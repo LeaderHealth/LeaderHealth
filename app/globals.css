@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f7f3f5;
+  --foreground: #321110;
+  --ink: #321110;
+  --brown: #4a2a26;
+  --taupe: #7a5a56;
+  --muted: #9a7a76;
+  --rose: #f2c6c3;
+  --blush: #c9a8ab;
+  --header: #c4a0a4;
+  --coral: #f37477;
+  --accent: #e33d4d;
+  --white: #ffffff;
+  --ticker: #2a1212;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-ink: var(--ink);
+  --color-brown: var(--brown);
+  --color-taupe: var(--taupe);
+  --color-muted: var(--muted);
+  --color-rose: var(--rose);
+  --color-blush: var(--blush);
+  --color-header: var(--header);
+  --color-coral: var(--coral);
+  --color-accent: var(--accent);
+  --color-ticker: var(--ticker);
+  --font-sans: var(--font-geist);
+  --font-display: var(--font-instrument-sans);
+  --font-serif: var(--font-instrument-serif);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist), system-ui, sans-serif;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-instrument-sans), var(--font-geist), system-ui, sans-serif;
+  letter-spacing: -0.03em;
+}
+
+.font-serif-italic {
+  font-family: var(--font-instrument-serif), Georgia, serif;
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.marquee-track {
+  animation: marquee 28s linear infinite;
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
