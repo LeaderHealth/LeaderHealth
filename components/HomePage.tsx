@@ -3,30 +3,57 @@
 import Image from "next/image";
 import Link from "next/link";
 import { assets, careSteps, designedFor, GET_STARTED_URL } from "@/lib/content/site";
-import { labs, products } from "@/lib/content/products";
+import { labs } from "@/lib/content/products";
 import { HeroVideo } from "./HeroVideo";
 import { Marquee } from "./Marquee";
 import { Testimonials } from "./Testimonials";
 import { ArticleLibrary } from "./ArticleLibrary";
 
+const campaign = [
+  {
+    href: "/products/weight-loss-semaglutide",
+    title: "Lose Weight, Keep it Off",
+    sub: "with Compounded Semaglutide",
+    img: "https://framerusercontent.com/images/qjehMU3idCiDUkHLomxHWBSbnkk.png?width=626&height=888",
+    fit: "object-cover",
+  },
+  {
+    href: "/products/weight-loss-tirzepatide",
+    title: "Transform Your Body",
+    sub: "with Compounded Tirzepatide",
+    img: "https://framerusercontent.com/images/wLJd6Casd45671gr7VQ42JuQQkE.png?width=1080&height=1350",
+    fit: "object-cover",
+  },
+  {
+    href: "/products/men-trt-testosterone-cypionate",
+    title: "Reclaim Your Energy",
+    sub: "with Compounded Testosterone",
+    img: "https://framerusercontent.com/images/v18TtF6idRTxtVpZ4ELVTqQf8Q.png?width=1080&height=1350",
+    fit: "object-cover",
+  },
+];
+
 const featured = [
   {
-    slug: "longevity-sermorelin",
+    href: "/products/longevity-sermorelin",
     category: "LONGEVITY",
     name: "Sermorelin",
     price: "Starting From $149/mo",
+    image: "https://framerusercontent.com/images/Nxmvv0V7wJmcL1463SseCeRgh8.png?width=1080&height=1350",
   },
   {
-    slug: "weight-loss-semaglutide",
+    href: "/products/weight-loss-semaglutide#find-what-fits",
     category: "WEIGHT LOSS",
     name: "Semaglutide Sublingual",
     price: "Starting From $129/mo",
+    image: "https://framerusercontent.com/images/b3PWiNtSYn3mtcfXtpoTxo38Zo.png?width=1024&height=1024",
   },
   {
-    slug: "men-sexual-health-tadalafil",
+    href: "/products/men-sexual-health-tadalafil",
     category: "SEXUAL HEALTH",
     name: "Tadalafil",
     price: "$79/mo",
+    image: "https://framerusercontent.com/images/pa9pIi4me0ue0YEMZpLwghozic.png?width=1024&height=587",
   },
 ];
 
@@ -128,28 +155,15 @@ export function HomePage() {
       </section>
 
       <section className="grid gap-4 bg-background px-6 py-16 md:grid-cols-3">
-        {[
-          {
-            href: "/products/longevity-sermorelin",
-            title: "Lose Weight, Keep it Off",
-            sub: "with Compounded Sermorelin",
-            img: "https://framerusercontent.com/images/DZxl5E96krCg93IEOLZY5gt00YU.png?width=1080&height=1350",
-          },
-          {
-            href: "/products/weight-loss-tirzepatide",
-            title: "Transform Your Body",
-            sub: "with Compounded Tirzepatide",
-            img: "https://framerusercontent.com/images/wLJd6Casd45671gr7VQ42JuQQkE.png?width=1080&height=1350",
-          },
-          {
-            href: "/products/men-trt-testosterone-cypionate",
-            title: "Reclaim Your Energy",
-            sub: "with Compounded Testosterone",
-            img: "https://framerusercontent.com/images/v18TtF6idRTxtVpZ4ELVTqQf8Q.png?width=1080&height=1350",
-          },
-        ].map((card) => (
+        {campaign.map((card) => (
           <Link key={card.href} href={card.href} className="overflow-hidden rounded-3xl bg-white">
-            <Image src={card.img} alt={card.title} width={540} height={675} className="h-80 w-full object-cover" />
+            <Image
+              src={card.img}
+              alt={`${card.title} ${card.sub}`}
+              width={540}
+              height={675}
+              className={`h-80 w-full bg-white ${card.fit}`}
+            />
             <div className="p-6">
               <h3 className="text-2xl">{card.title}</h3>
               <p className="font-serif-italic text-xl text-accent">{card.sub}</p>
@@ -192,17 +206,14 @@ export function HomePage() {
           <h2 className="text-4xl md:text-5xl">Energy. Weight. Performance.</h2>
           <p className="mt-3 text-taupe">When one is off, everything feels off. Here&apos;s where most members start.</p>
           <div className="mt-10 grid gap-6 md:grid-cols-3">
-            {featured.map((item) => {
-              const p = products.find((product) => product.slug === item.slug)!;
-              return (
-                <Link key={item.slug} href={`/products/${item.slug}`} className="rounded-3xl bg-background p-6">
-                  <Image src={p.image} alt={item.name} width={320} height={320} className="mx-auto h-40 w-auto object-contain" />
-                  <p className="mt-4 text-xs uppercase tracking-wider text-accent">{item.category}</p>
-                  <h3 className="mt-2 text-2xl">{item.name}</h3>
-                  <p className="mt-1 text-sm text-brown">{item.price}</p>
-                </Link>
-              );
-            })}
+            {featured.map((item) => (
+              <Link key={item.href} href={item.href} className="rounded-3xl bg-background p-6">
+                <Image src={item.image} alt={item.name} width={320} height={320} className="mx-auto h-40 w-auto object-contain" />
+                <p className="mt-4 text-xs uppercase tracking-wider text-accent">{item.category}</p>
+                <h3 className="mt-2 text-2xl">{item.name}</h3>
+                <p className="mt-1 text-sm text-brown">{item.price}</p>
+              </Link>
+            ))}
           </div>
         </div>
       </section>
