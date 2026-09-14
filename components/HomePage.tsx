@@ -68,7 +68,8 @@ export function HomePage() {
             alt="LEADERHEALTH"
             width={280}
             height={32}
-            className="mb-5 h-7 w-auto brightness-0 invert md:h-8"
+            className="mb-5 h-auto w-[280px] max-w-[280px] object-contain object-left brightness-0 invert"
+            style={{ width: 280, height: "auto", maxWidth: 280 }}
             priority
           />
           <h1 className="max-w-[720px] font-serif-italic text-[42px] leading-[0.95] md:text-[77px] md:leading-[84.7px]">

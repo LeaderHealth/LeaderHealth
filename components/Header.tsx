@@ -160,13 +160,14 @@ export function Header() {
               >
                 Menu
               </button>
-              <Link href="/" className="absolute left-1/2 -translate-x-1/2">
+              <Link href="/" className="absolute left-1/2 shrink-0 -translate-x-1/2">
                 <Image
                   src={assets.logo}
                   alt={site.name}
                   width={180}
                   height={20}
-                  className="h-[18px] w-auto max-w-none brightness-0 invert"
+                  className="h-auto w-[180px] max-w-[180px] object-contain brightness-0 invert"
+                  style={{ width: 180, height: "auto", maxWidth: 180 }}
                   priority
                 />
               </Link>
