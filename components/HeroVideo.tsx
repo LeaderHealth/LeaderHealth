@@ -9,12 +9,22 @@ export function HeroVideo({ src }: { src: string }) {
     const video = ref.current;
     if (!video) return;
     video.muted = true;
+    video.defaultMuted = true;
     const play = () => {
-      video.play().catch(() => {});
+      void video.play().catch(() => {});
     };
     play();
     video.addEventListener("canplay", play);
-    return () => video.removeEventListener("canplay", play);
+    video.addEventListener("loadeddata", play);
+    const onVisible = () => {
+      if (!document.hidden) play();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      video.removeEventListener("canplay", play);
+      video.removeEventListener("loadeddata", play);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [src]);
 
   return (
@@ -24,7 +34,7 @@ export function HeroVideo({ src }: { src: string }) {
       muted
       loop
       playsInline
-      preload="auto"
+      preload="metadata"
       className="absolute inset-0 h-full w-full object-cover"
     >
       <source src={src} type="video/mp4" />

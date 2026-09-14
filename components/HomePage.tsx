@@ -3,31 +3,66 @@
 import Image from "next/image";
 import Link from "next/link";
 import { assets, careSteps, designedFor, GET_STARTED_URL } from "@/lib/content/site";
-import { labs, products } from "@/lib/content/products";
+import { labs } from "@/lib/content/products";
 import { HeroVideo } from "./HeroVideo";
 import { Marquee } from "./Marquee";
 import { Testimonials } from "./Testimonials";
 import { ArticleLibrary } from "./ArticleLibrary";
 
+const campaign = [
+  {
+    href: "/products/longevity-sermorelin",
+    title: "Lose Weight, Keep it Off",
+    sub: "with Compounded Sermorelin",
+    img: "https://framerusercontent.com/images/DZxl5E96krCg93IEOLZY5gt00YU.png?width=1080&height=1350",
+  },
+  {
+    href: "/products/weight-loss-tirzepatide",
+    title: "Transform Your Body",
+    sub: "with Compounded Tirzepatide",
+    img: "https://framerusercontent.com/images/wLJd6Casd45671gr7VQ42JuQQkE.png?width=1080&height=1350",
+  },
+  {
+    href: "/products/men-trt-testosterone-cypionate",
+    title: "Reclaim Your Energy",
+    sub: "with Compounded Testosterone",
+    img: "https://framerusercontent.com/images/v18TtF6idRTxtVpZ4ELVTqQf8Q.png?width=1080&height=1350",
+  },
+];
+
 const featured = [
   {
-    slug: "longevity-sermorelin",
+    href: "/products/longevity-sermorelin",
     category: "LONGEVITY",
     name: "Sermorelin",
     price: "Starting From $149/mo",
+    image: "https://framerusercontent.com/images/Nxmvv0V7wJmcL1463SseCeRgh8.png?width=1080&height=1350",
   },
   {
-    slug: "weight-loss-semaglutide",
+    href: "/products/weight-loss-semaglutide#find-what-fits",
     category: "WEIGHT LOSS",
     name: "Semaglutide Sublingual",
     price: "Starting From $129/mo",
+    image: "https://framerusercontent.com/images/b3PWiNtSYn3mtcfXtpoTxo38Zo.png?width=1024&height=1024",
   },
   {
-    slug: "men-sexual-health-tadalafil",
+    href: "/products/men-sexual-health-tadalafil",
     category: "SEXUAL HEALTH",
     name: "Tadalafil",
     price: "$79/mo",
+    image: "https://framerusercontent.com/images/pa9pIi4me0ue0YEMZpLwghozic.png?width=1024&height=587",
   },
+];
+
+const designedForCards = [
+  ...designedFor,
+  designedFor[designedFor.length - 1],
+];
+
+const labMetrics = [
+  { value: "2-5", label: "business days from draw to results" },
+  { value: "30", label: "minutes clinical view, included" },
+  { value: "", label: "HSA / FSA" },
 ];
 
 export function HomePage() {
@@ -100,6 +135,7 @@ export function HomePage() {
         </div>
       </section>
 
+      <div className="relative bg-white">
       <section className="grid md:grid-cols-2">
         <div className="bg-rose/40 px-8 py-16 md:px-16">
           <p className="text-sm uppercase tracking-wider text-taupe">Weight Loss</p>
@@ -111,11 +147,11 @@ export function HomePage() {
             Get Started
           </a>
         </div>
-        <div className="relative min-h-[320px]">
-          <Image src={assets.pills} alt="Two round tablets and a capsule on a blush gradient background" fill className="object-cover" />
+        <div className="relative min-h-[420px]">
+          <Image src={assets.pills} alt="Two round tablets and a capsule on a blush gradient background" fill className="object-cover" sizes="50vw" />
         </div>
-        <div className="relative min-h-[280px]">
-          <Image src={assets.stretching} alt="LEADER HEALTH logo over a photo of a man stretching his shoulder" fill className="object-cover" />
+        <div className="relative min-h-[480px]">
+          <Image src={assets.stretching} alt="LEADER HEALTH logo over a photo of a man stretching his shoulder" fill className="object-cover" sizes="50vw" />
         </div>
         <div className="bg-ink px-8 py-16 text-white md:px-16">
           <h2 className="text-4xl">Care Built Around You</h2>
@@ -128,110 +164,173 @@ export function HomePage() {
         </div>
       </section>
 
-      <section className="grid gap-4 bg-background px-6 py-16 md:grid-cols-3">
-        {[
-          {
-            href: "/products/longevity-sermorelin",
-            title: "Lose Weight, Keep it Off",
-            sub: "with Compounded Sermorelin",
-            img: "https://framerusercontent.com/images/DZxl5E96krCg93IEOLZY5gt00YU.png?width=1080&height=1350",
-          },
-          {
-            href: "/products/weight-loss-tirzepatide",
-            title: "Transform Your Body",
-            sub: "with Compounded Tirzepatide",
-            img: "https://framerusercontent.com/images/wLJd6Casd45671gr7VQ42JuQQkE.png?width=1080&height=1350",
-          },
-          {
-            href: "/products/men-trt-testosterone-cypionate",
-            title: "Reclaim Your Energy",
-            sub: "with Compounded Testosterone",
-            img: "https://framerusercontent.com/images/v18TtF6idRTxtVpZ4ELVTqQf8Q.png?width=1080&height=1350",
-          },
-        ].map((card) => (
-          <Link key={card.href} href={card.href} className="overflow-hidden rounded-3xl bg-white">
-            <Image src={card.img} alt={card.title} width={540} height={675} className="h-80 w-full object-cover" />
-            <div className="p-6">
-              <h3 className="text-2xl">{card.title}</h3>
-              <p className="font-serif-italic text-xl text-accent">{card.sub}</p>
-            </div>
-          </Link>
-        ))}
+      <section className="relative z-10 mx-auto w-full max-w-[1200px] -mt-16 px-4 pb-16 md:-mt-40 md:px-6 lg:-mt-[420px]">
+        <div className="grid gap-2.5 md:grid-cols-3">
+          {campaign.map((card) => (
+            <Link
+              key={card.href}
+              href={card.href}
+              className="flex min-h-[560px] w-full flex-col items-center justify-center gap-2.5 rounded-[19px] bg-[#442928] p-6 md:min-h-[860px] md:p-10"
+            >
+              <Image
+                src={card.img}
+                alt={`${card.title} ${card.sub}`}
+                width={297}
+                height={550}
+                className="h-auto w-full max-w-[297px] object-cover md:h-[550px] md:w-[297px]"
+              />
+              <h3 className="w-full font-sans text-[28px] font-medium leading-[1.2] tracking-normal text-accent md:text-[36px] md:leading-[43.2px]">
+                {card.title}
+              </h3>
+              <p className="w-full font-sans text-[18px] font-medium leading-6 tracking-normal text-accent md:text-[20px]">
+                {card.sub}
+              </p>
+            </Link>
+          ))}
+        </div>
       </section>
+      </div>
 
-      <section className="relative overflow-hidden bg-ink text-white">
+      <section className="relative overflow-hidden bg-white">
         <Image
           src={assets.weightlifting}
           alt="A man in a white tank top lifting weights in a shaft of light."
-          width={1600}
-          height={900}
-          className="absolute inset-0 h-full w-full object-cover opacity-50"
+          width={2496}
+          height={1664}
+          className="absolute inset-0 h-full w-full object-cover"
         />
-        <div className="relative mx-auto max-w-4xl px-6 py-28">
-          <h2 className="text-5xl md:text-6xl">
-            Designed for the way
-            <br />
-            <span className="font-serif-italic">you want to live.</span>
-          </h2>
-          <p className="mt-6 max-w-xl text-white/85">
-            Most wellness products are built for the average. Yours is built for you — engineered to move the metrics that matter, and refined as your body changes.
-          </p>
-          <ul className="mt-8 space-y-3">
-            {designedFor.map((item) => (
-              <li key={item} className="flex items-start gap-3">
-                <Image src={assets.check} alt="" width={28} height={28} className="mt-0.5 h-7 w-7" />
-                {item}
-              </li>
-            ))}
-          </ul>
-          <p className="mt-10 font-serif-italic text-3xl text-rose">More by design.</p>
-        </div>
-      </section>
+        <div className="relative mx-auto max-w-[1129px] overflow-hidden rounded-[36px] px-6 pb-9 pt-16 md:px-12 md:pt-[84px]">
+          <div className="grid items-start gap-8 lg:grid-cols-2">
+            <div>
+              <h2 className="font-sans text-[36px] font-medium leading-tight tracking-normal text-[#f7f3f4] md:text-[47px] md:leading-[56.4px]">
+                Designed for the way
+              </h2>
+              <p className="font-serif-italic text-[36px] leading-tight text-[#f7f3f4] md:text-[47px] md:leading-[37.6px]">
+                you want to live.
+              </p>
+              <p className="mt-6 max-w-[478px] font-sans text-lg font-light leading-snug tracking-normal text-white md:text-[24px] md:leading-[28.8px]">
+                Most wellness products are built for the average. Yours is built for you — engineered to move the metrics that matter, and refined as your body changes.
+              </p>
+              <div className="mt-8 grid grid-cols-2 gap-2.5">
+                {designedForCards.map((item, i) => (
+                  <div
+                    key={`${item}-${i}`}
+                    className="flex items-start gap-[11px] rounded-[13px] bg-white/20 p-4 md:p-5"
+                  >
+                    <Image src={assets.check} alt="" width={28} height={28} className="mt-0.5 h-7 w-7 shrink-0" />
+                    <p className="font-sans text-[14px] leading-[16.8px] tracking-normal text-[#f7f3f4]">{item}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="relative mx-auto hidden min-h-[520px] w-full max-w-[579px] lg:block">
+              <Image
+                src="https://framerusercontent.com/images/Nxmvv0V7wJmcL1463SseCeRgh8.png?width=1080&height=1350"
+                alt="Sermorelin injection vial"
+                width={579}
+                height={677}
+                className="h-auto w-full object-contain"
+              />
+              <p className="absolute bottom-16 right-4 flex h-16 items-center justify-center rounded-[13px] bg-black/50 px-6 font-serif-italic text-[28px] leading-[33.6px] text-[#f7f3f4] md:right-8">
+                More by design.
+              </p>
+            </div>
+          </div>
 
-      <section className="bg-white px-6 py-20">
-        <div className="mx-auto max-w-6xl">
-          <h2 className="text-4xl md:text-5xl">Energy. Weight. Performance.</h2>
-          <p className="mt-3 text-taupe">When one is off, everything feels off. Here&apos;s where most members start.</p>
-          <div className="mt-10 grid gap-6 md:grid-cols-3">
-            {featured.map((item) => {
-              const p = products.find((product) => product.slug === item.slug)!;
-              return (
-                <Link key={item.slug} href={`/products/${item.slug}`} className="rounded-3xl bg-background p-6">
-                  <Image src={p.image} alt={item.name} width={320} height={320} className="mx-auto h-40 w-auto object-contain" />
-                  <p className="mt-4 text-xs uppercase tracking-wider text-accent">{item.category}</p>
-                  <h3 className="mt-2 text-2xl">{item.name}</h3>
-                  <p className="mt-1 text-sm text-brown">{item.price}</p>
+          <div className="mt-16 text-center">
+            <h2 className="font-serif-italic text-[36px] font-normal leading-tight tracking-normal text-[#f7f3f4] md:text-[47px] md:leading-[56.4px]">
+              Energy. Weight. Performance.
+            </h2>
+            <p className="mt-1 font-sans text-xl font-normal leading-snug tracking-normal text-[#f7f3f4] md:text-[30px] md:leading-9">
+              When one is off, everything feels off. Here&apos;s where most members start.
+            </p>
+            <div className="mx-auto mt-10 grid max-w-[980px] gap-4 md:grid-cols-3">
+              {featured.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="flex min-h-[380px] flex-col items-center justify-between rounded-2xl px-4 pb-10 pt-12 text-center md:min-h-[458px] md:pt-[60px]"
+                  style={{ background: "linear-gradient(211deg, rgb(220, 212, 189) 0%, rgb(228, 79, 93) 100%)" }}
+                >
+                  <p className="font-sans text-[25px] font-bold leading-[30px] tracking-normal text-ink">
+                    {item.category}
+                  </p>
+                  <Image
+                    src={item.image}
+                    alt={item.name}
+                    width={241}
+                    height={241}
+                    className="h-auto w-full max-w-[241px] object-contain"
+                  />
+                  <div>
+                    <p className="font-sans text-[22px] font-semibold leading-[22px] tracking-normal text-white">
+                      {item.name}
+                    </p>
+                    <p className="mt-1.5 font-sans text-[17px] font-normal leading-[20.4px] tracking-normal text-white">
+                      {item.price}
+                    </p>
+                  </div>
                 </Link>
-              );
-            })}
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="bg-background px-6 py-20">
-        <div className="mx-auto max-w-6xl">
-          <p className="text-xs uppercase tracking-wider text-accent">Now available</p>
-          <h2 className="mt-2 text-5xl">Labs</h2>
-          <p className="mt-3 max-w-xl text-taupe">
-            Get a clearer picture of your health with comprehensive lab testing and expert clinical insights.
-          </p>
-          <div className="mt-4 flex flex-wrap gap-4 text-sm text-brown">
-            <span>2-5 business days from draw to results</span>
-            <span>30 minutes clinical view, included</span>
-            <span>HSA / FSA</span>
+      <section className="overflow-x-hidden bg-white px-6 py-[30px]">
+        <div className="mx-auto grid max-w-[1200px] items-center gap-10 md:grid-cols-12 md:gap-8">
+          <div className="min-w-0 md:col-span-5">
+            <p className="font-sans text-[16px] font-semibold leading-[19.2px] tracking-normal text-[#e33b4f]">
+              NOW AVAILABLE
+            </p>
+            <h2 className="mt-2 font-sans text-6xl font-medium leading-none tracking-normal text-[#e43c4e] md:text-[74px] md:leading-[88.8px]">
+              Labs
+            </h2>
+            <p className="mt-4 max-w-[449px] font-sans text-[21px] font-normal leading-[25.2px] tracking-normal text-[#32120e]">
+              Get a clearer picture of your health with comprehensive lab testing and expert clinical insights.
+            </p>
+            <div className="mt-8">
+              {labMetrics.map((metric) => (
+                <p
+                  key={metric.label}
+                  className="border-t border-ink/15 py-2 font-sans text-[21px] leading-[25.2px] tracking-normal text-[#32120e]"
+                >
+                  {metric.value ? (
+                    <span className="font-medium italic text-[#e33b4f]">{metric.value} </span>
+                  ) : null}
+                  {metric.label}
+                </p>
+              ))}
+            </div>
           </div>
-          <div className="mt-10 grid gap-6 md:grid-cols-2">
+          <div className="grid min-w-0 gap-[19px] md:col-span-7 md:grid-cols-2">
             {labs.map((lab) => (
-              <Link key={lab.slug} href={`/labs/${lab.slug}`} className="overflow-hidden rounded-3xl bg-white">
-                <Image src={lab.image} alt={lab.name} width={400} height={700} className="h-80 w-full bg-[#1a1a1a] object-contain" />
-                <div className="p-6">
-                  <h3 className="text-2xl uppercase">
+              <Link
+                key={lab.slug}
+                href={`/labs/${lab.slug}`}
+                className="relative min-w-0 overflow-hidden rounded-[20px] pt-2"
+                style={{
+                  background:
+                    "linear-gradient(307deg, rgb(243, 218, 218) 0%, rgb(238, 208, 210) 16%, rgb(222, 211, 189) 100%)",
+                }}
+              >
+                {lab.recommended ? (
+                  <span className="absolute right-[19px] top-[21px] z-10 whitespace-nowrap rounded-[15px] bg-[#e43c4e]/75 px-2.5 py-[5px] text-[12px] font-medium text-white">
+                    Recommended
+                  </span>
+                ) : null}
+                <Image
+                  src={lab.image}
+                  alt={lab.name}
+                  width={332}
+                  height={415}
+                  className="mx-auto h-auto w-full max-h-[415px] object-contain"
+                />
+                <div className="px-6 pb-6">
+                  <h3 className="font-sans text-[19px] font-medium uppercase leading-[22.8px] tracking-normal text-[#331110]">
                     {lab.name}
-                    {lab.recommended ? (
-                      <span className="ml-2 text-sm font-normal normal-case text-accent">Recommended</span>
-                    ) : null}
                   </h3>
-                  <p className="text-taupe">
+                  <p className="mt-1 font-sans text-[18px] font-medium leading-[21.6px] tracking-normal text-[#e43c4e]">
                     ({lab.biomarkers}) / {lab.price}
                   </p>
                 </div>
@@ -241,7 +340,7 @@ export function HomePage() {
         </div>
       </section>
 
-      <Testimonials />
+      <Testimonials variant="featured" />
       <ArticleLibrary
         slugs={[
           "semaglutide-vs-tirzepatide-comparison-guide",
