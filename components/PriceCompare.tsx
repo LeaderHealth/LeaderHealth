@@ -1,68 +1,112 @@
-const rows = [
+type Cell = string | "yes" | "no";
+
+const competitors = ["Maximus", "Hone Health", "Hims"];
+
+const rows: { label: string; leader: Cell; others: Cell[] }[] = [
   {
     label: "Monthly price",
-    values: ["$49–$229", "$50–$349+", "$50–$500+", "$40–$600+"],
+    leader: "$49–$229",
+    others: ["$50–$349+", "$50–$500+", "$40–$600+"],
   },
   {
     label: "Price ceiling",
-    values: ["$229 max", "—", "—", "—"],
+    leader: "$229 max",
+    others: ["no", "no", "no"],
   },
   {
     label: "Baseline labs included",
-    values: ["Yes", "Varies", "Varies", "Varies"],
+    leader: "yes",
+    others: ["yes", "yes", "no"],
   },
   {
     label: "1-on-1 clinician consult",
-    values: ["Every plan", "Varies", "Varies", "Varies"],
+    leader: "Every plan",
+    others: ["yes", "no", "no"],
   },
   {
     label: "Hidden fees",
-    values: ["None", "Varies", "Varies", "Varies"],
+    leader: "None",
+    others: ["Varies", "Varies", "Varies"],
   },
   {
-    label: "Easy cancellation",
-    values: ["Yes", "Varies", "Varies", "Varies"],
+    label: "Easy Cancellation",
+    leader: "yes",
+    others: ["yes", "yes", "yes"],
   },
 ];
 
-const brands = ["Leader Health", "Maximus", "Hone Health", "Hims"];
+function Mark({ value, onDark = false }: { value: Cell; onDark?: boolean }) {
+  if (value === "yes") {
+    return (
+      <span
+        className={`mx-auto grid h-5 w-5 place-items-center rounded-full border text-[11px] ${
+          onDark ? "border-white/80" : "border-ink/40"
+        }`}
+      >
+        ✓
+      </span>
+    );
+  }
+  if (value === "no") {
+    return (
+      <span
+        className={`mx-auto grid h-5 w-5 place-items-center rounded-full border text-[11px] ${
+          onDark ? "border-white/30 text-white/50" : "border-ink/20 text-ink/40"
+        }`}
+      >
+        ×
+      </span>
+    );
+  }
+  return <span className="block text-center">{value}</span>;
+}
 
 export function PriceCompare() {
   return (
-    <section className="bg-background px-6 py-20">
-      <div className="mx-auto max-w-5xl">
-        <h2 className="text-center text-4xl md:text-5xl">
-          Same medicine. Lower cost ceiling.{" "}
-          <span className="font-serif-italic text-accent">No surprises.</span>
+    <section className="bg-[linear-gradient(180deg,#f7f0e8_0%,#ead9c4_100%)] px-6 py-20">
+      <div className="mx-auto max-w-[840px]">
+        <h2 className="text-center text-[34px] leading-tight text-ink md:text-[40px]">
+          Same medicine. Lower cost ceiling. No surprises.
         </h2>
-        <div className="mt-10 overflow-x-auto rounded-[28px] bg-white">
-          <table className="w-full min-w-[720px] text-left text-sm">
-            <thead>
-              <tr className="border-b border-ink/10">
-                <th className="px-5 py-4 font-medium text-taupe" />
-                {brands.map((brand) => (
-                  <th key={brand} className="px-5 py-4 font-medium">
-                    {brand}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.label} className="border-b border-ink/5 last:border-0">
-                  <th className="px-5 py-4 font-medium text-taupe">{row.label}</th>
-                  {row.values.map((value, i) => (
-                    <td
-                      key={brands[i]}
-                      className={`px-5 py-4 ${i === 0 ? "font-medium text-ink" : "text-brown"}`}
-                    >
-                      {value}
-                    </td>
-                  ))}
-                </tr>
+
+        <div className="mt-12 overflow-x-auto">
+          <div className="min-w-[680px] rounded-[28px] bg-white px-3 py-4 shadow-sm md:px-5">
+            <div className="grid grid-cols-[minmax(140px,1.15fr)_minmax(110px,0.95fr)_repeat(3,minmax(90px,1fr))] items-stretch">
+              <div />
+              <div className="rounded-t-[24px] bg-gradient-to-b from-[#7a3336] to-[#3a1818] px-2 py-5 text-center text-[10px] font-medium tracking-[0.12em] text-white">
+                LEADER+HEALTH
+              </div>
+              {competitors.map((brand) => (
+                <div key={brand} className="px-2 py-5 text-center text-[13px] text-taupe">
+                  {brand}
+                </div>
               ))}
-            </tbody>
-          </table>
+
+              {rows.map((row, i) => {
+                const last = i === rows.length - 1;
+                return (
+                  <div key={row.label} className="contents">
+                    <div className="flex items-center px-3 py-4 text-[13px] text-taupe">{row.label}</div>
+                    <div
+                      className={`flex items-center justify-center bg-gradient-to-b from-[#5c282a] to-[#2a1010] px-2 py-4 text-[13px] font-medium text-white ${
+                        last ? "rounded-b-[24px]" : ""
+                      }`}
+                    >
+                      <Mark value={row.leader} onDark />
+                    </div>
+                    {row.others.map((value, j) => (
+                      <div
+                        key={competitors[j]}
+                        className="flex items-center justify-center border-t border-ink/8 px-2 py-4 text-[13px] text-brown"
+                      >
+                        <Mark value={value} />
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
     </section>

@@ -19,68 +19,75 @@ export function productEyebrow(product: Product) {
 export function ProductHero({ product }: { product: Product }) {
   const cta = product.variants ? "CHOOSE YOUR TREATMENT" : "START NOW";
   const ctaHref = product.variants ? "#find-what-fits" : GET_STARTED_URL;
+  const badge = product.badge ?? (product.disclaimer?.toLowerCase().includes("fda approved") ? undefined : "Medication");
 
   return (
-    <section className="relative overflow-hidden bg-coral pb-16 pt-28 text-white">
-      <div className="absolute inset-0 bg-[radial-gradient(120%_80%_at_20%_20%,rgba(255,255,255,0.28),transparent_55%)]" />
-      <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-6 md:grid-cols-[1.05fr_0.95fr]">
-        <div className="flex min-h-[520px] flex-col justify-end">
+    <section className="relative bg-gradient-to-b from-[#d07a7c] to-[#a24b4e] pb-16 pt-28 text-white">
+      <div className="relative mx-auto grid max-w-6xl items-center gap-8 px-6 lg:grid-cols-[1fr_minmax(320px,440px)]">
+        <div className="flex min-h-[480px] flex-col items-center justify-center">
           <Image
             src={product.image}
             alt={product.name}
-            width={720}
-            height={720}
-            className="mx-auto h-[min(62vh,560px)] w-auto object-contain drop-shadow-2xl"
+            width={785}
+            height={995}
+            className="mx-auto h-[min(58vh,520px)] w-auto object-contain drop-shadow-2xl"
+            sizes="(max-width: 1024px) 80vw, 480px"
             priority
           />
-          <p className="mt-6 text-center font-serif-italic text-sm text-white/85">
+          <p className="mt-6 text-center text-[13px] text-white/80">
             Illustration only. Actual medication and label may vary.
           </p>
         </div>
 
-        <div className="rounded-[32px] border border-white/20 bg-white/12 p-7 shadow-xl backdrop-blur-md md:p-9">
+        <div className="rounded-[28px] border border-white/25 bg-white/14 p-7 shadow-xl backdrop-blur-md md:p-8">
           <div className="flex items-start justify-between gap-4">
             <p className="flex items-center gap-2 text-sm">
               <span className="font-medium">4.8</span>
-              <span className="text-white">★★★★★</span>
+              <span className="tracking-tight text-[#ff5a5a]">★★★★★</span>
             </p>
-            <span className="rounded-full bg-white/20 px-3 py-1 text-[11px] uppercase tracking-wider">
-              HSA / FSA
-            </span>
+            <span className="text-[11px] uppercase tracking-[0.14em] text-white/85">HSA / FSA</span>
           </div>
-          <p className="mt-6 text-sm text-white/90">{productEyebrow(product)}</p>
-          {product.badge && <p className="text-sm text-white/80">{product.badge}</p>}
-          <h1 className="mt-2 text-4xl leading-none md:text-[52px]">{product.name}</h1>
-          <p className="mt-5 font-serif-italic text-[13px] leading-relaxed text-white/90">
+          <div className="mt-5 flex flex-wrap gap-2">
+            <span className="rounded-full bg-[#2a1212]/55 px-3 py-1 text-[11px]">{productEyebrow(product)}</span>
+            {badge && <span className="rounded-full bg-[#2a1212]/55 px-3 py-1 text-[11px]">{badge}</span>}
+          </div>
+          <h1 className="mt-3 text-[40px] leading-none">{product.name}</h1>
+          <p className="mt-4 font-serif-italic text-[12px] leading-relaxed text-white/88">
             {product.disclaimer ?? defaultDisclaimer}
           </p>
-          <div className="mt-5 space-y-4 text-[15px] leading-relaxed">
+          <div className="mt-4 space-y-3 text-[14px] leading-relaxed">
             {(product.paragraphs ?? [product.description]).map((p) => (
               <p key={p.slice(0, 40)}>{p}</p>
             ))}
-            {product.highlight && <p>{product.highlight}</p>}
-            {product.safety && <p>{product.safety}</p>}
+            {product.highlight && <p className="font-medium">{product.highlight}</p>}
+            {product.safety && <p className="text-[13px] text-white/90">{product.safety}</p>}
           </div>
           <a
             href={ctaHref}
-            className="mt-8 flex w-full items-center justify-center gap-2 rounded-2xl bg-white py-4 text-sm font-medium tracking-wide text-ink"
+            className="mt-7 flex w-full items-center justify-center gap-2 rounded-[10px] bg-[#dcd4bd] py-3.5 text-xs font-medium tracking-[0.08em] text-ink"
           >
             {cta}
-            <span aria-hidden>→</span>
+            {product.variants ? (
+              <span aria-hidden className="text-[10px]">
+                ▾
+              </span>
+            ) : (
+              <span aria-hidden>→</span>
+            )}
           </a>
           <Link
             href="/legal/important-safety-information"
-            className="mt-4 block text-center font-serif-italic text-sm text-white/90"
+            className="mt-3 block text-center font-serif-italic text-sm text-white/90"
           >
             Important Safety Info
           </Link>
         </div>
       </div>
 
-      <div className="relative mx-auto mt-16 grid max-w-6xl gap-10 px-6 text-center md:grid-cols-3">
+      <div className="relative mx-auto mt-14 grid max-w-5xl gap-8 px-6 text-center md:grid-cols-3">
         {product.benefits.map((b) => (
           <article key={b.title}>
-            <h2 className="text-lg font-medium">{b.title}</h2>
+            <h2 className="text-[17px] font-medium">{b.title}</h2>
             <p className="mt-2 text-sm leading-relaxed text-white/85">{b.body}</p>
           </article>
         ))}

@@ -102,15 +102,15 @@ function UserIcon() {
 
 export function Header() {
   const pathname = usePathname();
-  const isHome = pathname === "/";
-  const [hero, setHero] = useState(isHome);
+  const overlay = pathname === "/" || pathname.startsWith("/products/");
+  const [hero, setHero] = useState(overlay);
   const [mobile, setMobile] = useState(false);
   const [search, setSearch] = useState(false);
   const [query, setQuery] = useState("");
 
   useEffect(() => {
     const update = () => {
-      if (!isHome) {
+      if (!overlay) {
         setHero(false);
         return;
       }
@@ -123,7 +123,7 @@ export function Header() {
       window.removeEventListener("scroll", update);
       window.removeEventListener("resize", update);
     };
-  }, [isHome]);
+  }, [overlay]);
 
   const results = query.trim()
     ? products.filter(

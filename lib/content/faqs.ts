@@ -87,3 +87,105 @@ export const productFaqs = [
     a: "Email help@myleaderhealth.com or call (254) 244-0104. Existing patients can also message through the patient portal.",
   },
 ];
+
+export const tirzepatideFaqs = [
+  {
+    q: "How is tirzepatide different from semaglutide?",
+    a: "Tirzepatide acts on both GLP-1 and GIP pathways; semaglutide acts on GLP-1. Your clinician helps choose based on your history, goals, tolerance, and cost — not a one-size default.",
+  },
+  {
+    q: "Am I a candidate, and who should not take it?",
+    a: "Candidacy is a clinical decision after intake and labs. Do not use if you or a family member has had medullary thyroid cancer, or if you have MEN 2. Your licensed provider screens before prescribing.",
+  },
+  {
+    q: "How does the labs-first process work?",
+    a: "You complete intake, obtain the ordered panel, and a clinician reviews results with your history. Medication is only prescribed if it is appropriate. Follow-up labs are used to adjust dose and watch safety markers.",
+  },
+  {
+    q: "What is included in the monthly subscription?",
+    a: "Typically the prescribed medication, clinician follow-up as defined for that protocol, and supplies when the format requires them. Exact inclusions are shown at checkout for the option you select.",
+  },
+  {
+    q: "What side effects and warnings should I know about?",
+    a: "Gastrointestinal effects are common during titration. Tirzepatide carries a boxed warning about thyroid C-cell tumors in animal studies. Your clinician reviews risks and when to seek care.",
+  },
+  {
+    q: "Is this a generic or the brand product?",
+    a: "Compounded tirzepatide is not an FDA-approved generic of Mounjaro or Zepbound. It is prepared for you by a licensed compounding pharmacy on your prescriber's order.",
+  },
+  {
+    q: "Why is tirzepatide priced higher?",
+    a: "It is a dual-agonist medication with a different supply and compounding cost than semaglutide. Your clinician can still help you compare both options against your goals and budget.",
+  },
+  {
+    q: "How is it shipped?",
+    a: "After a clinician approves a plan, medication is filled by a licensed pharmacy and shipped to your door. See the Shipping Policy for timelines, temperature-sensitive handling, and state restrictions.",
+  },
+  {
+    q: "Is there a commitment?",
+    a: "Weight-loss protocols are typically a three-month start, cancel anytime. Plans are billed monthly according to the Subscription Terms.",
+  },
+  {
+    q: "Do you accept insurance?",
+    a: "No insurance is required. Care is cash-pay with transparent monthly pricing.",
+  },
+  {
+    q: "Can I use my HSA or FSA?",
+    a: "Yes — HSA and FSA cards can typically be used for eligible clinical services, labs, and prescribed treatments. Check with your plan administrator for your specific account rules.",
+  },
+  {
+    q: "What if I have another questions?",
+    a: "Email help@myleaderhealth.com or call (254) 244-0104. Existing patients can also message through the patient portal.",
+  },
+];
+
+export const tadalafilFaqs = [
+  {
+    q: "Daily vs. on-demand - which is right for me?",
+    a: "Daily low-dose tadalafil is built for spontaneity so you are not timing a pill. On-demand dosing may still be discussed if that better fits your routine. Your clinician helps choose.",
+  },
+  {
+    q: "How long does it take to work?",
+    a: "Daily tadalafil builds to a steady level over several days. Your provider will tell you what to expect for your dose and when to follow up if it is not working as planned.",
+  },
+  {
+    q: "Can I drink alcohol on tadalafil?",
+    a: "Light alcohol may be tolerated, but drinking can worsen dizziness and blood-pressure drops. Ask your clinician what is safe for you.",
+  },
+  {
+    q: "What side effects should I know about?",
+    a: "Headache, flushing, indigestion, back pain, and nasal congestion can occur. Seek care immediately for chest pain, an erection lasting more than four hours, or sudden vision or hearing changes.",
+  },
+  {
+    q: "What interactions and warnings are most important?",
+    a: "Do not use tadalafil with any nitrate medicine, including nitroglycerin and poppers. Your provider also reviews blood pressure, heart history, and other medications before prescribing.",
+  },
+  {
+    q: "What is included in the monthly subscription?",
+    a: "Typically the prescribed tablets and clinician follow-up as defined for that protocol. Exact inclusions are shown at checkout.",
+  },
+  {
+    q: "How does the labs-first process work?",
+    a: "Your clinician reviews intake and, when needed, labs or vitals before prescribing. Tadalafil is only issued if it is a safe fit.",
+  },
+  {
+    q: "Where is it compounded?",
+    a: "Tadalafil on this page is an FDA-approved, commercially manufactured product dispensed by a licensed U.S. pharmacy. It is not compounded.",
+  },
+  {
+    q: "Is there a commitment?",
+    a: "Plans are typically a three-month start, then cancel anytime, billed monthly according to the Subscription Terms.",
+  },
+  {
+    q: "Do you accept insurance?",
+    a: "No insurance is required. Care is cash-pay with transparent monthly pricing.",
+  },
+  {
+    q: "Can I use my HSA or FSA?",
+    a: "Yes — HSA and FSA cards can typically be used for eligible clinical services and prescribed treatments. Check with your plan administrator.",
+  },
+  {
+    q: "What if I have another questions?",
+    a: "Email help@myleaderhealth.com or call (254) 244-0104. Existing patients can also message through the patient portal.",
+  },
+];

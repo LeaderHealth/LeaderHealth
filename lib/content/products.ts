@@ -19,20 +19,31 @@ export type Product = {
   safety?: string;
   disclaimer?: string;
   compare?: boolean;
+  seoTitle?: string;
+  faqs?: { q: string; a: string }[];
   benefits: { title: string; body: string }[];
-  variants?: { name: string; detail: string; price: string; notes: string[] }[];
+  variants?: {
+    name: string;
+    eyebrow?: string;
+    detail: string;
+    price: string;
+    priceAmount?: string;
+    notes: string[];
+    image?: string;
+  }[];
 };
 
 export const products: Product[] = [
   {
     slug: "weight-loss-semaglutide",
     name: "Semaglutide",
+    seoTitle: "Compounded Semaglutide Weight Loss",
     category: "weight-loss",
     audience: "all",
     price: "Starting From $129/mo",
     labRequired: true,
     image:
-      "https://framerusercontent.com/images/b3PWiNtSYn3mtcfXtpoTxo38Zo.png?width=1024&height=1024",
+      "https://framerusercontent.com/images/xDyQlFKKF945ielQLHRmWsJply8.png?width=785&height=995",
     tagline: "Provider-guided GLP-1 support for sustainable weight management.",
     eyebrow: "Weight Loss",
     badge: "Medication",
@@ -50,34 +61,70 @@ export const products: Product[] = [
     variants: [
       {
         name: "Semaglutide Injectable",
-        detail: "Weekly injection · Titrated dosing, adjusted as you progress.",
+        eyebrow: "Weekly injection",
+        detail: "Titrated dosing, adjusted as you progress.",
         price: "From $159 / month",
+        priceAmount: "$159",
         notes: ["4 doses / month", "Supplies included"],
+        image:
+          "https://framerusercontent.com/images/qjehMU3idCiDUkHLomxHWBSbnkk.png?width=626&height=888",
       },
       {
         name: "Semaglutide Sublingual",
-        detail: "Daily sublingual · Needle-free troche that dissolves under the tongue.",
+        eyebrow: "Daily sublingual",
+        detail: "Needle-free troche that dissolves under the tongue.",
         price: "From $129 / month",
+        priceAmount: "$129",
         notes: ["30 troches / month", "No needles"],
+        image:
+          "https://framerusercontent.com/images/a35lvlEcdBD3i8gaqZ0pHpHg.png?width=1060&height=1002",
       },
     ],
   },
   {
     slug: "weight-loss-tirzepatide",
     name: "Tirzepatide",
+    seoTitle: "Tirzepatide Weight Loss Program Online",
     category: "weight-loss",
     audience: "all",
     price: "Starting at $229",
     labRequired: true,
     image:
-      "https://framerusercontent.com/images/wLJd6Casd45671gr7VQ42JuQQkE.png?width=1080&height=1350",
+      "https://framerusercontent.com/images/MKfQvxNUoASTK8K9iYyxletrY0.png?width=952&height=1213",
     tagline: "Dual-agonist support for appetite, metabolism, and body composition.",
+    eyebrow: "Weight Loss",
+    badge: "Medication",
+    compare: true,
+    safety:
+      "*Risk of thyroid C cell tumors. Do not use if you or a family member has had medullary thyroid cancer, or if you have MEN 2. Compounded. Not FDA approved. Not a generic of Mounjaro or Zepbound.",
     description:
-      "Tirzepatide acts on GLP-1 and GIP pathways. After labs and a clinician review, your provider selects a starting dose and titrates based on how you feel and how you respond.",
+      "Tirzepatide works on two appetite pathways, paired with healthy eating and activity for weight management. Before any prescription, your team reviews your labs, weight history, medications, and health background. Your provider sets your dose, guides titration, and checks in as you go. A clinician-led plan around your goals and needs.",
     benefits: [
-      { title: "Dual pathway", body: "GLP-1 plus GIP support for appetite and metabolic health." },
-      { title: "Clinician titration", body: "Dose is adjusted to your response, not a fixed script." },
-      { title: "Muscle-aware plan", body: "Protein and resistance training guidance built into follow-up." },
+      { title: "Improves Metabolic Health", body: "Targets hunger hormones GLP-1 and GIP to significantly reduce appetite and promote sustained fat loss." },
+      { title: "Reduces Body Weight", body: "Helps regulate blood sugar levels and supports healthier insulin response over time." },
+      { title: "Curbs Cravings", body: "Slows gastric emptying so you feel fuller longer and eat less without feeling deprived." },
+    ],
+    variants: [
+      {
+        name: "Tirzepatide Injectable",
+        eyebrow: "Weekly injection",
+        detail: "Titrated dosing, adjusted as you progress.",
+        price: "From $249 / month",
+        priceAmount: "$249",
+        notes: ["4 doses / month", "Supplies included"],
+        image:
+          "https://framerusercontent.com/images/nRou5ezUCB89as5C3yZkRliVl0.png?width=769&height=979",
+      },
+      {
+        name: "Tirzepatide Sublingual",
+        eyebrow: "Daily sublingual",
+        detail: "Needle-free troche that dissolves under the tongue.",
+        price: "From $229 / month",
+        priceAmount: "$229",
+        notes: ["30 troches / month", "No needles"],
+        image:
+          "https://framerusercontent.com/images/BqEQwOsB8kfY0RMAijwLoWRAWg.png?width=963&height=651",
+      },
     ],
   },
   {
@@ -135,14 +182,18 @@ export const products: Product[] = [
     variants: [
       {
         name: "NAD+ Injectable",
+        eyebrow: "Injectable",
         detail: "Clinician-guided injectable protocol.",
         price: "From $149 / month",
+        priceAmount: "$149",
         notes: ["Provider directed"],
       },
       {
         name: "NAD+ Nasal Spray",
+        eyebrow: "Nasal spray",
         detail: "Needle-free option for at-home use.",
         price: "From $119",
+        priceAmount: "$119",
         notes: ["No needles"],
       },
     ],
@@ -222,18 +273,26 @@ export const products: Product[] = [
   {
     slug: "men-sexual-health-tadalafil",
     name: "Tadalafil",
+    seoTitle: "Tadalafil for Erectile Dysfunction Online",
     category: "sexual",
     audience: "men",
     price: "$79/mo",
     image:
-      "https://framerusercontent.com/images/pa9pIi4me0ue0YEMZpLwghozic.png?width=1024&height=587",
+      "https://framerusercontent.com/images/xiLmspoD4quCotY2Ro6T9VdAuU.png?width=1890&height=2363",
     tagline: "Daily or as-needed tadalafil after a clinician screens for safety.",
+    eyebrow: "Sexual Health",
+    compare: true,
+    disclaimer:
+      "FDA approved medication. Dispensed as a commercially manufactured, FDA approved product by a licensed U.S. pharmacy. Not compounded.",
+    highlight: "$79/month, three-month start, then cancel anytime.",
+    safety:
+      "*Do not use with any nitrate medicine, including nitroglycerin and poppers. FDA approved medication, dispensed by a licensed U.S. pharmacy.",
     description:
-      "Tadalafil is prescribed for erectile function and, when appropriate, daily low-dose use. Your provider reviews cardiac history and interacting medications first.",
+      "Want spontaneity back? Daily low-dose tadalafil is an oral tablet that supports erectile function in eligible men. Because you take a low dose every day, there's no timing a pill before the moment — you're simply ready. Your provider reviews your heart health, blood pressure, and current medications before prescribing to make sure it's a safe fit. One important note: tadalafil can't be combined with nitrate medications, as the combination can cause a dangerous drop in blood pressure.",
     benefits: [
-      { title: "Predictable access", body: "A straightforward monthly option from $79." },
-      { title: "Safety screen", body: "Nitrates and cardiac risk are checked before prescribing." },
-      { title: "Flexible use", body: "Daily low-dose or as-needed depending on your plan." },
+      { title: "Built for spontaneity", body: "Daily tadalafil may help support erectile response when sexual activity occurs." },
+      { title: "Supports erections", body: "A steady daily dose can reduce the need to time an on-demand pill." },
+      { title: "Clinical safety review", body: "Your provider reviews cardiovascular history and medication interactions before prescribing." },
     ],
   },
   {
