@@ -119,77 +119,106 @@ export function HomePage() {
         </a>
       </section>
 
-      <section className="relative overflow-hidden">
+      <section className="relative overflow-hidden rounded-t-[25px]">
         <Image
           src={assets.showUp}
           alt="A man standing beside an oversized LeaderHealth tablet embossed with the LH monogram."
-          width={1600}
-          height={900}
-          className="h-[70vh] w-full object-cover"
+          width={2720}
+          height={1536}
+          className="absolute inset-0 h-full w-full object-cover"
         />
-        <div className="absolute inset-0 flex flex-col items-center justify-end bg-gradient-to-t from-ink/70 to-transparent pb-16 text-center text-white">
-          <h2 className="text-5xl md:text-7xl">Show Up Stronger</h2>
-          <Link href="/shop-all-products" className="mt-4 underline">
-            Explore All Treatments
-          </Link>
-        </div>
-      </section>
-
-      <div className="relative bg-white">
-      <section className="grid md:grid-cols-2">
-        <div className="bg-rose/40 px-8 py-16 md:px-16">
-          <p className="text-sm uppercase tracking-wider text-taupe">Weight Loss</p>
-          <h2 className="mt-3 text-4xl">Provider-Guided Weight Loss</h2>
-          <p className="mt-4 max-w-md text-brown">
-            Physician-prescribed treatments, quarterly labs, and real clinical support — delivered to your door.
-          </p>
-          <a href={GET_STARTED_URL} className="mt-8 inline-flex rounded-full bg-ink px-5 py-2.5 text-sm text-white">
-            Get Started
-          </a>
-        </div>
-        <div className="relative min-h-[420px]">
-          <Image src={assets.pills} alt="Two round tablets and a capsule on a blush gradient background" fill className="object-cover" sizes="50vw" />
-        </div>
-        <div className="relative min-h-[480px]">
-          <Image src={assets.stretching} alt="LEADER HEALTH logo over a photo of a man stretching his shoulder" fill className="object-cover" sizes="50vw" />
-        </div>
-        <div className="bg-ink px-8 py-16 text-white md:px-16">
-          <h2 className="text-4xl">Care Built Around You</h2>
-          <p className="mt-4 max-w-md text-rose">
-            Licensed clinicians, transparent pricing, and support at every step.
-          </p>
-          <Link href="/aboutus" className="mt-8 inline-flex rounded-full bg-white px-5 py-2.5 text-sm text-ink">
-            About Us
-          </Link>
-        </div>
-      </section>
-
-      <section className="relative z-10 mx-auto w-full max-w-[1200px] -mt-16 px-4 pb-16 md:-mt-40 md:px-6 lg:-mt-[420px]">
-        <div className="grid gap-2.5 md:grid-cols-3">
-          {campaign.map((card) => (
+        <div className="relative mx-auto w-[min(1174px,calc(100%-2rem))] pb-16 pt-[72px]">
+          <h2 className="text-center font-sans text-[40px] font-medium leading-[1.1] tracking-normal text-[#331110] md:text-[56px] md:leading-[61.6px]">
+            Show Up <span className="font-serif-italic text-[40px] leading-[1.1] text-[#e43d4e] md:text-[56px] md:leading-[61.6px]">Stronger</span>
+          </h2>
+          <div className="mt-7 flex justify-center">
             <Link
-              key={card.href}
-              href={card.href}
-              className="flex min-h-[560px] w-full flex-col items-center justify-center gap-2.5 rounded-[19px] bg-[#442928] p-6 md:min-h-[860px] md:p-10"
+              href="/shop-all-products"
+              className="inline-flex rounded-[39px] bg-[#df4452] px-[26px] py-[14px] font-sans text-base font-semibold leading-[19.2px] text-[#f7f3f5]"
             >
-              <Image
-                src={card.img}
-                alt={`${card.title} ${card.sub}`}
-                width={297}
-                height={550}
-                className="h-auto w-full max-w-[297px] object-cover md:h-[550px] md:w-[297px]"
-              />
-              <h3 className="w-full font-sans text-[28px] font-medium leading-[1.2] tracking-normal text-accent md:text-[36px] md:leading-[43.2px]">
-                {card.title}
-              </h3>
-              <p className="w-full font-sans text-[18px] font-medium leading-6 tracking-normal text-accent md:text-[20px]">
-                {card.sub}
-              </p>
+              Explore All Treatments
             </Link>
-          ))}
+          </div>
+
+          <div className="mt-5 grid gap-2.5 md:grid-cols-2">
+            <article className="relative h-[280px] overflow-hidden rounded-[23px] md:h-[335px]">
+              <Image
+                src={assets.pills}
+                alt="Two round tablets and a capsule on a blush gradient background"
+                fill
+                className="object-cover"
+                sizes="(min-width: 768px) 582px, 92vw"
+              />
+              <div className="relative flex h-full flex-col justify-between px-[22px] pb-[22px] pt-10">
+                <div>
+                  <h3 className="max-w-[538px] font-sans text-[28px] font-medium leading-[1.2] tracking-normal text-[#f7f3f4] md:text-[34px] md:leading-[40.8px]">
+                    Provider-Guided Weight Loss
+                  </h3>
+                  <p className="mt-2.5 max-w-[538px] font-sans text-base leading-[19.2px] tracking-normal text-[#f7f3f4]">
+                    Physician-prescribed treatments, quarterly labs, and real clinical support — delivered to your door.
+                  </p>
+                </div>
+                <a
+                  href={GET_STARTED_URL}
+                  className="self-end rounded-[39px] bg-[#f9f9f9] px-[18px] py-[5px] text-[15px] font-medium text-ink"
+                >
+                  Get Started
+                </a>
+              </div>
+            </article>
+
+            <article className="relative h-[280px] overflow-hidden rounded-[23px] md:h-[335px]">
+              <Image
+                src={assets.stretching}
+                alt="LEADER HEALTH logo over a photo of a man stretching his shoulder"
+                fill
+                className="object-cover"
+                sizes="(min-width: 768px) 582px, 92vw"
+              />
+              <div className="relative flex h-full flex-col justify-end px-[22px] pb-[22px] pt-10">
+                <h3 className="max-w-[345px] font-sans text-[28px] font-medium leading-[40.8px] tracking-normal text-[#f7f3f4] md:text-[34px]">
+                  Care Built Around You
+                </h3>
+                <div className="mt-1 flex items-end justify-between gap-3">
+                  <p className="max-w-[345px] font-sans text-base leading-[19.2px] tracking-normal text-[#f7f3f4]">
+                    Licensed clinicians, transparent pricing, and support at every step.
+                  </p>
+                  <Link
+                    href="/aboutus"
+                    className="shrink-0 rounded-[39px] bg-[#f9f9f9] px-[18px] py-[5px] text-[15px] font-medium text-ink"
+                  >
+                    About Us
+                  </Link>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <div className="relative z-10 mt-2.5 grid gap-2.5 md:grid-cols-3">
+            {campaign.map((card) => (
+              <Link
+                key={card.href}
+                href={card.href}
+                className="flex min-h-[560px] w-full flex-col items-center justify-center gap-2.5 rounded-[19px] bg-[#442928] p-6 md:min-h-[860px] md:p-10"
+              >
+                <Image
+                  src={card.img}
+                  alt={`${card.title} ${card.sub}`}
+                  width={297}
+                  height={550}
+                  className="h-auto w-full max-w-[297px] object-cover md:h-[550px] md:w-[297px]"
+                />
+                <h3 className="w-full font-sans text-[28px] font-medium leading-[1.2] tracking-normal text-accent md:text-[36px] md:leading-[43.2px]">
+                  {card.title}
+                </h3>
+                <p className="w-full font-sans text-[18px] font-medium leading-6 tracking-normal text-accent md:text-[20px]">
+                  {card.sub}
+                </p>
+              </Link>
+            ))}
+          </div>
         </div>
       </section>
-      </div>
 
       <section className="relative overflow-hidden bg-white">
         <Image
