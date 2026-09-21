@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { labs } from "@/lib/content/products";
-import { GET_STARTED_URL } from "@/lib/content/site";
+import { LabAddToCart } from "@/components/LabAddToCart";
 import type { Metadata } from "next";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -38,9 +38,7 @@ export default async function LabPage({ params }: Props) {
           <li>30 minutes clinical view, included</li>
           <li>HSA / FSA eligible</li>
         </ul>
-        <a href={GET_STARTED_URL} className="mt-8 inline-flex rounded-full bg-ink px-6 py-3 text-sm text-white">
-          Get Started
-        </a>
+        <LabAddToCart slug={lab.slug} />
       </div>
     </section>
   );

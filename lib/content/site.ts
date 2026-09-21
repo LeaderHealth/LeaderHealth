@@ -1,6 +1,23 @@
-export const GET_STARTED_URL =
-  "https://products.leaderhealth.clinic/?quizOpen=true";
+const storefrontOrigin = (
+  process.env.NEXT_PUBLIC_STOREFRONT_ORIGIN ??
+  (process.env.NODE_ENV === "development" ? "http://localhost:5176" : "")
+).replace(/\/$/, "");
+
+export function storefrontPath(path: string) {
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  return `${storefrontOrigin}${normalized}`;
+}
+
+export const GET_STARTED_URL = "/checkout";
 export const PORTAL_URL = "https://myportal.leaderhealth.clinic/login";
+
+export function checkoutUrl(product?: string, variant?: string) {
+  const params = new URLSearchParams();
+  if (product) params.set("product", product);
+  if (variant) params.set("variant", variant);
+  const query = params.toString();
+  return query ? `/checkout?${query}` : GET_STARTED_URL;
+}
 
 export const site = {
   name: "Leader Health",

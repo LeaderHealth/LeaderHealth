@@ -1,5 +1,9 @@
+"use client";
+
 import Link from "next/link";
-import { GET_STARTED_URL } from "@/lib/content/site";
+import { getProduct } from "@/lib/content/products";
+import { cartItemFromProduct } from "@/lib/cart/items";
+import { AddToCartButton } from "@/components/cart/AddToCartButton";
 
 const blends = {
   men: [
@@ -53,7 +57,9 @@ export function SexualHealthBlends({ audience }: { audience: "men" | "women" }) 
         Personalized support for performance, arousal, and intimacy. Your licensed provider will determine the formula that is right for you.
       </p>
       <div className="mt-8 grid gap-6 md:grid-cols-2">
-        {blends[audience].map((blend) => (
+        {blends[audience].map((blend) => {
+          const product = getProduct(blend.href.replace("/products/", ""));
+          return (
           <article key={blend.href + blend.name} className="rounded-3xl bg-white p-6">
             <p className="text-xs uppercase tracking-wider text-accent">{blend.badge}</p>
             <h3 className="mt-2 text-2xl">{blend.name}</h3>
@@ -66,15 +72,20 @@ export function SexualHealthBlends({ audience }: { audience: "men" | "women" }) 
               ))}
             </ul>
             <div className="mt-6 flex flex-wrap gap-3">
-              <a href={GET_STARTED_URL} className="rounded-full bg-ink px-4 py-2 text-sm text-white">
-                {blend.cta}
-              </a>
+              {product ? (
+                <AddToCartButton
+                  item={cartItemFromProduct(product)}
+                  className="w-auto px-5"
+                  label="ADD TO CART"
+                />
+              ) : null}
               <Link href={blend.href} className="rounded-full px-4 py-2 text-sm underline">
                 Learn more
               </Link>
             </div>
           </article>
-        ))}
+          );
+        })}
       </div>
     </section>
   );

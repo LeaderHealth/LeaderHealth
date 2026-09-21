@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { assets, GET_STARTED_URL, PORTAL_URL, site } from "@/lib/content/site";
 import { products } from "@/lib/content/products";
+import { CartButton } from "./cart/CartButton";
 
 const menLinks = [
   { href: "/shop-men-products", label: "Shop All Men" },
@@ -102,7 +103,9 @@ function UserIcon() {
 
 export function Header() {
   const pathname = usePathname();
-  const overlay = pathname === "/" || pathname.startsWith("/products/");
+  const overlay =
+    pathname === "/" || pathname.startsWith("/products/") || pathname.startsWith("/checkout");
+  const onCheckout = pathname.startsWith("/checkout");
   const [hero, setHero] = useState(overlay);
   const [mobile, setMobile] = useState(false);
   const [search, setSearch] = useState(false);
@@ -139,9 +142,9 @@ export function Header() {
 
   return (
     <>
-      <header className="pointer-events-none fixed inset-x-0 top-3 z-50 flex justify-center px-3 md:top-4">
+      <header className="pointer-events-none fixed inset-x-0 top-2 z-50 flex justify-center px-2 sm:top-3 sm:px-3 md:top-4">
         <div
-          className={`pointer-events-auto relative flex w-full max-w-[1120px] items-center gap-3 rounded-full px-3 py-2 text-white shadow-lg shadow-ink/10 sm:px-5 ${shell}`}
+          className={`pointer-events-auto relative flex w-full max-w-[1120px] min-w-0 items-center gap-1.5 rounded-full px-2 py-1.5 text-white shadow-lg shadow-ink/10 sm:gap-3 sm:px-5 sm:py-2 ${shell}`}
         >
           {hero ? (
             <>
@@ -153,21 +156,24 @@ export function Header() {
                 </Link>
               </div>
               <button
-                className="px-2 text-sm md:hidden"
+                className="shrink-0 px-1.5 text-xs sm:px-2 sm:text-sm md:hidden"
                 onClick={() => setMobile((v) => !v)}
                 type="button"
                 aria-label="Menu"
               >
                 Menu
               </button>
-              <Link href="/" className="absolute left-1/2 shrink-0 -translate-x-1/2">
+              <Link
+                href="/"
+                className="flex min-w-0 flex-1 justify-center md:absolute md:left-1/2 md:flex-none md:-translate-x-1/2"
+              >
                 <Image
                   src={assets.logo}
                   alt={site.name}
                   width={180}
                   height={20}
-                  className="h-auto w-[180px] max-w-[180px] object-contain brightness-0 invert"
-                  style={{ width: 180, height: "auto", maxWidth: 180 }}
+                  className="h-3.5 w-auto max-w-[108px] object-contain brightness-0 invert sm:h-4 sm:max-w-[140px] md:h-5 md:max-w-[180px]"
+                  style={{ width: "auto", height: "auto" }}
                   priority
                 />
               </Link>
@@ -181,41 +187,46 @@ export function Header() {
                   <SearchIcon />
                 </button>
                 <Dropdown label="Who We Are" items={whoLinks} />
-                <a
-                  href={PORTAL_URL}
-                  aria-label="Patient portal"
-                  className="grid h-8 w-8 place-items-center"
-                >
+                <a href={PORTAL_URL} aria-label="Patient portal" className="grid h-8 w-8 place-items-center">
                   <UserIcon />
                 </a>
-                <a
-                  href={GET_STARTED_URL}
-                  className="rounded-full bg-white px-4 py-1.5 text-[13px] font-medium text-ink"
-                >
-                  Get Started
-                </a>
+                <CartButton />
+                {!onCheckout ? (
+                  <a
+                    href={GET_STARTED_URL}
+                    className="rounded-full bg-white px-4 py-1.5 text-[13px] font-medium text-ink"
+                  >
+                    Get Started
+                  </a>
+                ) : null}
               </div>
-              <a
-                href={GET_STARTED_URL}
-                className="ml-auto rounded-full bg-white px-3 py-1.5 text-xs font-medium text-ink md:hidden"
-              >
-                Start
-              </a>
+              <div className="ml-auto flex shrink-0 items-center gap-1.5 md:hidden">
+                <CartButton compact />
+                {!onCheckout ? (
+                  <a
+                    href={GET_STARTED_URL}
+                    className="rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-ink sm:px-3 sm:py-1.5 sm:text-xs"
+                  >
+                    Start
+                  </a>
+                ) : null}
+              </div>
             </>
           ) : (
             <>
-              <Link href="/" className="shrink-0 pl-1">
+              <Link href="/" className="min-w-0 shrink pl-0.5 sm:pl-1">
                 <Image
                   src={assets.logo}
                   alt={site.name}
                   width={160}
                   height={18}
-                  className="h-4 w-auto brightness-0 invert"
+                  className="h-3.5 w-auto max-w-[108px] object-contain brightness-0 invert sm:h-4 sm:max-w-[140px] md:max-w-none"
+                  style={{ width: "auto", height: "auto" }}
                   priority
                 />
               </Link>
               <button
-                className="px-2 text-sm md:hidden"
+                className="shrink-0 px-1.5 text-xs sm:px-2 sm:text-sm md:hidden"
                 onClick={() => setMobile((v) => !v)}
                 type="button"
                 aria-label="Menu"
@@ -240,19 +251,27 @@ export function Header() {
                 >
                   <SearchIcon />
                 </button>
-                <a
-                  href={GET_STARTED_URL}
-                  className="rounded-full bg-white px-4 py-1.5 text-[13px] font-medium text-ink"
-                >
-                  Get Started
-                </a>
+                <CartButton />
+                {!onCheckout ? (
+                  <a
+                    href={GET_STARTED_URL}
+                    className="rounded-full bg-white px-4 py-1.5 text-[13px] font-medium text-ink"
+                  >
+                    Get Started
+                  </a>
+                ) : null}
               </div>
-              <a
-                href={GET_STARTED_URL}
-                className="ml-auto rounded-full bg-white px-3 py-1.5 text-xs font-medium text-ink md:hidden"
-              >
-                Start
-              </a>
+              <div className="ml-auto flex shrink-0 items-center gap-1.5 md:hidden">
+                <CartButton compact />
+                {!onCheckout ? (
+                  <a
+                    href={GET_STARTED_URL}
+                    className="rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-ink sm:px-3 sm:py-1.5 sm:text-xs"
+                  >
+                    Start
+                  </a>
+                ) : null}
+              </div>
             </>
           )}
         </div>

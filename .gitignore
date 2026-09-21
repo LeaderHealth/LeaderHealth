@@ -32,6 +32,17 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+!storefront/.env.example
+!firebase/functions/.env.example
+
+# nested apps
+storefront/node_modules
+storefront/dist
+dashboard/node_modules
+dashboard/dist
+firebase/functions/node_modules
+public/storefront
 
 # vercel
 .vercel
@@ -39,6 +50,3 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-.vercel
-.env*
