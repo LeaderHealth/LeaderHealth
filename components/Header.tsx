@@ -87,6 +87,19 @@ function SearchIcon() {
   );
 }
 
+function BrandLogo() {
+  return (
+    <Image
+      src={assets.logo}
+      alt={site.name}
+      width={180}
+      height={20}
+      className="h-3.5 w-auto max-w-[108px] object-contain object-left brightness-0 invert sm:h-4 sm:max-w-[140px] md:h-5 md:max-w-[180px]"
+      priority
+    />
+  );
+}
+
 function UserIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden>
@@ -144,7 +157,7 @@ export function Header() {
     <>
       <header className="pointer-events-none fixed inset-x-0 top-2 z-50 flex justify-center px-2 sm:top-3 sm:px-3 md:top-4">
         <div
-          className={`pointer-events-auto relative flex w-full max-w-[1120px] min-w-0 items-center gap-1.5 rounded-full px-2 py-1.5 text-white shadow-lg shadow-ink/10 sm:gap-3 sm:px-5 sm:py-2 ${shell}`}
+          className={`pointer-events-auto relative flex w-full max-w-[1120px] min-w-0 items-center gap-1.5 overflow-hidden rounded-full px-2 py-1.5 text-white shadow-lg shadow-ink/10 sm:gap-3 sm:px-5 sm:py-2 ${shell}`}
         >
           {hero ? (
             <>
@@ -167,15 +180,7 @@ export function Header() {
                 href="/"
                 className="flex min-w-0 flex-1 justify-center md:absolute md:left-1/2 md:flex-none md:-translate-x-1/2"
               >
-                <Image
-                  src={assets.logo}
-                  alt={site.name}
-                  width={180}
-                  height={20}
-                  className="h-3.5 w-auto max-w-[108px] object-contain brightness-0 invert sm:h-4 sm:max-w-[140px] md:h-5 md:max-w-[180px]"
-                  style={{ width: "auto", height: "auto" }}
-                  priority
-                />
+                <BrandLogo />
               </Link>
               <div className="ml-auto hidden items-center gap-3 md:flex">
                 <button
@@ -214,16 +219,8 @@ export function Header() {
             </>
           ) : (
             <>
-              <Link href="/" className="min-w-0 shrink pl-0.5 sm:pl-1">
-                <Image
-                  src={assets.logo}
-                  alt={site.name}
-                  width={160}
-                  height={18}
-                  className="h-3.5 w-auto max-w-[108px] object-contain brightness-0 invert sm:h-4 sm:max-w-[140px] md:max-w-none"
-                  style={{ width: "auto", height: "auto" }}
-                  priority
-                />
+              <Link href="/" className="min-w-0 shrink-0 pl-0.5 sm:pl-1">
+                <BrandLogo />
               </Link>
               <button
                 className="shrink-0 px-1.5 text-xs sm:px-2 sm:text-sm md:hidden"
