@@ -364,7 +364,7 @@ export function CheckoutForm({ catalog, seedProduct, seedVariant }: CheckoutForm
     }
   }
 
-  const paymentReady = nmi?.configured ? collectReady : Boolean(nmi) && !nmi.chargesEnabled;
+  const paymentReady = nmi ? (nmi.configured ? collectReady : !nmi.chargesEnabled) : false;
   const submitDisabled =
     pending || !ready || items.length === 0 || blockedByScreening || blockedByState || !paymentReady;
 
