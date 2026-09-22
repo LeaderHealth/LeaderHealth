@@ -11,7 +11,7 @@ export function CartButton({ compact = false }: { compact?: boolean }) {
       type="button"
       aria-label={visibleCount ? `Open cart, ${visibleCount} items` : "Open cart"}
       onClick={openCart}
-      className={`relative grid place-items-center rounded-full bg-white/15 ${compact ? "h-7 w-7 sm:h-8 sm:w-8" : "h-8 w-10"}`}
+      className={`relative grid place-items-center rounded-full bg-white/15 transition-[transform,background-color] duration-200 ease-out hover:scale-[1.06] hover:bg-white/25 active:scale-95 ${compact ? "h-7 w-7 sm:h-8 sm:w-8" : "h-8 w-10"}`}
     >
       <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden>
         <path
