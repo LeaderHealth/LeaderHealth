@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Product } from "@/lib/content/products";
-import { GET_STARTED_URL } from "@/lib/content/site";
+import { ProductHeroCta } from "./ProductHeroCta";
 
 const defaultDisclaimer =
   "Compounded medication. Not FDA approved. This medicine is prepared for you by a licensed U.S. compounding pharmacy on your prescriber's order. FDA does not review compounded medications for safety, effectiveness, or quality before they are sold. Leader Health is not a pharmacy and does not make or dispense medications. The pharmacy that fills your prescription is identified on the medication you receive.";
@@ -17,8 +17,6 @@ export function productEyebrow(product: Product) {
 }
 
 export function ProductHero({ product }: { product: Product }) {
-  const cta = product.variants ? "CHOOSE YOUR TREATMENT" : "START NOW";
-  const ctaHref = product.variants ? "#find-what-fits" : GET_STARTED_URL;
   const badge = product.badge ?? (product.disclaimer?.toLowerCase().includes("fda approved") ? undefined : "Medication");
 
   return (
@@ -62,19 +60,7 @@ export function ProductHero({ product }: { product: Product }) {
             {product.highlight && <p className="font-medium">{product.highlight}</p>}
             {product.safety && <p className="text-[13px] text-white/90">{product.safety}</p>}
           </div>
-          <a
-            href={ctaHref}
-            className="mt-7 flex w-full items-center justify-center gap-2 rounded-[10px] bg-[#dcd4bd] py-3.5 text-xs font-medium tracking-[0.08em] text-ink"
-          >
-            {cta}
-            {product.variants ? (
-              <span aria-hidden className="text-[10px]">
-                ▾
-              </span>
-            ) : (
-              <span aria-hidden>→</span>
-            )}
-          </a>
+          <ProductHeroCta product={product} />
           <Link
             href="/legal/important-safety-information"
             className="mt-3 block text-center font-serif-italic text-sm text-white/90"

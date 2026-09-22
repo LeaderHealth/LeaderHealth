@@ -1,6 +1,7 @@
 import Image from "next/image";
 import type { Product } from "@/lib/content/products";
-import { GET_STARTED_URL } from "@/lib/content/site";
+import { cartItemFromProduct } from "@/lib/cart/items";
+import { AddToCartButton } from "@/components/cart/AddToCartButton";
 
 function SyringeIcon() {
   return (
@@ -83,12 +84,11 @@ export function ProductVariants({ product }: { product: Product }) {
                   </span>{" "}
                   / month
                 </p>
-                <a
-                  href={GET_STARTED_URL}
-                  className="mt-4 inline-flex text-sm text-white/90 underline decoration-white/30 underline-offset-4"
-                >
-                  Start now
-                </a>
+                <AddToCartButton
+                  item={cartItemFromProduct(product, v)}
+                  className="mt-4"
+                  label="ADD TO CART"
+                />
               </article>
             );
           })}
