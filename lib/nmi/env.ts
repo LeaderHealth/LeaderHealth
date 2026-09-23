@@ -6,7 +6,7 @@ const DEFAULT_GATEWAY = "https://secure.nmi.com";
 function parseEnvFile(relative: string) {
   const values: Record<string, string> = {};
   try {
-    const source = fs.readFileSync(path.join(process.cwd(), relative), "utf8");
+    const source = fs.readFileSync(path.join(/*turbopackIgnore: true*/ process.cwd(), relative), "utf8");
     for (const raw of source.split(/\r?\n/)) {
       const line = raw.trim();
       if (!line || line.startsWith("#")) continue;
@@ -39,7 +39,7 @@ function labThreeEnv() {
 
 function labThreeGatewayFromConfig() {
   try {
-    const source = fs.readFileSync(path.join(process.cwd(), "firebase/functions/config.js"), "utf8");
+    const source = fs.readFileSync(path.join(/*turbopackIgnore: true*/ process.cwd(), "firebase/functions/config.js"), "utf8");
     return source.match(/NMI_GATEWAY_BASE_URL\s*\|\|\s*"([^"]+)"/)?.[1]?.trim() || "";
   } catch {
     return "";

@@ -70,6 +70,7 @@ export const assets = {
     "https://framerusercontent.com/images/X7bsiY1oJsGU4I96M8TqKDKmvY.png?width=1620&height=2880",
   shopHero:
     "https://framerusercontent.com/images/cCfn27Xv7UDHhfu2ClpobxLqv0.png?width=2496&height=1664",
+  contactHero: "/images/contact-hero.jpg",
 };
 
 export const careSteps = [
