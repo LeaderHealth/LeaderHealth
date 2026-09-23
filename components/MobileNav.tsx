@@ -33,10 +33,14 @@ const whoRows = [
   { href: "/blogs", label: "Blogs" },
 ];
 
-const rootTiles = [
-  { label: "Women", image: assets.stretching, screen: { name: "audience", audience: "women" } as const },
-  { label: "Men", image: assets.weightlifting, screen: { name: "audience", audience: "men" } as const },
-  { label: "Who Are We?", image: assets.showUp, screen: { name: "who" } as const },
+type RootTile =
+  | { label: string; image: string; screen: { name: "who" } | { name: "audience"; audience: Audience } }
+  | { label: string; image: string; href: string };
+
+const rootTiles: RootTile[] = [
+  { label: "Women", image: assets.stretching, screen: { name: "audience", audience: "women" } },
+  { label: "Men", image: assets.weightlifting, screen: { name: "audience", audience: "men" } },
+  { label: "Who Are We?", image: assets.showUp, screen: { name: "who" } },
   { label: "Shop All Products", image: assets.shopHero, href: "/shop-all-products" },
   {
     label: "Peptides",
@@ -803,7 +807,7 @@ function MobileScreenView({
             </>
           );
 
-          if (tile.href) {
+          if ("href" in tile) {
             return (
               <div key={tile.label} style={motion}>
                 <Link href={tile.href} className={className}>
@@ -813,13 +817,14 @@ function MobileScreenView({
             );
           }
 
+          const { screen } = tile;
           return (
             <div key={tile.label} style={motion}>
               <button
                 type="button"
                 onClick={() => {
-                  if (tile.screen.name === "who") onWho();
-                  else onAudience(tile.screen.audience);
+                  if (screen.name === "who") onWho();
+                  else onAudience(screen.audience);
                 }}
                 className={`${className} text-left`}
               >
