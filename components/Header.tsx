@@ -388,19 +388,6 @@ function SearchIcon() {
   );
 }
 
-function BrandLogo() {
-  return (
-    <Image
-      src={assets.logo}
-      alt={site.name}
-      width={180}
-      height={20}
-      className="h-3.5 w-auto max-w-[108px] object-contain object-left brightness-0 invert sm:h-4 sm:max-w-[140px] md:h-5 md:max-w-[180px]"
-      priority
-    />
-  );
-}
-
 function UserIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden>
@@ -529,7 +516,7 @@ export function Header() {
         }`}
       >
         <div
-          className={`pointer-events-auto relative flex w-full max-w-[1120px] min-w-0 items-center gap-1.5 overflow-hidden rounded-full px-2 py-1.5 text-white shadow-lg shadow-ink/10 sm:gap-3 sm:px-5 sm:py-2 ${shell}`}
+          className={`pointer-events-auto relative flex w-full max-w-[1120px] min-w-0 items-center gap-1.5 rounded-full px-2 py-1.5 text-white shadow-lg shadow-ink/10 transition-colors duration-300 sm:gap-3 sm:px-5 sm:py-2 ${shell}`}
         >
           {/* LEFT NAV */}
           <div className="hidden items-center gap-5 md:flex">
@@ -651,53 +638,19 @@ export function Header() {
                 href={GET_STARTED_URL}
                 className="rounded-full bg-white px-4 py-1.5 text-[13px] font-medium text-ink transition-transform duration-200 ease-out hover:scale-[1.04] active:scale-[0.96]"
               >
-                <BrandLogo />
-              </Link>
-              <div className="ml-auto hidden items-center gap-3 md:flex">
-                <button
-                  type="button"
-                  aria-label="Search"
-                  className="grid h-8 w-11 place-items-center rounded-full bg-white/15"
-                  onClick={() => setSearch(true)}
-                >
-                  <SearchIcon />
-                </button>
-                <Dropdown label="Who We Are" items={whoLinks} />
-                <a href={PORTAL_URL} aria-label="Patient portal" className="grid h-8 w-8 place-items-center">
-                  <UserIcon />
-                </a>
-                <CartButton />
-                {!onCheckout ? (
-                  <a
-                    href={GET_STARTED_URL}
-                    className="rounded-full bg-white px-4 py-1.5 text-[13px] font-medium text-ink"
-                  >
-                    Get Started
-                  </a>
-                ) : null}
-              </div>
-              <div className="ml-auto flex shrink-0 items-center gap-1.5 md:hidden">
-                <CartButton compact />
-                {!onCheckout ? (
-                  <a
-                    href={GET_STARTED_URL}
-                    className="rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-ink sm:px-3 sm:py-1.5 sm:text-xs"
-                  >
-                    Start
-                  </a>
-                ) : null}
-              </div>
-            </>
-          ) : (
-            <>
-              <Link href="/" className="min-w-0 shrink-0 pl-0.5 sm:pl-1">
-                <BrandLogo />
-              </Link>
-              <button
-                className="shrink-0 px-1.5 text-xs sm:px-2 sm:text-sm md:hidden"
-                onClick={() => setMobile((v) => !v)}
-                type="button"
-                aria-label="Menu"
+                Get Started
+              </a>
+            ) : null}
+          </div>
+
+          {/* MOBILE RIGHT */}
+          <div className="ml-auto flex shrink-0 items-center gap-1.5 md:hidden">
+            <CartButton compact />
+
+            {!onCheckout ? (
+              <a
+                href={GET_STARTED_URL}
+                className="rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-ink transition-transform duration-200 ease-out hover:scale-[1.04] active:scale-[0.96] sm:px-3 sm:py-1.5 sm:text-xs"
               >
                 Start
               </a>
