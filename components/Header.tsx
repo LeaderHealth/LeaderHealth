@@ -45,52 +45,10 @@ const whoLinks = [
   { href: "/blogs", label: "Learn" },
 ];
 
+type MegaId = "men" | "women" | "who";
+
 function cardKey(card: FeatureCard) {
   return `${card.href}|${card.heading}|${card.image}`;
-}
-
-function Dropdown({
-  label,
-  items,
-}: {
-  label: string;
-  items: { href: string; label: string }[];
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div
-      className="relative"
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
-    >
-      <button
-        className="flex items-center gap-1 text-[13px] text-white transition-transform duration-200 ease-out hover:scale-[1.05] active:scale-[0.96]"
-        onClick={() => setOpen((v) => !v)}
-        type="button"
-      >
-        {label}
-        <svg viewBox="0 0 12 8" className="h-2 w-2.5 opacity-80" fill="none" aria-hidden>
-          <path d="M1 1.5 6 6.5 11 1.5" stroke="currentColor" strokeWidth="1.4" />
-        </svg>
-      </button>
-      {open && (
-        <div className="absolute left-0 top-full z-50 min-w-[220px] pt-2">
-          <div className="rounded-2xl bg-white py-2 text-ink shadow-lg">
-            {items.map((item) => (
-              <Link
-                key={item.href + item.label}
-                href={item.href}
-                className="block px-4 py-2 text-sm transition-colors duration-150 hover:bg-background active:bg-background/80"
-                onClick={() => setOpen(false)}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
 }
 
 function DocumentIcon() {
@@ -109,6 +67,13 @@ function DocumentIcon() {
 
 const megaLinkClass =
   "text-left text-[15px] font-semibold text-white transition-opacity duration-150 hover:opacity-80";
+const megaHoverBridgeClass = "absolute top-full z-50 pt-[24px]";
+const megaPanelSurfaceClass =
+  "overflow-hidden rounded-[16px] bg-[linear-gradient(to_bottom_right,rgba(22,6,8,0.94),rgba(145,16,16,0.86))] shadow-xl backdrop-blur-md transition-[opacity,transform] duration-200 ease-out [@starting-style]:translate-y-2 [@starting-style]:opacity-0";
+
+function megaPanelMotionClass(fading: boolean) {
+  return fading ? "translate-y-2 opacity-0" : "translate-y-0 opacity-100";
+}
 
 function FeatureCardLink({
   card,
@@ -117,28 +82,65 @@ function FeatureCardLink({
   card: FeatureCard;
   className?: string;
 }) {
+  const amount = card.price.match(/\$[\d,]+(?:\.\d+)?/)?.[0] ?? card.price;
+
   return (
-    <Link
-      href={card.href}
-      className={`flex flex-col rounded-[12px] bg-white p-2 text-ink ${className ?? ""}`}
+    <div
+      className={`flex flex-col overflow-hidden rounded-[14px] bg-[#F7F3F5] p-2 font-sans ${className ?? ""}`}
     >
-      <div className="relative min-h-0 flex-1 overflow-hidden rounded-[10px] bg-ink">
+      <div className="relative h-[56%] shrink-0 overflow-hidden rounded-[10px] bg-[#331110]">
         {card.image ? (
           <Image
             src={card.image}
             alt={card.heading}
             fill
-            className="object-cover object-center"
+            className="object-contain object-center"
             sizes="320px"
           />
         ) : null}
+        <span className="absolute top-2.5 left-2.5 rounded-full bg-[#F7F3F5] px-2.5 py-1 text-[11px] font-semibold tracking-[0.02em] text-[#331110]">
+          Prescription required
+        </span>
       </div>
-      <div className="h-[126px] shrink-0 px-2 pb-2 pt-3">
-        <p className="line-clamp-2 text-[28px] leading-none font-bold">{card.heading}</p>
-        <p className="mt-1 line-clamp-2 text-[17px] leading-snug">{card.subline}</p>
-        <p className="mt-1 truncate text-[14px]">{card.price}</p>
+
+      <div className="flex flex-col gap-1.5 px-2 pt-2.5">
+        <p className="line-clamp-2 text-[22px] font-extrabold leading-[1.05] tracking-[-0.02em] text-[#331110]">
+          {card.heading}
+        </p>
+        {card.subline ? (
+          <p className="line-clamp-2 text-[13px] leading-[1.4] font-normal text-[#5A3431]">{card.subline}</p>
+        ) : null}
       </div>
-    </Link>
+
+      <div className="mx-2 mt-2 h-px bg-[#DBD4BD]" />
+
+      <div className="mt-2 flex items-end justify-between gap-2 px-2 pb-1">
+        <p className="min-w-0">
+          <span className="block text-[10px] font-semibold tracking-[0.06em] text-[#6B4A48] uppercase">
+            Starting at
+          </span>
+          <span className="mt-0.5 flex items-baseline gap-1">
+            <span className="text-[22px] leading-none font-extrabold text-[#331110]">{amount}</span>
+            <span className="text-[13px] font-medium text-[#6B4A48]">/mo</span>
+          </span>
+        </p>
+        <Link
+          href={card.href}
+          className="inline-flex h-10 min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-full bg-[#331110] px-3.5 text-[13px] font-semibold text-[#F7F3F5] transition-colors duration-200 ease-out hover:bg-[#5A3431] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#331110]"
+        >
+          Get started
+          <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" aria-hidden>
+            <path
+              d="M3 8h9M8.5 4.5 12.5 8 8.5 11.5"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </Link>
+      </div>
+    </div>
   );
 }
 
@@ -254,11 +256,9 @@ function MegaMenu({
         </svg>
       </button>
       {open ? (
-        <div className={`absolute top-full z-50 pt-[24px] ${shift ? "left-0 translate-x-6" : "left-0"}`}>
+        <div className={`${megaHoverBridgeClass} ${shift ? "left-0 translate-x-6" : "left-0"}`}>
           <div
-            className={`flex h-[460px] w-[660px] overflow-hidden rounded-[16px] bg-[linear-gradient(to_bottom_right,rgba(22,6,8,0.94),rgba(145,16,16,0.86))] shadow-xl backdrop-blur-md transition-[opacity,transform] duration-200 ease-out ${
-              fading ? "translate-y-2 opacity-0" : "translate-y-0 opacity-100"
-            } [@starting-style]:translate-y-2 [@starting-style]:opacity-0`}
+            className={`flex h-[460px] w-[660px] ${megaPanelSurfaceClass} ${megaPanelMotionClass(fading)}`}
           >
             <div className="flex w-[45%] flex-col px-6 py-6">
               {view === "root" || !activeCategory ? (
@@ -379,6 +379,51 @@ function MegaMenu({
   );
 }
 
+function WhoWeAreMenu({
+  open,
+  fading,
+  onOpen,
+  onClose,
+}: {
+  open: boolean;
+  fading: boolean;
+  onOpen: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="relative" onMouseEnter={onOpen} onMouseLeave={onClose}>
+      <button
+        className="flex items-center gap-1 text-[13px] text-white transition-transform duration-200 ease-out hover:scale-[1.05] active:scale-[0.96]"
+        onClick={() => (open ? onClose() : onOpen())}
+        type="button"
+      >
+        Who We Are
+        <svg
+          viewBox="0 0 12 8"
+          className={`h-2 w-2.5 opacity-80 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+          fill="none"
+          aria-hidden
+        >
+          <path d="M1 1.5 6 6.5 11 1.5" stroke="currentColor" strokeWidth="1.4" />
+        </svg>
+      </button>
+      {open ? (
+        <div className={`${megaHoverBridgeClass} left-0`}>
+          <div className={`w-[260px] px-6 py-6 ${megaPanelSurfaceClass} ${megaPanelMotionClass(fading)}`}>
+            <nav className="flex flex-col gap-3.5">
+              {whoLinks.map((item) => (
+                <Link key={item.href + item.label} href={item.href} className={megaLinkClass}>
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function SearchIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden>
@@ -412,8 +457,8 @@ export function Header() {
   const [search, setSearch] = useState(false);
   const [query, setQuery] = useState("");
   const [navVisible, setNavVisible] = useState(true);
-  const [mega, setMega] = useState<"men" | "women" | null>(null);
-  const [shownMega, setShownMega] = useState<"men" | "women" | null>(null);
+  const [mega, setMega] = useState<MegaId | null>(null);
+  const [shownMega, setShownMega] = useState<MegaId | null>(null);
   const [megaFading, setMegaFading] = useState(false);
   const lastScrollY = useRef(0);
   const megaCloseTimer = useRef(0);
@@ -445,12 +490,12 @@ export function Header() {
     setShownMega(mega);
   }, [mega, shownMega]);
 
-  function openMega(id: "men" | "women") {
+  function openMega(id: MegaId) {
     window.clearTimeout(megaCloseTimer.current);
     setMega(id);
   }
 
-  function closeMega(id: "men" | "women") {
+  function closeMega(id: MegaId) {
     window.clearTimeout(megaCloseTimer.current);
     megaCloseTimer.current = window.setTimeout(() => {
       setMega((current) => (current === id ? null : current));
@@ -617,9 +662,11 @@ export function Header() {
 
           {/* RIGHT NAV */}
           <div className="ml-auto hidden items-center gap-3 md:flex">
-            <Dropdown
-              label="Who We Are"
-              items={whoLinks}
+            <WhoWeAreMenu
+              open={shownMega === "who"}
+              fading={shownMega === "who" && megaFading}
+              onOpen={() => openMega("who")}
+              onClose={() => closeMega("who")}
             />
 
             <a
