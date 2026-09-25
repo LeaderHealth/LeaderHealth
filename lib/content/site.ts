@@ -71,6 +71,15 @@ export const assets = {
   shopHero:
     "https://framerusercontent.com/images/cCfn27Xv7UDHhfu2ClpobxLqv0.png?width=2496&height=1664",
   contactHero: "/images/contact-hero.jpg",
+  energyHero: "/images/energy-longevity-hero.jpg",
+  energyMeasurement: "/images/energy-longevity-measurement.jpg",
+  energyWalkthrough: "/images/walkthrough-hiking.jpg",
+  nadVial: "/images/walkthrough-nad.jpg",
+  glutathioneVial: "/images/walkthrough-glutathione.jpg",
+  mattersEnergy: "/images/matters-energy.jpg",
+  mattersAging: "/images/matters-aging.jpg",
+  mattersSleep: "/images/matters-sleep.jpg",
+  mattersRecovery: "/images/matters-recovery.jpg",
 };
 
 export const careSteps = [

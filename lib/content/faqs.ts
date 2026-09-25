@@ -181,11 +181,26 @@ export const tadalafilFaqs = [
     a: "No insurance is required. Care is cash-pay with transparent monthly pricing.",
   },
   {
-    q: "Can I use my HSA or FSA?",
-    a: "Yes — HSA and FSA cards can typically be used for eligible clinical services and prescribed treatments. Check with your plan administrator.",
-  },
-  {
     q: "What if I have another questions?",
     a: "Email help@myleaderhealth.com or call (254) 244-0104. Existing patients can also message through the patient portal.",
+  },
+];
+
+export const energyLongevityFaqs = [
+  {
+    q: "What is Energy & Longevity care?",
+    a: "Energy & Longevity care takes a personalized approach to understanding your health, symptoms, and goals. A licensed provider reviews your health history and other relevant information to determine which options, if any, may be appropriate for you.",
+  },
+  {
+    q: "What can Energy & Longevity care support?",
+    a: "Depending on your individual needs, your provider may discuss options related to areas such as cellular energy and metabolic support, sleep and restoration, recovery, body composition, and overall health. Whether a particular therapy is appropriate for you is a clinical decision made with your provider, and individual results vary.",
+  },
+  {
+    q: "Do I need lab work before starting?",
+    a: "Lab testing may be used to give your provider a clearer picture of your baseline health, help inform treatment decisions, and provide information that can be monitored over time. If you already have recent lab results, your provider may be able to review them; otherwise, testing can be ordered when appropriate.",
+  },
+  {
+    q: "How is my treatment plan determined?",
+    a: "Your plan is based on a clinical evaluation of your health history, symptoms, goals, and any relevant lab work. A licensed provider determines whether treatment is medically appropriate and which options fit your individual needs.",
   },
 ];
