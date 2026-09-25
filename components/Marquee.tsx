@@ -51,22 +51,31 @@ function PlusIcon() {
   );
 }
 
-export function Marquee() {
+function TickerSequence({ hidden = false }: { hidden?: boolean }) {
   const items = [...tickerItems, ...tickerItems, ...tickerItems];
   return (
-    <div className="overflow-hidden bg-ticker py-3.5 text-white">
-      <div className="marquee-track flex w-max items-center gap-10 pr-10 text-[15px]">
-        {items.map((item, i) => {
-          const Icon = icons[i % icons.length];
-          return (
-            <span key={item + i} className="flex items-center gap-3 whitespace-nowrap">
-              <span className="grid h-9 w-9 place-items-center rounded-full bg-accent text-white">
-                <Icon />
-              </span>
-              {item}
+    <div className="flex shrink-0 items-center gap-10 pr-10" aria-hidden={hidden || undefined}>
+      {items.map((item, i) => {
+        const Icon = icons[i % icons.length];
+        return (
+          <span key={item + i} className="flex items-center gap-3 whitespace-nowrap">
+            <span className="grid h-9 w-9 place-items-center rounded-full bg-accent text-white">
+              <Icon />
             </span>
-          );
-        })}
+            {item}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+export function Marquee() {
+  return (
+    <div className="overflow-hidden bg-ticker py-3.5 text-white">
+      <div className="marquee-track flex w-max text-[15px]">
+        <TickerSequence />
+        <TickerSequence hidden />
       </div>
     </div>
   );
