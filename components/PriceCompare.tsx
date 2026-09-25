@@ -117,7 +117,6 @@ export function PriceCompare() {
                       maskSize: "100% 100%",
                       WebkitMaskRepeat: "no-repeat",
                       maskRepeat: "no-repeat",
-                      WebkitMaskMode: "luminance",
                       maskMode: "luminance",
                     }}
                   />
