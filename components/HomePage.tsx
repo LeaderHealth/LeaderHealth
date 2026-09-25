@@ -2,11 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { assets, careSteps, designedFor, GET_STARTED_URL } from "@/lib/content/site";
+import { assets, careSteps, designedFor, GET_STARTED_URL, testimonials } from "@/lib/content/site";
 import { labs } from "@/lib/content/products";
 import { HeroVideo } from "./HeroVideo";
 import { Marquee } from "./Marquee";
-import { Testimonials } from "./Testimonials";
+import { TestimonialsVideoSection } from "./TestimonialsVideoSection";
 import { ArticleLibrary } from "./ArticleLibrary";
 
 const campaign = [
@@ -369,7 +369,19 @@ export function HomePage() {
         </div>
       </section>
 
-      <Testimonials variant="featured" />
+      <TestimonialsVideoSection
+        videoSrc={assets.heroVideoAlt}
+        posterSrc={assets.weightlifting}
+        testimonials={testimonials.map((item) => ({
+          quote: item.quote,
+          name: item.name,
+          role: item.treatment,
+          image: item.image,
+        }))}
+        showDots
+        draggable
+        initialIndex={1}
+      />
       <ArticleLibrary
         slugs={[
           "semaglutide-vs-tirzepatide-comparison-guide",
