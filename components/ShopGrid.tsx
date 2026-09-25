@@ -39,7 +39,7 @@ export function ShopGrid({
   }, [audience, who, active, query]);
 
   return (
-    <div>
+    <div className="w-full">
       <section className="relative flex min-h-[70vh] items-end overflow-hidden bg-ink pb-16 pt-32 text-white">
         <Image
           src={assets.shopHero}
@@ -104,8 +104,8 @@ export function ShopGrid({
           ))}
         </div>
         {children}
-        <LabsTeaser />
       </div>
+      <LabsTeaser />
     </div>
   );
 }

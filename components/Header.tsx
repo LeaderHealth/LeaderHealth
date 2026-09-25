@@ -729,10 +729,7 @@ export function Header() {
               </Link>
             ))}
 
-            <a
-              href={GET_STARTED_URL}
-              className="block text-lg text-accent"
-            >
+            <a href={GET_STARTED_URL} className="block text-lg text-accent">
               Get Started
             </a>
           </nav>
