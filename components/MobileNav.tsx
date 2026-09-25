@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
-import { assets, PORTAL_URL, site } from "@/lib/content/site";
+import { assets, GET_STARTED_URL, PORTAL_URL, site } from "@/lib/content/site";
 import { getProduct, products } from "@/lib/content/products";
 import {
   findMegaCategory,
@@ -15,8 +15,6 @@ import {
   womenDefaultCard,
   womenMegaCategories,
 } from "@/lib/content/nav";
-
-const MOBILE_GET_STARTED_URL = "https://products.leaderhealth.clinic?quizOpen=true";
 
 type Audience = "men" | "women";
 
@@ -757,7 +755,7 @@ export function MobileNav({
               Log In / Sign Up
             </a>
             <a
-              href={MOBILE_GET_STARTED_URL}
+              href={GET_STARTED_URL}
               className={`flex min-h-12 items-center justify-center rounded-full bg-white text-[15px] font-medium text-ink ${tapFocus} focus-visible:outline-ink`}
             >
               Get Started

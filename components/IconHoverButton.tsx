@@ -77,8 +77,9 @@ export function IconHoverButton({
   );
 
   if (href.startsWith("http") || href.startsWith("mailto") || href.startsWith("tel")) {
+    const newTab = href.startsWith("http") && href !== GET_STARTED_URL;
     return (
-      <a href={href} className={cls} target={href.startsWith("http") ? "_blank" : undefined} rel="noreferrer">
+      <a href={href} className={cls} target={newTab ? "_blank" : undefined} rel={newTab ? "noreferrer" : undefined}>
         {content}
       </a>
     );

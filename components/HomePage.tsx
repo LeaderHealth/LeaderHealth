@@ -376,7 +376,7 @@ export function HomePage() {
           <p className="mt-5 max-w-[640px] text-base font-medium leading-snug md:text-lg">
             Personalized, clinician-led protocols that help you lose weight, build strength, and live with more energy—no guesswork.
           </p>
-          <Link
+          <a
             href={GET_STARTED_URL}
             className="group relative mt-6 inline-flex h-[47px] min-w-[188px] items-center justify-center self-start overflow-hidden rounded-[39px] bg-[#DF4452] px-[26px] py-[14px] font-sans text-[16px] leading-none font-semibold tracking-[-0.02em] text-[#F7F3F5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
           >
@@ -393,7 +393,7 @@ export function HomePage() {
             >
               →
             </span>
-          </Link>
+          </a>
         </div>
       </section>
       <Marquee />

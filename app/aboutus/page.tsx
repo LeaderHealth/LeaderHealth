@@ -1,5 +1,4 @@
 import Image from "next/image";
-import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
 import type { Metadata } from "next";
 import { assets, GET_STARTED_URL } from "@/lib/content/site";
@@ -183,12 +182,12 @@ export default function AboutPage() {
               At Leader Health, the goal is simple: to make advanced medical therapies accessible, safe, and
               effective for everyone.
             </p>
-            <Link
+            <a
               href={GET_STARTED_URL}
               className="mt-4 inline-flex items-center justify-center rounded-[39px] bg-[#DF4452] px-[26px] py-[14px] font-sans text-[16px] leading-none font-semibold tracking-[-0.02em] text-[#F7F3F5] transition-colors duration-200 hover:bg-[#E43D4E] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#331110]"
             >
               Get Started
-            </Link>
+            </a>
           </div>
 
           <div className="grid flex-1 grid-cols-2 gap-3">

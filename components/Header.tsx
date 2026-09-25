@@ -124,8 +124,8 @@ function FeatureCardLink({
             <span className="text-[13px] font-medium text-[#6B4A48]">/mo</span>
           </span>
         </p>
-        <Link
-          href={card.href}
+        <a
+          href={GET_STARTED_URL}
           className="inline-flex h-10 min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-full bg-[#331110] px-3.5 text-[13px] font-semibold text-[#F7F3F5] transition-colors duration-200 ease-out hover:bg-[#5A3431] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#331110]"
         >
           Get started
@@ -138,7 +138,7 @@ function FeatureCardLink({
               strokeLinejoin="round"
             />
           </svg>
-        </Link>
+        </a>
       </div>
     </div>
   );

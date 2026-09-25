@@ -8,7 +8,7 @@ export function storefrontPath(path: string) {
   return `${storefrontOrigin}${normalized}`;
 }
 
-export const GET_STARTED_URL = "/checkout";
+export const GET_STARTED_URL = "https://products.leaderhealth.clinic/?quizOpen=true";
 export const PORTAL_URL = "https://myportal.leaderhealth.clinic/login";
 
 export function checkoutUrl(product?: string, variant?: string) {
@@ -16,7 +16,7 @@ export function checkoutUrl(product?: string, variant?: string) {
   if (product) params.set("product", product);
   if (variant) params.set("variant", variant);
   const query = params.toString();
-  return query ? `/checkout?${query}` : GET_STARTED_URL;
+  return query ? `/checkout?${query}` : "/checkout";
 }
 
 export const site = {
