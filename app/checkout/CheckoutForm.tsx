@@ -43,6 +43,7 @@ import {
   requestPaymentToken,
   warmGateway,
 } from "@/lib/nmi/collect";
+import { ALLOW_LIVE_NMI_CHARGES } from "@/lib/nmi/flags";
 
 export type CheckoutFormProps = {
   catalog: CatalogItem[];
@@ -95,12 +96,20 @@ export function CheckoutForm({ catalog, seedProduct, seedVariant }: CheckoutForm
   const [collectReady, setCollectReady] = useState(false);
   const [fieldsMounted, setFieldsMounted] = useState(false);
   const dobBounds = useMemo(() => getDobInputBounds(), []);
+  const steps = useMemo(
+    () => (ALLOW_LIVE_NMI_CHARGES ? CHECKOUT_STEPS : CHECKOUT_STEPS.filter((step) => step.id !== "payment")),
+    [],
+  );
 
   useEffect(() => {
     setFieldsMounted(true);
   }, []);
 
   useEffect(() => {
+    if (!ALLOW_LIVE_NMI_CHARGES) {
+      setNmi({ configured: false, tokenizationKey: "", gatewayBaseUrl: "", chargesEnabled: false });
+      return;
+    }
     let cancelled = false;
     fetch("/api/checkout/nmi")
       .then((response) => response.json())
@@ -127,7 +136,7 @@ export function CheckoutForm({ catalog, seedProduct, seedVariant }: CheckoutForm
   }, []);
 
   useEffect(() => {
-    if (!fieldsMounted || !nmi?.configured) return;
+    if (!ALLOW_LIVE_NMI_CHARGES || !fieldsMounted || !nmi?.configured) return;
     let cancelled = false;
     setCollectReady(false);
     loadCollectJs(nmi.tokenizationKey, nmi.gatewayBaseUrl)
@@ -191,7 +200,7 @@ export function CheckoutForm({ catalog, seedProduct, seedVariant }: CheckoutForm
   const screeningDone = isScreeningComplete(screeningAnswer, consent);
   const shippingDone = isShippingComplete(shipping) && !blockedByState && !(hasLabs && isPoBoxAddress(shipping.address1));
   const subtotal = cartSubtotal(items);
-  const payLabel = subtotal > 0 ? `PAY ${formatPrice(subtotal)}` : "COMPLETE CHECKOUT";
+  const payLabel = ALLOW_LIVE_NMI_CHARGES && subtotal > 0 ? `PAY ${formatPrice(subtotal)}` : "COMPLETE CHECKOUT";
 
   function patchContact(update: Partial<ContactState>) {
     setContact((current) => ({ ...current, ...update }));
@@ -236,8 +245,8 @@ export function CheckoutForm({ catalog, seedProduct, seedVariant }: CheckoutForm
     }
     if (id === "shipping" && blockedByState) return;
     setErrors({});
-    const index = CHECKOUT_STEPS.findIndex((step) => step.id === id);
-    const following = CHECKOUT_STEPS[index + 1];
+    const index = steps.findIndex((step) => step.id === id);
+    const following = steps[index + 1];
     if (following) setOpenStep(following.id);
   }
 
@@ -246,7 +255,7 @@ export function CheckoutForm({ catalog, seedProduct, seedVariant }: CheckoutForm
     setError(null);
     setCardError(null);
 
-    for (const step of CHECKOUT_STEPS) {
+    for (const step of steps) {
       if (step.id === "payment") continue;
       const next = stepErrors(step.id);
       if (Object.keys(next).length) {
@@ -279,21 +288,23 @@ export function CheckoutForm({ catalog, seedProduct, seedVariant }: CheckoutForm
       return;
     }
 
-    if (nmi?.configured) {
-      if (!collectReady) {
+    if (ALLOW_LIVE_NMI_CHARGES) {
+      if (nmi?.configured) {
+        if (!collectReady) {
+          setOpenStep("payment");
+          setError("Payment is still loading. Please wait a moment and try again.");
+          return;
+        }
+      } else if (!nmi || nmi.chargesEnabled) {
         setOpenStep("payment");
-        setError("Payment is still loading. Please wait a moment and try again.");
+        setCardError("Payment fields could not load. Refresh the page, or contact support if it keeps happening.");
         return;
       }
-    } else if (!nmi || nmi.chargesEnabled) {
-      setOpenStep("payment");
-      setCardError("Payment fields could not load. Refresh the page, or contact support if it keeps happening.");
-      return;
     }
 
     setPending(true);
     let token = "";
-    if (nmi?.configured) {
+    if (ALLOW_LIVE_NMI_CHARGES && nmi?.configured) {
       try {
         token = await requestPaymentToken();
       } catch (tokenErr) {
@@ -364,7 +375,7 @@ export function CheckoutForm({ catalog, seedProduct, seedVariant }: CheckoutForm
     }
   }
 
-  const paymentReady = nmi ? (nmi.configured ? collectReady : !nmi.chargesEnabled) : false;
+  const paymentReady = !ALLOW_LIVE_NMI_CHARGES || (nmi ? (nmi.configured ? collectReady : !nmi.chargesEnabled) : false);
   const submitDisabled =
     pending || !ready || items.length === 0 || blockedByScreening || blockedByState || !paymentReady;
 
@@ -380,15 +391,15 @@ export function CheckoutForm({ catalog, seedProduct, seedVariant }: CheckoutForm
         <div className="mb-4">
           <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.14em] text-white/80">
             <span>
-              Step {CHECKOUT_STEPS.findIndex((step) => step.id === openStep) + 1} of {CHECKOUT_STEPS.length}
+              Step {steps.findIndex((step) => step.id === openStep) + 1} of {steps.length}
             </span>
-            <span>{CHECKOUT_STEPS.find((step) => step.id === openStep)?.title}</span>
+            <span>{steps.find((step) => step.id === openStep)?.title}</span>
           </div>
           <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/20">
             <div
               className="h-full bg-[#dcd4bd] transition-all"
               style={{
-                width: `${((CHECKOUT_STEPS.findIndex((step) => step.id === openStep) + 1) / CHECKOUT_STEPS.length) * 100}%`,
+                width: `${((steps.findIndex((step) => step.id === openStep) + 1) / steps.length) * 100}%`,
               }}
             />
           </div>
@@ -650,13 +661,18 @@ export function CheckoutForm({ catalog, seedProduct, seedVariant }: CheckoutForm
                       Try a different shipping state, or remove the hormone therapy item to continue.
                     </p>
                   </div>
-                ) : (
+                ) : ALLOW_LIVE_NMI_CHARGES ? (
                   <ContinueButton onClick={() => advance("shipping")}>Continue to payment</ContinueButton>
+                ) : (
+                  <p className="mt-4 text-sm text-white/75">
+                    No card is required yet. Submit below and a clinician will review your request first.
+                  </p>
                 )}
               </>
             ) : null}
           </AccordionCard>
 
+          {ALLOW_LIVE_NMI_CHARGES ? (
           <AccordionCard
             step={4}
             title="Payment"
@@ -715,6 +731,7 @@ export function CheckoutForm({ catalog, seedProduct, seedVariant }: CheckoutForm
               request before anything is prescribed.
             </p>
           </AccordionCard>
+          ) : null}
         </div>
 
         {error ? <p className="mt-4 text-sm text-[#ffd6d6]">{error}</p> : null}
@@ -727,7 +744,7 @@ export function CheckoutForm({ catalog, seedProduct, seedVariant }: CheckoutForm
           <span aria-hidden>→</span>
         </button>
         <p className="mt-3 text-center text-sm text-white/75">
-          By paying you agree to our{" "}
+          {ALLOW_LIVE_NMI_CHARGES ? "By paying you agree to our " : "By submitting you agree to our "}
           <Link href="/legal/terms-of-service" target="_blank" className="underline">
             terms of service
           </Link>

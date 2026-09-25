@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { CheckoutForm } from "./CheckoutForm";
 import { listCatalog } from "@/lib/genhealth/catalog";
 import { genHealthConfigured } from "@/lib/genhealth/client";
+import { ALLOW_LIVE_NMI_CHARGES } from "@/lib/nmi/flags";
 
 export const metadata: Metadata = { title: "Checkout" };
 export const runtime = "nodejs";
@@ -46,7 +47,9 @@ export default async function CheckoutPage({ searchParams }: Props) {
           Checkout <span className="font-serif-italic">with care</span>
         </h1>
         <p className="mt-4 max-w-xl text-white/85">
-          Four short steps — your details, screening, shipping, and payment. A clinician reviews every request before anything is prescribed.
+          {ALLOW_LIVE_NMI_CHARGES
+            ? "Four short steps — your details, screening, shipping, and payment. A clinician reviews every request before anything is prescribed."
+            : "Three short steps — your details, screening, and shipping. A clinician reviews every request before anything is prescribed."}
         </p>
         {loadError ? (
           <p className="mt-10 rounded-[28px] bg-white/14 p-6 backdrop-blur-md">{loadError}</p>
