@@ -38,6 +38,9 @@ const featured = [
     name: "Sermorelin",
     price: "Starting From $149/mo",
     image: "https://framerusercontent.com/images/Nxmvv0V7wJmcL1463SseCeRgh8.png?width=1080&height=1350",
+    imageWidth: 1080,
+    imageHeight: 1350,
+    assetSlot: "h-[301px]",
   },
   {
     href: "/products/weight-loss-semaglutide#find-what-fits",
@@ -45,6 +48,9 @@ const featured = [
     name: "Semaglutide Sublingual",
     price: "Starting From $129/mo",
     image: "https://framerusercontent.com/images/b3PWiNtSYn3mtcfXtpoTxo38Zo.png?width=1024&height=1024",
+    imageWidth: 1024,
+    imageHeight: 1024,
+    assetSlot: "h-[241px]",
   },
   {
     href: "/products/men-sexual-health-tadalafil",
@@ -52,8 +58,72 @@ const featured = [
     name: "Tadalafil",
     price: "$79/mo",
     image: "https://framerusercontent.com/images/pa9pIi4me0ue0YEMZpLwghozic.png?width=1024&height=587",
+    imageWidth: 1024,
+    imageHeight: 587,
+    assetSlot: "h-[138px]",
   },
 ];
+
+function FeaturedCareTile({ item }: { item: (typeof featured)[number] }) {
+  const assetRef = useRef<HTMLDivElement>(null);
+
+  function startFloat() {
+    const asset = assetRef.current;
+    if (!asset || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    asset.style.transition = "none";
+    asset.style.transform = "";
+    asset.style.animation = "featuredTileFloat 2.5s ease-in-out infinite";
+  }
+
+  function stopFloat() {
+    const asset = assetRef.current;
+    if (!asset || !asset.style.animation) return;
+    const current = getComputedStyle(asset).transform;
+    asset.style.animation = "none";
+    asset.style.transform = current === "none" ? "translateY(0) rotate(0deg)" : current;
+    requestAnimationFrame(() => {
+      asset.style.transition = "transform 450ms ease-in-out";
+      asset.style.transform = "translateY(0) rotate(0deg)";
+    });
+  }
+
+  return (
+    <Link
+      href={item.href}
+      onMouseEnter={startFloat}
+      onMouseLeave={stopFloat}
+      className="group relative flex min-h-[380px] flex-col items-center justify-between rounded-2xl px-4 pb-10 pt-12 text-center md:min-h-[458px] md:pt-[60px]"
+    >
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-0 rounded-2xl opacity-100 transition-opacity duration-300 ease-[ease] group-hover:opacity-[0.78]"
+        style={{ background: "linear-gradient(211deg, rgb(220, 212, 189) 0%, rgb(228, 79, 93) 100%)" }}
+      />
+      <p className="relative z-10 font-sans text-[25px] font-bold leading-[30px] tracking-normal text-ink">
+        {item.category}
+      </p>
+      <div className={`relative z-10 flex w-full max-w-[241px] items-center justify-center ${item.assetSlot}`}>
+        <div ref={assetRef} className="flex h-[88%] w-[88%] items-center justify-center">
+          <Image
+            src={item.image}
+            alt={item.name}
+            width={item.imageWidth}
+            height={item.imageHeight}
+            className="h-auto max-h-full w-auto max-w-full object-contain"
+          />
+        </div>
+      </div>
+      <div className="relative z-10">
+        <p className="font-sans text-[22px] font-semibold leading-[22px] tracking-normal text-white">
+          {item.name}
+        </p>
+        <p className="mt-1.5 font-sans text-[17px] font-normal leading-[20.4px] tracking-normal text-white">
+          {item.price}
+        </p>
+      </div>
+    </Link>
+  );
+}
 
 const designedForCards = [
   ...designedFor,
@@ -758,7 +828,7 @@ export function HomePage() {
         />
         <div className="px-4 py-12 sm:px-6 sm:py-16 md:px-8 md:py-20 lg:px-10 lg:py-24">
         <div
-          className="relative mx-auto max-w-[1129px] overflow-hidden rounded-[36px] px-6 pb-9 pt-16 md:px-12 md:pt-[84px]"
+          className="relative mx-auto max-w-[1129px] overflow-hidden rounded-[36px] border border-white/55 px-6 pb-9 pt-16 md:px-12 md:pt-[84px]"
           style={{
             backgroundColor: "transparent",
             backgroundImage:
@@ -784,7 +854,7 @@ export function HomePage() {
                 {designedForCards.map((item, i) => (
                   <div
                     key={`${item}-${i}`}
-                    className="flex items-start gap-[11px] rounded-[13px] bg-white/20 p-4 md:p-5"
+                    className="flex items-start gap-[11px] rounded-[13px] border border-white/55 bg-white/20 p-4 md:p-5"
                   >
                     <Image src={assets.check} alt="" width={28} height={28} className="mt-0.5 h-7 w-7 shrink-0" />
                     <p className="font-sans text-[14px] leading-[16.8px] tracking-normal text-[#f7f3f4]">{item}</p>
@@ -793,16 +863,18 @@ export function HomePage() {
               </div>
             </div>
             <div className="relative mx-auto hidden min-h-[520px] w-full max-w-[579px] lg:block">
-              <Image
-                src="https://framerusercontent.com/images/Nxmvv0V7wJmcL1463SseCeRgh8.png?width=1080&height=1350"
-                alt="Sermorelin injection vial"
-                width={579}
-                height={677}
-                className="h-auto w-full object-contain"
-              />
-              <p className="absolute bottom-16 right-4 flex h-16 items-center justify-center rounded-[13px] bg-black/50 px-6 font-serif-italic text-[28px] leading-[33.6px] text-[#f7f3f4] md:right-8">
-                More by design.
-              </p>
+              <div className="sermorelin-vial-float relative">
+                <Image
+                  src="https://framerusercontent.com/images/Nxmvv0V7wJmcL1463SseCeRgh8.png?width=1080&height=1350"
+                  alt="Sermorelin injection vial"
+                  width={579}
+                  height={677}
+                  className="sermorelin-vial h-auto w-full object-contain"
+                />
+                <p className="absolute bottom-16 right-4 flex h-16 items-center justify-center rounded-[13px] bg-black/50 px-6 font-serif-italic text-[28px] leading-[33.6px] text-[#f7f3f4] md:right-8">
+                  More by design.
+                </p>
+              </div>
             </div>
           </div>
 
@@ -815,31 +887,7 @@ export function HomePage() {
             </p>
             <div className="mx-auto mt-10 grid max-w-[980px] gap-4 md:grid-cols-3">
               {featured.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="flex min-h-[380px] flex-col items-center justify-between rounded-2xl px-4 pb-10 pt-12 text-center md:min-h-[458px] md:pt-[60px]"
-                  style={{ background: "linear-gradient(211deg, rgb(220, 212, 189) 0%, rgb(228, 79, 93) 100%)" }}
-                >
-                  <p className="font-sans text-[25px] font-bold leading-[30px] tracking-normal text-ink">
-                    {item.category}
-                  </p>
-                  <Image
-                    src={item.image}
-                    alt={item.name}
-                    width={241}
-                    height={241}
-                    className="h-auto w-full max-w-[241px] object-contain"
-                  />
-                  <div>
-                    <p className="font-sans text-[22px] font-semibold leading-[22px] tracking-normal text-white">
-                      {item.name}
-                    </p>
-                    <p className="mt-1.5 font-sans text-[17px] font-normal leading-[20.4px] tracking-normal text-white">
-                      {item.price}
-                    </p>
-                  </div>
-                </Link>
+                <FeaturedCareTile key={item.href} item={item} />
               ))}
             </div>
           </div>

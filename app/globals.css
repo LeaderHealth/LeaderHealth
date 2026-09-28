@@ -88,6 +88,84 @@ h3.font-sans,
   }
 }
 
+.sermorelin-vial-float {
+  animation: vialFloatY 2.5s ease-in-out 0.3s infinite alternate;
+  will-change: transform;
+}
+
+.sermorelin-vial {
+  transform: rotate(-10deg);
+  animation: vialTilt 2.5s ease-in-out 0.3s infinite alternate;
+  will-change: transform;
+}
+
+@keyframes vialFloatY {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-14px);
+  }
+}
+
+@keyframes vialTilt {
+  from {
+    transform: rotate(-10deg);
+  }
+  to {
+    transform: rotate(-8deg);
+  }
+}
+
+@keyframes vialFloatYMobile {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes vialTiltMobile {
+  from {
+    transform: rotate(-10deg);
+  }
+  to {
+    transform: rotate(-9deg);
+  }
+}
+
+@media (max-width: 767px) {
+  .sermorelin-vial-float {
+    animation-name: vialFloatYMobile;
+  }
+
+  .sermorelin-vial {
+    animation-name: vialTiltMobile;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sermorelin-vial-float {
+    animation: none;
+  }
+
+  .sermorelin-vial {
+    animation: none;
+    transform: rotate(-10deg);
+  }
+}
+
+@keyframes featuredTileFloat {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-9px) rotate(1.5deg);
+  }
+}
+
 .lh-mobile-nav-scroll {
   overflow-x: hidden;
   overflow-y: auto;
