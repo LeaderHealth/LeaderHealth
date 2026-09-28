@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
-import { assets, PORTAL_URL, site } from "@/lib/content/site";
+import { assets, GET_STARTED_URL, PORTAL_URL, site } from "@/lib/content/site";
 import { getProduct, products } from "@/lib/content/products";
 import {
   findMegaCategory,
@@ -15,8 +15,6 @@ import {
   womenDefaultCard,
   womenMegaCategories,
 } from "@/lib/content/nav";
-
-const MOBILE_GET_STARTED_URL = "https://products.leaderhealth.clinic?quizOpen=true";
 
 type Audience = "men" | "women";
 
@@ -357,11 +355,28 @@ export function MobileNav({
   const shellRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const phaseTimer = useRef(0);
+  const onCloseRef = useRef(onClose);
   const reducedMotion = usePrefersReducedMotion();
+  const reducedMotionRef = useRef(reducedMotion);
   const [phase, setPhase] = useState<NavPhase>(open ? "open" : "closed");
+  const [trackedOpen, setTrackedOpen] = useState(open);
+  const [closeNotifiesParent, setCloseNotifiesParent] = useState(false);
   const [screen, setScreen] = useState<MobileScreen>({ name: "root" });
   const [query, setQuery] = useState("");
   const [fade, setFade] = useState<ScrollFade>("none");
+
+  if (open !== trackedOpen) {
+    setTrackedOpen(open);
+    if (open && phase === "closed") {
+      setCloseNotifiesParent(false);
+      setPhase("opening");
+    } else if (!open && (phase === "open" || phase === "opening")) {
+      setCloseNotifiesParent(false);
+      setPhase("closing");
+    }
+  }
+
+  const scrollFade = phase === "closed" ? "none" : fade;
 
   const busy = phase === "opening" || phase === "closing";
   const expanded = phase === "opening" || phase === "open";
@@ -369,13 +384,6 @@ export function MobileNav({
   const revealed = phase !== "closed";
   const intro = phase === "opening" && !reducedMotion;
   const showBar = visible || phase !== "closed";
-
-  function resetMenu() {
-    setScreen({ name: "root" });
-    setQuery("");
-    setFade("none");
-    if (scrollRef.current) scrollRef.current.scrollTop = 0;
-  }
 
   function updateFade() {
     const el = scrollRef.current;
@@ -386,36 +394,41 @@ export function MobileNav({
     setFade(readScrollFade(el));
   }
 
-  function beginOpen() {
-    window.clearTimeout(phaseTimer.current);
-    setPhase("opening");
-    phaseTimer.current = window.setTimeout(() => {
-      setPhase("open");
-      toggleRef.current?.focus();
-    }, reducedMotion ? REDUCED_MS : OPEN_MS);
+  function beginClose(notifyParent: boolean) {
+    setCloseNotifiesParent(notifyParent);
+    setPhase("closing");
   }
 
-  function beginClose(notifyParent: boolean) {
-    window.clearTimeout(phaseTimer.current);
-    setPhase("closing");
-    phaseTimer.current = window.setTimeout(() => {
-      setPhase("closed");
-      resetMenu();
-      toggleRef.current?.focus();
-      if (notifyParent) onClose();
-    }, reducedMotion ? REDUCED_MS : CLOSE_MS);
-  }
+  useEffect(() => {
+    onCloseRef.current = onClose;
+    reducedMotionRef.current = reducedMotion;
+  });
 
   useEffect(() => {
     return () => window.clearTimeout(phaseTimer.current);
   }, []);
 
   useEffect(() => {
-    if (open && phase === "closed") beginOpen();
-    if (!open && (phase === "open" || phase === "opening")) beginClose(false);
-    // phase/begin* are intentionally omitted; this syncs parent intent only
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+    if (phase !== "opening" && phase !== "closing") return;
+    const ms = reducedMotionRef.current ? REDUCED_MS : phase === "opening" ? OPEN_MS : CLOSE_MS;
+    const notify = closeNotifiesParent;
+    const timer = window.setTimeout(() => {
+      if (phase === "opening") {
+        setPhase("open");
+        toggleRef.current?.focus();
+        return;
+      }
+      setPhase("closed");
+      setScreen({ name: "root" });
+      setQuery("");
+      setFade("none");
+      if (scrollRef.current) scrollRef.current.scrollTop = 0;
+      toggleRef.current?.focus();
+      if (notify) onCloseRef.current();
+    }, ms);
+    phaseTimer.current = timer;
+    return () => window.clearTimeout(timer);
+  }, [phase, closeNotifiesParent]);
 
   const pageLocked = phase !== "closed";
 
@@ -494,7 +507,6 @@ export function MobileNav({
     if (!el) return;
     if (phase === "closed") {
       el.scrollTop = 0;
-      setFade("none");
       return;
     }
     if (phase === "opening" || phase === "open") {
@@ -504,10 +516,7 @@ export function MobileNav({
 
   useEffect(() => {
     const el = scrollRef.current;
-    if (!el || phase === "closed" || phase === "closing") {
-      if (phase === "closed") setFade("none");
-      return;
-    }
+    if (!el || phase === "closed" || phase === "closing") return;
 
     const sync = () => setFade(readScrollFade(el));
     const frame = window.requestAnimationFrame(sync);
@@ -690,7 +699,7 @@ export function MobileNav({
         >
           <div
             ref={scrollRef}
-            data-fade={fade}
+            data-fade={scrollFade}
             onScroll={updateFade}
             className={`lh-mobile-nav-scroll min-h-0 min-w-0 flex-1 ${menuPad} pb-10`}
           >
@@ -757,7 +766,7 @@ export function MobileNav({
               Log In / Sign Up
             </a>
             <a
-              href={MOBILE_GET_STARTED_URL}
+              href={GET_STARTED_URL}
               className={`flex min-h-12 items-center justify-center rounded-full bg-white text-[15px] font-medium text-ink ${tapFocus} focus-visible:outline-ink`}
             >
               Get Started

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { PORTAL_URL } from "@/lib/content/site";
 import { CHECKOUT_SUCCESS_KEY } from "@/lib/genhealth/types";
@@ -20,18 +20,33 @@ const NEXT_STEPS = [
   { title: "Discreet delivery", body: "Medication ships in plain packaging to your address." },
 ];
 
+let successRaw: string | null | undefined;
+let successPayload: SuccessPayload | null = null;
+
+function readSuccessPayload() {
+  try {
+    const raw = sessionStorage.getItem(CHECKOUT_SUCCESS_KEY);
+    if (raw === successRaw) return successPayload;
+    successRaw = raw;
+    successPayload = raw ? (JSON.parse(raw) as SuccessPayload) : null;
+  } catch {
+    successRaw = null;
+    successPayload = null;
+  }
+  return successPayload;
+}
+
+function subscribeSuccess() {
+  return () => {};
+}
+
+function getEmptySuccess() {
+  return null;
+}
+
 export function SuccessView() {
   const { clear } = useCart();
-  const [payload, setPayload] = useState<SuccessPayload | null>(null);
-
-  useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem(CHECKOUT_SUCCESS_KEY);
-      if (raw) setPayload(JSON.parse(raw) as SuccessPayload);
-    } catch {
-      setPayload(null);
-    }
-  }, []);
+  const payload = useSyncExternalStore(subscribeSuccess, readSuccessPayload, getEmptySuccess);
 
   useEffect(() => {
     if (payload) clear();

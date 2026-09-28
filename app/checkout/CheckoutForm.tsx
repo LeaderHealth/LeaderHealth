@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -65,6 +65,17 @@ const emptyConsent: ConsentState = {
   marketing: false,
 };
 
+const NMI_UNAVAILABLE = {
+  configured: false,
+  tokenizationKey: "",
+  gatewayBaseUrl: "",
+  chargesEnabled: false,
+};
+
+function subscribeMounted() {
+  return () => {};
+}
+
 function isLabSlug(slug: string) {
   return labs.some((lab) => lab.slug === slug) || slug.startsWith("labs-");
 }
@@ -86,15 +97,13 @@ export function CheckoutForm({ catalog, seedProduct, seedVariant }: CheckoutForm
   const [cardError, setCardError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [pending, setPending] = useState(false);
-  const [seeded, setSeeded] = useState(false);
-  const [nmi, setNmi] = useState<{
-    configured: boolean;
-    tokenizationKey: string;
-    gatewayBaseUrl: string;
-    chargesEnabled: boolean;
-  } | null>(null);
-  const [collectReady, setCollectReady] = useState(false);
-  const [fieldsMounted, setFieldsMounted] = useState(false);
+  const seededRef = useRef(false);
+  const [nmi, setNmi] = useState<typeof NMI_UNAVAILABLE | null>(ALLOW_LIVE_NMI_CHARGES ? null : NMI_UNAVAILABLE);
+  const [collectKey, setCollectKey] = useState<string | null>(null);
+  const fieldsMounted = useSyncExternalStore(subscribeMounted, () => true, () => false);
+  const collectReady = Boolean(
+    nmi?.configured && collectKey === `${nmi.tokenizationKey}|${nmi.gatewayBaseUrl}`,
+  );
   const dobBounds = useMemo(() => getDobInputBounds(), []);
   const steps = useMemo(
     () => (ALLOW_LIVE_NMI_CHARGES ? CHECKOUT_STEPS : CHECKOUT_STEPS.filter((step) => step.id !== "payment")),
@@ -102,14 +111,7 @@ export function CheckoutForm({ catalog, seedProduct, seedVariant }: CheckoutForm
   );
 
   useEffect(() => {
-    setFieldsMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!ALLOW_LIVE_NMI_CHARGES) {
-      setNmi({ configured: false, tokenizationKey: "", gatewayBaseUrl: "", chargesEnabled: false });
-      return;
-    }
+    if (!ALLOW_LIVE_NMI_CHARGES) return;
     let cancelled = false;
     fetch("/api/checkout/nmi")
       .then((response) => response.json())
@@ -128,7 +130,7 @@ export function CheckoutForm({ catalog, seedProduct, seedVariant }: CheckoutForm
         else setCardError("Payment fields could not load. Refresh the page, or contact support if it keeps happening.");
       })
       .catch(() => {
-        if (!cancelled) setNmi({ configured: false, tokenizationKey: "", gatewayBaseUrl: "", chargesEnabled: false });
+        if (!cancelled) setNmi(NMI_UNAVAILABLE);
       });
     return () => {
       cancelled = true;
@@ -138,7 +140,7 @@ export function CheckoutForm({ catalog, seedProduct, seedVariant }: CheckoutForm
   useEffect(() => {
     if (!ALLOW_LIVE_NMI_CHARGES || !fieldsMounted || !nmi?.configured) return;
     let cancelled = false;
-    setCollectReady(false);
+    const key = `${nmi.tokenizationKey}|${nmi.gatewayBaseUrl}`;
     loadCollectJs(nmi.tokenizationKey, nmi.gatewayBaseUrl)
       .then(async () => {
         if (cancelled) return;
@@ -159,11 +161,11 @@ export function CheckoutForm({ catalog, seedProduct, seedVariant }: CheckoutForm
         });
       })
       .then(() => {
-        if (!cancelled) setCollectReady(true);
+        if (!cancelled) setCollectKey(key);
       })
       .catch((err) => {
         if (cancelled) return;
-        setCollectReady(false);
+        setCollectKey(null);
         setCardError(err instanceof Error ? err.message : INVALID_KEY_MESSAGE);
       });
     return () => {
@@ -172,7 +174,7 @@ export function CheckoutForm({ catalog, seedProduct, seedVariant }: CheckoutForm
   }, [fieldsMounted, nmi]);
 
   useEffect(() => {
-    if (!ready || seeded || !seedProduct) return;
+    if (!ready || seededRef.current || !seedProduct) return;
     const already = items.some(
       (item) => item.slug === seedProduct && (!seedVariant || item.variant === seedVariant),
     );
@@ -180,8 +182,8 @@ export function CheckoutForm({ catalog, seedProduct, seedVariant }: CheckoutForm
       const seededItem = cartItemFromSlug(seedProduct, seedVariant);
       if (seededItem) addItem({ ...seededItem, quantity: 1 }, { open: false });
     }
-    setSeeded(true);
-  }, [addItem, items, ready, seedProduct, seedVariant, seeded]);
+    seededRef.current = true;
+  }, [addItem, items, ready, seedProduct, seedVariant]);
 
   const selected = useMemo(() => {
     const list = Array.isArray(catalog) ? catalog : [];

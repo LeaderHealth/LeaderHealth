@@ -124,8 +124,8 @@ function FeatureCardLink({
             <span className="text-[13px] font-medium text-[#6B4A48]">/mo</span>
           </span>
         </p>
-        <Link
-          href={card.href}
+        <a
+          href={GET_STARTED_URL}
           className="inline-flex h-10 min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-full bg-[#331110] px-3.5 text-[13px] font-semibold text-[#F7F3F5] transition-colors duration-200 ease-out hover:bg-[#5A3431] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#331110]"
         >
           Get started
@@ -138,7 +138,7 @@ function FeatureCardLink({
               strokeLinejoin="round"
             />
           </svg>
-        </Link>
+        </a>
       </div>
     </div>
   );
@@ -215,29 +215,6 @@ function MegaMenu({
   defaultCard: FeatureCard;
   featureLabel: string;
 }) {
-  const [view, setView] = useState("root");
-  const [longevityOpen, setLongevityOpen] = useState(false);
-  const [hovered, setHovered] = useState<FeatureCard | null>(null);
-
-  useEffect(() => {
-    if (!open) {
-      setView("root");
-      setLongevityOpen(false);
-      setHovered(null);
-    }
-  }, [open]);
-
-  const activeCategory = categories.find((category) => category.id === view);
-  const lockedCard =
-    view === "root" || !activeCategory ? defaultCard : activeCategory.card;
-  const card = hovered ?? lockedCard;
-
-  function openDrill(id: string) {
-    setView(id);
-    setLongevityOpen(false);
-    setHovered(null);
-  }
-
   return (
     <div className="relative" onMouseEnter={onOpen} onMouseLeave={onClose}>
       <button
@@ -256,6 +233,49 @@ function MegaMenu({
         </svg>
       </button>
       {open ? (
+        <MegaMenuPanel
+          shift={shift}
+          fading={fading}
+          categories={categories}
+          shopAll={shopAll}
+          defaultCard={defaultCard}
+          featureLabel={featureLabel}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function MegaMenuPanel({
+  shift,
+  fading,
+  categories,
+  shopAll,
+  defaultCard,
+  featureLabel,
+}: {
+  shift?: boolean;
+  fading: boolean;
+  categories: MegaCategory[];
+  shopAll: { href: string; label: string };
+  defaultCard: FeatureCard;
+  featureLabel: string;
+}) {
+  const [view, setView] = useState("root");
+  const [longevityOpen, setLongevityOpen] = useState(false);
+  const [hovered, setHovered] = useState<FeatureCard | null>(null);
+  const activeCategory = categories.find((category) => category.id === view);
+  const lockedCard =
+    view === "root" || !activeCategory ? defaultCard : activeCategory.card;
+  const card = hovered ?? lockedCard;
+
+  function openDrill(id: string) {
+    setView(id);
+    setLongevityOpen(false);
+    setHovered(null);
+  }
+
+  return (
         <div className={`${megaHoverBridgeClass} ${shift ? "left-0 translate-x-6" : "left-0"}`}>
           <div
             className={`flex h-[460px] w-[660px] ${megaPanelSurfaceClass} ${megaPanelMotionClass(fading)}`}
@@ -374,8 +394,6 @@ function MegaMenu({
             </div>
           </div>
         </div>
-      ) : null}
-    </div>
   );
 }
 
@@ -459,36 +477,36 @@ export function Header() {
   const [navVisible, setNavVisible] = useState(true);
   const [mega, setMega] = useState<MegaId | null>(null);
   const [shownMega, setShownMega] = useState<MegaId | null>(null);
-  const [megaFading, setMegaFading] = useState(false);
+  const [navPath, setNavPath] = useState(pathname);
   const lastScrollY = useRef(0);
   const megaCloseTimer = useRef(0);
 
-  useEffect(() => {
-    window.clearTimeout(megaCloseTimer.current);
+  if (navPath !== pathname) {
+    setNavPath(pathname);
     setMega(null);
     setShownMega(null);
-    setMegaFading(false);
     setMobile(false);
     setSearch(false);
+  }
+
+  if (shownMega === null && mega !== null) {
+    setShownMega(mega);
+  }
+
+  const megaFading = shownMega !== null && mega !== shownMega;
+
+  useEffect(() => {
+    window.clearTimeout(megaCloseTimer.current);
   }, [pathname]);
 
   useEffect(() => {
-    if (mega === shownMega) {
-      setMegaFading(false);
-      return;
-    }
-
-    if (shownMega !== null) {
-      setMegaFading(true);
-      const timer = window.setTimeout(() => {
-        setShownMega(mega);
-        setMegaFading(false);
-      }, 200);
-      return () => window.clearTimeout(timer);
-    }
-
-    setShownMega(mega);
-  }, [mega, shownMega]);
+    if (!megaFading) return;
+    const next = mega;
+    const timer = window.setTimeout(() => {
+      setShownMega(next);
+    }, 200);
+    return () => window.clearTimeout(timer);
+  }, [mega, megaFading]);
 
   function openMega(id: MegaId) {
     window.clearTimeout(megaCloseTimer.current);

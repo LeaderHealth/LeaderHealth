@@ -26,8 +26,9 @@ export function Button({
   const cls = `inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-medium transition ${styles} ${className}`;
 
   if (external || href.startsWith("http") || href.startsWith("mailto") || href.startsWith("tel")) {
+    const newTab = (external || href.startsWith("http")) && href !== GET_STARTED_URL;
     return (
-      <a href={href} className={cls} target={href.startsWith("http") ? "_blank" : undefined} rel="noreferrer">
+      <a href={href} className={cls} target={newTab ? "_blank" : undefined} rel={newTab ? "noreferrer" : undefined}>
         {children}
       </a>
     );
