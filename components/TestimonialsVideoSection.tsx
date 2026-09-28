@@ -101,10 +101,8 @@ export function TestimonialsVideoSection({
   cardBackground = DEFAULTS.cardBackground,
   cardTextColor = DEFAULTS.cardTextColor,
   accentColor = DEFAULTS.accentColor,
-  quoteFontFamily,
   bodyFontFamily,
   cardRadius = DEFAULTS.cardRadius,
-  cardPadding = DEFAULTS.cardPadding,
 }: TestimonialsVideoSectionProps) {
   const count = testimonials.length;
   const labelId = useId();
@@ -287,10 +285,8 @@ export function TestimonialsVideoSection({
                   cardBackground={cardBackground}
                   cardTextColor={cardTextColor}
                   accentColor={accentColor}
-                  quoteFontFamily={quoteFontFamily}
                   bodyFontFamily={bodyFontFamily}
                   cardRadius={cardRadius}
-                  cardPadding={cardPadding}
                 />
               </motion.div>
 
@@ -352,19 +348,15 @@ function FeaturedCard({
   cardBackground,
   cardTextColor,
   accentColor,
-  quoteFontFamily,
   bodyFontFamily,
   cardRadius,
-  cardPadding,
 }: {
   item: TestimonialItem;
   cardBackground: string;
   cardTextColor: string;
   accentColor: string;
-  quoteFontFamily?: string;
   bodyFontFamily?: string;
   cardRadius: number;
-  cardPadding: number;
 }) {
   const quoteMark = <QuoteIcon className="h-12 w-12" />;
 

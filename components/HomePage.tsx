@@ -756,7 +756,19 @@ export function HomePage() {
           height={1664}
           className="absolute inset-0 h-full w-full object-cover"
         />
-        <div className="relative mx-auto max-w-[1129px] overflow-hidden rounded-[36px] px-6 pb-9 pt-16 md:px-12 md:pt-[84px]">
+        <div className="px-4 py-12 sm:px-6 sm:py-16 md:px-8 md:py-20 lg:px-10 lg:py-24">
+        <div
+          className="relative mx-auto max-w-[1129px] overflow-hidden rounded-[36px] px-6 pb-9 pt-16 md:px-12 md:pt-[84px]"
+          style={{
+            backgroundColor: "transparent",
+            backgroundImage:
+              "linear-gradient(180deg, rgba(228, 79, 93, 0.7) 0%, rgba(51, 17, 16, 0.8) 100%)",
+            borderRadius: 36,
+            opacity: 1,
+            backdropFilter: "none",
+            mixBlendMode: "normal",
+          }}
+        >
           <div className="grid items-start gap-8 lg:grid-cols-2">
             <div>
               <h2 className="font-sans text-[36px] font-medium leading-tight tracking-normal text-[#f7f3f4] md:text-[47px] md:leading-[56.4px]">
@@ -831,6 +843,7 @@ export function HomePage() {
               ))}
             </div>
           </div>
+        </div>
         </div>
       </section>
 
