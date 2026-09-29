@@ -71,6 +71,7 @@ export const assets = {
   shopHero:
     "https://framerusercontent.com/images/cCfn27Xv7UDHhfu2ClpobxLqv0.png?width=2496&height=1664",
   contactHero: "/images/contact-hero.jpg",
+  faqHero: "/images/faq-hero.jpg",
   energyHero: "/images/energy-longevity-hero.jpg",
   peptidesHero: "/images/advanced-peptides-hero.jpg",
   peptidesMetabolic: "/images/peptides-metabolic.jpg",
