@@ -4,14 +4,13 @@ import { assets } from "@/lib/content/site";
 
 export function AdvancedPeptidesHero() {
   return (
-    <section className="relative overflow-hidden bg-[#f4efe9] text-white">
+    <section className="relative h-[75svh] overflow-hidden bg-[#f4efe9] text-white">
       <Image
         src={assets.peptidesHero}
         alt="Glass dish of pink peptide serum with a dropper resting on the rim"
-        width={1024}
-        height={766}
+        fill
         priority
-        className="h-[560px] w-full object-cover object-[center_32%] sm:h-auto sm:object-center"
+        className="object-cover object-center"
         sizes="100vw"
       />
       <div
