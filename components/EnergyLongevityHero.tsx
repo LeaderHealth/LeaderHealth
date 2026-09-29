@@ -4,7 +4,7 @@ import { assets } from "@/lib/content/site";
 
 export function EnergyLongevityHero() {
   return (
-    <section className="relative flex min-h-[640px] items-center overflow-hidden bg-ink text-white h-[88svh] max-h-[920px]">
+    <section className="relative flex h-[75svh] items-center overflow-hidden bg-ink text-white">
       <Image
         src={assets.energyHero}
         alt="Couple cycling along a coastal mountain road at sunset"
