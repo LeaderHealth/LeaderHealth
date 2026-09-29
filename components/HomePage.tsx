@@ -142,7 +142,6 @@ const careOptions = [
     width: 1080,
     height: 1350,
     imageClass: "max-h-[73.07%]",
-    featured: false,
   },
   {
     href: "/products/men-sexual-health-combo-troches",
@@ -153,7 +152,6 @@ const careOptions = [
     width: 1890,
     height: 2363,
     imageClass: "max-h-full",
-    featured: false,
   },
   {
     href: "/products/longevity-nad",
@@ -164,7 +162,6 @@ const careOptions = [
     width: 2286,
     height: 1287,
     imageClass: "max-h-full",
-    featured: true,
   },
   {
     href: "/products/weight-loss-semaglutide",
@@ -175,7 +172,6 @@ const careOptions = [
     width: 626,
     height: 888,
     imageClass: "max-h-full",
-    featured: false,
   },
 ];
 
@@ -496,17 +492,13 @@ export function HomePage() {
             </div>
           </div>
 
-          <div className="group/options mt-8 rounded-[28px] border border-white/80 bg-[#f7f4f4]/90 p-3 shadow-[0_16px_50px_rgba(80,40,40,0.06)] sm:p-4 lg:mt-11 lg:p-4">
+          <div className="mt-8 rounded-[28px] border border-white/80 bg-[#f7f4f4]/90 p-3 shadow-[0_16px_50px_rgba(80,40,40,0.06)] sm:p-4 lg:mt-11 lg:p-4">
             <div className="grid grid-cols-1 items-stretch gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {careOptions.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`group relative flex h-full flex-col rounded-[20px] border bg-white px-3.5 pt-3.5 pb-4 transition-colors duration-300 ease-out sm:px-4 sm:pt-4 sm:pb-5 ${
-                    item.featured
-                      ? "border-[#e33d4d] group-hover/options:border-transparent hover:border-[#e33d4d]"
-                      : "border-transparent hover:border-[#e33d4d]"
-                  }`}
+                  className="group relative flex h-full flex-col rounded-[20px] border border-transparent bg-white px-3.5 pt-3.5 pb-4 transition-colors duration-300 ease-out hover:border-[#e33d4d] sm:px-4 sm:pt-4 sm:pb-5"
                 >
                   <span
                     aria-hidden
