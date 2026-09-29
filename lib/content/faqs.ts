@@ -186,6 +186,45 @@ export const tadalafilFaqs = [
   },
 ];
 
+export const peptideFaqs = [
+  {
+    q: "What are peptides?",
+    a: "Peptides are short chains of amino acids that act as signaling molecules in the body. They help regulate biological processes including hormone release, tissue repair, and cellular communication. In clinical settings, certain peptides can be used within medical protocols to support specific health goals when prescribed and monitored by a licensed provider.",
+  },
+  {
+    q: "What is peptide therapy?",
+    a: "Peptide therapy uses targeted, physician-prescribed peptides within structured clinical protocols. A licensed clinician evaluates your health history, symptoms, and goals to determine whether peptide therapy is appropriate for you, and if so, which protocol fits your physiology and goals.",
+  },
+  {
+    q: "Are these medications FDA-approved?",
+    a: "No. Every medication discussed on this site is compounded, and compounded drugs are not FDA-approved. FDA does not verify their safety, effectiveness, or quality before they are marketed. We state this on every page rather than burying it in a footer (FDA — Compounding and FDA: Questions and Answers).",
+  },
+  {
+    q: "Why is compounding legal if there's no FDA approval?",
+    a: "Federal law creates specific exemptions for pharmacy compounding when defined conditions are met, and the Supreme Court has addressed the advertising side of that framework. The exemptions are conditional, substance-specific, and narrower than most marketing implies — which is exactly why our public list is short (21 U.S.C. § 353a; 21 U.S.C. § 353b; Thompson v. Western States Medical Center, 535 U.S. 357 (2002)).",
+  },
+  {
+    q: "Do I need to get labs done?",
+    a: "Labs are not required to get started, but we offer comprehensive lab testing as part of your program. Labs give your clinician a clearer picture of your baseline health, help determine which therapies are appropriate for you, and provide a benchmark to measure against over time. If you already have recent lab results, your clinician can review those. If you don't, we can order a panel for you.",
+  },
+  {
+    q: "Which medications can I learn about on the site?",
+    a: "The following are available to explore and purchase directly:\n\nSermorelin — $149/month\n\nNAD+ (injectable) — $149/month\n\nNAD+ nasal spray — $119/month\n\nGlutathione — $129/month\n\nAdditional advanced peptide therapies are available through the patient portal after a consultation with a licensed provider determines they are clinically appropriate for you. These are not advertised publicly because the evidence does not support advertising them to strangers — but they may be part of your treatment plan after a clinical evaluation.",
+  },
+  {
+    q: "Who should not use these?",
+    a: "Anyone pregnant, breastfeeding, or trying to conceive; anyone with an active malignancy, for the growth-hormone-axis program in particular, since the approved medication in that class is contraindicated in active malignancy because it induces release of endogenous growth hormone; anyone with a pituitary disorder or a history of pituitary surgery, radiation, or trauma; anyone with poorly controlled diabetes, without a discussion of glycemic effects first; and anyone competing in a tested sport (EGRIFTA SV label; EGRIFTA WR label).",
+  },
+  {
+    q: "How are peptide medications administered?",
+    a: "Most clinical peptide protocols are administered through small subcutaneous injections using a very thin needle, similar to an insulin syringe. Some medications are available as nasal sprays. The GHK-Cu topical product is applied to the skin. Your clinician will recommend the format that fits your protocol and lifestyle, and provide detailed administration instructions and support.",
+  },
+  {
+    q: "What am I actually paying for?",
+    a: "A clinical program: assessment, clinician review, medication where prescribed, and ongoing support. Lab testing is available if you and your clinician decide it is appropriate. If a clinician decides no medication is appropriate, you keep the assessment and the written reasoning, and you can cancel immediately.",
+  },
+];
+
 export const energyLongevityFaqs = [
   {
     q: "What is Energy & Longevity care?",
