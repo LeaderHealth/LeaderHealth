@@ -4,9 +4,9 @@ import { productFaqs, tirzepatideFaqs, tadalafilFaqs } from "@/lib/content/faqs"
 import { ProductHero } from "@/components/ProductHero";
 import { PriceCompare } from "@/components/PriceCompare";
 import { ProductVariants } from "@/components/ProductVariants";
-import { Testimonials } from "@/components/Testimonials";
+import { SiteTestimonials } from "@/components/TestimonialsVideoSection";
 import { ArticleLibrary } from "@/components/ArticleLibrary";
-import { FaqList } from "@/components/FaqList";
+import { FaqDropdownItems } from "@/components/PeptidesFaq";
 import type { Metadata } from "next";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -36,13 +36,15 @@ export default async function ProductPage({ params }: Props) {
     <>
       <ProductHero product={product} />
       {product.compare !== false && <PriceCompare />}
-      <Testimonials variant="featured" />
+      <SiteTestimonials />
       {product.variants && <ProductVariants product={product} />}
       <section className="bg-white px-6 py-16">
         <div className="mx-auto max-w-3xl">
-          <h2 className="text-4xl">FAQ: We&apos;ve Got Answers.</h2>
-          <div className="mt-8">
-            <FaqList items={product.faqs ?? faqsFor(slug)} />
+          <h2 className="text-left font-sans text-[40px] leading-[1.1] font-medium !tracking-[-0.04em] text-[#331110]">
+            FAQ: We&apos;ve Got <span className="font-serif-italic !tracking-[-0.04em] text-[#e43d4e]">Answers</span>.
+          </h2>
+          <div className="mt-[26px]">
+            <FaqDropdownItems items={product.faqs ?? faqsFor(slug)} />
           </div>
         </div>
       </section>

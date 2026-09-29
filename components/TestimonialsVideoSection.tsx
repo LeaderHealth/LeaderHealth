@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { motion } from "framer-motion";
+import { assets, testimonials as siteTestimonials } from "@/lib/content/site";
 import {
   useCallback,
   useEffect,
@@ -500,6 +501,24 @@ function Stars({ rating, accent }: { rating: number; accent: string }) {
         </span>
       ))}
     </p>
+  );
+}
+
+export function SiteTestimonials() {
+  return (
+    <TestimonialsVideoSection
+      videoSrc={assets.heroVideoAlt}
+      posterSrc={assets.weightlifting}
+      testimonials={siteTestimonials.map((item) => ({
+        quote: item.quote,
+        name: item.name,
+        role: item.treatment,
+        image: item.image,
+      }))}
+      showDots
+      draggable
+      initialIndex={1}
+    />
   );
 }
 

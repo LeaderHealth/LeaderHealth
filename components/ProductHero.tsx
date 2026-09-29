@@ -1,7 +1,10 @@
+"use client";
+
 import Image from "next/image";
-import Link from "next/link";
 import type { Product } from "@/lib/content/products";
+import { getLegal } from "@/lib/content/legal";
 import { ProductHeroCta } from "./ProductHeroCta";
+import { SafetyInformationModal } from "./SafetyInformationModal";
 
 const defaultDisclaimer =
   "Compounded medication. Not FDA approved. This medicine is prepared for you by a licensed U.S. compounding pharmacy on your prescriber's order. FDA does not review compounded medications for safety, effectiveness, or quality before they are sold. Leader Health is not a pharmacy and does not make or dispense medications. The pharmacy that fills your prescription is identified on the medication you receive.";
@@ -20,6 +23,11 @@ export function ProductHero({ product }: { product: Product }) {
   const badge = product.badge ?? (product.disclaimer?.toLowerCase().includes("fda approved") ? undefined : "Medication");
 
   return (
+    <SafetyInformationModal
+      notice={product.safety}
+      sections={getLegal("important-safety-information")?.sections ?? []}
+    >
+    {(trigger) => (
     <section className="relative bg-gradient-to-b from-[#d07a7c] to-[#a24b4e] pb-16 pt-28 text-white">
       <div className="relative mx-auto grid max-w-6xl items-center gap-8 px-6 lg:grid-cols-[1fr_minmax(320px,440px)]">
         <div className="flex min-h-[480px] flex-col items-center justify-center">
@@ -61,12 +69,7 @@ export function ProductHero({ product }: { product: Product }) {
             {product.safety && <p className="text-[13px] text-white/90">{product.safety}</p>}
           </div>
           <ProductHeroCta product={product} />
-          <Link
-            href="/legal/important-safety-information"
-            className="mt-3 block text-center font-serif-italic text-sm text-white/90"
-          >
-            Important Safety Info
-          </Link>
+          {trigger}
         </div>
       </div>
 
@@ -79,5 +82,7 @@ export function ProductHero({ product }: { product: Product }) {
         ))}
       </div>
     </section>
+    )}
+    </SafetyInformationModal>
   );
 }

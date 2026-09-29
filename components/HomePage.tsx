@@ -3,11 +3,11 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { assets, careSteps, designedFor, GET_STARTED_URL, testimonials } from "@/lib/content/site";
+import { assets, careSteps, designedFor, GET_STARTED_URL } from "@/lib/content/site";
 import { HeroVideo } from "./HeroVideo";
 import { Marquee } from "./Marquee";
 import { LabsTeaser } from "./LabsTeaser";
-import { TestimonialsVideoSection } from "./TestimonialsVideoSection";
+import { SiteTestimonials } from "./TestimonialsVideoSection";
 import { ArticleLibrary } from "./ArticleLibrary";
 
 const campaign = [
@@ -889,19 +889,7 @@ export function HomePage() {
 
       <LabsTeaser />
 
-      <TestimonialsVideoSection
-        videoSrc={assets.heroVideoAlt}
-        posterSrc={assets.weightlifting}
-        testimonials={testimonials.map((item) => ({
-          quote: item.quote,
-          name: item.name,
-          role: item.treatment,
-          image: item.image,
-        }))}
-        showDots
-        draggable
-        initialIndex={1}
-      />
+      <SiteTestimonials />
       <ArticleLibrary
         slugs={[
           "semaglutide-vs-tirzepatide-comparison-guide",
