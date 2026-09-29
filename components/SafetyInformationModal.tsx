@@ -107,7 +107,7 @@ export function SafetyInformationModal({
       aria-haspopup="dialog"
       aria-expanded={phase === "open"}
       onClick={openDialog}
-      className="mt-3 block w-full text-center font-serif-italic text-sm text-white/90 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+      className="mt-3 block w-full rounded-full px-3 py-2 text-center font-serif-italic text-sm text-white/90 underline decoration-white/45 underline-offset-[6px] transition-[color,background-color,text-decoration-color] duration-200 ease-out hover:bg-white/16 hover:text-white hover:decoration-white focus-visible:bg-white/16 focus-visible:text-white focus-visible:decoration-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white motion-reduce:transition-none"
     >
       Important Safety Info
     </button>
