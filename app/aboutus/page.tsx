@@ -184,9 +184,21 @@ export default function AboutPage() {
             </p>
             <a
               href={GET_STARTED_URL}
-              className="mt-4 inline-flex items-center justify-center rounded-[39px] bg-[#DF4452] px-[26px] py-[14px] font-sans text-[16px] leading-none font-semibold tracking-[-0.02em] text-[#F7F3F5] transition-colors duration-200 hover:bg-[#E43D4E] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#331110]"
+              className="group relative mt-4 inline-flex h-[47px] min-w-[148px] items-center justify-center overflow-hidden rounded-[39px] bg-[#DF4452] px-[26px] py-[14px] font-sans text-[16px] leading-none font-semibold tracking-[-0.02em] text-[#F7F3F5] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#331110]"
             >
-              Get Started
+              <span
+                aria-hidden
+                className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#E33D4E] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
+              />
+              <span className="relative z-10 whitespace-nowrap transition-transform duration-[400ms] ease-out group-hover:-translate-x-[15px] motion-reduce:translate-x-0! motion-reduce:transition-none">
+                Get Started
+              </span>
+              <span
+                aria-hidden
+                className="pointer-events-none absolute top-1/2 right-0 z-10 -translate-y-1/2 translate-x-full transition-transform duration-[400ms] ease-out group-hover:translate-x-[calc(100%-35px)] motion-reduce:translate-x-full! motion-reduce:transition-none"
+              >
+                →
+              </span>
             </a>
           </div>
 

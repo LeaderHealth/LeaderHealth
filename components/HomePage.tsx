@@ -426,6 +426,7 @@ export function HomePage() {
     <>
       <section className="relative h-[100svh] min-h-[640px] overflow-hidden bg-ink text-white">
         <HeroVideo src={assets.heroVideo} />
+        <div aria-hidden className="pointer-events-none absolute inset-0 z-[1] bg-[#737373]/20" />
         <div className="relative z-10 flex h-full flex-col justify-end px-[8%] pb-28 md:px-[12%] md:pb-32">
           <Image
             src={assets.logo}
@@ -712,9 +713,21 @@ export function HomePage() {
           <div className="mt-7 flex justify-center">
             <Link
               href="/shop-all-products"
-              className="inline-flex rounded-[39px] bg-[#df4452] px-[26px] py-[14px] font-sans text-base font-semibold leading-[19.2px] text-[#f7f3f5]"
+              className="group relative inline-flex items-center justify-center overflow-hidden rounded-[39px] bg-[#df4452] px-[26px] py-[14px] font-sans text-base font-semibold leading-[19.2px] text-[#f7f3f5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
             >
-              Explore All Treatments
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#E33D4E] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
+              />
+              <span className="relative z-10 whitespace-nowrap transition-transform duration-[400ms] ease-out group-hover:-translate-x-[15px] motion-reduce:translate-x-0! motion-reduce:transition-none">
+                Explore All Treatments
+              </span>
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute top-1/2 right-0 z-10 -translate-y-1/2 translate-x-full transition-transform duration-[400ms] ease-out group-hover:translate-x-[calc(100%-35px)] motion-reduce:translate-x-full! motion-reduce:transition-none"
+              >
+                →
+              </span>
             </Link>
           </div>
 
@@ -738,9 +751,21 @@ export function HomePage() {
                 </div>
                 <a
                   href={GET_STARTED_URL}
-                  className="self-end rounded-[39px] bg-[#f9f9f9] px-[18px] py-[5px] text-[15px] font-medium text-ink"
+                  className="group relative inline-flex items-center justify-center self-end overflow-hidden rounded-[39px] bg-[#f9f9f9] px-[18px] py-[5px] text-[15px] font-medium text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
                 >
-                  Get Started
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#e4d0ce] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
+                  />
+                  <span className="relative z-10 whitespace-nowrap transition-transform duration-[400ms] ease-out group-hover:-translate-x-[15px] motion-reduce:translate-x-0! motion-reduce:transition-none">
+                    Get Started
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute top-1/2 right-0 z-10 -translate-y-1/2 translate-x-full transition-transform duration-[400ms] ease-out group-hover:translate-x-[calc(100%-28px)] motion-reduce:translate-x-full! motion-reduce:transition-none"
+                  >
+                    →
+                  </span>
                 </a>
               </div>
             </article>

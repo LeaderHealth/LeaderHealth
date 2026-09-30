@@ -222,7 +222,7 @@ export function SafetyInformationModal({
       {children(trigger)}
       <div className={closed ? "pointer-events-none invisible" : undefined}>
         <div
-          className={`fixed inset-0 z-[80] bg-[#331110]/45 backdrop-blur-[3px] transition-opacity duration-300 ease-out motion-reduce:transition-none ${
+          className={`fixed inset-0 z-[80] bg-[#331110]/45 backdrop-blur-[3px] transition-opacity duration-[320ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
             entered ? "opacity-100" : "pointer-events-none opacity-0"
           }`}
           onClick={closeDialog}
@@ -234,10 +234,10 @@ export function SafetyInformationModal({
           aria-labelledby={titleId}
           aria-hidden={closed}
           inert={interactive ? undefined : true}
-          className={`fixed z-[81] flex flex-col overflow-hidden bg-white text-[#331110] shadow-[0_24px_80px_rgba(51,17,16,0.22)] transition-transform duration-300 ease-out motion-reduce:transition-none max-sm:inset-x-0 max-sm:bottom-0 max-sm:max-h-[90vh] max-sm:rounded-t-[20px] sm:top-1/2 sm:left-1/2 sm:max-h-[85vh] sm:w-[calc(100%-3rem)] sm:max-w-[560px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[20px] sm:transition-opacity ${
+          className={`fixed z-[81] flex flex-col overflow-hidden bg-white text-[#331110] shadow-[0_24px_80px_rgba(51,17,16,0.22)] transition-[opacity,transform,scale] duration-[380ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none max-sm:inset-x-0 max-sm:bottom-0 max-sm:max-h-[90vh] max-sm:rounded-t-[20px] sm:top-1/2 sm:left-1/2 sm:max-h-[85vh] sm:w-[calc(100%-3rem)] sm:max-w-[560px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[20px] ${
             entered
-              ? "max-sm:translate-y-0 sm:opacity-100"
-              : "max-sm:translate-y-full sm:pointer-events-none sm:opacity-0"
+              ? "max-sm:translate-y-0 sm:scale-100 sm:opacity-100"
+              : "max-sm:translate-y-full sm:pointer-events-none sm:scale-95 sm:opacity-0"
           }`}
         >
           <div className="flex justify-center pt-2.5 sm:hidden" aria-hidden>

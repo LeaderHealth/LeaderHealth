@@ -7,6 +7,7 @@ import { ProductVariants } from "@/components/ProductVariants";
 import { SiteTestimonials } from "@/components/TestimonialsVideoSection";
 import { ArticleLibrary } from "@/components/ArticleLibrary";
 import { FaqDropdownItems } from "@/components/PeptidesFaq";
+import { ProductSignupPrompt } from "@/components/ProductSignupPrompt";
 import type { Metadata } from "next";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -48,6 +49,7 @@ export default async function ProductPage({ params }: Props) {
           </div>
         </div>
       </section>
+      <ProductSignupPrompt />
       <ArticleLibrary
         slugs={[
           "semaglutide-vs-tirzepatide-comparison-guide",

@@ -767,9 +767,21 @@ export function MobileNav({
             </a>
             <a
               href={GET_STARTED_URL}
-              className={`flex min-h-12 items-center justify-center rounded-full bg-white text-[15px] font-medium text-ink ${tapFocus} focus-visible:outline-ink`}
+              className={`group relative flex min-h-12 items-center justify-center overflow-hidden rounded-full bg-white text-[15px] font-medium text-ink ${tapFocus} focus-visible:outline-ink`}
             >
-              Get Started
+              <span
+                aria-hidden
+                className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#e4d0ce] transition-transform duration-[400ms] ease-out group-hover:scale-[80] motion-reduce:scale-100! motion-reduce:transition-none"
+              />
+              <span className="relative z-10 whitespace-nowrap transition-transform duration-[400ms] ease-out group-hover:-translate-x-[15px] motion-reduce:translate-x-0! motion-reduce:transition-none">
+                Get Started
+              </span>
+              <span
+                aria-hidden
+                className="pointer-events-none absolute top-1/2 right-0 z-10 -translate-y-1/2 translate-x-full transition-transform duration-[400ms] ease-out group-hover:translate-x-[calc(100%-35px)] motion-reduce:translate-x-full! motion-reduce:transition-none"
+              >
+                →
+              </span>
             </a>
           </div>
         </div>

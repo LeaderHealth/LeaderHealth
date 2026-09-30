@@ -45,7 +45,7 @@ export const tickerItems = [
 export const assets = {
   logo: "https://framerusercontent.com/images/GA0eD4KXUgXgbydQx3suqxgv20.png?width=8103&height=554",
   heroVideo:
-    "https://framerusercontent.com/assets/SEvBMYJ1Odd8btsq47nUoKvLX8M.mp4",
+    "https://framerusercontent.com/assets/uZ4pyoMzHwVNy0NCh1VbkubHg9U.mp4",
   heroVideoAlt:
     "https://framerusercontent.com/assets/WUBCjjcACmE3AuGZNdJF8vWz5M.mp4",
   stepForm:
