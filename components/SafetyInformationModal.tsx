@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 export type SafetySection = {
   heading: string;
@@ -93,6 +94,7 @@ export function SafetyInformationModal({
   const closeRef = useRef<HTMLButtonElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const closeTimer = useRef<number | null>(null);
+  const [mounted, setMounted] = useState(false);
   const [phase, setPhase] = useState<"closed" | "open">("closed");
   const [entered, setEntered] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -150,6 +152,10 @@ export function SafetyInformationModal({
   }, [entered]);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
     const el = bodyRef.current;
     if (!el) return;
     const onScroll = () => measure();
@@ -161,7 +167,7 @@ export function SafetyInformationModal({
       observer.disconnect();
       el.removeEventListener("scroll", onScroll);
     };
-  }, []);
+  }, [mounted]);
 
   useEffect(() => {
     if (phase !== "open") return;
@@ -217,10 +223,8 @@ export function SafetyInformationModal({
 
   const closed = phase === "closed";
 
-  return (
-    <>
-      {children(trigger)}
-      <div className={closed ? "pointer-events-none invisible" : undefined}>
+  const overlay = (
+    <div className={closed ? "pointer-events-none invisible" : undefined}>
         <div
           className={`fixed inset-0 z-[80] bg-[#331110]/45 backdrop-blur-[3px] transition-opacity duration-[320ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
             entered ? "opacity-100" : "pointer-events-none opacity-0"
@@ -299,7 +303,13 @@ export function SafetyInformationModal({
             />
           </div>
         </div>
-      </div>
+    </div>
+  );
+
+  return (
+    <>
+      {children(trigger)}
+      {mounted ? createPortal(overlay, document.body) : null}
     </>
   );
 }

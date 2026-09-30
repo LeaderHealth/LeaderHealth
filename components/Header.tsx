@@ -380,14 +380,20 @@ function MegaMenuPanel({
               </nav>
               <a
                 href={GENERAL_FORM_URL}
-                className="mt-4 flex h-12 w-[285px] max-w-full items-center gap-3 rounded-full bg-white px-3 text-ink"
+                className="group relative mt-4 flex h-12 w-[285px] max-w-full items-center gap-3 overflow-hidden rounded-full bg-white px-3 text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
               >
-                <DocumentIcon />
-                <span className="min-w-0 leading-tight">
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#e4d0ce] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
+                />
+                <span className="relative z-10 shrink-0">
+                  <DocumentIcon />
+                </span>
+                <span className="relative z-10 min-w-0 leading-tight">
                   <span className="block text-[13px] font-bold">Don&apos;t see your goal?</span>
                   <span className="block text-[12px]">Start with our General Form.</span>
                 </span>
-                <svg viewBox="0 0 16 16" className="ml-auto h-4 w-4 shrink-0" fill="none" aria-hidden>
+                <svg viewBox="0 0 16 16" className="relative z-10 ml-auto h-4 w-4 shrink-0 transition-transform duration-[400ms] ease-out group-hover:translate-x-1 motion-reduce:translate-x-0! motion-reduce:transition-none" fill="none" aria-hidden>
                   <path d="M3 8h9M8.5 4.5 12.5 8 8.5 11.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </a>

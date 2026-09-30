@@ -3,6 +3,7 @@
 import Image from "next/image";
 import type { Product } from "@/lib/content/products";
 import { getLegal } from "@/lib/content/legal";
+import { getProductSafety } from "@/lib/content/product-safety";
 import { ProductHeroCta } from "./ProductHeroCta";
 import { SafetyInformationModal } from "./SafetyInformationModal";
 
@@ -21,11 +22,12 @@ export function productEyebrow(product: Product) {
 
 export function ProductHero({ product }: { product: Product }) {
   const badge = product.badge ?? (product.disclaimer?.toLowerCase().includes("fda approved") ? undefined : "Medication");
+  const safetySections = getProductSafety(product.slug);
 
   return (
     <SafetyInformationModal
-      notice={product.safety}
-      sections={getLegal("important-safety-information")?.sections ?? []}
+      notice={safetySections ? undefined : product.safety}
+      sections={safetySections ?? getLegal("important-safety-information")?.sections ?? []}
     >
     {(trigger) => (
     <section className="relative bg-gradient-to-b from-[#d07a7c] to-[#a24b4e] pb-16 pt-28 text-white">

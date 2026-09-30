@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import Image from "next/image";
 
 type Cell = string | "yes" | "no";
@@ -84,24 +87,56 @@ function Mark({ value, onDark = false }: { value: Cell; onDark?: boolean }) {
 }
 
 export function PriceCompare() {
+  const sectionRef = useRef<HTMLElement>(null);
+  const [phase, setPhase] = useState<"pending" | "waiting" | "in">("pending");
+
+  useEffect(() => {
+    const node = sectionRef.current;
+    if (!node) return;
+
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const rect = node.getBoundingClientRect();
+    const alreadyVisible = rect.top < window.innerHeight * 0.82 && rect.bottom > 80;
+    if (reduce || alreadyVisible) {
+      setPhase("in");
+      return;
+    }
+
+    setPhase("waiting");
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        setPhase("in");
+        observer.disconnect();
+      },
+      { rootMargin: "0px 0px -18% 0px", threshold: 0 },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <section className="bg-[linear-gradient(180deg,#f7f0e8_0%,#ead9c4_100%)] px-3 py-12 sm:px-5 sm:py-16 lg:px-6 lg:py-20">
+    <section
+      ref={sectionRef}
+      data-phase={phase}
+      className="price-compare bg-[linear-gradient(180deg,#f7f0e8_0%,#ead9c4_100%)] px-3 py-12 sm:px-5 sm:py-16 lg:px-6 lg:py-20"
+    >
       <div className="mx-auto w-full min-w-0 max-w-[1080px]">
-        <h2 className="text-balance px-2 text-center text-[28px] leading-tight font-semibold text-ink sm:text-[34px] lg:text-[40px]">
+        <h2 className="price-compare-title text-balance px-2 text-center text-[28px] leading-tight font-semibold text-ink sm:text-[34px] lg:text-[40px]">
           Same medicine. Lower cost ceiling. No surprises.
         </h2>
 
         <div className="mt-8 sm:mt-12 lg:mt-16">
           <div className="py-10 sm:py-14 lg:px-2 lg:py-20">
-            <div className="rounded-[22px] bg-white px-1.5 py-2 shadow-[0_16px_48px_rgba(74,52,32,0.08)] sm:rounded-[28px] sm:px-3 md:rounded-[32px] md:px-4 md:py-2.5 lg:rounded-[36px] lg:px-8 lg:py-3">
+            <div className="price-compare-card rounded-[22px] bg-white px-1.5 py-2 shadow-[0_16px_48px_rgba(74,52,32,0.08)] sm:rounded-[28px] sm:px-3 md:rounded-[32px] md:px-4 md:py-2.5 lg:rounded-[36px] lg:px-8 lg:py-3">
               <div className="price-compare-grid relative grid items-stretch">
                 <div
                   aria-hidden
                   className="price-compare-leader pointer-events-none absolute -top-8 -bottom-8 z-0 rounded-[22px] bg-[linear-gradient(180deg,#c45d66_0%,#a44650_16%,#7a333c_40%,#4c2028_68%,#2a1016_100%)] shadow-[0_18px_36px_rgba(36,12,16,0.26)] sm:-top-10 sm:-bottom-10 sm:rounded-[28px] md:-top-12 md:-bottom-12 lg:-top-[4.75rem] lg:-bottom-[4.75rem] lg:rounded-[36px]"
                 />
 
-                <div className="relative z-10 min-h-16 border-b border-[#eceae8] md:min-h-20 lg:min-h-[88px]" />
-                <div className="relative z-10 flex min-h-16 items-center justify-center px-1.5 md:min-h-20 md:px-3 lg:min-h-[88px] lg:px-5">
+                <div className="price-compare-cell relative z-10 min-h-16 border-b border-[#eceae8] md:min-h-20 lg:min-h-[88px]" style={{ "--d": "220ms" } as CSSProperties} />
+                <div className="price-compare-cell relative z-10 flex min-h-16 items-center justify-center px-1.5 md:min-h-20 md:px-3 lg:min-h-[88px] lg:px-5" style={{ "--d": "260ms" } as CSSProperties}>
                   <Image
                     src="/images/lh-logo-white.png"
                     alt="LEADERHEALTH"
@@ -121,8 +156,8 @@ export function PriceCompare() {
                     }}
                   />
                 </div>
-                {competitors.map((brand) => (
-                  <div key={brand} className="relative z-10 flex min-h-16 min-w-0 items-center justify-center border-b border-[#eceae8] px-0.5 text-center text-[10px] leading-tight font-normal text-balance text-[#a39e99] sm:text-xs md:min-h-20 md:px-2 md:text-[15px] lg:min-h-[88px] lg:px-4 lg:text-[17px]">
+                {competitors.map((brand, j) => (
+                  <div key={brand} className="price-compare-cell relative z-10 flex min-h-16 min-w-0 items-center justify-center border-b border-[#eceae8] px-0.5 text-center text-[10px] leading-tight font-normal text-balance text-[#a39e99] sm:text-xs md:min-h-20 md:px-2 md:text-[15px] lg:min-h-[88px] lg:px-4 lg:text-[17px]" style={{ "--d": `${300 + j * 40}ms` } as CSSProperties}>
                     {brand}
                   </div>
                 ))}
@@ -132,16 +167,17 @@ export function PriceCompare() {
                   const rule = last ? "" : "border-b border-[#eceae8]";
                   return (
                     <div key={row.label} className="contents">
-                      <div className={`relative z-10 flex min-h-14 min-w-0 items-center px-1.5 text-[11px] leading-tight text-[#9a9590] sm:px-2 sm:text-xs md:min-h-[80px] md:px-3 md:text-sm lg:min-h-[92px] lg:px-4 lg:text-[15px] ${rule}`}>
+                      <div className={`price-compare-cell relative z-10 flex min-h-14 min-w-0 items-center px-1.5 text-[11px] leading-tight text-[#9a9590] sm:px-2 sm:text-xs md:min-h-[80px] md:px-3 md:text-sm lg:min-h-[92px] lg:px-4 lg:text-[15px] ${rule}`} style={{ "--d": `${420 + i * 70}ms` } as CSSProperties}>
                         {row.label}
                       </div>
-                      <div className="relative z-10 flex min-h-14 min-w-0 items-center justify-center px-1 text-white md:min-h-[80px] md:px-2 lg:min-h-[92px] lg:px-3">
+                      <div className="price-compare-cell relative z-10 flex min-h-14 min-w-0 items-center justify-center px-1 text-white md:min-h-[80px] md:px-2 lg:min-h-[92px] lg:px-3" style={{ "--d": `${460 + i * 70}ms` } as CSSProperties}>
                         <Mark value={row.leader} onDark />
                       </div>
                       {row.others.map((value, j) => (
                         <div
                           key={competitors[j]}
-                          className={`relative z-10 flex min-h-14 min-w-0 items-center justify-center px-0.5 md:min-h-[80px] md:px-2 lg:min-h-[92px] lg:px-4 ${rule}`}
+                          className={`price-compare-cell relative z-10 flex min-h-14 min-w-0 items-center justify-center px-0.5 md:min-h-[80px] md:px-2 lg:min-h-[92px] lg:px-4 ${rule}`}
+                          style={{ "--d": `${500 + i * 70 + j * 35}ms` } as CSSProperties}
                         >
                           <Mark value={value} />
                         </div>
