@@ -88,6 +88,57 @@ export const productFaqs = [
   },
 ];
 
+export const womenHrtFaqs = [
+  {
+    q: "Am I a candidate for HRT?",
+    a: "Candidacy depends on symptoms, age, time since menopause, anatomy, personal and family history, medications, and risk factors. Systemic hormone therapy is generally avoided with unexplained vaginal bleeding, an estrogen-sensitive cancer history, prior heart attack, stroke, or blood clot, liver disease, or high clot risk. A licensed provider reviews your panel and history before prescribing. Combined estrogen-progestogen therapy is associated with a small increased risk of breast cancer that rises with duration of use; estrogen-only therapy in women without a uterus has not shown the same signal.",
+  },
+  {
+    q: "How are labs used in menopause care?",
+    a: "Menopause is often diagnosed clinically from symptoms and age. Labs help establish baselines, check for overlapping causes, and guide safety monitoring for selected therapies. A prescription is never based on a lab value alone.",
+  },
+  {
+    q: "How does the labs-first process work?",
+    a: "Start with the $49 intake, which includes the Complete Panel and clearance visit. Once results return, your provider reviews them with your history and recommends a regimen, additional evaluation, or no prescription when appropriate.",
+  },
+  {
+    q: "If I have a uterus, do I need progesterone?",
+    a: "Yes, in most cases. If you have an intact uterus and use systemic estrogen, you generally need adequate progesterone or another endometrial-protective strategy, because unopposed systemic estrogen can raise the risk of endometrial hyperplasia or cancer. Your provider confirms what applies to your anatomy and history.",
+  },
+  {
+    q: "What is included in the monthly subscription?",
+    a: "Your prescribed medication, provider access for questions or adjustments, and monitoring labs on the cadence your clinician sets are included.",
+  },
+  {
+    q: "Is testosterone for women off-label?",
+    a: "Yes. Testosterone for women is prescribed off-label in the US and only when the provider determines the potential benefit and safety profile fit the patient.",
+  },
+  {
+    q: "Can I use vaginal estrogen without systemic HRT?",
+    a: "Some patients use vaginal estrogen without systemic hormone therapy. It is designed for local use, but your provider will confirm whether it fits your history and goals.",
+  },
+  {
+    q: "How long until I notice changes?",
+    a: "Some patients notice changes in sleep or temperature comfort within weeks, while libido, mood, and energy may take longer. Follow-up labs and visits help your provider fine-tune the plan.",
+  },
+  {
+    q: "Is there a commitment?",
+    a: "Therapy has a three-month minimum so your provider can evaluate response and adjust safely. After month three, you can cancel anytime.",
+  },
+  {
+    q: "Do you accept insurance?",
+    a: "Leader Health is a cash-pay service; we don't bill insurance. This keeps pricing transparent and care free of coverage restrictions. We'll provide itemized receipts you can submit to your insurer or HSA/FSA administrator for possible reimbursement, though coverage isn't guaranteed.",
+  },
+  {
+    q: "Can I use my HSA or FSA?",
+    a: "Yes — most members can use HSA or FSA funds, and we provide itemized receipts on request. Because plan rules vary, confirm eligibility with your administrator.",
+  },
+  {
+    q: "What if I have another questions?",
+    a: "Email help@myleaderhealth.com or call (254) 244-0104. Existing patients can also message through the patient portal.",
+  },
+];
+
 export const tirzepatideFaqs = [
   {
     q: "How is tirzepatide different from semaglutide?",

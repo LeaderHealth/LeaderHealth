@@ -39,7 +39,7 @@ export function SideCart() {
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
-            transition={{ type: "spring", damping: 28, stiffness: 280 }}
+            transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
           >
             <div className="flex items-center justify-between px-6 pb-4 pt-6">
               <div>

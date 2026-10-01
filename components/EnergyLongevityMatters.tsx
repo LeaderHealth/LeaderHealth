@@ -5,12 +5,12 @@ import Image from "next/image";
 import { motion, useReducedMotion } from "framer-motion";
 import { assets } from "@/lib/content/site";
 
-const rowSpring = { type: "spring" as const, stiffness: 400, damping: 49, mass: 1 };
-const entranceSpring = { type: "spring" as const, stiffness: 400, damping: 68, mass: 1, delay: 0.1 };
-const imageEase = [0.44, 0, 0.56, 1] as const;
-const imageTween = { duration: 0.9, delay: 0.2, ease: imageEase };
-const imageCloseTween = { duration: 0.9, delay: 0, ease: imageEase };
-const underlineSpring = { type: "spring" as const, stiffness: 454, damping: 176, mass: 6.1, delay: 0.6 };
+const rowSpring = { duration: 0.6, ease: [0.22, 1, 0.36, 1] as const };
+const entranceSpring = { duration: 0.9, ease: [0.22, 1, 0.36, 1] as const, delay: 0.05 };
+const imageEase = [0.22, 1, 0.36, 1] as const;
+const imageTween = { duration: 1.1, delay: 0.08, ease: imageEase };
+const imageCloseTween = { duration: 0.8, delay: 0, ease: imageEase };
+const underlineSpring = { duration: 0.8, ease: imageEase, delay: 0.12 };
 
 const CLOSED = "#e98a90";
 const OPEN = "#4a2a26";

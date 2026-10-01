@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type RefObject } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { assets, careSteps, designedFor, GET_STARTED_URL } from "@/lib/content/site";
@@ -72,7 +72,7 @@ function FeaturedCareTile({ item }: { item: (typeof featured)[number] }) {
     if (!asset || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     asset.style.transition = "none";
     asset.style.transform = "";
-    asset.style.animation = "featuredTileFloat 2.5s ease-in-out infinite";
+    asset.style.animation = "featuredTileFloat 4.8s ease-in-out infinite";
   }
 
   function stopFloat() {
@@ -124,11 +124,6 @@ function FeaturedCareTile({ item }: { item: (typeof featured)[number] }) {
     </Link>
   );
 }
-
-const designedForCards = [
-  ...designedFor,
-  designedFor[designedFor.length - 1],
-];
 
 const intakeUrl = "https://products.leaderhealth.clinic/?quizOpen=true";
 
@@ -225,6 +220,92 @@ const careButtonLabelClass =
 const careButtonArrowClass =
   "pointer-events-none absolute top-1/2 right-0 z-10 -translate-y-1/2 translate-x-full transition-transform duration-[400ms] ease-out group-hover:translate-x-[calc(100%-35px)] group-focus-visible:translate-x-[calc(100%-35px)] motion-reduce:translate-x-full! motion-reduce:transition-none";
 
+type ScrollPhase = "pending" | "waiting" | "in";
+
+function useScrollPhase(ref: RefObject<HTMLElement | null>) {
+  const [phase, setPhase] = useState<ScrollPhase>("pending");
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const rect = node.getBoundingClientRect();
+    const visible = rect.top < window.innerHeight * 0.86 && rect.bottom > 64;
+    if (reduce || visible) {
+      setPhase("in");
+      return;
+    }
+
+    setPhase("waiting");
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting) return;
+        setPhase("in");
+        observer.disconnect();
+      },
+      { rootMargin: "0px 0px -10% 0px", threshold: 0 },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [ref]);
+
+  return phase;
+}
+
+function useInViewPhases(count: number) {
+  const nodes = useRef<(HTMLElement | null)[]>([]);
+  const [phases, setPhases] = useState<ScrollPhase[]>(() => Array.from({ length: count }, () => "pending"));
+
+  useEffect(() => {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const list = nodes.current.slice(0, count);
+    if (reduce) {
+      setPhases(Array.from({ length: count }, () => "in"));
+      return;
+    }
+
+    const initial: ScrollPhase[] = list.map((node) => {
+      if (!node) return "in";
+      const rect = node.getBoundingClientRect();
+      const visible = rect.top < window.innerHeight * 0.88 && rect.bottom > 64;
+      return visible ? "in" : "waiting";
+    });
+    setPhases(initial);
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        setPhases((current) => {
+          const next = [...current];
+          let changed = false;
+          for (const entry of entries) {
+            if (!entry.isIntersecting) continue;
+            const index = list.indexOf(entry.target as HTMLElement);
+            if (index < 0 || next[index] === "in") continue;
+            next[index] = "in";
+            changed = true;
+            observer.unobserve(entry.target);
+          }
+          return changed ? next : current;
+        });
+      },
+      { rootMargin: "0px 0px -8% 0px", threshold: 0 },
+    );
+
+    list.forEach((node, index) => {
+      if (node && initial[index] === "waiting") observer.observe(node);
+    });
+
+    return () => observer.disconnect();
+  }, [count]);
+
+  const setNode = (index: number) => (node: HTMLElement | null) => {
+    nodes.current[index] = node;
+  };
+
+  return { phases, setNode };
+}
+
 export function HomePage() {
   const [activeStep, setActiveStep] = useState(careSteps[0].step);
   const [trackReady, setTrackReady] = useState(false);
@@ -232,6 +313,12 @@ export function HomePage() {
   const viewportRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLElement | null)[]>([]);
+  const showUpRef = useRef<HTMLElement>(null);
+  const showUpPhase = useScrollPhase(showUpRef);
+  const showUpAssets = useInViewPhases(5);
+  const liveRef = useRef<HTMLElement>(null);
+  const livePhase = useScrollPhase(liveRef);
+  const livePieces = useInViewPhases(6);
 
   useLayoutEffect(() => {
     const container = scrollRef.current;
@@ -465,10 +552,10 @@ export function HomePage() {
       </section>
       <Marquee />
 
-      <section className="relative overflow-hidden bg-white px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
+      <section className="relative z-10 bg-white px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_8%_40%,rgba(246,198,206,0.85),transparent_42%),radial-gradient(ellipse_at_92%_70%,rgba(244,190,200,0.7),transparent_40%),radial-gradient(ellipse_at_50%_100%,rgba(248,214,220,0.55),transparent_46%)]"
+          className="pointer-events-none absolute inset-x-0 top-0 -bottom-48 bg-[radial-gradient(ellipse_at_8%_40%,rgba(246,198,206,0.85),transparent_42%),radial-gradient(ellipse_at_92%_70%,rgba(244,190,200,0.7),transparent_40%),radial-gradient(ellipse_at_50%_100%,rgba(248,214,220,0.55),transparent_46%)] [mask-image:linear-gradient(to_bottom,#000_68%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,#000_68%,transparent_100%)]"
         />
         <div className="relative mx-auto w-full max-w-[1200px]">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
@@ -654,7 +741,7 @@ export function HomePage() {
                     event.preventDefault();
                     setActiveStep(step.step);
                   }}
-                  className={`relative h-[520px] min-w-0 shrink basis-0 cursor-pointer overflow-hidden rounded-[28px] transition-[flex-grow] duration-[400ms] ease-out motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink ${
+                  className={`relative h-[520px] min-w-0 shrink basis-0 cursor-pointer overflow-hidden rounded-[28px] transition-[flex-grow] duration-[700ms] ease-out motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink ${
                     active ? "grow-[2]" : "grow"
                   }`}
                 >
@@ -666,7 +753,7 @@ export function HomePage() {
                     <p
                       aria-hidden={!active}
                       inert={!active}
-                      className={`w-[508px] max-w-[calc((min(72rem,100vw-4rem)-2.5rem)/2-3rem)] whitespace-normal break-words text-base text-white/90 transition-[opacity,translate] duration-[400ms] ease-out motion-reduce:transition-none ${
+                      className={`w-[508px] max-w-[calc((min(72rem,100vw-4rem)-2.5rem)/2-3rem)] whitespace-normal break-words text-base text-white/90 transition-[opacity,translate] duration-[700ms] ease-out motion-reduce:transition-none ${
                         active ? "relative mt-2 translate-y-0 opacity-100 delay-[250ms]" : "absolute opacity-0 delay-0"
                       }`}
                     >
@@ -698,13 +785,13 @@ export function HomePage() {
         </div>
       </section>
 
-      <section className="relative overflow-hidden rounded-t-[25px]">
+      <section ref={showUpRef} data-phase={showUpPhase} className="show-up-scene relative overflow-hidden rounded-t-[25px]">
         <Image
           src={assets.showUp}
           alt="A man standing beside an oversized LeaderHealth tablet embossed with the LH monogram."
           width={2720}
           height={1536}
-          className="absolute inset-0 h-full w-full object-cover"
+          className="show-up-bg absolute inset-0 h-full w-full object-cover"
         />
         <div className="relative mx-auto w-[min(1174px,calc(100%-2rem))] pb-16 pt-[72px]">
           <h2 className="text-center font-sans text-[40px] font-medium leading-[1.1] tracking-normal text-[#331110] md:text-[56px] md:leading-[61.6px]">
@@ -732,12 +819,17 @@ export function HomePage() {
           </div>
 
           <div className="mt-5 grid gap-2.5 md:grid-cols-2">
-            <article className="relative h-[280px] overflow-hidden rounded-[23px] md:h-[335px]">
+            <article
+              ref={showUpAssets.setNode(0)}
+              data-phase={showUpAssets.phases[0]}
+              className="show-up-card relative h-[280px] overflow-hidden rounded-[23px] md:h-[335px]"
+              style={{ "--d": "0ms" } as CSSProperties}
+            >
               <Image
                 src={assets.pills}
                 alt="Two round tablets and a capsule on a blush gradient background"
                 fill
-                className="object-cover"
+                className="show-up-photo object-cover"
                 sizes="(min-width: 768px) 582px, 92vw"
               />
               <div className="relative flex h-full flex-col justify-between px-[22px] pb-[22px] pt-10">
@@ -770,12 +862,17 @@ export function HomePage() {
               </div>
             </article>
 
-            <article className="relative h-[280px] overflow-hidden rounded-[23px] md:h-[335px]">
+            <article
+              ref={showUpAssets.setNode(1)}
+              data-phase={showUpAssets.phases[1]}
+              className="show-up-card relative h-[280px] overflow-hidden rounded-[23px] md:h-[335px]"
+              style={{ "--d": "160ms" } as CSSProperties}
+            >
               <Image
                 src={assets.stretching}
                 alt="LEADER HEALTH logo over a photo of a man stretching his shoulder"
                 fill
-                className="object-cover"
+                className="show-up-photo object-cover"
                 sizes="(min-width: 768px) 582px, 92vw"
               />
               <div className="relative flex h-full flex-col justify-end px-[22px] pb-[22px] pt-10">
@@ -798,9 +895,15 @@ export function HomePage() {
           </div>
 
           <div id="our-top-3" className="relative z-10 mt-2.5 scroll-mt-24 grid items-stretch gap-2.5 md:grid-cols-3">
-            {campaign.map((card) => (
-              <Link
+            {campaign.map((card, index) => (
+              <div
                 key={card.href}
+                ref={showUpAssets.setNode(index + 2)}
+                data-phase={showUpAssets.phases[index + 2]}
+                className="show-up-card min-w-0"
+                style={{ "--d": `${index * 150}ms` } as CSSProperties}
+              >
+              <Link
                 href={card.href}
                 className="group relative flex h-[660px] w-full flex-col overflow-hidden rounded-[22px] bg-[#442928] px-6 pt-8 pb-7 transition-colors duration-300 ease-out hover:bg-[#e6d8c6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e33d4d] motion-reduce:transition-none md:h-[860px] md:px-8 md:pt-10 md:pb-10"
               >
@@ -812,7 +915,7 @@ export function HomePage() {
                     <path d="M5.5 14.5 14.5 5.5M8 5.5h6.5V12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </span>
-                <div className="flex min-h-0 flex-1 items-center justify-center">
+                <div className="show-up-vial flex min-h-0 flex-1 items-center justify-center">
                   <Image
                     src={card.img}
                     alt=""
@@ -830,18 +933,19 @@ export function HomePage() {
                   </p>
                 </div>
               </Link>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="relative overflow-hidden bg-white">
+      <section ref={liveRef} data-phase={livePhase} className="live-scene relative overflow-hidden bg-white">
         <Image
           src={assets.weightlifting}
           alt="A man in a white tank top lifting weights in a shaft of light."
           width={2496}
           height={1664}
-          className="absolute inset-0 h-full w-full object-cover"
+          className="live-bg absolute inset-0 h-full w-full object-cover"
         />
         <div className="px-4 py-12 sm:px-6 sm:py-16 md:px-8 md:py-20 lg:px-10 lg:py-24">
         <div
@@ -858,29 +962,44 @@ export function HomePage() {
         >
           <div className="grid items-start gap-8 lg:grid-cols-2">
             <div>
-              <h2 className="font-sans text-[36px] font-medium leading-tight tracking-normal text-[#f7f3f4] md:text-[47px] md:leading-[56.4px]">
-                Designed for the way
-              </h2>
-              <p className="font-serif-italic text-[36px] leading-tight text-[#f7f3f4] md:text-[47px] md:leading-[37.6px]">
-                you want to live.
-              </p>
-              <p className="mt-6 max-w-[478px] font-sans text-lg font-light leading-snug tracking-normal text-white md:text-[24px] md:leading-[28.8px]">
-                Most wellness products are built for the average. Yours is built for you — engineered to move the metrics that matter, and refined as your body changes.
-              </p>
+              <div
+                ref={livePieces.setNode(0)}
+                data-phase={livePieces.phases[0]}
+                className="live-copy"
+                style={{ "--d": "0ms" } as CSSProperties}
+              >
+                <h2 className="font-sans text-[36px] font-medium leading-tight tracking-normal text-[#f7f3f4] md:text-[47px] md:leading-[56.4px]">
+                  Designed for the way
+                </h2>
+                <p className="font-serif-italic text-[36px] leading-tight text-[#f7f3f4] md:text-[47px] md:leading-[37.6px]">
+                  you want to live.
+                </p>
+                <p className="mt-6 max-w-[478px] font-sans text-lg font-light leading-snug tracking-normal text-white md:text-[24px] md:leading-[28.8px]">
+                  Most wellness products are built for the average. Yours is built for you — engineered to move the metrics that matter, and refined as your body changes.
+                </p>
+              </div>
               <div className="mt-8 grid grid-cols-2 gap-2.5">
-                {designedForCards.map((item, i) => (
+                {designedFor.map((item, i) => (
                   <div
-                    key={`${item}-${i}`}
-                    className="flex items-start gap-[11px] rounded-[13px] border border-white/55 bg-white/20 p-4 md:p-5"
+                    key={item}
+                    ref={livePieces.setNode(i + 1)}
+                    data-phase={livePieces.phases[i + 1]}
+                    className="live-card flex items-start gap-[11px] rounded-[13px] border border-white/55 bg-white/20 p-4 md:p-5"
+                    style={{ "--d": `${120 + i * 110}ms` } as CSSProperties}
                   >
-                    <Image src={assets.check} alt="" width={28} height={28} className="mt-0.5 h-7 w-7 shrink-0" />
+                    <Image src={assets.check} alt="" width={28} height={28} className="live-check mt-0.5 h-7 w-7 shrink-0" />
                     <p className="font-sans text-[14px] leading-[16.8px] tracking-normal text-[#f7f3f4]">{item}</p>
                   </div>
                 ))}
               </div>
             </div>
-            <div className="relative mx-auto hidden min-h-[520px] w-full max-w-[579px] lg:block">
-              <div className="sermorelin-vial-float relative">
+            <div
+              ref={livePieces.setNode(5)}
+              data-phase={livePieces.phases[5]}
+              className="live-vial relative mx-auto w-full max-w-[340px] lg:min-h-[520px] lg:max-w-[579px]"
+              style={{ "--d": "180ms" } as CSSProperties}
+            >
+              <div className="sermorelin-vial-float relative pb-14 md:pb-0">
                 <Image
                   src="https://framerusercontent.com/images/Nxmvv0V7wJmcL1463SseCeRgh8.png?width=1080&height=1350"
                   alt="Sermorelin injection vial"
@@ -888,7 +1007,7 @@ export function HomePage() {
                   height={677}
                   className="sermorelin-vial h-auto w-full object-contain"
                 />
-                <p className="absolute bottom-16 right-4 flex h-16 items-center justify-center rounded-[13px] bg-black/50 px-6 font-serif-italic text-[28px] leading-[33.6px] text-[#f7f3f4] md:right-8">
+                <p className="absolute bottom-0 left-1/2 flex h-11 -translate-x-1/2 items-center justify-center rounded-[13px] bg-black/50 px-4 font-serif-italic text-[18px] leading-none text-[#f7f3f4] md:bottom-16 md:left-auto md:right-8 md:h-16 md:translate-x-0 md:px-6 md:text-[28px] md:leading-[33.6px]">
                   More by design.
                 </p>
               </div>

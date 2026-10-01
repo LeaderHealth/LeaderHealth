@@ -4,8 +4,8 @@ import Image from "next/image";
 import { useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
-const stepTransition = { type: "spring" as const, duration: 0.5, bounce: 0.2, delay: 0 };
-const listTransition = { type: "spring" as const, duration: 0.7, bounce: 0, delay: 0 };
+const stepTransition = { duration: 0.7, ease: [0.22, 1, 0.36, 1] as const };
+const listTransition = { duration: 0.75, ease: [0.22, 1, 0.36, 1] as const };
 
 const steps = [
   {
@@ -61,7 +61,7 @@ function StepImage({ step }: { step: (typeof steps)[number] }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.35, ease: [0.44, 0, 0.56, 1] }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
           className="absolute inset-8 flex items-center justify-center"
         >
           <Image

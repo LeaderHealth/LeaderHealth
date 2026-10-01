@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { energyLongevityFaqs } from "@/lib/content/faqs";
 
-const rowSpring = { type: "spring" as const, stiffness: 400, damping: 49, mass: 1 };
+const rowSpring = { duration: 0.55, ease: [0.22, 1, 0.36, 1] as const };
 
 function Chevron({ open }: { open: boolean }) {
   return (
@@ -12,7 +12,7 @@ function Chevron({ open }: { open: boolean }) {
       className="grid h-6 w-6 shrink-0 place-items-center text-[#331110]"
       initial={false}
       animate={{ rotate: open ? 180 : 0 }}
-      transition={{ duration: 0.35, ease: [0.44, 0, 0.56, 1] }}
+      transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
       aria-hidden
     >
       <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none">

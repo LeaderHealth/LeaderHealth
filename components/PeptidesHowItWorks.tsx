@@ -5,17 +5,16 @@ import Image from "next/image";
 import { motion, useReducedMotion } from "framer-motion";
 import { assets } from "@/lib/content/site";
 
-const CARD_EASE = [0.34, 1.2, 0.64, 1] as const;
+const CARD_EASE = [0.22, 1, 0.36, 1] as const;
 
 const cardTransition = {
-  duration: 0.4,
+  duration: 0.65,
   ease: CARD_EASE,
 };
 
 const parentTransition = {
-  type: "spring" as const,
-  duration: 0.4,
-  bounce: 0.2,
+  duration: 0.7,
+  ease: CARD_EASE,
 };
 
 const CARD_GRADIENT = "linear-gradient(180deg, #e74655 0%, #f06b72 55%, #f27477 100%)";
