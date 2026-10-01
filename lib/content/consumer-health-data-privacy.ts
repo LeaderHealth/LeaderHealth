@@ -105,14 +105,14 @@ export const consumerHealthDataPrivacy: LegalPage = {
         },
         {
           "kind": "p",
-          "text": "Who \"we\" are. \"Leader Health\" means LH Ventures LLC dba Leader Health, the technology and administrative-services company that operates the Leader Health platform. Clinical care is delivered by independent licensed clinicians practicing through an Affiliated Provider Network. The Affiliated Provider Network is the HIPAA Covered Entity for your medical record; Leader Health is its Business Associate.",
+          "text": "Who \"we\" are. \"Leader Health\" means LH Ventures LLC d/b/a Leader Health, the technology and administrative-services company that operates the Leader Health platform. Clinical care is delivered by independent licensed clinicians practicing through an Independent Provider Network. The Independent Provider Network is the HIPAA Covered Entity for your medical record; Leader Health is its Business Associate.",
           "runs": [
             {
               "text": "Who \"we\" are.",
               "bold": true
             },
             {
-              "text": " \"Leader Health\" means LH Ventures LLC dba Leader Health, the technology and administrative-services company that operates the Leader Health platform. Clinical care is delivered by independent licensed clinicians practicing through an Affiliated Provider Network. The Affiliated Provider Network is the HIPAA Covered Entity for your medical record; Leader Health is its Business Associate."
+              "text": " \"Leader Health\" means LH Ventures LLC d/b/a Leader Health, the technology and administrative-services company that operates the Leader Health platform. Clinical care is delivered by independent licensed clinicians practicing through an Independent Provider Network. The Independent Provider Network is the HIPAA Covered Entity for your medical record; Leader Health is its Business Associate."
             }
           ]
         },
@@ -137,14 +137,14 @@ export const consumerHealthDataPrivacy: LegalPage = {
       "blocks": [
         {
           "kind": "p",
-          "text": "Not covered (governed by HIPAA instead). Most information created in the course of your care — your medical record, lab results, prescriptions, clinical messages, and other protected health information — is PHI held by the Affiliated Provider Network and governed by the HIPAA Notice. State consumer-health-data laws expressly exclude PHI and information that a HIPAA covered entity or business associate maintains in the same way as PHI. That information is not the subject of this Policy.",
+          "text": "Not covered (governed by HIPAA instead). Most information created in the course of your care — your medical record, lab results, prescriptions, clinical messages, and other protected health information — is PHI held by the Independent Provider Network and governed by the HIPAA Notice. State consumer-health-data laws expressly exclude PHI and information that a HIPAA covered entity or business associate maintains in the same way as PHI. That information is not the subject of this Policy.",
           "runs": [
             {
               "text": "Not covered (governed by HIPAA instead).",
               "bold": true
             },
             {
-              "text": " Most information created in the course of your care — your medical record, lab results, prescriptions, clinical messages, and other protected health information — is PHI held by the Affiliated Provider Network and governed by the "
+              "text": " Most information created in the course of your care — your medical record, lab results, prescriptions, clinical messages, and other protected health information — is PHI held by the Independent Provider Network and governed by the "
             },
             {
               "text": "HIPAA Notice",
@@ -461,7 +461,7 @@ export const consumerHealthDataPrivacy: LegalPage = {
         },
         {
           "kind": "p",
-          "text": "We do not share consumer health data with the Affiliated Provider Network, Pharmacies, or Labs under this Policy; information shared with them to deliver your care is PHI governed by HIPAA, not by this Policy.",
+          "text": "We do not share consumer health data with the Independent Provider Network, Pharmacies, or Labs under this Policy; information shared with them to deliver your care is PHI governed by HIPAA, not by this Policy.",
           "runs": [
             {
               "text": "We do "
@@ -471,7 +471,7 @@ export const consumerHealthDataPrivacy: LegalPage = {
               "bold": true
             },
             {
-              "text": " share consumer health data with the Affiliated Provider Network, Pharmacies, or Labs under this Policy; information shared with them to deliver your care is PHI governed by HIPAA, not by this Policy."
+              "text": " share consumer health data with the Independent Provider Network, Pharmacies, or Labs under this Policy; information shared with them to deliver your care is PHI governed by HIPAA, not by this Policy."
             }
           ]
         }

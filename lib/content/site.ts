@@ -32,7 +32,7 @@ export const site = {
   addressHref: "https://maps.google.com/?q=321+S+Persimmon+St+Tomball+Texas",
   hours: ["Tue-Sat, 9am-5pm CT", "Sun-Mon, Closed"],
   legalNote:
-    "Leader Health provides the technology platform and administrative services for your care. Medical services are provided by independent, licensed clinicians through affiliated medical practices; the clinician and practice responsible for your care are identified in your visit record and patient portal. Leader Health is not a pharmacy and does not compound, manufacture, or dispense medications. Prescriptions are filled by licensed U.S. pharmacies. Whether a medicine is FDA approved or compounded is stated on that medicine's own page. This site does not provide medical advice and is not a substitute for care from your own clinician. For a medical emergency, call 911.",
+    "Leader Health provides the technology platform and administrative services for your care. Medical services are provided by independent, licensed clinicians through an Independent Provider Network; the clinician and practice responsible for your care are identified in your visit record and patient portal. Leader Health is not a pharmacy and does not compound, manufacture, or dispense medications. Prescriptions are filled by licensed U.S. pharmacies. Whether a medicine is FDA approved or compounded is stated on that medicine's own page. This site does not provide medical advice and is not a substitute for care from your own clinician. For a medical emergency, call 911.",
 };
 
 export const tickerItems = [

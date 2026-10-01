@@ -11,13 +11,13 @@ export const privacyPolicy: LegalPage = {
       "blocks": [
         {
           "kind": "p",
-          "text": "Leader Health is a healthtech platform operated by LH Ventures LLC as the technology and administrative-services company. Clinical care is delivered by independent licensed clinicians who practice through an Independent Provider Network under contract with us; those clinicians exercise their own independent clinical judgment under the Independent Provider Network's own clinical governance. The Independent Provider Network is the HIPAA Covered Entity for your medical record (the \"Covered Entity\" is the entity legally responsible under HIPAA for your medical records); Leader Health is its Business Associate (a \"Business Associate\" is a vendor that handles that data on the Covered Entity's behalf under a written agreement). Program-level medical oversight of the platform (a non-treatment function) is provided by Leader Health’s Chief Medical Officer, a licensed physician and officer of the company; the Chief Medical Officer does not direct the clinical decisions your treating clinician makes about you. We do not sell your Protected Health Information, and we do not use your PHI for cross-context behavioral advertising. We are implementing support for Global Privacy Control (GPC) opt-out preference signals. Your state-law rights are listed below. Questions: privacy@myleaderhealth.com.",
+          "text": "Leader Health is a healthtech platform operated by LH Ventures LLC d/b/a Leader Health as the technology and administrative-services company. Clinical care is delivered by independent licensed clinicians who practice through an Independent Provider Network under contract with us; those clinicians exercise their own independent clinical judgment under the Independent Provider Network's own clinical governance. The Independent Provider Network is the HIPAA Covered Entity for your medical record (the \"Covered Entity\" is the entity legally responsible under HIPAA for your medical records); Leader Health is its Business Associate (a \"Business Associate\" is a vendor that handles that data on the Covered Entity's behalf under a written agreement). Program-level medical oversight of the platform (a non-treatment function) is provided by Leader Health’s Chief Medical Officer, a licensed physician and officer of the company; the Chief Medical Officer does not direct the clinical decisions your treating clinician makes about you. We do not sell your Protected Health Information, and we do not use your PHI for cross-context behavioral advertising. We are implementing support for Global Privacy Control (GPC) opt-out preference signals. Your state-law rights are listed below. Questions: privacy@myleaderhealth.com.",
           "runs": [
             {
               "text": "Leader Health is a healthtech platform operated by "
             },
             {
-              "text": "LH Ventures LLC",
+              "text": "LH Ventures LLC d/b/a Leader Health",
               "bold": true
             },
             {
@@ -54,10 +54,10 @@ export const privacyPolicy: LegalPage = {
       "blocks": [
         {
           "kind": "p",
-          "text": "\"Leader Health,\" \"we,\" \"our,\" or \"us\" means Leader Health, the trade name of LH Ventures LLC, a Delaware limited liability company foreign-qualified in Texas, together with its affiliates. Leader Health is a technology and administrative-services company. Leader Health does not practice medicine.",
+          "text": "\"Leader Health,\" \"we,\" \"our,\" or \"us\" means LH Ventures LLC d/b/a Leader Health, a Delaware limited liability company foreign-qualified in Texas, together with its affiliates. Leader Health is a technology and administrative-services company. Leader Health does not practice medicine.",
           "runs": [
             {
-              "text": "\"Leader Health,\" \"we,\" \"our,\" or \"us\" means Leader Health, the trade name of LH Ventures LLC, a Delaware limited liability company foreign-qualified in Texas, together with its affiliates. Leader Health is a technology and administrative-services company. Leader Health does not practice medicine.",
+              "text": "\"Leader Health,\" \"we,\" \"our,\" or \"us\" means LH Ventures LLC d/b/a Leader Health, a Delaware limited liability company foreign-qualified in Texas, together with its affiliates. Leader Health is a technology and administrative-services company. Leader Health does not practice medicine.",
               "bold": true
             }
           ]
@@ -194,7 +194,7 @@ export const privacyPolicy: LegalPage = {
             "Intake and health-history information (symptoms, conditions, medications, allergies, lifestyle, photos when you choose to upload them).",
             "Identity verification documents where required by law (government ID for controlled substances or age-restricted therapies).",
             "Payment information processed through our payment processor; we do not store full card numbers on our servers.",
-            "Communications with our support team or the Affiliated Provider Network (messages, voicemails, recorded video consults)."
+            "Communications with our support team or the Independent Provider Network (messages, voicemails, recorded video consults)."
           ]
         },
         {
@@ -246,7 +246,7 @@ export const privacyPolicy: LegalPage = {
           "items": [
             "Lab results from the Labs.",
             "Prescription, dispensing, and shipping data from the Pharmacies.",
-            "Clinical notes and prescriptions from the Affiliated Provider Network and its Providers.",
+            "Clinical notes and prescriptions from the Independent Provider Network and its Providers.",
             "Address verification, fraud-prevention, and identity-verification data from service providers.",
             "If you connect a wearable, EHR, or health-record service, the data you authorize that service to share."
           ]
@@ -309,7 +309,7 @@ export const privacyPolicy: LegalPage = {
               "Health information (intake, conditions, medications, allergies, photos when uploaded)",
               "Coordinate clinical care; deliver Service",
               "No",
-              "Per the Affiliated Provider Network's medical-record retention applicable to the state in which care was provided (minimum periods vary by state — for example, 7 years for adults under Texas law and longer for minors and in some other states; the longer of the applicable state minimum and any federal minimum applies)"
+              "Per the Independent Provider Network's medical-record retention applicable to the state in which care was provided (minimum periods vary by state — for example, 7 years for adults under Texas law and longer for minors and in some other states; the longer of the applicable state minimum and any federal minimum applies)"
             ],
             [
               "Internet/network activity (cookies, device, IP, browsing)",
@@ -394,7 +394,7 @@ export const privacyPolicy: LegalPage = {
           "kind": "list",
           "items": [
             "Create and administer your account.",
-            "Coordinate your care with the Affiliated Provider Network, Pharmacies, and Labs (PHI is governed by the HIPAA Notice).",
+            "Coordinate your care with the Independent Provider Network, Pharmacies, and Labs (PHI is governed by the HIPAA Notice).",
             "Process payments, billing, refunds, and reimbursements.",
             "Communicate with you — appointment reminders, lab and shipping updates, service announcements, and, if you opt in, marketing.",
             "Operate, maintain, secure, and improve the Site and Platform.",
@@ -406,7 +406,7 @@ export const privacyPolicy: LegalPage = {
             null,
             [
               {
-                "text": "Coordinate your care with the Affiliated Provider Network, Pharmacies, and Labs (PHI is governed by the "
+                "text": "Coordinate your care with the Independent Provider Network, Pharmacies, and Labs (PHI is governed by the "
               },
               {
                 "text": "HIPAA Notice",
@@ -447,7 +447,7 @@ export const privacyPolicy: LegalPage = {
         {
           "kind": "list",
           "items": [
-            "With the Affiliated Provider Network, Pharmacies, and Labs as needed to deliver your care. The Affiliated Provider Network is the HIPAA Covered Entity; Leader Health acts as its Business Associate for PHI under a written Business Associate Agreement.",
+            "With the Independent Provider Network, Pharmacies, and Labs as needed to deliver your care. The Independent Provider Network is the HIPAA Covered Entity; Leader Health acts as its Business Associate for PHI under a written Business Associate Agreement.",
             "With service providers that operate our infrastructure, payment processing, identity verification, customer support, analytics, and communications, under contracts that require confidentiality and limit use to the services they provide to us.",
             "With professional advisors (auditors, lawyers, accountants) under confidentiality.",
             "In a corporate transaction (merger, acquisition, financing, reorganization, asset sale, bankruptcy) — only to the extent permitted by law and subject to applicable safeguards for health information.",
@@ -457,11 +457,11 @@ export const privacyPolicy: LegalPage = {
           "runs": [
             [
               {
-                "text": "With the Affiliated Provider Network, Pharmacies, and Labs",
+                "text": "With the Independent Provider Network, Pharmacies, and Labs",
                 "bold": true
               },
               {
-                "text": " as needed to deliver your care. The Affiliated Provider Network is the HIPAA Covered Entity; Leader Health acts as its Business Associate for PHI under a written Business Associate Agreement."
+                "text": " as needed to deliver your care. The Independent Provider Network is the HIPAA Covered Entity; Leader Health acts as its Business Associate for PHI under a written Business Associate Agreement."
               }
             ],
             [
@@ -546,7 +546,7 @@ export const privacyPolicy: LegalPage = {
       "blocks": [
         {
           "kind": "p",
-          "text": "This matrix summarizes the categories of personal information Leader Health may disclose to categories of service providers and third parties to operate the Site and deliver the Service. PHI shared with the Affiliated Provider Network, Pharmacies, and Labs to deliver clinical care is governed by HIPAA and the BAA framework described above, not by this matrix."
+          "text": "This matrix summarizes the categories of personal information Leader Health may disclose to categories of service providers and third parties to operate the Site and deliver the Service. PHI shared with the Independent Provider Network, Pharmacies, and Labs to deliver clinical care is governed by HIPAA and the BAA framework described above, not by this matrix."
         },
         {
           "kind": "table",
@@ -578,7 +578,7 @@ export const privacyPolicy: LegalPage = {
             ],
             [
               "Health data and PHI",
-              "Affiliated Provider Network, Pharmacies, Labs, technology vendors under BAA",
+              "Independent Provider Network, Pharmacies, Labs, technology vendors under BAA",
               "None"
             ],
             [
@@ -675,14 +675,14 @@ export const privacyPolicy: LegalPage = {
           "items": [
             "Update your account information in your dashboard.",
             "Opt out of marketing emails by clicking \"unsubscribe\"; transactional and care-related messages will continue.",
-            "Request a copy of your medical record from the Affiliated Provider Network via the dashboard or by contacting records@myleaderhealth.com."
+            "Request a copy of your medical record from the Independent Provider Network via the dashboard or by contacting records@myleaderhealth.com."
           ],
           "runs": [
             null,
             null,
             [
               {
-                "text": "Request a copy of your medical record from the Affiliated Provider Network via the dashboard or by contacting "
+                "text": "Request a copy of your medical record from the Independent Provider Network via the dashboard or by contacting "
               },
               {
                 "text": "records@myleaderhealth.com",
@@ -772,10 +772,10 @@ export const privacyPolicy: LegalPage = {
         },
         {
           "kind": "p",
-          "text": "Rights with respect to PHI held by the Affiliated Provider Network are described in the HIPAA Notice of Privacy Practices.",
+          "text": "Rights with respect to PHI held by the Independent Provider Network are described in the HIPAA Notice of Privacy Practices.",
           "runs": [
             {
-              "text": "Rights with respect to PHI held by the Affiliated Provider Network are described in the "
+              "text": "Rights with respect to PHI held by the Independent Provider Network are described in the "
             },
             {
               "text": "HIPAA Notice of Privacy Practices",

@@ -121,8 +121,9 @@ const legalAccordions: FooterAccordion[] = [
     sections: [
       {
         links: [
-          { label: "Terms & Services", href: "/legal/terms-of-service" },
+          { label: "Terms of Service", href: "/legal/terms-of-service" },
           { label: "Telehealth Consent", href: "/legal/telehealth-consent" },
+          { label: "Important Safety Information", href: "/legal/important-safety-information" },
           { label: "HIPAA Notice", href: "/legal/hipaa-notice" },
         ],
       },
@@ -530,7 +531,7 @@ export function Footer() {
       <div className="relative">
         <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[#DBD4BD]/8" />
       <div className="mx-auto flex w-full max-w-[1540px] items-center justify-between gap-4 px-6 py-4 min-[810px]:px-12 min-[1200px]:px-24">
-        <p className="font-sans text-[13px] tracking-[0.06em] text-[#DBD4BD]/62">Leader Health © 2026 — All rights reserved</p>
+        <p className="font-sans text-[13px] tracking-[0.06em] text-[#DBD4BD]/62">© 2026 Leader Health. All rights reserved.</p>
         <a
           href="#top"
           className={`font-sans text-[13px] tracking-[0.09em] text-[#DBD4BD] uppercase ${linkHover} focus-visible:outline-offset-4`}

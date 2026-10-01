@@ -7,7 +7,7 @@ const labFaqs = [
   },
   {
     q: "Where do I get my blood drawn?",
-    a: "At any Quest Diagnostics or LabCorp location near you, coordinated through our platform. It's typically a 15-minute in-person appointment; we send the order ahead so you can simply check in.",
+    a: "At a partner-laboratory location near you, coordinated through our platform. It's typically a 15-minute in-person appointment; we send the order ahead so you can simply check in.",
   },
   {
     q: "Do I need to fast before my labs?",

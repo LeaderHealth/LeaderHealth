@@ -2174,14 +2174,14 @@ export const hipaaNotice: LegalPage = {
         },
         {
           "kind": "p",
-          "text": "Leader Health (the trade name used by LH Ventures LLC) acts as a HIPAA Business Associate of the Independent Provider Network under a written Business Associate Agreement and handles Protected Health Information (\"PHI\") only as permitted by that agreement and by HIPAA.",
+          "text": "Leader Health (LH Ventures LLC d/b/a Leader Health) acts as a HIPAA Business Associate of the Independent Provider Network under a written Business Associate Agreement and handles Protected Health Information (\"PHI\") only as permitted by that agreement and by HIPAA.",
           "runs": [
             {
               "text": "Leader Health",
               "bold": true
             },
             {
-              "text": " (the trade name used by LH Ventures LLC) acts as a HIPAA "
+              "text": " (LH Ventures LLC d/b/a Leader Health) acts as a HIPAA "
             },
             {
               "text": "Business Associate",
@@ -3998,22 +3998,22 @@ export const stateRestrictions: LegalPage = {
       ]
     },
     {
-      "heading": "2. The Affiliated Provider Network",
+      "heading": "2. The Independent Provider Network",
       "paragraphs": [],
       "blocks": [
         {
           "kind": "p",
-          "text": "The Affiliated Provider Network providing care to you, and the identity and licensure of your treating clinician, are disclosed to you in your patient dashboard and at the visit. The Network may be added to, expanded, or substituted by Leader Health on notice without revising these documents. Where the Service operates with more than one Affiliated Provider Network, your assigned Network and the Providers within it are shown in your dashboard. The Network includes clinicians licensed in all 50 states and the District of Columbia.",
+          "text": "The Independent Provider Network providing care to you, and the identity and licensure of your treating clinician, are disclosed to you in your patient dashboard and at the visit. The Network may be added to, expanded, or substituted by Leader Health on notice without revising these documents. Where the Service operates with more than one Independent Provider Network, your assigned Network and the Providers within it are shown in your dashboard. The Network includes clinicians licensed in all 50 states and the District of Columbia.",
           "runs": [
             {
               "text": "The "
             },
             {
-              "text": "Affiliated Provider Network",
+              "text": "Independent Provider Network",
               "bold": true
             },
             {
-              "text": " providing care to you, and the identity and licensure of your treating clinician, are disclosed to you in your patient dashboard and at the visit. The Network may be added to, expanded, or substituted by Leader Health on notice without revising these documents. Where the Service operates with more than one Affiliated Provider Network, your assigned Network and the Providers within it are shown in your dashboard. The Network includes clinicians licensed in all 50 states and the District of Columbia."
+              "text": " providing care to you, and the identity and licensure of your treating clinician, are disclosed to you in your patient dashboard and at the visit. The Network may be added to, expanded, or substituted by Leader Health on notice without revising these documents. Where the Service operates with more than one Independent Provider Network, your assigned Network and the Providers within it are shown in your dashboard. The Network includes clinicians licensed in all 50 states and the District of Columbia."
             }
           ]
         }
