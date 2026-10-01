@@ -85,11 +85,11 @@ function ReadMore() {
   );
 }
 
-function PhonePreview() {
+function PhonePreview({ src, alt }: { src: string; alt: string }) {
   return (
     <Image
-      src="/images/complete-lab-phone.png"
-      alt="Phone showing the Complete Panel annual baseline, with 64 core biomarkers and a View Results button"
+      src={src}
+      alt={alt}
       width={457}
       height={931}
       priority
@@ -102,10 +102,20 @@ export function CompleteLabHero({
   slug,
   image,
   price,
+  name = "Complete Panel",
+  biomarkers = "64 biomarkers",
+  phoneSrc = "/images/complete-lab-phone.png",
+  phoneAlt = "Phone showing the Complete Panel annual baseline, with 64 core biomarkers and a View Results button",
+  description = "Energy, mood, and sex drive all rely on hormonal balance. This lab panel analyzes 64 key biomarkers, providing a streamlined assessment of your hormone health.",
 }: {
   slug: string;
   image: string;
   price: string;
+  name?: string;
+  biomarkers?: string;
+  phoneSrc?: string;
+  phoneAlt?: string;
+  description?: string;
 }) {
   const { addItem } = useCart();
 
@@ -113,7 +123,7 @@ export function CompleteLabHero({
     const item: CartItem = {
       id: cartLineId(slug, gender),
       slug,
-      name: "Complete Panel",
+      name,
       variant: `For ${gender}`,
       href: `/labs/${slug}`,
       image,
@@ -133,7 +143,7 @@ export function CompleteLabHero({
       }}
     >
       <div className="mx-auto flex w-full max-w-[1100px] flex-col items-center gap-8 lg:flex-row lg:items-center lg:justify-center lg:gap-16">
-        <PhonePreview />
+        <PhonePreview src={phoneSrc} alt={phoneAlt} />
 
         <div
           className="relative flex h-auto w-[340px] flex-col overflow-hidden rounded-[20px] px-[22px] pb-5 pt-6 lg:h-[610px] lg:w-[458px] lg:px-[34px] lg:pb-6 lg:pt-8"
@@ -147,7 +157,7 @@ export function CompleteLabHero({
             }}
           >
             <p className="font-sans text-[18px] font-semibold leading-[1.2] text-[#321110] lg:text-[25px]">{price}</p>
-            <p className="font-sans text-[12px] font-normal leading-[1.2] text-[#E4505B]">64 biomarkers</p>
+            <p className="font-sans text-[12px] font-normal leading-[1.2] text-[#E4505B]">{biomarkers}</p>
           </div>
 
           <Stars />
@@ -155,11 +165,10 @@ export function CompleteLabHero({
             Diagnostic labs
           </p>
           <h1 className="mt-2 font-sans text-[20px] font-medium leading-[1.2] tracking-normal text-[#331110] lg:w-[392px] lg:text-[28px]">
-            Complete Panel
+            {name}
           </h1>
           <p className="mt-2 font-sans text-[11px] font-normal leading-[1.2] tracking-normal text-justify text-[rgba(84,40,39,0.85)] lg:w-[391px] lg:text-[15px]">
-            Energy, mood, and sex drive all rely on hormonal balance. This lab panel analyzes 64 key biomarkers,
-            providing a streamlined assessment of your hormone health.
+            {description}
           </p>
 
           <ul className="mt-5 space-y-3">

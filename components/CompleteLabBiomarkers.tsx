@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { motion } from "framer-motion";
 
 const rowSpring = { duration: 0.6, ease: [0.22, 1, 0.36, 1] as const };
@@ -118,6 +118,147 @@ const rightColumn: Group[] = [
   },
 ];
 
+const advanceLeft: Group[] = [
+  {
+    title: "Heart & Cardiovascular",
+    icon: <BiomarkerIcon src="/images/biomarkers/advance-heart.png" />,
+    markers: [
+      "Total Cholesterol",
+      "HDL Cholesterol",
+      "LDL Cholesterol",
+      "Triglycerides",
+      "Non-HDL Cholesterol",
+      "Total Cholesterol / HDL Ratio",
+      "Apolipoprotein B (ApoB)",
+      "Lipoprotein(a)",
+      "High-Sensitivity C-Reactive Protein (hs-CRP)",
+    ],
+  },
+  {
+    title: "Metabolic & Blood Sugar",
+    icon: <BiomarkerIcon src="/images/biomarkers/advance-metabolic.png" />,
+    markers: ["Fasting Glucose", "HbA1c", "Fasting Insulin", "Amylase", "Lipase", "Uric Acid", "Apolipoprotein B (ApoB)"],
+  },
+  {
+    title: "Inflammation",
+    icon: <BiomarkerIcon src="/images/biomarkers/advance-inflammation.png" />,
+    markers: ["Homocysteine"],
+  },
+  {
+    title: "Sex Hormones",
+    icon: <BiomarkerIcon src="/images/biomarkers/advance-hormones.png" />,
+    markers: [
+      "Total Testosterone",
+      "Free Testosterone",
+      "SHBG",
+      "Estradiol",
+      "LH",
+      "FSH",
+      "DHEA-S",
+      "Prolactin",
+      "IGF-1",
+      "Progesterone",
+      "AMH",
+    ],
+  },
+  {
+    title: "Thyroid",
+    icon: <BiomarkerIcon src="/images/biomarkers/advance-thyroid.png" />,
+    markers: ["TSH", "Free T4", "Free T3", "TPO Antibody", "Thyroglobulin Antibodies (TgAb)"],
+  },
+  {
+    title: "Electrolytes & Fluid Balance",
+    icon: <BiomarkerIcon src="/images/biomarkers/advance-electrolytes.png" />,
+    markers: ["Sodium", "Potassium", "Chloride", "CO2 (Bicarbonate)", "Calcium"],
+  },
+];
+
+const advanceRight: Group[] = [
+  {
+    title: "Liver Function",
+    icon: <BiomarkerIcon src="/images/biomarkers/advance-liver.png" />,
+    markers: ["ALT", "AST", "ALP", "GGT", "Total Bilirubin", "Albumin", "Globulin", "Total Protein", "Albumin / Globulin Ratio"],
+  },
+  {
+    title: "Kidney Function",
+    icon: <BiomarkerIcon src="/images/biomarkers/advance-kidney.png" />,
+    markers: ["Creatinine", "eGFR", "BUN", "BUN / Creatinine Ratio", "Microalbumin (Urine)"],
+  },
+  {
+    title: "Urinalysis",
+    icon: <BiomarkerIcon src="/images/biomarkers/advance-urinalysis.png" />,
+    markers: [
+      "Color",
+      "Appearance",
+      "Specific Gravity",
+      "pH",
+      "Protein",
+      "Glucose",
+      "Ketones",
+      "Bilirubin",
+      "Urobilinogen",
+      "Nitrite",
+      "Blood (Hemoglobin)",
+      "Leukocyte Esterase",
+      "RBC (microscopic)",
+      "WBC (microscopic)",
+      "Epithelial Cells (microscopic)",
+      "Bacteria (microscopic)",
+    ],
+  },
+  {
+    title: "Blood & Immune",
+    icon: <BiomarkerIcon src="/images/biomarkers/advance-blood.png" />,
+    markers: [
+      "WBC",
+      "RBC",
+      "Hemoglobin",
+      "Hematocrit",
+      "MCV",
+      "MCH",
+      "MCHC",
+      "RDW",
+      "Platelets",
+      "MPV (Mean Platelet Volume)",
+      "Neutrophils %",
+      "Lymphocytes %",
+      "Monocytes %",
+      "Eosinophils %",
+      "Basophils %",
+      "Neutrophils Absolute",
+      "Lymphocytes Absolute",
+      "Monocytes Absolute",
+      "Eosinophils Absolute",
+      "Basophils Absolute",
+      "Immature Granulocytes %",
+      "Immature Granulocytes Absolute",
+    ],
+  },
+  {
+    title: "Vitamins & Nutrients",
+    icon: <BiomarkerIcon src="/images/biomarkers/advance-vitamins.png" />,
+    markers: [
+      "Vitamin D, 25-Hydroxy",
+      "Iron",
+      "Ferritin",
+      "TIBC",
+      "Iron % Saturation",
+      "Magnesium, RBC",
+      "MCHC",
+      "Zinc",
+      "Vitamin B12",
+      "Methylmalonic Acid (MMA)",
+    ],
+  },
+  {
+    title: "Prostate Health (Men 40+)",
+    icon: <BiomarkerIcon src="/images/biomarkers/advance-prostate.png" />,
+    markers: ["Prostate-Specific Antigen (PSA)"],
+  },
+];
+
+const layoutSpring = { type: "spring" as const, duration: 0.4, bounce: 0.2, delay: 0 };
+
 function BiomarkerIcon({ src }: { src: string }) {
   return (
     <Image
@@ -152,9 +293,19 @@ function ToggleIcon({ open }: { open: boolean }) {
   );
 }
 
-function BiomarkerRow({ item, open, onToggle }: { item: Group; open: boolean; onToggle: () => void }) {
+function BiomarkerRow({
+  item,
+  open,
+  onToggle,
+  cardClassName = "px-4 py-5 min-[810px]:px-6 min-[810px]:py-6",
+}: {
+  item: Group;
+  open: boolean;
+  onToggle: () => void;
+  cardClassName?: string;
+}) {
   return (
-    <article className="overflow-hidden rounded-[24px] bg-[#f5f5f5] px-4 py-5 text-[#121212] min-[810px]:px-6 min-[810px]:py-6">
+    <article className={`overflow-hidden rounded-[24px] bg-[#f5f5f5] text-[#121212] ${cardClassName}`}>
       <div className={`flex gap-3 min-[810px]:gap-4 ${open ? "items-start" : "items-center"}`}>
         <span className={open ? "mt-0.5" : undefined}>{item.icon}</span>
         <div className="min-w-0 flex-1">
@@ -194,7 +345,7 @@ function BiomarkerRow({ item, open, onToggle }: { item: Group; open: boolean; on
   );
 }
 
-function BiomarkerColumn({ items }: { items: Group[] }) {
+function BiomarkerColumn({ items, cardClassName }: { items: Group[]; cardClassName?: string }) {
   const [open, setOpen] = useState<boolean[]>(() => items.map(() => false));
 
   return (
@@ -207,13 +358,43 @@ function BiomarkerColumn({ items }: { items: Group[] }) {
           onToggle={() =>
             setOpen((current) => current.map((value, i) => (i === index ? !value : value)))
           }
+          cardClassName={cardClassName}
         />
       ))}
     </div>
   );
 }
 
-export function CompleteLabBiomarkers() {
+export function CompleteLabBiomarkers({ panel = "complete" }: { panel?: "complete" | "advance" }) {
+  const [layoutReady, setLayoutReady] = useState(false);
+  useEffect(() => setLayoutReady(true), []);
+
+  if (panel === "advance") {
+    return (
+      <section
+        className="flex flex-col items-center gap-[63px] overflow-hidden px-4 py-[50px] min-[810px]:px-[50px]"
+        style={{
+          background:
+            "linear-gradient(298deg, rgb(232, 132, 144) 0%, rgb(232, 114, 126) 65%, rgb(229, 80, 92) 100%)",
+        }}
+      >
+        <h2 className="max-w-[860px] text-center font-sans text-[26px] font-medium leading-[1.2] tracking-normal text-white min-[810px]:text-[36px] min-[1200px]:text-[40px]">
+          Advance lab panel offers a streamlined
+          <br className="hidden min-[810px]:block" /> analysis of{" "}
+          <span className="font-serif-italic font-normal text-[#321110]">100 key biomarkers</span>
+        </h2>
+        <motion.div
+          layout={layoutReady}
+          transition={layoutSpring}
+          className="flex w-full max-w-[360px] flex-col items-start justify-center gap-2.5 overflow-hidden min-[810px]:w-[694px] min-[810px]:max-w-[694px] min-[1200px]:w-auto min-[1200px]:max-w-none min-[1200px]:flex-row min-[1200px]:justify-center min-[1200px]:gap-[21px]"
+        >
+          <BiomarkerColumn items={advanceLeft} cardClassName="p-6" />
+          <BiomarkerColumn items={advanceRight} cardClassName="p-6" />
+        </motion.div>
+      </section>
+    );
+  }
+
   return (
     <section className="bg-[#32120E] px-4 py-16 min-[810px]:px-8 min-[810px]:py-20 min-[1200px]:px-6">
       <h2 className="mx-auto max-w-[860px] text-center font-sans text-[26px] font-medium leading-[1.2] tracking-normal text-white min-[810px]:text-[36px] min-[1200px]:text-[40px]">

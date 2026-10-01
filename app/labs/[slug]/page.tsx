@@ -81,10 +81,42 @@ export default async function LabPage({ params }: Props) {
   const lab = labs.find((l) => l.slug === slug);
   if (!lab) notFound();
 
-  if (lab.slug === "labs-complete-panel") {
+  if (lab.slug === "labs-complete-panel" || lab.slug === "labs-advance-panel") {
+    const suggestions =
+      lab.slug === "labs-advance-panel"
+        ? [
+            {
+              href: "/labs/labs-complete-panel",
+              title: "Complete Panel",
+              body: "Baseline panel covering 64 biomarkers",
+              price: "$179",
+              src: "/images/complete-lab-phone.png",
+              alt: "Phone showing the Complete Panel results",
+              width: 457,
+              height: 931,
+              imageClass: "max-h-[270px] max-w-[78%]",
+            },
+            ...alsoLike.slice(1),
+          ]
+        : alsoLike;
+
     return (
       <>
-        <CompleteLabHero slug={lab.slug} image={lab.image} price={lab.price} />
+        <CompleteLabHero
+          slug={lab.slug}
+          image={lab.image}
+          price={lab.price}
+          {...(lab.slug === "labs-advance-panel"
+            ? {
+                name: "Advanced Panel",
+                biomarkers: lab.biomarkers,
+                phoneSrc: "/images/also-like-advanced.png",
+                phoneAlt: "Phone showing the Advanced Panel results",
+                description:
+                  "Energy, mood, and sex drive all rely on hormonal balance. This lab panel analyzes 100 key biomarkers, providing a streamlined assessment of your hormone health.",
+              }
+            : {})}
+        />
         <section className="bg-[#f6f2f1] px-10 py-16 text-center md:py-20">
           <div className="mx-auto grid max-w-[1040px] gap-10 md:grid-cols-3 md:gap-x-16">
             {completeLabPoints.map((point) => (
@@ -97,7 +129,7 @@ export default async function LabPage({ params }: Props) {
             ))}
           </div>
         </section>
-        <CompleteLabBiomarkers />
+        <CompleteLabBiomarkers panel={lab.slug === "labs-advance-panel" ? "advance" : "complete"} />
         <CompleteLabSteps />
         <CompleteLabIncluded />
         <SiteTestimonials />
@@ -109,7 +141,7 @@ export default async function LabPage({ params }: Props) {
               You might also like
             </h2>
             <div className="mt-8 grid grid-cols-1 gap-10 min-[810px]:grid-cols-3 min-[810px]:gap-6">
-              {alsoLike.map((item) => (
+              {suggestions.map((item) => (
                 <Link key={item.href} href={item.href} className="group block">
                   <div className="mx-auto flex aspect-[305/321] w-full max-w-[305px] items-center justify-center overflow-hidden rounded-[10px] bg-gradient-to-b from-[#FAF4EA] to-[#DDD3BE]">
                     <Image
