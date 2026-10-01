@@ -7,10 +7,9 @@ import { faqCategories } from "@/lib/content/faqs";
 const accordionEase = [0.12, 0.23, 0.5, 1] as const;
 
 const entrance = {
-  type: "spring" as const,
-  duration: 1,
-  bounce: 0.2,
-  delay: 0.8,
+  duration: 0.9,
+  ease: [0.22, 1, 0.36, 1] as const,
+  delay: 0.05,
 };
 
 function CategoryIcon({ id }: { id: string }) {
@@ -110,7 +109,7 @@ export function FaqBrowse() {
     >
       <motion.div
         className="mx-auto w-full max-w-[980px]"
-        initial={reduceMotion ? false : { opacity: 0, y: 150 }}
+        initial={reduceMotion ? false : { opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={reduceMotion ? { duration: 0 } : entrance}
       >

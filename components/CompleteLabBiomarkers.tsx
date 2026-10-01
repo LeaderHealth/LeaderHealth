@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useState, type ReactNode } from "react";
 import { motion } from "framer-motion";
 
-const rowSpring = { type: "spring" as const, stiffness: 500, damping: 60, mass: 1 };
+const rowSpring = { duration: 0.6, ease: [0.22, 1, 0.36, 1] as const };
 
 type Group = {
   title: string;

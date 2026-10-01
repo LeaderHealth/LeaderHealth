@@ -771,14 +771,14 @@ export function MobileNav({
             >
               <span
                 aria-hidden
-                className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#e4d0ce] transition-transform duration-[400ms] ease-out group-hover:scale-[80] motion-reduce:scale-100! motion-reduce:transition-none"
+                className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#331110] transition-transform duration-[400ms] ease-out group-hover:scale-[80] group-focus-visible:scale-[80] motion-reduce:scale-100! motion-reduce:transition-none"
               />
-              <span className="relative z-10 whitespace-nowrap transition-transform duration-[400ms] ease-out group-hover:-translate-x-[15px] motion-reduce:translate-x-0! motion-reduce:transition-none">
+              <span className="relative z-10 whitespace-nowrap text-ink transition-[transform,color] duration-[400ms] ease-out group-hover:-translate-x-[15px] group-hover:text-white group-focus-visible:-translate-x-[15px] group-focus-visible:text-white motion-reduce:translate-x-0! motion-reduce:text-ink! motion-reduce:transition-none">
                 Get Started
               </span>
               <span
                 aria-hidden
-                className="pointer-events-none absolute top-1/2 right-0 z-10 -translate-y-1/2 translate-x-full transition-transform duration-[400ms] ease-out group-hover:translate-x-[calc(100%-35px)] motion-reduce:translate-x-full! motion-reduce:transition-none"
+                className="pointer-events-none absolute top-1/2 right-0 z-10 -translate-y-1/2 translate-x-full text-white transition-transform duration-[400ms] ease-out group-hover:translate-x-[calc(100%-35px)] group-focus-visible:translate-x-[calc(100%-35px)] motion-reduce:translate-x-full! motion-reduce:transition-none"
               >
                 →
               </span>

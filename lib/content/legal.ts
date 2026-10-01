@@ -1,10 +1,30 @@
 import { privacyPolicy } from "@/lib/content/privacy-policy";
+import { cookiesPolicy } from "@/lib/content/cookies-policy";
+import { consumerHealthDataPrivacy } from "@/lib/content/consumer-health-data-privacy";
+import {
+  doNotSell,
+  hipaaNotice,
+  refundsCancellations,
+  shippingPolicy,
+  stateRestrictions,
+  subscriptionTerms,
+  telehealthConsent,
+  termsOfService,
+  compoundingDisclosure,
+  accessibilityStatement,
+} from "@/lib/content/published-legal";
+
+export type LegalRun = {
+  text: string;
+  bold?: boolean;
+  href?: string;
+};
 
 export type LegalBlock =
-  | { kind: "p"; text: string }
-  | { kind: "h3"; text: string }
-  | { kind: "list"; items: string[] }
-  | { kind: "table"; headers: string[]; rows: string[][] };
+  | { kind: "p"; text: string; runs?: LegalRun[] }
+  | { kind: "h3"; text: string; runs?: LegalRun[] }
+  | { kind: "list"; items: string[]; runs?: (LegalRun[] | null)[] }
+  | { kind: "table"; headers: string[]; rows: string[][]; cellRuns?: (LegalRun[] | null)[][] };
 
 export type LegalSection = {
   heading: string;
@@ -16,66 +36,16 @@ export type LegalPage = {
   slug: string;
   title: string;
   effective?: string;
+  intro?: LegalBlock[];
   sections: LegalSection[];
 };
 
 export const legalPages: LegalPage[] = [
   privacyPolicy,
-  {
-    slug: "terms-of-service",
-    title: "Terms of Service",
-    effective: "July 1, 2026",
-    sections: [
-      {
-        heading: "Agreement",
-        paragraphs: [
-          "These Terms govern your use of Leader Health websites and related services operated by LH Ventures LLC. By using the site, you agree to these Terms. If you do not agree, do not use the platform.",
-        ],
-      },
-      {
-        heading: "Not medical advice on this website",
-        paragraphs: [
-          "Content on this marketing site is educational and is not a diagnosis, prescription, or provider-patient relationship. Clinical care begins only after you complete intake and a licensed clinician evaluates you.",
-        ],
-      },
-      {
-        heading: "Eligibility and accounts",
-        paragraphs: [
-          "You must be 18 or older to create an account. You are responsible for the accuracy of information you submit and for keeping portal credentials confidential.",
-        ],
-      },
-      {
-        heading: "Compounded medications",
-        paragraphs: [
-          "Compounded medications are prepared by licensed pharmacies and are not FDA-approved. Leader Health is not a pharmacy and does not manufacture or dispense medications. Availability may vary by state.",
-        ],
-      },
-    ],
-  },
-  {
-    slug: "telehealth-consent",
-    title: "Telehealth Consent",
-    sections: [
-      {
-        heading: "Consent to telehealth",
-        paragraphs: [
-          "By starting care, you consent to evaluation and treatment via telehealth. You understand that telehealth has benefits and limitations, including the possibility that your clinician may determine you need in-person care.",
-        ],
-      },
-      {
-        heading: "Independent clinicians",
-        paragraphs: [
-          "Care is delivered by independent licensed clinicians in the state where you are located. Leader Health does not practice medicine. Your treating clinician exercises independent clinical judgment.",
-        ],
-      },
-      {
-        heading: "Privacy",
-        paragraphs: [
-          "Video, messages, and records are handled under the HIPAA Notice and Privacy Policy. Do not join visits from a setting where others can overhear sensitive information if you can avoid it.",
-        ],
-      },
-    ],
-  },
+  cookiesPolicy,
+  consumerHealthDataPrivacy,
+  termsOfService,
+  telehealthConsent,
   {
     slug: "important-safety-information",
     title: "Important Safety Information",
@@ -100,132 +70,14 @@ export const legalPages: LegalPage[] = [
       },
     ],
   },
-  {
-    slug: "hipaa-notice",
-    title: "HIPAA Notice of Privacy Practices",
-    sections: [
-      {
-        heading: "Covered Entity",
-        paragraphs: [
-          "The Independent Provider Network is the HIPAA Covered Entity for your medical record. Leader Health acts as a Business Associate under a written Business Associate Agreement.",
-        ],
-      },
-      {
-        heading: "How PHI is used",
-        paragraphs: [
-          "Protected Health Information is used and disclosed for treatment, payment, and health-care operations as permitted by HIPAA, and as described in the full Notice provided at registration and in your patient dashboard.",
-        ],
-      },
-      {
-        heading: "Your rights",
-        paragraphs: [
-          "You have rights to access, amend, and receive an accounting of certain disclosures of your PHI, and to request restrictions and confidential communications. Contact privacy@myleaderhealth.com or your dashboard support channel to exercise these rights.",
-        ],
-      },
-    ],
-  },
-  {
-    slug: "consumer-health-data-privacy",
-    title: "Consumer Health Data Privacy",
-    sections: [
-      {
-        heading: "Additional health-data notice",
-        paragraphs: [
-          "Certain states, including Washington and Nevada, require extra disclosures about consumer health data. We collect health information to coordinate care, verify identity, and operate the platform. We do not sell consumer health data.",
-        ],
-      },
-      {
-        heading: "Requests",
-        paragraphs: [
-          "To request access, deletion, or to appeal a decision, email privacy@myleaderhealth.com with \"Consumer Health Data\" in the subject line.",
-        ],
-      },
-    ],
-  },
-  {
-    slug: "do-not-sell",
-    title: "Do Not Sell or Share My Info",
-    sections: [
-      {
-        heading: "We do not sell your information",
-        paragraphs: [
-          "Leader Health does not sell personal information and does not share it for cross-context behavioral advertising. If you still wish to record an opt-out preference, email privacy@myleaderhealth.com or use a Global Privacy Control signal when available.",
-        ],
-      },
-    ],
-  },
-  {
-    slug: "refunds-cancellations",
-    title: "Refunds & Cancellations",
-    sections: [
-      {
-        heading: "Cancellations",
-        paragraphs: [
-          "You may cancel a subscription according to the timing in the Subscription Terms. Cancel before the next billing date to avoid the following cycle's charge. Portal cancellation or written request to help@myleaderhealth.com is required.",
-        ],
-      },
-      {
-        heading: "Refunds",
-        paragraphs: [
-          "Because compounded medications are prepared for you, opened or shipped prescriptions are generally not returnable. If a shipment is lost, damaged, or filled in error, contact support so we can coordinate with the pharmacy. Lab panels that have already been drawn are not refundable.",
-        ],
-      },
-    ],
-  },
-  {
-    slug: "subscription-terms",
-    title: "Subscription Terms",
-    sections: [
-      {
-        heading: "Billing",
-        paragraphs: [
-          "Many protocols are billed monthly until canceled. Prices shown are starting prices and may change with dose, format, or clinically required labs. You authorize recurring charges to the payment method on file.",
-        ],
-      },
-      {
-        heading: "Clinical gate",
-        paragraphs: [
-          "Payment does not guarantee a prescription. A licensed clinician must determine that treatment is appropriate. If you are not a candidate, you will be told and charged only for services already performed (such as labs).",
-        ],
-      },
-    ],
-  },
-  {
-    slug: "shipping-policy",
-    title: "Shipping Policy",
-    sections: [
-      {
-        heading: "How shipping works",
-        paragraphs: [
-          "After a clinician approves a prescription, a licensed pharmacy ships medication to the address on file. Temperature-sensitive products may use expedited or cold-chain shipping. Delivery windows vary by pharmacy and destination.",
-        ],
-      },
-      {
-        heading: "Your responsibilities",
-        paragraphs: [
-          "Keep your address and phone number current. Someone should be available to receive packages that require a signature or refrigeration. Report damaged or missing packages promptly to help@myleaderhealth.com.",
-        ],
-      },
-    ],
-  },
-  {
-    slug: "state-restrictions",
-    title: "State Restrictions",
-    sections: [
-      {
-        heading: "Availability varies",
-        paragraphs: [
-          "Not every therapy is available in every state. Controlled substances, compounding rules, and clinician licensure limit what can be prescribed or shipped to your location. Your intake will show options available where you are.",
-        ],
-      },
-      {
-        heading: "Questions",
-        paragraphs: [
-          "If you are unsure whether a treatment can be offered in your state, contact help@myleaderhealth.com before completing labs.",
-        ],
-      },
-    ],
-  },
+  hipaaNotice,
+  doNotSell,
+  refundsCancellations,
+  subscriptionTerms,
+  shippingPolicy,
+  stateRestrictions,
+  compoundingDisclosure,
+  accessibilityStatement,
   {
     slug: "consent-notices",
     title: "Consent & Notices",

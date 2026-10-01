@@ -276,9 +276,9 @@ export function TestimonialsVideoSection({
                   if (info.offset.x < -72 || info.velocity.x < -480) go(1);
                   else if (info.offset.x > 72 || info.velocity.x > 480) go(-1);
                 }}
-                initial={reduceMotion ? false : { opacity: 0.55, y: 12 }}
+                initial={reduceMotion ? false : { opacity: 0.85, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ type: "spring", stiffness: 280, damping: 28, duration: transitionDuration }}
+                transition={reduceMotion ? { duration: 0 } : { duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
                 className={`min-w-0 w-[370px] max-w-full touch-pan-y md:w-auto md:flex-1 md:max-w-[726px] lg:h-[416px] lg:w-[726px] lg:flex-none ${draggable && count > 1 ? "cursor-grab active:cursor-grabbing" : ""}`}
               >
                 <FeaturedCard

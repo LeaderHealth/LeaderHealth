@@ -11,7 +11,40 @@ export const privacyPolicy: LegalPage = {
       "blocks": [
         {
           "kind": "p",
-          "text": "Leader Health is a healthtech platform operated by LH Ventures LLC as the technology and administrative-services company. Clinical care is delivered by independent licensed clinicians who practice through an Independent Provider Network under contract with us; those clinicians exercise their own independent clinical judgment under the Independent Provider Network's own clinical governance. The Independent Provider Network is the HIPAA Covered Entity for your medical record (the \"Covered Entity\" is the entity legally responsible under HIPAA for your medical records); Leader Health is its Business Associate (a \"Business Associate\" is a vendor that handles that data on the Covered Entity's behalf under a written agreement). Program-level medical oversight of the platform (a non-treatment function) is provided by Leader Health’s Chief Medical Officer, a licensed physician and officer of the company; the Chief Medical Officer does not direct the clinical decisions your treating clinician makes about you. We do not sell your Protected Health Information, and we do not use your PHI for cross-context behavioral advertising. We are implementing support for Global Privacy Control (GPC) opt-out preference signals. Your state-law rights are listed below. Questions: privacy@myleaderhealth.com."
+          "text": "Leader Health is a healthtech platform operated by LH Ventures LLC as the technology and administrative-services company. Clinical care is delivered by independent licensed clinicians who practice through an Independent Provider Network under contract with us; those clinicians exercise their own independent clinical judgment under the Independent Provider Network's own clinical governance. The Independent Provider Network is the HIPAA Covered Entity for your medical record (the \"Covered Entity\" is the entity legally responsible under HIPAA for your medical records); Leader Health is its Business Associate (a \"Business Associate\" is a vendor that handles that data on the Covered Entity's behalf under a written agreement). Program-level medical oversight of the platform (a non-treatment function) is provided by Leader Health’s Chief Medical Officer, a licensed physician and officer of the company; the Chief Medical Officer does not direct the clinical decisions your treating clinician makes about you. We do not sell your Protected Health Information, and we do not use your PHI for cross-context behavioral advertising. We are implementing support for Global Privacy Control (GPC) opt-out preference signals. Your state-law rights are listed below. Questions: privacy@myleaderhealth.com.",
+          "runs": [
+            {
+              "text": "Leader Health is a healthtech platform operated by "
+            },
+            {
+              "text": "LH Ventures LLC",
+              "bold": true
+            },
+            {
+              "text": " as the technology and administrative-services company. Clinical care is delivered by "
+            },
+            {
+              "text": "independent licensed clinicians",
+              "bold": true
+            },
+            {
+              "text": " who practice through an "
+            },
+            {
+              "text": "Independent Provider Network",
+              "bold": true
+            },
+            {
+              "text": " under contract with us; those clinicians exercise their own independent clinical judgment under the Independent Provider Network's own clinical governance. The Independent Provider Network is the HIPAA Covered Entity for your medical record (the \"Covered Entity\" is the entity legally responsible under HIPAA for your medical records); Leader Health is its Business Associate (a \"Business Associate\" is a vendor that handles that data on the Covered Entity's behalf under a written agreement). Program-level medical oversight of the platform (a non-treatment function) is provided by Leader Health’s Chief Medical Officer, a licensed physician and officer of the company; the Chief Medical Officer does not direct the clinical decisions your treating clinician makes about you. We do not sell your Protected Health Information, and we do not use your PHI for cross-context behavioral advertising. We are implementing support for Global Privacy Control (GPC) opt-out preference signals. Your state-law rights are listed below. Questions: "
+            },
+            {
+              "text": "privacy@myleaderhealth.com",
+              "bold": true
+            },
+            {
+              "text": "."
+            }
+          ]
         }
       ]
     },
@@ -21,23 +54,122 @@ export const privacyPolicy: LegalPage = {
       "blocks": [
         {
           "kind": "p",
-          "text": "\"Leader Health,\" \"we,\" \"our,\" or \"us\" means Leader Health, the trade name of LH Ventures LLC, a Delaware limited liability company foreign-qualified in Texas, together with its affiliates. Leader Health is a technology and administrative-services company. Leader Health does not practice medicine."
+          "text": "\"Leader Health,\" \"we,\" \"our,\" or \"us\" means Leader Health, the trade name of LH Ventures LLC, a Delaware limited liability company foreign-qualified in Texas, together with its affiliates. Leader Health is a technology and administrative-services company. Leader Health does not practice medicine.",
+          "runs": [
+            {
+              "text": "\"Leader Health,\" \"we,\" \"our,\" or \"us\" means Leader Health, the trade name of LH Ventures LLC, a Delaware limited liability company foreign-qualified in Texas, together with its affiliates. Leader Health is a technology and administrative-services company. Leader Health does not practice medicine.",
+              "bold": true
+            }
+          ]
         },
         {
           "kind": "p",
-          "text": "Clinical services accessed through myleaderhealth.com (the \"Site\" or \"Platform\") are provided by independent licensed clinicians (the \"Providers\") who practice through one or more independently owned and operated professional medical entities under contract with Leader Health (each, an \"Independent Provider Network\"). The Independent Provider Network providing care to you, and the identity and licensure of the clinician treating you, are disclosed to you in your patient dashboard and at the visit; the current Network and the covered entity issuing the HIPAA Notice for your record are identified at registration and in the dashboard. Leader Health operates the Platform as the MSO and technology / administrative-services company and does not operate any in-person clinic. Leader Health may, on notice to patients, add to, expand, or substitute the Independent Provider Network without revising this Policy."
+          "text": "Clinical services accessed through myleaderhealth.com (the \"Site\" or \"Platform\") are provided by independent licensed clinicians (the \"Providers\") who practice through one or more independently owned and operated professional medical entities under contract with Leader Health (each, an \"Independent Provider Network\"). The Independent Provider Network providing care to you, and the identity and licensure of the clinician treating you, are disclosed to you in your patient dashboard and at the visit; the current Network and the covered entity issuing the HIPAA Notice for your record are identified at registration and in the dashboard. Leader Health operates the Platform as the MSO and technology / administrative-services company and does not operate any in-person clinic. Leader Health may, on notice to patients, add to, expand, or substitute the Independent Provider Network without revising this Policy.",
+          "runs": [
+            {
+              "text": "Clinical services accessed through myleaderhealth.com (the "
+            },
+            {
+              "text": "\"Site\"",
+              "bold": true
+            },
+            {
+              "text": " or "
+            },
+            {
+              "text": "\"Platform\"",
+              "bold": true
+            },
+            {
+              "text": ") are provided by independent licensed clinicians (the "
+            },
+            {
+              "text": "\"Providers\"",
+              "bold": true
+            },
+            {
+              "text": ") who practice through one or more independently owned and operated professional medical entities under contract with Leader Health (each, an "
+            },
+            {
+              "text": "\"Independent Provider Network\"",
+              "bold": true
+            },
+            {
+              "text": "). The Independent Provider Network providing care to you, and the identity and licensure of the clinician treating you, are disclosed to you in your patient dashboard and at the visit; the current Network and the covered entity issuing the "
+            },
+            {
+              "text": "HIPAA Notice",
+              "href": "/legal/hipaa-notice"
+            },
+            {
+              "text": " for your record are identified at registration and in the dashboard. "
+            },
+            {
+              "text": "Leader Health",
+              "bold": true
+            },
+            {
+              "text": " operates the Platform as the MSO and technology / administrative-services company and does not operate any in-person clinic. Leader Health may, on notice to patients, add to, expand, or substitute the Independent Provider Network without revising this Policy."
+            }
+          ]
         },
         {
           "kind": "p",
-          "text": "Pharmacy services are provided by independently owned and operated licensed pharmacies (the \"Pharmacies\"). Laboratory services are provided by independent reference laboratories (the \"Labs\")."
+          "text": "Pharmacy services are provided by independently owned and operated licensed pharmacies (the \"Pharmacies\"). Laboratory services are provided by independent reference laboratories (the \"Labs\").",
+          "runs": [
+            {
+              "text": "Pharmacy services are provided by independently owned and operated licensed pharmacies (the "
+            },
+            {
+              "text": "\"Pharmacies\"",
+              "bold": true
+            },
+            {
+              "text": "). Laboratory services are provided by independent reference laboratories (the "
+            },
+            {
+              "text": "\"Labs\"",
+              "bold": true
+            },
+            {
+              "text": ")."
+            }
+          ]
         },
         {
           "kind": "p",
-          "text": "This Policy applies to information Leader Health collects in its role as a technology and administrative-services company. Protected Health Information (PHI) created and held by the Independent Provider Network is governed by the HIPAA Notice of Privacy Practices, which controls in case of conflict with respect to PHI. Leader Health acts as the Independent Provider Network's HIPAA Business Associate under a written Business Associate Agreement."
+          "text": "This Policy applies to information Leader Health collects in its role as a technology and administrative-services company. Protected Health Information (PHI) created and held by the Independent Provider Network is governed by the HIPAA Notice of Privacy Practices, which controls in case of conflict with respect to PHI. Leader Health acts as the Independent Provider Network's HIPAA Business Associate under a written Business Associate Agreement.",
+          "runs": [
+            {
+              "text": "This Policy applies to information Leader Health collects in its role as a technology and administrative-services company. "
+            },
+            {
+              "text": "Protected Health Information (PHI) created and held by the Independent Provider Network is governed by the ",
+              "bold": true
+            },
+            {
+              "text": "HIPAA Notice of Privacy Practices",
+              "href": "/legal/hipaa-notice",
+              "bold": true
+            },
+            {
+              "text": ", which controls in case of conflict with respect to PHI.",
+              "bold": true
+            },
+            {
+              "text": " Leader Health acts as the Independent Provider Network's HIPAA Business Associate under a written Business Associate Agreement."
+            }
+          ]
         },
         {
           "kind": "p",
-          "text": "If you do not agree with this Policy, please do not use the Site or the Platform."
+          "text": "If you do not agree with this Policy, please do not use the Site or the Platform.",
+          "runs": [
+            {
+              "text": "If you do not agree with this Policy, please do not use the Site or the Platform.",
+              "bold": true
+            }
+          ]
         }
       ]
     },
@@ -47,7 +179,13 @@ export const privacyPolicy: LegalPage = {
       "blocks": [
         {
           "kind": "h3",
-          "text": "a. Information you provide."
+          "text": "a. Information you provide.",
+          "runs": [
+            {
+              "text": "a. Information you provide.",
+              "bold": true
+            }
+          ]
         },
         {
           "kind": "list",
@@ -61,7 +199,13 @@ export const privacyPolicy: LegalPage = {
         },
         {
           "kind": "h3",
-          "text": "b. Information generated by your use of the Site or Platform."
+          "text": "b. Information generated by your use of the Site or Platform.",
+          "runs": [
+            {
+              "text": "b. Information generated by your use of the Site or Platform.",
+              "bold": true
+            }
+          ]
         },
         {
           "kind": "list",
@@ -69,11 +213,33 @@ export const privacyPolicy: LegalPage = {
             "Device and connection data (IP address, browser type, operating system, device identifiers).",
             "Usage data (pages viewed, links clicked, time on page, referring URL).",
             "Cookies and similar technologies — see Cookies & Tracking Technologies."
+          ],
+          "runs": [
+            null,
+            null,
+            [
+              {
+                "text": "Cookies and similar technologies — see "
+              },
+              {
+                "text": "Cookies & Tracking Technologies",
+                "href": "/legal/cookies"
+              },
+              {
+                "text": "."
+              }
+            ]
           ]
         },
         {
           "kind": "h3",
-          "text": "c. Information we receive from third parties."
+          "text": "c. Information we receive from third parties.",
+          "runs": [
+            {
+              "text": "c. Information we receive from third parties.",
+              "bold": true
+            }
+          ]
         },
         {
           "kind": "list",
@@ -87,11 +253,23 @@ export const privacyPolicy: LegalPage = {
         },
         {
           "kind": "h3",
-          "text": "d. Sensitive information."
+          "text": "d. Sensitive information.",
+          "runs": [
+            {
+              "text": "d. Sensitive information.",
+              "bold": true
+            }
+          ]
         },
         {
           "kind": "p",
-          "text": "Some information we collect is sensitive — health information, government ID, and precise location if you enable it. We use sensitive information only to deliver care, verify identity, prevent fraud, and comply with law."
+          "text": "Some information we collect is sensitive — health information, government ID, and precise location if you enable it. We use sensitive information only to deliver care, verify identity, prevent fraud, and comply with law.",
+          "runs": [
+            {
+              "text": "Some information we collect is sensitive — health information, government ID, and precise location if you enable it. We use sensitive information only to deliver care, verify identity, prevent fraud, and comply with law.",
+              "bold": true
+            }
+          ]
         }
       ]
     },
@@ -101,7 +279,16 @@ export const privacyPolicy: LegalPage = {
       "blocks": [
         {
           "kind": "p",
-          "text": "California Notice at Collection (Cal. Civ. Code §1798.100(a)). At or before the point of collection, Leader Health notifies California residents of the following:"
+          "text": "California Notice at Collection (Cal. Civ. Code §1798.100(a)). At or before the point of collection, Leader Health notifies California residents of the following:",
+          "runs": [
+            {
+              "text": "California Notice at Collection (Cal. Civ. Code §1798.100(a)).",
+              "bold": true
+            },
+            {
+              "text": " At or before the point of collection, Leader Health notifies California residents of the following:"
+            }
+          ]
         },
         {
           "kind": "table",
@@ -152,7 +339,40 @@ export const privacyPolicy: LegalPage = {
         },
         {
           "kind": "p",
-          "text": "Leader Health does not sell personal information and does not use or disclose sensitive personal information for purposes other than those listed in Cal. Civ. Code §1798.121(a). California residents can exercise their rights at privacy@myleaderhealth.com or via the Do Not Sell or Share My Personal Information page."
+          "text": "Leader Health does not sell personal information and does not use or disclose sensitive personal information for purposes other than those listed in Cal. Civ. Code §1798.121(a). California residents can exercise their rights at privacy@myleaderhealth.com or via the Do Not Sell or Share My Personal Information page.",
+          "runs": [
+            {
+              "text": "Leader Health does "
+            },
+            {
+              "text": "not",
+              "bold": true
+            },
+            {
+              "text": " sell personal information and does "
+            },
+            {
+              "text": "not",
+              "bold": true
+            },
+            {
+              "text": " use or disclose sensitive personal information for purposes other than those listed in Cal. Civ. Code §1798.121(a). California residents can exercise their rights at "
+            },
+            {
+              "text": "privacy@myleaderhealth.com",
+              "bold": true
+            },
+            {
+              "text": " or via the "
+            },
+            {
+              "text": "Do Not Sell or Share My Personal Information",
+              "href": "/legal/do-not-sell"
+            },
+            {
+              "text": " page."
+            }
+          ]
         }
       ]
     },
@@ -162,7 +382,13 @@ export const privacyPolicy: LegalPage = {
       "blocks": [
         {
           "kind": "p",
-          "text": "We use personal information to:"
+          "text": "We use personal information to:",
+          "runs": [
+            {
+              "text": "We use personal information to:",
+              "bold": true
+            }
+          ]
         },
         {
           "kind": "list",
@@ -175,6 +401,27 @@ export const privacyPolicy: LegalPage = {
             "Detect and prevent fraud, abuse, and security incidents.",
             "Comply with legal obligations and respond to lawful requests.",
             "Establish, exercise, or defend legal claims."
+          ],
+          "runs": [
+            null,
+            [
+              {
+                "text": "Coordinate your care with the Affiliated Provider Network, Pharmacies, and Labs (PHI is governed by the "
+              },
+              {
+                "text": "HIPAA Notice",
+                "href": "/legal/hipaa-notice"
+              },
+              {
+                "text": ")."
+              }
+            ],
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
           ]
         },
         {
@@ -189,7 +436,13 @@ export const privacyPolicy: LegalPage = {
       "blocks": [
         {
           "kind": "p",
-          "text": "We use personal information to:"
+          "text": "We use personal information to:",
+          "runs": [
+            {
+              "text": "We use personal information to:",
+              "bold": true
+            }
+          ]
         },
         {
           "kind": "list",
@@ -200,11 +453,90 @@ export const privacyPolicy: LegalPage = {
             "In a corporate transaction (merger, acquisition, financing, reorganization, asset sale, bankruptcy) — only to the extent permitted by law and subject to applicable safeguards for health information.",
             "For legal and safety reasons — to comply with law, lawful process, or government request; to enforce our Terms; to protect Leader Health, our patients, or the public; and to respond to emergencies involving risk to life or health.",
             "With your direction or consent — for example, when you ask us to share your lab results with your primary care physician."
+          ],
+          "runs": [
+            [
+              {
+                "text": "With the Affiliated Provider Network, Pharmacies, and Labs",
+                "bold": true
+              },
+              {
+                "text": " as needed to deliver your care. The Affiliated Provider Network is the HIPAA Covered Entity; Leader Health acts as its Business Associate for PHI under a written Business Associate Agreement."
+              }
+            ],
+            [
+              {
+                "text": "With service providers",
+                "bold": true
+              },
+              {
+                "text": " that operate our infrastructure, payment processing, identity verification, customer support, analytics, and communications, under contracts that require confidentiality and limit use to the services they provide to us."
+              }
+            ],
+            [
+              {
+                "text": "With professional advisors",
+                "bold": true
+              },
+              {
+                "text": " (auditors, lawyers, accountants) under confidentiality."
+              }
+            ],
+            [
+              {
+                "text": "In a corporate transaction",
+                "bold": true
+              },
+              {
+                "text": " (merger, acquisition, financing, reorganization, asset sale, bankruptcy) — only to the extent permitted by law and subject to applicable safeguards for health information."
+              }
+            ],
+            [
+              {
+                "text": "For legal and safety reasons",
+                "bold": true
+              },
+              {
+                "text": " — to comply with law, lawful process, or government request; to enforce our Terms; to protect Leader Health, our patients, or the public; and to respond to emergencies involving risk to life or health."
+              }
+            ],
+            [
+              {
+                "text": "With your direction or consent",
+                "bold": true
+              },
+              {
+                "text": " — for example, when you ask us to share your lab results with your primary care physician."
+              }
+            ]
           ]
         },
         {
           "kind": "p",
-          "text": "We do not sell your Protected Health Information, and we do not share your PHI for cross-context behavioral advertising. Where Site analytics or advertising tags collect limited non-PHI information on non-PHI pages (such as IP and pageview data), you can manage that through the controls in Cookies & Tracking Technologies and our Do Not Sell or Share My Personal Information page."
+          "text": "We do not sell your Protected Health Information, and we do not share your PHI for cross-context behavioral advertising. Where Site analytics or advertising tags collect limited non-PHI information on non-PHI pages (such as IP and pageview data), you can manage that through the controls in Cookies & Tracking Technologies and our Do Not Sell or Share My Personal Information page.",
+          "runs": [
+            {
+              "text": "We do not sell your Protected Health Information, and we do not share your PHI for cross-context behavioral advertising.",
+              "bold": true
+            },
+            {
+              "text": " Where Site analytics or advertising tags collect limited non-PHI information on non-PHI pages (such as IP and pageview data), you can manage that through the controls in "
+            },
+            {
+              "text": "Cookies & Tracking Technologies",
+              "href": "/legal/cookies"
+            },
+            {
+              "text": " and our "
+            },
+            {
+              "text": "Do Not Sell or Share My Personal Information",
+              "href": "/legal/do-not-sell"
+            },
+            {
+              "text": " page."
+            }
+          ]
         }
       ]
     },
@@ -314,7 +646,19 @@ export const privacyPolicy: LegalPage = {
         },
         {
           "kind": "p",
-          "text": "We may de-identify your information, including your PHI, and use such de-identified information for any business or other purpose not prohibited by applicable law, including operational and research purposes. We will not attempt to re-identify information that has been de-identified under HIPAA standards, except to determine whether our de-identification processes meet applicable legal standards."
+          "text": "We may de-identify your information, including your PHI, and use such de-identified information for any business or other purpose not prohibited by applicable law, including operational and research purposes. We will not attempt to re-identify information that has been de-identified under HIPAA standards, except to determine whether our de-identification processes meet applicable legal standards.",
+          "runs": [
+            {
+              "text": "We may de-identify your information, including your PHI, and use such de-identified information for any business or other purpose not prohibited by applicable law, including operational and research purposes. "
+            },
+            {
+              "text": "We will not attempt to re-identify information that has been de-identified under HIPAA standards",
+              "bold": true
+            },
+            {
+              "text": ", except to determine whether our de-identification processes meet applicable legal standards."
+            }
+          ]
         }
       ]
     },
@@ -332,6 +676,22 @@ export const privacyPolicy: LegalPage = {
             "Update your account information in your dashboard.",
             "Opt out of marketing emails by clicking \"unsubscribe\"; transactional and care-related messages will continue.",
             "Request a copy of your medical record from the Affiliated Provider Network via the dashboard or by contacting records@myleaderhealth.com."
+          ],
+          "runs": [
+            null,
+            null,
+            [
+              {
+                "text": "Request a copy of your medical record from the Affiliated Provider Network via the dashboard or by contacting "
+              },
+              {
+                "text": "records@myleaderhealth.com",
+                "bold": true
+              },
+              {
+                "text": "."
+              }
+            ]
           ]
         },
         {
@@ -348,6 +708,26 @@ export const privacyPolicy: LegalPage = {
             "Opt out of sale, sharing, or targeted advertising — see Do Not Sell or Share My Personal Information.",
             "Limit use of sensitive personal information.",
             "Non-discrimination for exercising your rights."
+          ],
+          "runs": [
+            null,
+            null,
+            null,
+            null,
+            [
+              {
+                "text": "Opt out of sale, sharing, or targeted advertising — see "
+              },
+              {
+                "text": "Do Not Sell or Share My Personal Information",
+                "href": "/legal/do-not-sell"
+              },
+              {
+                "text": "."
+              }
+            ],
+            null,
+            null
           ]
         },
         {
@@ -356,19 +736,55 @@ export const privacyPolicy: LegalPage = {
         },
         {
           "kind": "h3",
-          "text": "c. California \"shine the light\" notice."
+          "text": "c. California \"shine the light\" notice.",
+          "runs": [
+            {
+              "text": "c. California \"shine the light\" notice.",
+              "bold": true
+            }
+          ]
         },
         {
           "kind": "p",
-          "text": "If you are a California resident with an established business relationship with us, you may request once per calendar year a notice disclosing the categories of personal information we shared with third parties for the third parties' direct marketing purposes during the preceding calendar year. Email privacy@myleaderhealth.com with \"Shine the Light\" in the subject line. Allow 30 days for a response."
+          "text": "If you are a California resident with an established business relationship with us, you may request once per calendar year a notice disclosing the categories of personal information we shared with third parties for the third parties' direct marketing purposes during the preceding calendar year. Email privacy@myleaderhealth.com with \"Shine the Light\" in the subject line. Allow 30 days for a response.",
+          "runs": [
+            {
+              "text": "If you are a California resident with an established business relationship with us, you may request once per calendar year a notice disclosing the categories of personal information we shared with third parties for the third parties' direct marketing purposes during the preceding calendar year. Email "
+            },
+            {
+              "text": "privacy@myleaderhealth.com",
+              "href": "mailto:privacy@myleaderhealth.com"
+            },
+            {
+              "text": " with \"Shine the Light\" in the subject line. Allow 30 days for a response."
+            }
+          ]
         },
         {
           "kind": "h3",
-          "text": "d. HIPAA rights."
+          "text": "d. HIPAA rights.",
+          "runs": [
+            {
+              "text": "d. HIPAA rights.",
+              "bold": true
+            }
+          ]
         },
         {
           "kind": "p",
-          "text": "Rights with respect to PHI held by the Affiliated Provider Network are described in the HIPAA Notice of Privacy Practices."
+          "text": "Rights with respect to PHI held by the Affiliated Provider Network are described in the HIPAA Notice of Privacy Practices.",
+          "runs": [
+            {
+              "text": "Rights with respect to PHI held by the Affiliated Provider Network are described in the "
+            },
+            {
+              "text": "HIPAA Notice of Privacy Practices",
+              "href": "/legal/hipaa-notice"
+            },
+            {
+              "text": "."
+            }
+          ]
         }
       ]
     },
@@ -388,7 +804,16 @@ export const privacyPolicy: LegalPage = {
       "blocks": [
         {
           "kind": "p",
-          "text": "Customer information collected as part of any SMS or text-messaging program will not be shared or sold to third parties for any purpose related to any SMS program. This sentence is included to satisfy carrier and CTIA short-code-registry requirements."
+          "text": "Customer information collected as part of any SMS or text-messaging program will not be shared or sold to third parties for any purpose related to any SMS program. This sentence is included to satisfy carrier and CTIA short-code-registry requirements.",
+          "runs": [
+            {
+              "text": "Customer information collected as part of any SMS or text-messaging program will not be shared or sold to third parties for any purpose related to any SMS program.",
+              "bold": true
+            },
+            {
+              "text": " This sentence is included to satisfy carrier and CTIA short-code-registry requirements."
+            }
+          ]
         }
       ]
     },
@@ -398,7 +823,47 @@ export const privacyPolicy: LegalPage = {
       "blocks": [
         {
           "kind": "p",
-          "text": "Leader Health is intended for adults aged 18 or older. We do not knowingly collect personal information from children under 18. If we learn we have collected information from a person under 18, we will delete it. If you believe a minor has provided us with information, contact privacy@myleaderhealth.com. \"Under 18\" is the eligibility age for the Service; it is separate from the lower minor-protections age (under 16) used in certain state privacy laws — see the Do Not Sell or Share My Personal Information page."
+          "text": "Leader Health is intended for adults aged 18 or older. We do not knowingly collect personal information from children under 18. If we learn we have collected information from a person under 18, we will delete it. If you believe a minor has provided us with information, contact privacy@myleaderhealth.com. \"Under 18\" is the eligibility age for the Service; it is separate from the lower minor-protections age (under 16) used in certain state privacy laws — see the Do Not Sell or Share My Personal Information page.",
+          "runs": [
+            {
+              "text": "Leader Health is intended for "
+            },
+            {
+              "text": "adults aged 18 or older",
+              "bold": true
+            },
+            {
+              "text": ". We do not knowingly collect personal information from children "
+            },
+            {
+              "text": "under 18",
+              "bold": true
+            },
+            {
+              "text": ". If we learn we have collected information from a person under 18, we will delete it. If you believe a minor has provided us with information, contact "
+            },
+            {
+              "text": "privacy@myleaderhealth.com",
+              "bold": true
+            },
+            {
+              "text": ". \"Under 18\" is the "
+            },
+            {
+              "text": "eligibility age",
+              "bold": true
+            },
+            {
+              "text": " for the Service; it is separate from the lower minor-protections age (under 16) used in certain state privacy laws — see the "
+            },
+            {
+              "text": "Do Not Sell or Share My Personal Information",
+              "href": "/legal/do-not-sell"
+            },
+            {
+              "text": " page."
+            }
+          ]
         }
       ]
     },
@@ -418,23 +883,226 @@ export const privacyPolicy: LegalPage = {
       "blocks": [
         {
           "kind": "p",
-          "text": "Leader Health operates nationally and is subject to a growing set of U.S. state consumer-health-data laws and comprehensive consumer-privacy laws. We draft to the strictest-common-denominator of these laws and apply our consumer-health-data practices to residents of all states whose law currently provides heightened protections for consumer health data, and our state-privacy-rights practices to residents of all states with a comprehensive consumer-privacy law. The list of applicable states changes over time; this Policy is updated as new laws come into force, and the controlling list at any given moment is the list of state laws then in effect (not the named examples below)."
+          "text": "Leader Health operates nationally and is subject to a growing set of U.S. state consumer-health-data laws and comprehensive consumer-privacy laws. We draft to the strictest-common-denominator of these laws and apply our consumer-health-data practices to residents of all states whose law currently provides heightened protections for consumer health data, and our state-privacy-rights practices to residents of all states with a comprehensive consumer-privacy law. The list of applicable states changes over time; this Policy is updated as new laws come into force, and the controlling list at any given moment is the list of state laws then in effect (not the named examples below).",
+          "runs": [
+            {
+              "text": "Leader Health operates nationally and is subject to a growing set of U.S. state consumer-health-data laws and comprehensive consumer-privacy laws. We draft to the "
+            },
+            {
+              "text": "strictest-common-denominator",
+              "bold": true
+            },
+            {
+              "text": " of these laws and apply our consumer-health-data practices to residents of all states whose law currently provides heightened protections for consumer health data, and our state-privacy-rights practices to residents of all states with a comprehensive consumer-privacy law. The list of applicable states changes over time; this Policy is updated as new laws come into force, and the controlling list at any given moment is the list of state laws then in effect (not the named examples below)."
+            }
+          ]
         },
         {
           "kind": "p",
-          "text": "Consumer-health-data laws — examples (non-exhaustive). These include the Washington My Health My Data Act (RCW ch. 19.373), Nevada SB370 (NRS 603A.400–603A.470), the Connecticut Data Privacy Act consumer-health-data provisions, and any equivalent or successor laws"
+          "text": "Consumer-health-data laws — examples (non-exhaustive). These include the Washington My Health My Data Act (RCW ch. 19.373), Nevada SB370 (NRS 603A.400–603A.470), the Connecticut Data Privacy Act consumer-health-data provisions, and any equivalent or successor laws",
+          "runs": [
+            {
+              "text": "Consumer-health-data laws — examples (non-exhaustive).",
+              "bold": true
+            },
+            {
+              "text": " These include the "
+            },
+            {
+              "text": "Washington My Health My Data Act (RCW ch. 19.373)",
+              "bold": true
+            },
+            {
+              "text": ", "
+            },
+            {
+              "text": "Nevada SB370 (NRS 603A.400–603A.470)",
+              "bold": true
+            },
+            {
+              "text": ", the "
+            },
+            {
+              "text": "Connecticut Data Privacy Act consumer-health-data provisions",
+              "bold": true
+            },
+            {
+              "text": ", and any equivalent or successor laws"
+            }
+          ]
         },
         {
           "kind": "p",
-          "text": "Washington My Health My Data Act. Our practices for consumer health data collected from Washington consumers, and the specific rights of Washington consumers under the My Health My Data Act (RCW ch. 19.373), are described in our separate Consumer Health Data Privacy Policy, linked prominently in our site footer and in the patient dashboard. That policy controls with respect to consumer health data of Washington consumers."
+          "text": "Washington My Health My Data Act. Our practices for consumer health data collected from Washington consumers, and the specific rights of Washington consumers under the My Health My Data Act (RCW ch. 19.373), are described in our separate Consumer Health Data Privacy Policy, linked prominently in our site footer and in the patient dashboard. That policy controls with respect to consumer health data of Washington consumers.",
+          "runs": [
+            {
+              "text": "Washington My Health My Data Act.",
+              "bold": true
+            },
+            {
+              "text": " Our practices for consumer health data collected from Washington consumers, and the specific rights of Washington consumers under the My Health My Data Act (RCW ch. 19.373), are described in our separate "
+            },
+            {
+              "text": "Consumer Health Data Privacy Policy",
+              "href": "/legal/consumer-health-data-privacy",
+              "bold": true
+            },
+            {
+              "text": ", linked prominently in our site footer and in the patient dashboard. That policy controls with respect to consumer health data of Washington consumers."
+            }
+          ]
         },
         {
           "kind": "p",
-          "text": "Comprehensive consumer-privacy laws — examples (non-exhaustive). These include the California Consumer Privacy Act / CPRA, Virginia Consumer Data Protection Act (VCDPA), Colorado Privacy Act (CPA), Connecticut Data Privacy Act (CTDPA), Utah Consumer Privacy Act (UCPA), Iowa, Indiana, Tennessee, Montana, Oregon, Texas (TDPSA), Delaware, New Jersey, New Hampshire, Kentucky, Maryland, Minnesota, Rhode Island, and other states whose comprehensive consumer-privacy laws are then in effect."
+          "text": "Comprehensive consumer-privacy laws — examples (non-exhaustive). These include the California Consumer Privacy Act / CPRA, Virginia Consumer Data Protection Act (VCDPA), Colorado Privacy Act (CPA), Connecticut Data Privacy Act (CTDPA), Utah Consumer Privacy Act (UCPA), Iowa, Indiana, Tennessee, Montana, Oregon, Texas (TDPSA), Delaware, New Jersey, New Hampshire, Kentucky, Maryland, Minnesota, Rhode Island, and other states whose comprehensive consumer-privacy laws are then in effect.",
+          "runs": [
+            {
+              "text": "Comprehensive consumer-privacy laws — examples (non-exhaustive).",
+              "bold": true
+            },
+            {
+              "text": " These include the "
+            },
+            {
+              "text": "California Consumer Privacy Act / CPRA",
+              "bold": true
+            },
+            {
+              "text": ", "
+            },
+            {
+              "text": "Virginia Consumer Data Protection Act (VCDPA)",
+              "bold": true
+            },
+            {
+              "text": ", "
+            },
+            {
+              "text": "Colorado Privacy Act (CPA)",
+              "bold": true
+            },
+            {
+              "text": ", "
+            },
+            {
+              "text": "Connecticut Data Privacy Act (CTDPA)",
+              "bold": true
+            },
+            {
+              "text": ", "
+            },
+            {
+              "text": "Utah Consumer Privacy Act (UCPA)",
+              "bold": true
+            },
+            {
+              "text": ", "
+            },
+            {
+              "text": "Iowa",
+              "bold": true
+            },
+            {
+              "text": ", "
+            },
+            {
+              "text": "Indiana",
+              "bold": true
+            },
+            {
+              "text": ", "
+            },
+            {
+              "text": "Tennessee",
+              "bold": true
+            },
+            {
+              "text": ", "
+            },
+            {
+              "text": "Montana",
+              "bold": true
+            },
+            {
+              "text": ", "
+            },
+            {
+              "text": "Oregon",
+              "bold": true
+            },
+            {
+              "text": ", "
+            },
+            {
+              "text": "Texas (TDPSA)",
+              "bold": true
+            },
+            {
+              "text": ", "
+            },
+            {
+              "text": "Delaware",
+              "bold": true
+            },
+            {
+              "text": ", "
+            },
+            {
+              "text": "New Jersey",
+              "bold": true
+            },
+            {
+              "text": ", "
+            },
+            {
+              "text": "New Hampshire",
+              "bold": true
+            },
+            {
+              "text": ", "
+            },
+            {
+              "text": "Kentucky",
+              "bold": true
+            },
+            {
+              "text": ", "
+            },
+            {
+              "text": "Maryland",
+              "bold": true
+            },
+            {
+              "text": ", "
+            },
+            {
+              "text": "Minnesota",
+              "bold": true
+            },
+            {
+              "text": ", "
+            },
+            {
+              "text": "Rhode Island",
+              "bold": true
+            },
+            {
+              "text": ", and other states whose comprehensive consumer-privacy laws are then in effect."
+            }
+          ]
         },
         {
           "kind": "p",
-          "text": "Universal consumer-health-data practices. Regardless of which state's law applies to you:"
+          "text": "Universal consumer-health-data practices. Regardless of which state's law applies to you:",
+          "runs": [
+            {
+              "text": "Universal consumer-health-data practices.",
+              "bold": true
+            },
+            {
+              "text": " Regardless of which state's law applies to you:"
+            }
+          ]
         },
         {
           "kind": "list",
@@ -445,11 +1113,87 @@ export const privacyPolicy: LegalPage = {
             "Right to know, access, correct, delete, and port your personal information, to the extent provided by the law of your state.",
             "Right to withdraw consent. You may withdraw any prior consent at any time.",
             "Appeals. If we deny a request you submit under a state consumer-health-data or consumer-privacy law, you may appeal to privacy@myleaderhealth.com with the subject line \"State Privacy Appeal.\" We will respond within the time required by your state's law."
+          ],
+          "runs": [
+            [
+              {
+                "text": "No sale of consumer health data.",
+                "bold": true
+              },
+              {
+                "text": " We do not sell consumer health data."
+              }
+            ],
+            [
+              {
+                "text": "No sharing of consumer health data for targeted advertising",
+                "bold": true
+              },
+              {
+                "text": " without your affirmative authorization."
+              }
+            ],
+            [
+              {
+                "text": "No use of a geofence",
+                "bold": true
+              },
+              {
+                "text": " to identify or track individuals seeking health-care services."
+              }
+            ],
+            [
+              {
+                "text": "Right to know, access, correct, delete, and port",
+                "bold": true
+              },
+              {
+                "text": " your personal information, to the extent provided by the law of your state."
+              }
+            ],
+            [
+              {
+                "text": "Right to withdraw consent.",
+                "bold": true
+              },
+              {
+                "text": " You may withdraw any prior consent at any time."
+              }
+            ],
+            [
+              {
+                "text": "Appeals.",
+                "bold": true
+              },
+              {
+                "text": " If we deny a request you submit under a state consumer-health-data or consumer-privacy law, you may appeal to "
+              },
+              {
+                "text": "privacy@myleaderhealth.com",
+                "bold": true
+              },
+              {
+                "text": " with the subject line "
+              },
+              {
+                "text": "\"State Privacy Appeal.\"",
+                "bold": true
+              },
+              {
+                "text": " We will respond within the time required by your state's law."
+              }
+            ]
           ]
         },
         {
           "kind": "p",
-          "text": "When you exercise a state-law right, identify your state of residence so we can apply the correct framework. If you do not identify a state, we will apply the strictest framework available under the laws then in effect."
+          "text": "When you exercise a state-law right, identify your state of residence so we can apply the correct framework. If you do not identify a state, we will apply the strictest framework available under the laws then in effect.",
+          "runs": [
+            {
+              "text": "When you exercise a state-law right, identify your state of residence so we can apply the correct framework. If you do not identify a state, we will apply the strictest framework available under the laws then in effect.",
+              "bold": true
+            }
+          ]
         }
       ]
     },
@@ -469,7 +1213,23 @@ export const privacyPolicy: LegalPage = {
       "blocks": [
         {
           "kind": "p",
-          "text": "Privacy team: privacy@myleaderhealth.com Mailing address: Leader Health, c/o LH Ventures LLC, 321 S Persimmon St, Tomball, TX 77375"
+          "text": "Privacy team: privacy@myleaderhealth.com Mailing address: Leader Health, c/o LH Ventures LLC, 321 S Persimmon St, Tomball, TX 77375",
+          "runs": [
+            {
+              "text": "Privacy team:",
+              "bold": true
+            },
+            {
+              "text": " privacy@myleaderhealth.com "
+            },
+            {
+              "text": "Mailing address:",
+              "bold": true
+            },
+            {
+              "text": " Leader Health, c/o LH Ventures LLC, 321 S Persimmon St, Tomball, TX 77375"
+            }
+          ]
         }
       ]
     }

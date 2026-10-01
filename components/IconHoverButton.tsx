@@ -46,22 +46,33 @@ export function IconHoverButton({
   const palette =
     variant === "accent"
       ? "bg-[#e43d4e] text-white hover:bg-[#f04d5c] focus-visible:bg-[#f04d5c]"
-      : "bg-white text-ink group-hover:text-white group-focus-visible:text-white";
-
-  const fillClass = variant === "light" ? "bg-[#0055ff]" : "";
+      : "bg-white text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink";
 
   const ease = "duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]";
+  const hoverEase = "duration-[400ms] ease-out motion-reduce:transition-none";
 
-  const cls = `group relative inline-flex items-center justify-center overflow-hidden rounded-[39px] text-center leading-none ${ease} ${sizes} ${palette} ${className}`;
+  const cls = `group relative inline-flex items-center justify-center overflow-hidden rounded-[39px] text-center leading-none ${variant === "accent" ? ease : ""} ${sizes} ${palette} ${className}`;
 
-  const content = (
-    <>
-      {variant === "light" ? (
+  const content =
+    variant === "light" ? (
+      <>
         <span
           aria-hidden
-          className={`pointer-events-none absolute top-full left-1/2 h-2 w-2 -translate-x-1/2 rounded-full ${fillClass} transition-transform ${ease} group-hover:scale-[55] group-focus-visible:scale-[55]`}
+          className={`pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#e4d0ce] transition-transform ${hoverEase} group-hover:scale-[36] group-focus-visible:scale-[36] motion-reduce:scale-100!`}
         />
-      ) : null}
+        <span
+          className={`relative z-10 whitespace-nowrap transition-transform ${hoverEase} group-hover:-translate-x-[15px] group-focus-visible:-translate-x-[15px] motion-reduce:translate-x-0!`}
+        >
+          {children}
+        </span>
+        <span
+          aria-hidden
+          className={`pointer-events-none absolute top-1/2 right-0 z-10 -translate-y-1/2 translate-x-full transition-transform ${hoverEase} group-hover:translate-x-[calc(100%-35px)] group-focus-visible:translate-x-[calc(100%-35px)] motion-reduce:translate-x-full!`}
+        >
+          →
+        </span>
+      </>
+    ) : (
       <span className="relative z-10 inline-flex items-center justify-center">
         <span className="leading-none">{children}</span>
         <span
@@ -73,8 +84,7 @@ export function IconHoverButton({
           </span>
         </span>
       </span>
-    </>
-  );
+    );
 
   if (href.startsWith("http") || href.startsWith("mailto") || href.startsWith("tel")) {
     const newTab = href.startsWith("http") && href !== GET_STARTED_URL;

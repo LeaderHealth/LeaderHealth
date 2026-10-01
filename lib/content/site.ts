@@ -120,9 +120,10 @@ export const careSteps = [
 ];
 
 export const designedFor = [
-  "Protocols tuned to your labs, goals, and lifestyle",
-  "Ongoing adjustments from your clinical team",
-  "Pharmaceutical-grade ingredients, transparently sourced",
+  "Care plans informed by your individual needs",
+  "Ongoing support from your clinical care team",
+  "Explore a range of treatment options",
+  "Care plans reviewed as your needs change",
 ];
 
 export const testimonials = [

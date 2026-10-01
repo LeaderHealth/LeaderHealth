@@ -5,8 +5,8 @@ import { motion } from "framer-motion";
 import { IconHoverButton } from "@/components/IconHoverButton";
 import { assets } from "@/lib/content/site";
 
-const ease = [0.85, 0, 0.15, 1] as const;
-const entrance = { duration: 1.1, ease };
+const ease = [0.22, 1, 0.36, 1] as const;
+const entrance = { duration: 1.4, ease };
 
 type Step = { n: string; text: string };
 
@@ -76,7 +76,7 @@ function ImagePanel({ row }: { row: Row }) {
       <motion.div
         className="relative h-full w-full"
         initial={{ scale: 1 }}
-        whileInView={{ scale: 1.05 }}
+        whileInView={{ scale: 1.03 }}
         viewport={{ once: true, amount: 0 }}
         transition={entrance}
       >
@@ -97,7 +97,7 @@ function TextPanel({ row }: { row: Row }) {
   return (
     <motion.div
       className="origin-center"
-      initial={{ opacity: 0, scale: 1.05 }}
+      initial={{ opacity: 0, scale: 1.02 }}
       whileInView={{ opacity: 1, scale: 1 }}
       viewport={{ once: true, amount: 0.5 }}
       transition={entrance}

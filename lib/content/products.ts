@@ -259,6 +259,7 @@ export const products: Product[] = [
     audience: "women",
     price: "Starting at $69/month",
     labRequired: true,
+    seoTitle: "Hormone Therapy for Women (HRT) Online",
     image:
       "https://framerusercontent.com/images/GMDs0BF7J9LSEZf6TeYNopUk.png?width=2308&height=836",
     tagline: "Perimenopause and menopause care with more than one delivery option.",
