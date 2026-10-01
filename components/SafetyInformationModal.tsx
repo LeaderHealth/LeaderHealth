@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 export type SafetySection = {
@@ -94,7 +94,11 @@ export function SafetyInformationModal({
   const closeRef = useRef<HTMLButtonElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const closeTimer = useRef<number | null>(null);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
   const [phase, setPhase] = useState<"closed" | "open">("closed");
   const [entered, setEntered] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -150,10 +154,6 @@ export function SafetyInformationModal({
     const frame = requestAnimationFrame(() => measure());
     return () => cancelAnimationFrame(frame);
   }, [entered]);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     const el = bodyRef.current;

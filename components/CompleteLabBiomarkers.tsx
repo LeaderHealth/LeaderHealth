@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, useSyncExternalStore, type ReactNode } from "react";
 import { motion } from "framer-motion";
 
 const rowSpring = { duration: 0.6, ease: [0.22, 1, 0.36, 1] as const };
@@ -365,9 +365,16 @@ function BiomarkerColumn({ items, cardClassName }: { items: Group[]; cardClassNa
   );
 }
 
+function useClientLayoutReady() {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+}
+
 export function CompleteLabBiomarkers({ panel = "complete" }: { panel?: "complete" | "advance" }) {
-  const [layoutReady, setLayoutReady] = useState(false);
-  useEffect(() => setLayoutReady(true), []);
+  const layoutReady = useClientLayoutReady();
 
   if (panel === "advance") {
     return (

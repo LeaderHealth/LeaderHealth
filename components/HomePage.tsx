@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type RefObject } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { assets, careSteps, designedFor, GET_STARTED_URL } from "@/lib/content/site";
@@ -253,18 +253,27 @@ function useScrollPhase(ref: RefObject<HTMLElement | null>) {
   return phase;
 }
 
+function usePrefersReducedMotion() {
+  return useSyncExternalStore(
+    (onStoreChange) => {
+      const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+      media.addEventListener("change", onStoreChange);
+      return () => media.removeEventListener("change", onStoreChange);
+    },
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    () => false,
+  );
+}
+
 function useInViewPhases(count: number) {
   const nodes = useRef<(HTMLElement | null)[]>([]);
+  const reduce = usePrefersReducedMotion();
   const [phases, setPhases] = useState<ScrollPhase[]>(() => Array.from({ length: count }, () => "pending"));
 
   useEffect(() => {
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const list = nodes.current.slice(0, count);
-    if (reduce) {
-      setPhases(Array.from({ length: count }, () => "in"));
-      return;
-    }
+    if (reduce) return;
 
+    const list = nodes.current.slice(0, count);
     const initial: ScrollPhase[] = list.map((node) => {
       if (!node) return "in";
       const rect = node.getBoundingClientRect();
@@ -297,13 +306,15 @@ function useInViewPhases(count: number) {
     });
 
     return () => observer.disconnect();
-  }, [count]);
+  }, [count, reduce]);
 
   const setNode = (index: number) => (node: HTMLElement | null) => {
     nodes.current[index] = node;
   };
 
-  return { phases, setNode };
+  const visiblePhases = reduce ? phases.map(() => "in" as const) : phases;
+
+  return { phases: visiblePhases, setNode };
 }
 
 export function HomePage() {
