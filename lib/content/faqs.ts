@@ -225,6 +225,255 @@ export const peptideFaqs = [
   },
 ];
 
+export type FaqCategory = {
+  id: string;
+  title: string;
+  description: string;
+  items: { id: string; q: string; a: string }[];
+};
+
+export const faqCategories: FaqCategory[] = [
+  {
+    id: "getting-started",
+    title: "Getting Started",
+    description: "onboarding, eligibility, and first steps",
+    items: [
+      {
+        id: "what-is-leader-health",
+        q: "What is Leader Health?",
+        a: "Leader Health is a clinician-led platform for personalized care. We provide the technology and administrative services. Medical care is delivered by independent licensed clinicians, and prescriptions are filled by licensed U.S. pharmacies. Leader Health is not a pharmacy and does not practice medicine.",
+      },
+      {
+        id: "how-it-works",
+        q: "How does Leader Health work?",
+        a: "You complete an intake, complete any required labs, and a licensed clinician reviews your history before prescribing. If a medication is appropriate, a licensed U.S. compounding pharmacy prepares it and ships it to you. Follow-up is part of the plan, not an add-on.",
+      },
+      {
+        id: "who-its-for",
+        q: "Who is Leader Health for?",
+        a: "Adults 18 and older who want a licensed clinician to review their history, goals, and labs before any prescription. People come to us for support with weight, hormones, energy, longevity, and related goals. Whether a treatment is appropriate is a clinical decision, not something the website decides.",
+      },
+      {
+        id: "in-person-visit",
+        q: "Do I need to visit a clinic in person?",
+        a: "No visit is required to start. You complete intake online and meet a licensed clinician by telehealth. Your clinician may decide you need in-person care. If you are in the greater Houston area, you can email ahead to schedule on-site labs in Tomball, Texas.",
+      },
+      {
+        id: "where-available",
+        q: "Where is Leader Health available?",
+        a: "We cover all 50 states through a network of licensed clinicians, subject to state restrictions on specific therapies. Not every treatment can be prescribed or shipped everywhere. Your intake shows the options available where you are.",
+      },
+      {
+        id: "primary-care",
+        q: "Does Leader Health replace my primary care doctor?",
+        a: "No. Leader Health does not replace your primary care clinician, and this site is not a substitute for their care. The clinician responsible for your Leader Health visit is identified in your visit record and patient portal. For a medical emergency, call 911.",
+      },
+    ],
+  },
+  {
+    id: "medical",
+    title: "Medical & Care",
+    description: "Treatments, dosing, and client support",
+    items: [
+      {
+        id: "fda-compounded",
+        q: "Are compounded medications FDA-approved?",
+        a: "Compounded medications are prepared by licensed pharmacies and are not FDA-approved. FDA does not review compounded medications for safety, effectiveness, or quality before they are sold. Prescriptions are issued only after evaluation by a licensed provider. Leader Health is not a pharmacy and does not make or dispense medications.",
+      },
+      {
+        id: "treatment-plan",
+        q: "How is my treatment plan determined?",
+        a: "Your plan comes from a clinical review of your health history, symptoms, goals, and any relevant lab work. A licensed provider decides whether treatment is appropriate and which option fits you. Paying for intake or labs does not guarantee a prescription.",
+      },
+      {
+        id: "glp1-contraindications",
+        q: "Who should not take GLP-1 medications?",
+        a: "Do not use semaglutide or tirzepatide if you or a family member has had medullary thyroid cancer, or if you have MEN 2. Your clinician also screens for other contraindications, including pregnancy. These medications carry a boxed warning about thyroid C-cell tumors in animal studies.",
+      },
+      {
+        id: "side-effects",
+        q: "What side effects should I know about?",
+        a: "They vary by medication. GLP-1s commonly cause gastrointestinal effects during titration. Hormone therapies and peptides have their own monitoring requirements. Your clinician reviews risks, boxed warnings, and when to seek care before anything is prescribed.",
+      },
+      {
+        id: "diet-exercise",
+        q: "Do I need a specific diet or exercise plan?",
+        a: "Medication works alongside eating and activity. Your clinician will talk through protein, resistance training, and titration so the plan fits how you actually live — not a one-size protocol.",
+      },
+      {
+        id: "follow-up",
+        q: "Is follow-up part of the plan?",
+        a: "Yes. Follow-up is part of the plan, not an add-on. Your clinician can review how you are doing and adjust the protocol. Existing patients can message through the patient portal, or email help@myleaderhealth.com.",
+      },
+    ],
+  },
+  {
+    id: "labs",
+    title: "Labs & Biomarkers",
+    description: "Panels, draws, results, and what's included",
+    items: [
+      {
+        id: "labs-first",
+        q: "Do I need labs first?",
+        a: "Many treatments — including hormone therapy, GLP-1 medications, and sermorelin — require lab work so your provider can determine the right plan. First-time patients should expect labs before a prescription. You can start with a Complete or Advanced panel.",
+      },
+      {
+        id: "labs-process",
+        q: "How does the labs-first process work?",
+        a: "You complete intake, obtain the ordered panel, and a clinician reviews the results with your history. Medication is prescribed only if it is appropriate. Follow-up labs can be used later to adjust a dose and watch safety markers.",
+      },
+      {
+        id: "which-panels",
+        q: "Which panels can I order?",
+        a: "The Complete panel covers 64 biomarkers and is $179. The Advanced panel covers 100 biomarkers, is $399, and includes a clinical review of the results. Results are typically ready 2–5 business days after the draw.",
+      },
+      {
+        id: "existing-labs",
+        q: "Can I use lab results I already have?",
+        a: "If you already have recent results, your clinician can review them. If you don't, a Complete or Advanced panel can be ordered for you. Labs give a baseline and a benchmark to measure against over time.",
+      },
+      {
+        id: "labs-refund",
+        q: "Can I get a refund after a draw?",
+        a: "Lab panels that have already been drawn are not refundable. If a clinician later decides medication is not appropriate, you are charged only for services already performed, such as those labs.",
+      },
+    ],
+  },
+  {
+    id: "pharmacy",
+    title: "Pharmacy & Shipping",
+    description: "How your medications are filled and delivered",
+    items: [
+      {
+        id: "who-fills",
+        q: "Who fills my prescription?",
+        a: "A licensed U.S. pharmacy fills the prescription after your clinician approves it. Leader Health is not a pharmacy and does not compound, manufacture, or dispense medications. Whether a medicine is FDA-approved or compounded is stated on that medicine's page.",
+      },
+      {
+        id: "how-shipped",
+        q: "How is medication shipped?",
+        a: "After a clinician approves a plan, the pharmacy ships it to the address on file. Delivery windows vary by pharmacy and destination. See the Shipping Policy for timelines, temperature-sensitive handling, and state restrictions.",
+      },
+      {
+        id: "cold-chain",
+        q: "How are temperature-sensitive medications shipped?",
+        a: "Temperature-sensitive products may use expedited or cold-chain shipping. Keep your address and phone number current, and have someone available if a package needs a signature or refrigeration.",
+      },
+      {
+        id: "lost-shipment",
+        q: "What if my shipment is lost, damaged, or wrong?",
+        a: "Email help@myleaderhealth.com promptly so we can coordinate with the pharmacy. Patient-specific compounded medications that have already shipped are generally not returnable.",
+      },
+      {
+        id: "state-shipping",
+        q: "Can every medication ship to my state?",
+        a: "No. Clinician licensure, compounding rules, and controlled-substance limits decide what can be prescribed or shipped to your location. If you are unsure, contact help@myleaderhealth.com before completing labs.",
+      },
+    ],
+  },
+  {
+    id: "pricing",
+    title: "Pricing & Payment",
+    description: "Billings & refund",
+    items: [
+      {
+        id: "insurance",
+        q: "Do you accept insurance?",
+        a: "No insurance is required. Care is cash-pay with transparent monthly pricing. HSA and FSA cards can typically be used for eligible services and labs.",
+      },
+      {
+        id: "hsa-fsa",
+        q: "Can I use my HSA or FSA?",
+        a: "Yes — HSA and FSA cards can typically be used for eligible clinical services, labs, and prescribed treatments. Check with your plan administrator for your specific account rules.",
+      },
+      {
+        id: "whats-included",
+        q: "What is included in the monthly price?",
+        a: "Typically the prescribed medication, clinician follow-up as defined for that protocol, and supplies when the format requires them. Exact inclusions are shown at checkout. Prices shown are starting prices and can change with dose, format, or required labs.",
+      },
+      {
+        id: "commitment",
+        q: "Is there a commitment?",
+        a: "Plans are typically billed monthly until you cancel. Cancel before the next billing date, through the patient portal or by emailing help@myleaderhealth.com, to avoid the following cycle's charge. There is no long-term lock-in marketed as a requirement to stay.",
+      },
+      {
+        id: "not-a-candidate",
+        q: "What if a clinician decides treatment isn't appropriate?",
+        a: "Payment does not guarantee a prescription. If you are not a candidate, you will be told and charged only for services already performed, such as labs that have been drawn.",
+      },
+      {
+        id: "refunds",
+        q: "How do refunds work?",
+        a: "Because compounded medications are prepared for you, opened or shipped prescriptions are generally not returnable. If a shipment is lost, damaged, or filled in error, contact support so we can coordinate with the pharmacy. Lab panels that have already been drawn are not refundable.",
+      },
+    ],
+  },
+  {
+    id: "privacy",
+    title: "Privacy & Security",
+    description: "How we handle your data and identity",
+    items: [
+      {
+        id: "medical-record",
+        q: "Who is responsible for my medical record?",
+        a: "The Independent Provider Network is the HIPAA Covered Entity for your medical record. Leader Health is its Business Associate under a written agreement and does not practice medicine. The HIPAA Notice of Privacy Practices controls how that record is used.",
+      },
+      {
+        id: "sell-data",
+        q: "Do you sell my information?",
+        a: "No. Leader Health does not sell personal information, does not sell Protected Health Information, and does not share information for cross-context behavioral advertising.",
+      },
+      {
+        id: "what-we-collect",
+        q: "What information do you collect?",
+        a: "Account details, intake and health history, identity documents when required, and messages with support or clinicians. Card payments run through our payment processor. We do not store full card numbers.",
+      },
+      {
+        id: "privacy-rights",
+        q: "How do I access or delete my information?",
+        a: "Email privacy@myleaderhealth.com to request access, correction, or deletion. Rights that apply to your medical record are described in the HIPAA Notice. You can also use the Do Not Sell or Share My Info page to record an opt-out preference.",
+      },
+      {
+        id: "patient-portal",
+        q: "Where is the patient portal?",
+        a: "Existing patients sign in at the Leader Health patient portal. New patients start with Get Started, which opens the intake.",
+      },
+    ],
+  },
+  {
+    id: "support",
+    title: "Support & Accessibility",
+    description: "Get in touch",
+    items: [
+      {
+        id: "contact-support",
+        q: "How do I reach support?",
+        a: "Email help@myleaderhealth.com or call (254) 244-0104. Hours are Tuesday–Saturday, 9am–5pm CT. Sunday and Monday are closed. Existing patients can also message through the patient portal.",
+      },
+      {
+        id: "sign-in",
+        q: "I already have an account. Where do I sign in?",
+        a: "Existing patients sign in at the Leader Health patient portal. New patients start with Get Started, which opens the intake.",
+      },
+      {
+        id: "emergency",
+        q: "What if this is an emergency?",
+        a: "Call 911. Leader Health and this website are not for medical emergencies, and the site does not provide medical advice.",
+      },
+      {
+        id: "visit-tomball",
+        q: "Can I come in person?",
+        a: "Visits are by telehealth. If you are in the greater Houston area and want on-site labs, email ahead about the Tomball, Texas location at 321 S Persimmon, Tomball, TX 77375.",
+      },
+      {
+        id: "get-started",
+        q: "How do I get started?",
+        a: "Choose Get Started to open the intake. You will share your history and goals, complete any labs your clinician needs, and meet a licensed provider before a prescription is considered.",
+      },
+    ],
+  },
+];
+
 export const energyLongevityFaqs = [
   {
     q: "What is Energy & Longevity care?",

@@ -69,7 +69,7 @@ const megaLinkClass =
   "text-left text-[15px] font-semibold text-white transition-opacity duration-150 hover:opacity-80";
 const megaHoverBridgeClass = "absolute top-full z-50 pt-[24px]";
 const megaPanelSurfaceClass =
-  "overflow-hidden rounded-[16px] bg-[linear-gradient(to_bottom_right,rgba(22,6,8,0.94),rgba(145,16,16,0.86))] shadow-xl backdrop-blur-md transition-[opacity,transform] duration-200 ease-out [@starting-style]:translate-y-2 [@starting-style]:opacity-0";
+  "overflow-hidden rounded-[16px] bg-[linear-gradient(to_bottom_right,rgba(22,6,8,0.94),rgba(145,16,16,0.86))] shadow-xl backdrop-blur-md transition-[opacity,transform] duration-[380ms] ease-[cubic-bezier(0.22,1,0.36,1)] [@starting-style]:translate-y-2 [@starting-style]:opacity-0";
 
 function megaPanelMotionClass(fading: boolean) {
   return fading ? "translate-y-2 opacity-0" : "translate-y-0 opacity-100";
@@ -126,18 +126,21 @@ function FeatureCardLink({
         </p>
         <a
           href={GET_STARTED_URL}
-          className="inline-flex h-10 min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-full bg-[#331110] px-3.5 text-[13px] font-semibold text-[#F7F3F5] transition-colors duration-200 ease-out hover:bg-[#5A3431] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#331110]"
+          className="group relative inline-flex h-10 min-h-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#331110] px-3.5 text-[13px] font-semibold text-[#F7F3F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#331110]"
         >
-          Get started
-          <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" aria-hidden>
-            <path
-              d="M3 8h9M8.5 4.5 12.5 8 8.5 11.5"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          <span
+            aria-hidden
+            className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#5A3431] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
+          />
+          <span className="relative z-10 whitespace-nowrap transition-transform duration-[400ms] ease-out group-hover:-translate-x-[15px] motion-reduce:translate-x-0! motion-reduce:transition-none">
+            Get started
+          </span>
+          <span
+            aria-hidden
+            className="pointer-events-none absolute top-1/2 right-0 z-10 -translate-y-1/2 translate-x-full transition-transform duration-[400ms] ease-out group-hover:translate-x-[calc(100%-28px)] motion-reduce:translate-x-full! motion-reduce:transition-none"
+          >
+            →
+          </span>
         </a>
       </div>
     </div>
@@ -377,14 +380,20 @@ function MegaMenuPanel({
               </nav>
               <a
                 href={GENERAL_FORM_URL}
-                className="mt-4 flex h-12 w-[285px] max-w-full items-center gap-3 rounded-full bg-white px-3 text-ink"
+                className="group relative mt-4 flex h-12 w-[285px] max-w-full items-center gap-3 overflow-hidden rounded-full bg-white px-3 text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
               >
-                <DocumentIcon />
-                <span className="min-w-0 leading-tight">
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#e4d0ce] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
+                />
+                <span className="relative z-10 shrink-0">
+                  <DocumentIcon />
+                </span>
+                <span className="relative z-10 min-w-0 leading-tight">
                   <span className="block text-[13px] font-bold">Don&apos;t see your goal?</span>
                   <span className="block text-[12px]">Start with our General Form.</span>
                 </span>
-                <svg viewBox="0 0 16 16" className="ml-auto h-4 w-4 shrink-0" fill="none" aria-hidden>
+                <svg viewBox="0 0 16 16" className="relative z-10 ml-auto h-4 w-4 shrink-0 transition-transform duration-[400ms] ease-out group-hover:translate-x-1 motion-reduce:translate-x-0! motion-reduce:transition-none" fill="none" aria-hidden>
                   <path d="M3 8h9M8.5 4.5 12.5 8 8.5 11.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </a>
@@ -504,7 +513,7 @@ export function Header() {
     const next = mega;
     const timer = window.setTimeout(() => {
       setShownMega(next);
-    }, 200);
+    }, 380);
     return () => window.clearTimeout(timer);
   }, [mega, megaFading]);
 
@@ -701,9 +710,21 @@ export function Header() {
             {!onCheckout ? (
               <a
                 href={GET_STARTED_URL}
-                className="rounded-full bg-white px-4 py-1.5 text-[13px] font-medium text-ink transition-transform duration-200 ease-out hover:scale-[1.04] active:scale-[0.96]"
+                className="group relative inline-flex items-center justify-center overflow-hidden rounded-full bg-white px-4 py-1.5 text-[13px] font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
               >
-                Get Started
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#e4d0ce] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
+                />
+                <span className="relative z-10 whitespace-nowrap transition-transform duration-[400ms] ease-out group-hover:-translate-x-[15px] motion-reduce:translate-x-0! motion-reduce:transition-none">
+                  Get Started
+                </span>
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute top-1/2 right-0 z-10 -translate-y-1/2 translate-x-full transition-transform duration-[400ms] ease-out group-hover:translate-x-[calc(100%-28px)] motion-reduce:translate-x-full! motion-reduce:transition-none"
+                >
+                  →
+                </span>
               </a>
             ) : null}
           </div>
@@ -715,9 +736,21 @@ export function Header() {
             {!onCheckout ? (
               <a
                 href={GET_STARTED_URL}
-                className="rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-ink transition-transform duration-200 ease-out hover:scale-[1.04] active:scale-[0.96] sm:px-3 sm:py-1.5 sm:text-xs"
+                className="group relative inline-flex items-center justify-center overflow-hidden rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:px-3 sm:py-1.5 sm:text-xs"
               >
-                Start
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#e4d0ce] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
+                />
+                <span className="relative z-10 whitespace-nowrap transition-transform duration-[400ms] ease-out group-hover:-translate-x-[10px] motion-reduce:translate-x-0! motion-reduce:transition-none">
+                  Start
+                </span>
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute top-1/2 right-0 z-10 -translate-y-1/2 translate-x-full transition-transform duration-[400ms] ease-out group-hover:translate-x-[calc(100%-18px)] motion-reduce:translate-x-full! motion-reduce:transition-none"
+                >
+                  →
+                </span>
               </a>
             ) : null}
           </div>
@@ -726,8 +759,8 @@ export function Header() {
 
       {/* MOBILE NAV */}
       {mobile && (
-        <div className="fixed inset-0 z-40 hidden bg-ink/80 pt-24 max-[440px]:hidden min-[441px]:block md:hidden">
-          <nav className="mx-4 space-y-3 rounded-3xl bg-white p-6 text-ink">
+        <div className="lh-popup-backdrop fixed inset-0 z-40 hidden bg-ink/80 pt-24 max-[440px]:hidden min-[441px]:block md:hidden">
+          <nav className="lh-popup-panel mx-4 space-y-3 rounded-3xl bg-white p-6 text-ink">
             {[
               ...menLinks.slice(0, 1),
               ...womenLinks.slice(0, 1),
@@ -757,11 +790,11 @@ export function Header() {
       {/* SEARCH MODAL */}
       {search && (
         <div
-          className="fixed inset-0 z-[60] bg-ink/50 px-4 pt-28"
+          className="lh-popup-backdrop fixed inset-0 z-[60] bg-ink/50 px-4 pt-28"
           onClick={() => setSearch(false)}
         >
           <div
-            className="mx-auto max-w-lg rounded-3xl bg-white p-5 text-ink shadow-xl"
+            className="lh-popup-panel mx-auto max-w-lg rounded-3xl bg-white p-5 text-ink shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <input

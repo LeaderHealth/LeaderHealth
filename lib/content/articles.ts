@@ -244,6 +244,81 @@ export const articles: Article[] = [
   },
 ];
 
+export const articleCovers: Record<string, { src: string; alt: string }> = {
+  "biological-age-and-longevity-lab-tests-what-the-evidence-actually-supports": {
+    src: "https://framerusercontent.com/images/OYwjC33H2QOtmXItvGUa9TfjZXA.png?width=1200&height=896",
+    alt: "Healthcare provider reviewing lab results with a patient at a desk",
+  },
+  "daily-tadalafil-sexual-health-cardiovascular-benefits": {
+    src: "https://framerusercontent.com/images/qJAVbfrE33SGuP529OFnfbzxA.png?width=1200&height=896",
+    alt: "Smiling couple sharing coffee together in their kitchen",
+  },
+  "glp-1-medications-weight-management-guide": {
+    src: "https://framerusercontent.com/images/e7AKbNse1kOSDk4gFdTGRkZ5zO8.png?width=1200&height=896",
+    alt: "Man preparing a fresh vegetable meal at his kitchen counter",
+  },
+  "hormone-replacement-therapy-perimenopause-guide": {
+    src: "https://framerusercontent.com/images/MTdnrC75ERsxBxNikkSZklPNnA.png?width=1200&height=896",
+    alt: "Woman with long silver hair reading in an armchair by a sunny window",
+  },
+  "hormone-therapy-options-when-estrogen-format-runs-short": {
+    src: "https://framerusercontent.com/images/e7wnHAaLAbTz1BRmiNv7ZbSgzEY.png?width=1200&height=896",
+    alt: "Woman seated at a table with several prescription bottles in front of her, looking away in thought",
+  },
+  "injectable-l-glutathione-antioxidant-guide": {
+    src: "https://framerusercontent.com/images/AeZt5aXa389UKn6jnQRIVmcGtE.png?width=1200&height=896",
+    alt: "Woman checking her phone at her kitchen counter, glass of water beside her",
+  },
+  "low-libido-in-women-causes-evaluation-guide": {
+    src: "https://framerusercontent.com/images/NpRIlB9unrAbVD72UJt7tT5nM.png?width=1200&height=896",
+    alt: "Two women seated in armchairs in conversation in a bright room",
+  },
+  "nad-plus-injectable-oral-evidence-guide": {
+    src: "https://framerusercontent.com/images/9Qrk1tuAG3AoFmXm0oJcB6FW5s.png?width=1200&height=896",
+    alt: "Woman in a red long-sleeve top standing at a kitchen counter, reading her phone",
+  },
+  "perimenopause-or-low-desire-reading-the-signals": {
+    src: "https://framerusercontent.com/images/xuRvlby8kyfuLdPdASUSwzm9Wg.png?width=1200&height=896",
+    alt: "Two women seated facing each other in conversation, a tablet on the table between them",
+  },
+  "pt-141-bremelanotide-sexual-health-guide": {
+    src: "https://framerusercontent.com/images/D53M0ewXz5KuUzg35TjMRBd7Y.png?width=1200&height=896",
+    alt: "Smiling middle-aged couple standing together outside their home",
+  },
+  "recovery-peptides-anti-doping-sourcing-guide": {
+    src: "https://framerusercontent.com/images/iZ68h4BDJvbvxZvvqShgcSTNLI.png?width=1200&height=896",
+    alt: "Clinician in a white coat pointing at a monitor beside a seated man at a desk",
+  },
+  "recovery-peptides-evidence-vs-hype": {
+    src: "https://framerusercontent.com/images/L1fqK94YpjxWPhptR68vLnj5vaY.png?width=1200&height=896",
+    alt: "Man in a navy blazer seated at a table, looking at a tablet",
+  },
+  "semaglutide-vs-tirzepatide-comparison-guide": {
+    src: "https://framerusercontent.com/images/rSbXuxdt7sgkw5BDZqGCEvEn8.png?width=1200&height=896",
+    alt: "Man seated in an armchair by a window, using a tablet at home",
+  },
+  "sermorelin-peptide-therapy-guide": {
+    src: "https://framerusercontent.com/images/cJMSg7x7wNozm1KpLS8H1dmxE8g.png?width=1200&height=896",
+    alt: "Man in a red long-sleeve top and shorts tying his shoe on a front porch step",
+  },
+  "sleep-testosterone-and-recovery-the-triad-most-men-optimizing-hormones-overlook": {
+    src: "https://framerusercontent.com/images/c6yMXJzWbf2ZUF0GdZfvWrNWFEc.png?width=1200&height=896",
+    alt: "Man in a black henley sitting by a window, holding a mug and looking outside",
+  },
+  "stopping-glp-1-maintenance-decision-guide": {
+    src: "https://framerusercontent.com/images/QsaA71bjh460UelpHptHsB3AAc.png?width=1200&height=896",
+    alt: "Man in a consultation with a healthcare provider, holding a tablet",
+  },
+  "testosterone-replacement-therapy-men-guide": {
+    src: "https://framerusercontent.com/images/aIxoSQ2lrhFUcJ1JEEwVb70G8.png?width=1200&height=896",
+    alt: "Man in a red henley standing in a softly lit living room",
+  },
+  "when-the-scale-stops-moving-in-menopause-why-weight-and-hormones-belong-in-one-plan": {
+    src: "https://framerusercontent.com/images/i3rMF4kncMVWDW8N9yu2qbDaOiU.png?width=1200&height=896",
+    alt: "Woman seated with a mug beside a tablet displaying a wellness plan",
+  },
+};
+
 export function getArticle(slug: string) {
   return articles.find((a) => a.slug === slug);
 }

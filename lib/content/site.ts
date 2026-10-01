@@ -45,7 +45,7 @@ export const tickerItems = [
 export const assets = {
   logo: "https://framerusercontent.com/images/GA0eD4KXUgXgbydQx3suqxgv20.png?width=8103&height=554",
   heroVideo:
-    "https://framerusercontent.com/assets/SEvBMYJ1Odd8btsq47nUoKvLX8M.mp4",
+    "https://framerusercontent.com/assets/uZ4pyoMzHwVNy0NCh1VbkubHg9U.mp4",
   heroVideoAlt:
     "https://framerusercontent.com/assets/WUBCjjcACmE3AuGZNdJF8vWz5M.mp4",
   stepForm:
@@ -71,6 +71,7 @@ export const assets = {
   shopHero:
     "https://framerusercontent.com/images/cCfn27Xv7UDHhfu2ClpobxLqv0.png?width=2496&height=1664",
   contactHero: "/images/contact-hero.jpg",
+  faqHero: "/images/faq-hero.jpg",
   energyHero: "/images/energy-longevity-hero.jpg",
   peptidesHero: "/images/advanced-peptides-hero.jpg",
   peptidesMetabolic: "/images/peptides-metabolic.jpg",

@@ -3,11 +3,11 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { assets, careSteps, designedFor, GET_STARTED_URL, testimonials } from "@/lib/content/site";
+import { assets, careSteps, designedFor, GET_STARTED_URL } from "@/lib/content/site";
 import { HeroVideo } from "./HeroVideo";
 import { Marquee } from "./Marquee";
 import { LabsTeaser } from "./LabsTeaser";
-import { TestimonialsVideoSection } from "./TestimonialsVideoSection";
+import { SiteTestimonials } from "./TestimonialsVideoSection";
 import { ArticleLibrary } from "./ArticleLibrary";
 
 const campaign = [
@@ -142,7 +142,6 @@ const careOptions = [
     width: 1080,
     height: 1350,
     imageClass: "max-h-[73.07%]",
-    featured: false,
   },
   {
     href: "/products/men-sexual-health-combo-troches",
@@ -153,7 +152,6 @@ const careOptions = [
     width: 1890,
     height: 2363,
     imageClass: "max-h-full",
-    featured: false,
   },
   {
     href: "/products/longevity-nad",
@@ -164,7 +162,6 @@ const careOptions = [
     width: 2286,
     height: 1287,
     imageClass: "max-h-full",
-    featured: true,
   },
   {
     href: "/products/weight-loss-semaglutide",
@@ -175,7 +172,6 @@ const careOptions = [
     width: 626,
     height: 888,
     imageClass: "max-h-full",
-    featured: false,
   },
 ];
 
@@ -430,6 +426,7 @@ export function HomePage() {
     <>
       <section className="relative h-[100svh] min-h-[640px] overflow-hidden bg-ink text-white">
         <HeroVideo src={assets.heroVideo} />
+        <div aria-hidden className="pointer-events-none absolute inset-0 z-[1] bg-[#737373]/20" />
         <div className="relative z-10 flex h-full flex-col justify-end px-[8%] pb-28 md:px-[12%] md:pb-32">
           <Image
             src={assets.logo}
@@ -496,17 +493,13 @@ export function HomePage() {
             </div>
           </div>
 
-          <div className="group/options mt-8 rounded-[28px] border border-white/80 bg-[#f7f4f4]/90 p-3 shadow-[0_16px_50px_rgba(80,40,40,0.06)] sm:p-4 lg:mt-11 lg:p-4">
+          <div className="mt-8 rounded-[28px] border border-white/80 bg-[#f7f4f4]/90 p-3 shadow-[0_16px_50px_rgba(80,40,40,0.06)] sm:p-4 lg:mt-11 lg:p-4">
             <div className="grid grid-cols-1 items-stretch gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {careOptions.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`group relative flex h-full flex-col rounded-[20px] border bg-white px-3.5 pt-3.5 pb-4 transition-colors duration-300 ease-out sm:px-4 sm:pt-4 sm:pb-5 ${
-                    item.featured
-                      ? "border-[#e33d4d] group-hover/options:border-transparent hover:border-[#e33d4d]"
-                      : "border-transparent hover:border-[#e33d4d]"
-                  }`}
+                  className="group relative flex h-full flex-col rounded-[20px] border border-transparent bg-white px-3.5 pt-3.5 pb-4 transition-colors duration-300 ease-out hover:border-[#e33d4d] sm:px-4 sm:pt-4 sm:pb-5"
                 >
                   <span
                     aria-hidden
@@ -720,9 +713,21 @@ export function HomePage() {
           <div className="mt-7 flex justify-center">
             <Link
               href="/shop-all-products"
-              className="inline-flex rounded-[39px] bg-[#df4452] px-[26px] py-[14px] font-sans text-base font-semibold leading-[19.2px] text-[#f7f3f5]"
+              className="group relative inline-flex items-center justify-center overflow-hidden rounded-[39px] bg-[#df4452] px-[26px] py-[14px] font-sans text-base font-semibold leading-[19.2px] text-[#f7f3f5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
             >
-              Explore All Treatments
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#E33D4E] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
+              />
+              <span className="relative z-10 whitespace-nowrap transition-transform duration-[400ms] ease-out group-hover:-translate-x-[15px] motion-reduce:translate-x-0! motion-reduce:transition-none">
+                Explore All Treatments
+              </span>
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute top-1/2 right-0 z-10 -translate-y-1/2 translate-x-full transition-transform duration-[400ms] ease-out group-hover:translate-x-[calc(100%-35px)] motion-reduce:translate-x-full! motion-reduce:transition-none"
+              >
+                →
+              </span>
             </Link>
           </div>
 
@@ -746,9 +751,21 @@ export function HomePage() {
                 </div>
                 <a
                   href={GET_STARTED_URL}
-                  className="self-end rounded-[39px] bg-[#f9f9f9] px-[18px] py-[5px] text-[15px] font-medium text-ink"
+                  className="group relative inline-flex items-center justify-center self-end overflow-hidden rounded-[39px] bg-[#f9f9f9] px-[18px] py-[5px] text-[15px] font-medium text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
                 >
-                  Get Started
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#e4d0ce] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
+                  />
+                  <span className="relative z-10 whitespace-nowrap transition-transform duration-[400ms] ease-out group-hover:-translate-x-[15px] motion-reduce:translate-x-0! motion-reduce:transition-none">
+                    Get Started
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute top-1/2 right-0 z-10 -translate-y-1/2 translate-x-full transition-transform duration-[400ms] ease-out group-hover:translate-x-[calc(100%-28px)] motion-reduce:translate-x-full! motion-reduce:transition-none"
+                  >
+                    →
+                  </span>
                 </a>
               </div>
             </article>
@@ -897,19 +914,7 @@ export function HomePage() {
 
       <LabsTeaser />
 
-      <TestimonialsVideoSection
-        videoSrc={assets.heroVideoAlt}
-        posterSrc={assets.weightlifting}
-        testimonials={testimonials.map((item) => ({
-          quote: item.quote,
-          name: item.name,
-          role: item.treatment,
-          image: item.image,
-        }))}
-        showDots
-        draggable
-        initialIndex={1}
-      />
+      <SiteTestimonials />
       <ArticleLibrary
         slugs={[
           "semaglutide-vs-tirzepatide-comparison-guide",
