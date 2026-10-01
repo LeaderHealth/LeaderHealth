@@ -42,13 +42,14 @@ function LegalBlocks({ blocks }: { blocks: LegalBlock[] }) {
       );
     }
     if (block.kind === "list") {
+      const ListTag = block.ordered ? "ol" : "ul";
       return (
-        <ul key={index} className="mt-4 list-disc space-y-2 pl-5 leading-relaxed text-brown">
+        <ListTag key={index} className={`mt-4 space-y-2 pl-5 leading-relaxed text-brown ${block.ordered ? "list-decimal" : "list-disc"}`}>
           {block.items.map((item, itemIndex) => {
             const runs = block.runs?.[itemIndex];
             return <li key={itemIndex}>{runs ? <LegalRuns runs={runs} /> : item}</li>;
           })}
-        </ul>
+        </ListTag>
       );
     }
     if (block.kind === "table") {

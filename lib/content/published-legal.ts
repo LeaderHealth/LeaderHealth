@@ -850,6 +850,37 @@ export const termsOfService: LegalPage = {
           ]
         },
         {
+          "kind": "list",
+          "ordered": true,
+          "items": [
+            "Diagnostic lab panels — your intake panel and any monitoring panels ordered by your Provider over time. A lab purchase may be one-time or recurring depending on the protocol applicable to you.",
+            "Provider visits / consultations — billed as shown at booking. Some visits may be bundled with a lab purchase as disclosed at checkout.",
+            "Therapy subscriptions — recurring therapy billed at the cadence shown at checkout. Minimum commitment, if any, is therapy-specific and is disclosed at checkout for that therapy (some therapies are month-to-month; some carry a disclosed minimum term such as 3 months).",
+            "Single-purchase items — certain one-time products or medications billed once. Single-purchase items are not subscriptions and do not automatically renew."
+          ],
+          "runs": [
+            [
+              { "text": "Diagnostic lab panels", "bold": true },
+              { "text": " — your intake panel and any monitoring panels ordered by your Provider over time. A lab purchase may be one-time or recurring depending on the protocol applicable to you." }
+            ],
+            [
+              { "text": "Provider visits / consultations", "bold": true },
+              { "text": " — billed as shown at booking. Some visits may be bundled with a lab purchase as disclosed at checkout." }
+            ],
+            [
+              { "text": "Therapy subscriptions", "bold": true },
+              { "text": " — recurring therapy billed at the cadence shown at checkout. " },
+              { "text": "Minimum commitment, if any, is therapy-specific and is disclosed at checkout for that therapy", "bold": true },
+              { "text": " (some therapies are month-to-month; some carry a disclosed minimum term such as 3 months)." }
+            ],
+            [
+              { "text": "Single-purchase items", "bold": true },
+              { "text": " — certain one-time products or medications billed once. " },
+              { "text": "Single-purchase items are not subscriptions and do not automatically renew.", "bold": true }
+            ]
+          ]
+        },
+        {
           "kind": "p",
           "text": "c. Price and terms shown before checkout control. The price, billing cadence, minimum term (if any), and refund and cancellation terms applicable to each purchase are shown to you before you complete that purchase and are governed by the Subscription Terms (for recurring purchases) and the Refunds & Cancellations policy.",
           "runs": [
@@ -869,7 +900,7 @@ export const termsOfService: LegalPage = {
             },
             {
               "text": "Refunds & Cancellations",
-              "href": "/legal/subscription-terms"
+              "href": "/legal/refunds-cancellations"
             },
             {
               "text": " policy."

@@ -23,7 +23,7 @@ export type LegalRun = {
 export type LegalBlock =
   | { kind: "p"; text: string; runs?: LegalRun[] }
   | { kind: "h3"; text: string; runs?: LegalRun[] }
-  | { kind: "list"; items: string[]; runs?: (LegalRun[] | null)[] }
+  | { kind: "list"; items: string[]; runs?: (LegalRun[] | null)[]; ordered?: boolean }
   | { kind: "table"; headers: string[]; rows: string[][]; cellRuns?: (LegalRun[] | null)[][] };
 
 export type LegalSection = {
