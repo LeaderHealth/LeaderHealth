@@ -1,52 +1,26 @@
+import { privacyPolicy } from "@/lib/content/privacy-policy";
+
+export type LegalBlock =
+  | { kind: "p"; text: string }
+  | { kind: "h3"; text: string }
+  | { kind: "list"; items: string[] }
+  | { kind: "table"; headers: string[]; rows: string[][] };
+
+export type LegalSection = {
+  heading: string;
+  paragraphs: string[];
+  blocks?: LegalBlock[];
+};
+
 export type LegalPage = {
   slug: string;
   title: string;
   effective?: string;
-  sections: { heading: string; paragraphs: string[] }[];
+  sections: LegalSection[];
 };
 
 export const legalPages: LegalPage[] = [
-  {
-    slug: "privacy-policy",
-    title: "Privacy Policy",
-    effective: "July 1, 2026",
-    sections: [
-      {
-        heading: "Plain-English summary",
-        paragraphs: [
-          "Leader Health is a healthtech platform operated by LH Ventures LLC as the technology and administrative-services company. Clinical care is delivered by independent licensed clinicians who practice through an Independent Provider Network. The Independent Provider Network is the HIPAA Covered Entity for your medical record; Leader Health is its Business Associate. We do not sell your Protected Health Information, and we do not use your PHI for cross-context behavioral advertising. Questions: privacy@myleaderhealth.com.",
-        ],
-      },
-      {
-        heading: "Who we are",
-        paragraphs: [
-          "\"Leader Health,\" \"we,\" \"our,\" or \"us\" means Leader Health, the trade name of LH Ventures LLC, a Delaware limited liability company foreign-qualified in Texas, together with its affiliates. Leader Health is a technology and administrative-services company. Leader Health does not practice medicine.",
-          "Clinical services are provided by independent licensed clinicians. Pharmacy services are provided by independently owned licensed pharmacies. Laboratory services are provided by independent reference laboratories.",
-          "Protected Health Information created and held by the Independent Provider Network is governed by the HIPAA Notice of Privacy Practices, which controls in case of conflict with respect to PHI.",
-        ],
-      },
-      {
-        heading: "Information we collect",
-        paragraphs: [
-          "Account information (name, email, password, phone, date of birth, address); intake and health-history information; identity verification documents where required; payment information processed through our payment processor (we do not store full card numbers); and communications with support or clinicians.",
-          "We also collect device and connection data, usage data, and cookies as described in our tracking practices, plus lab results, pharmacy data, and clinical notes from partners involved in your care.",
-        ],
-      },
-      {
-        heading: "How we use and share information",
-        paragraphs: [
-          "We use personal information to administer your account, coordinate care with the Affiliated Provider Network, Pharmacies, and Labs, process payments, communicate with you, secure the platform, prevent fraud, and comply with law.",
-          "We do not use AI or automated decision-making to make material clinical decisions about your care. Providers make all prescribing decisions. We do not sell personal information.",
-        ],
-      },
-      {
-        heading: "Your rights",
-        paragraphs: [
-          "California and other state-law rights, including access, deletion, and correction, can be exercised at privacy@myleaderhealth.com or via the Do Not Sell or Share My Info page. We are implementing support for Global Privacy Control (GPC) opt-out preference signals.",
-        ],
-      },
-    ],
-  },
+  privacyPolicy,
   {
     slug: "terms-of-service",
     title: "Terms of Service",
