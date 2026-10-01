@@ -832,7 +832,15 @@ export function HomePage() {
                 className="show-up-photo object-cover"
                 sizes="(min-width: 768px) 582px, 92vw"
               />
-              <div className="relative flex h-full flex-col justify-between px-[22px] pb-[22px] pt-10">
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  background:
+                    "linear-gradient(160deg, rgba(26, 8, 8, 0.74) 0%, rgba(26, 8, 8, 0.44) 45%, rgba(26, 8, 8, 0.1) 70%)",
+                }}
+              />
+              <div className="relative z-10 flex h-full flex-col justify-between px-[22px] pb-[22px] pt-10">
                 <div>
                   <h3 className="max-w-[538px] font-sans text-[28px] font-medium leading-[1.2] tracking-normal text-[#f7f3f4] md:text-[34px] md:leading-[40.8px]">
                     Provider-Guided Weight Loss
@@ -875,7 +883,15 @@ export function HomePage() {
                 className="show-up-photo object-cover"
                 sizes="(min-width: 768px) 582px, 92vw"
               />
-              <div className="relative flex h-full flex-col justify-end px-[22px] pb-[22px] pt-10">
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  background:
+                    "linear-gradient(0deg, rgba(26, 8, 8, 0.7) 0%, rgba(26, 8, 8, 0.3) 40%, rgba(26, 8, 8, 0) 65%)",
+                }}
+              />
+              <div className="relative z-10 flex h-full flex-col justify-end px-[22px] pb-[22px] pt-10">
                 <h3 className="max-w-[345px] font-sans text-[28px] font-medium leading-[40.8px] tracking-normal text-[#f7f3f4] md:text-[34px]">
                   Care Built Around You
                 </h3>
@@ -885,9 +901,21 @@ export function HomePage() {
                   </p>
                   <Link
                     href="/aboutus"
-                    className="shrink-0 rounded-[39px] bg-[#f9f9f9] px-[18px] py-[5px] text-[15px] font-medium text-ink"
+                    className="group relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-[39px] bg-[#f9f9f9] px-[18px] py-[5px] text-[15px] font-medium text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
                   >
-                    About Us
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#e4d0ce] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
+                    />
+                    <span className="relative z-10 whitespace-nowrap transition-transform duration-[400ms] ease-out group-hover:-translate-x-[15px] motion-reduce:translate-x-0! motion-reduce:transition-none">
+                      About Us
+                    </span>
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute top-1/2 right-0 z-10 -translate-y-1/2 translate-x-full transition-transform duration-[400ms] ease-out group-hover:translate-x-[calc(100%-28px)] motion-reduce:translate-x-full! motion-reduce:transition-none"
+                    >
+                      →
+                    </span>
                   </Link>
                 </div>
               </div>
