@@ -21,11 +21,13 @@ export function ShopGrid({
   title,
   intro,
   children,
+  centeredHero = false,
 }: {
   audience?: Audience;
   title: string;
   intro: string;
   children?: React.ReactNode;
+  centeredHero?: boolean;
 }) {
   const [active, setActive] = useState<Category | undefined>();
   const [who, setWho] = useState<Audience | undefined>(audience);
@@ -40,20 +42,47 @@ export function ShopGrid({
 
   return (
     <div className="w-full">
-      <section className="relative flex min-h-[70vh] items-end overflow-hidden bg-ink pb-16 pt-32 text-white">
+      <section
+        className={
+          centeredHero
+            ? "relative h-[78vh] overflow-hidden bg-ink text-white"
+            : "relative flex min-h-[70vh] items-end overflow-hidden bg-ink pb-16 pt-32 text-white"
+        }
+      >
         <Image
           src={assets.shopHero}
           alt=""
           fill
           priority
-          className="object-cover"
+          className={centeredHero ? "object-cover object-left" : "object-cover"}
           sizes="100vw"
         />
-        <div className="absolute inset-0 bg-[radial-gradient(52%_65%_at_50%_52%,rgba(51,17,16,0.72)_0%,rgba(51,17,16,0.21)_45%,rgba(51,17,16,0)_72%)]" />
-        <div className="relative mx-auto w-full max-w-6xl px-6">
-          <h1 className="max-w-xl text-5xl md:text-[60px]">{title}</h1>
-          <p className="mt-4 max-w-xl text-white/85">{intro}</p>
-        </div>
+        <div
+          className={
+            centeredHero
+              ? "absolute inset-0 bg-[linear-gradient(rgba(51,17,16,0)_15%,rgba(51,17,16,0.45)_55%,rgba(51,17,16,0.78)_100%)] min-[810px]:bg-[radial-gradient(52%_65%_at_50%_52%,rgba(51,17,16,0.72)_0%,rgba(51,17,16,0.21)_45%,rgba(51,17,16,0)_72%)]"
+              : "absolute inset-0 bg-[radial-gradient(52%_65%_at_50%_52%,rgba(51,17,16,0.72)_0%,rgba(51,17,16,0.21)_45%,rgba(51,17,16,0)_72%)]"
+          }
+        />
+        {centeredHero ? (
+          <div className="absolute top-[54%] left-1/2 flex w-[min(385px,calc(100%-24px))] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-4 text-center min-[810px]:top-[52%] min-[810px]:left-[52%] min-[810px]:w-[440px] min-[1200px]:w-[516px]">
+            <h1
+              className="font-sans text-[46px] leading-[0.96] font-medium text-[#F7F3F5] min-[810px]:text-[60px] min-[1200px]:text-[96px]"
+              style={{ letterSpacing: "-0.035em" }}
+            >
+              {title}
+            </h1>
+            <p className="font-sans text-[16px] leading-[1.6] font-normal text-[rgba(247,243,245,0.9)] min-[810px]:text-[18px]">
+              {intro}
+            </p>
+          </div>
+        ) : (
+          <div className="relative mx-auto w-full max-w-6xl px-6">
+            <h1 className="max-w-xl text-5xl md:text-[60px]">{title}</h1>
+            <p className="mt-4 max-w-xl text-white/85">{intro}</p>
+          </div>
+        )}
+        {centeredHero ? <div className="absolute inset-x-0 bottom-0 h-[2px] bg-[#E33D4D]" /> : null}
       </section>
 
       <div className="mx-auto max-w-6xl px-6 pb-20 pt-10">

@@ -578,6 +578,91 @@ h3.font-sans,
   }
 }
 
+/* Tablet navbar (768–1199). Unlayered so these beat Tailwind md: utilities
+   without changing the desktop bar at 1200px and up. */
+.lh-tablet-clip {
+  display: none;
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  .lh-tablet-header {
+    top: 12px;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .lh-tablet-shell {
+    max-width: none;
+    gap: 0;
+    padding: 0;
+    flex-direction: column;
+    align-items: stretch;
+    overflow: hidden;
+    border-radius: 44px;
+    transition-property: border-radius;
+    transition-duration: 0.4s;
+    transition-timing-function: cubic-bezier(0.22, 1.15, 0.36, 1);
+  }
+
+  .lh-tablet-shell.lh-tablet-open {
+    max-height: calc(100dvh - 1.5rem);
+    border-radius: 21px;
+  }
+
+  .lh-tablet-clip {
+    display: block;
+  }
+
+  .lh-tablet-row {
+    display: flex;
+    height: 48px;
+    width: 100%;
+    min-width: 0;
+    align-items: center;
+  }
+
+  .lh-desktop-nav {
+    display: none;
+  }
+
+  .lh-tablet-logo {
+    position: static;
+    left: auto;
+    width: auto;
+    flex: none;
+    transform: none;
+    justify-content: flex-start;
+    padding-left: 20px;
+    transition: opacity 200ms ease;
+  }
+
+  .lh-tablet-logo:hover {
+    opacity: 0.82;
+  }
+
+  .lh-tablet-logo:active {
+    opacity: 0.68;
+  }
+
+  .lh-tablet-logo img {
+    width: 163px;
+  }
+
+  .lh-tablet-bar {
+    display: flex;
+  }
+
+  .lh-tablet-panel {
+    display: block;
+  }
+}
+
+@media (min-width: 1200px) {
+  .lh-tablet-logo {
+    translate: -50% 0;
+  }
+}
+
 .lh-mobile-nav-scroll[data-fade="both"] {
   -webkit-mask-image: linear-gradient(
     to bottom,

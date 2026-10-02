@@ -261,7 +261,7 @@ export const products: Product[] = [
     labRequired: true,
     seoTitle: "Hormone Therapy for Women (HRT) Online",
     image:
-      "https://framerusercontent.com/images/GMDs0BF7J9LSEZf6TeYNopUk.png?width=2308&height=836",
+      "https://framerusercontent.com/images/NNkqjkjcButh0STKbHYnciyEKA.png?width=1000&height=1119",
     tagline: "Perimenopause and menopause care with more than one delivery option.",
     description:
       "Women's hormone therapy is built around symptoms, labs, and the formats that are actually available — cream, patch, pill, or vaginal options — with a clinician choosing what fits.",

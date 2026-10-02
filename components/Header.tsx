@@ -16,6 +16,7 @@ import {
 } from "@/lib/content/nav";
 import { CartButton } from "./cart/CartButton";
 import { MobileNav } from "./MobileNav";
+import { TabletNavBar, TabletNavDisclosure, type TabletPanel } from "./TabletNav";
 
 const GENERAL_FORM_URL = "https://products.leaderhealth.clinic/";
 
@@ -485,6 +486,8 @@ export function Header() {
   const [query, setQuery] = useState("");
   const [navVisible, setNavVisible] = useState(true);
   const [mega, setMega] = useState<MegaId | null>(null);
+  const [tabletPanel, setTabletPanel] = useState<TabletPanel | null>(null);
+  const headerRef = useRef<HTMLElement>(null);
   const [shownMega, setShownMega] = useState<MegaId | null>(null);
   const [navPath, setNavPath] = useState(pathname);
   const lastScrollY = useRef(0);
@@ -496,6 +499,7 @@ export function Header() {
     setShownMega(null);
     setMobile(false);
     setSearch(false);
+    setTabletPanel(null);
   }
 
   if (shownMega === null && mega !== null) {
@@ -536,7 +540,7 @@ export function Header() {
       const y = window.scrollY;
       const delta = y - lastScrollY.current;
 
-      if (mobile || search || y <= 10) {
+      if (mobile || search || tabletPanel || y <= 10) {
         setNavVisible(true);
         lastScrollY.current = y;
         return;
@@ -552,7 +556,25 @@ export function Header() {
 
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-  }, [mobile, search]);
+  }, [mobile, search, tabletPanel]);
+
+  useEffect(() => {
+    if (!tabletPanel) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!headerRef.current?.contains(event.target as Node)) {
+        setTabletPanel(null);
+      }
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [tabletPanel]);
+
+  function toggleTablet(next: TabletPanel) {
+    setMega(null);
+    setSearch(false);
+    setTabletPanel((current) => (current === next ? null : next));
+    if (next === "search") setQuery("");
+  }
 
   const results = query.trim()
     ? products.filter(
@@ -581,17 +603,21 @@ export function Header() {
       />
 
       <header
-        className={`pointer-events-none fixed inset-x-0 top-2 z-50 hidden justify-center px-2 transition-transform duration-300 ease-out min-[441px]:flex sm:top-3 sm:px-3 md:top-4 ${
-          navVisible || mobile || search
+        ref={headerRef}
+        className={`lh-tablet-header pointer-events-none fixed inset-x-0 top-2 z-50 hidden justify-center px-2 transition-transform duration-300 ease-out min-[441px]:flex sm:top-3 sm:px-3 md:top-4 ${
+          navVisible || mobile || search || tabletPanel
             ? "translate-y-0"
             : "-translate-y-[calc(100%+1rem)]"
         }`}
       >
         <div
-          className={`pointer-events-auto relative flex w-full max-w-[1120px] min-w-0 items-center gap-1.5 rounded-full px-2 py-1.5 text-white shadow-lg shadow-ink/10 transition-colors duration-300 sm:gap-3 sm:px-5 sm:py-2 ${shell}`}
+          className={`lh-tablet-shell pointer-events-auto relative flex w-full max-w-[1120px] min-w-0 items-center gap-1.5 rounded-full px-2 py-1.5 text-white shadow-lg shadow-ink/10 transition-colors duration-300 sm:gap-3 sm:px-5 sm:py-2 ${
+            tabletPanel ? "lh-tablet-open" : ""
+          } ${shell}`}
         >
+          <div className="contents lh-tablet-row">
           {/* LEFT NAV */}
-          <div className="hidden items-center gap-5 md:flex">
+          <div className="lh-desktop-nav hidden items-center gap-5 md:flex">
             <MegaMenu
               label="Men"
               open={shownMega === "men"}
@@ -653,18 +679,8 @@ export function Header() {
           {/* CENTER LOGO */}
           <Link
             href="/"
-            className="
-              flex
-              min-w-0
-              flex-1
-              items-center
-              justify-center
-              md:absolute
-              md:left-1/2
-              md:w-[180px]
-              md:flex-none
-              md:-translate-x-1/2
-            "
+            onClick={() => setTabletPanel(null)}
+            className="lh-tablet-logo flex min-w-0 flex-1 items-center justify-center md:absolute md:left-1/2 md:w-[180px] md:flex-none"
           >
             <Image
               src={assets.logo}
@@ -687,8 +703,14 @@ export function Header() {
             />
           </Link>
 
+          <TabletNavBar
+            panel={tabletPanel}
+            onToggle={toggleTablet}
+            onShop={() => setTabletPanel(null)}
+          />
+
           {/* RIGHT NAV */}
-          <div className="ml-auto hidden items-center gap-3 md:flex">
+          <div className="lh-desktop-nav ml-auto hidden items-center gap-3 md:flex">
             <WhoWeAreMenu
               open={shownMega === "who"}
               fading={shownMega === "who" && megaFading}
@@ -754,6 +776,14 @@ export function Header() {
               </a>
             ) : null}
           </div>
+          </div>
+          <TabletNavDisclosure
+            panel={tabletPanel}
+            query={query}
+            onQuery={setQuery}
+            results={results.map((product) => ({ slug: product.slug, name: product.name }))}
+            onNavigate={() => setTabletPanel(null)}
+          />
         </div>
       </header>
 

@@ -8,6 +8,7 @@ export default function ShopAllPage() {
   return (
     <>
       <ShopGrid
+        centeredHero
         title="All Products"
         intro="Explore our complete collection of physician-led solutions designed to help you look, feel, and perform at your best."
       />
