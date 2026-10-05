@@ -3,8 +3,9 @@
 import { motion, useReducedMotion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { GET_STARTED_URL, PORTAL_URL } from "@/lib/content/site";
+import type { SearchHit } from "@/lib/search";
 
 const tabletSpring = {
   type: "spring" as const,
@@ -324,12 +325,14 @@ export function TabletNavPanel({
   query,
   onQuery,
   results,
+  onSubmit,
   onNavigate,
 }: {
   panel: TabletPanel;
   query: string;
   onQuery: (value: string) => void;
-  results: { slug: string; name: string }[];
+  results: SearchHit[];
+  onSubmit: (value?: string) => void;
   onNavigate: () => void;
 }) {
   return (
@@ -374,23 +377,46 @@ export function TabletNavPanel({
 
       {panel === "search" ? (
         <div className="mx-auto max-w-[760px] py-2">
-          <input
-            autoFocus
-            value={query}
-            onChange={(event) => onQuery(event.target.value)}
-            placeholder="Search…"
-            aria-label="Search"
-            className="w-full rounded-full border border-white/30 bg-white/10 px-4 py-3 font-sans text-[16px] text-white outline-none placeholder:text-white/60"
-          />
+          <form
+            className="relative"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const field = event.currentTarget.elements.namedItem("q");
+              const value = field instanceof HTMLInputElement ? field.value : query;
+              onQuery(value);
+              onSubmit(value);
+            }}
+          >
+            <input
+              name="q"
+              autoFocus
+              value={query}
+              onChange={(event) => onQuery(event.target.value)}
+              placeholder="Search…"
+              aria-label="Search"
+              enterKeyHint="search"
+              className="w-full rounded-full border border-white/30 bg-white/10 py-3 pr-12 pl-4 font-sans text-[16px] text-white outline-none placeholder:text-white/60"
+            />
+            <button
+              type="submit"
+              aria-label="Submit search"
+              className="absolute top-1/2 right-1.5 grid size-8 -translate-y-1/2 place-items-center rounded-full bg-white text-[#331110] transition-[transform,background-color] duration-200 ease-out hover:scale-[1.06] hover:bg-[#f3eeec] active:scale-95 motion-reduce:transform-none"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden>
+                <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </form>
           <div className="mt-3">
-            {results.map((product) => (
+            {results.map((hit) => (
               <Link
-                key={product.slug}
-                href={`/products/${product.slug}`}
+                key={hit.href}
+                href={hit.href}
                 onClick={onNavigate}
-                className={`-mx-2 flex min-h-12 items-center border-b border-white/15 px-2 font-sans text-[16px] text-white ${washTap}`}
+                className={`-mx-2 flex min-h-12 flex-col justify-center border-b border-white/15 px-2 py-2 font-sans text-white ${washTap}`}
               >
-                {product.name}
+                <span className="text-[16px]">{hit.title}</span>
+                <span className="text-[13px] text-white/70">{hit.category}</span>
               </Link>
             ))}
             {query.trim() && results.length === 0 ? (
@@ -408,24 +434,26 @@ export function TabletNavDisclosure({
   query,
   onQuery,
   results,
+  onSubmit,
   onNavigate,
 }: {
   panel: TabletPanel | null;
   query: string;
   onQuery: (value: string) => void;
-  results: { slug: string; name: string }[];
+  results: SearchHit[];
+  onSubmit: (value?: string) => void;
   onNavigate: () => void;
 }) {
   const reduce = useReducedMotion();
   const panelRef = useRef(panel);
-  panelRef.current = panel;
   const [held, setHeld] = useState<TabletPanel | null>(panel);
+  if (panel && panel !== held) setHeld(panel);
   const active = panel ?? held;
   const innerRef = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState(0);
 
-  useLayoutEffect(() => {
-    if (panel) setHeld(panel);
+  useEffect(() => {
+    panelRef.current = panel;
   }, [panel]);
 
   useLayoutEffect(() => {
@@ -463,6 +491,7 @@ export function TabletNavDisclosure({
             query={query}
             onQuery={onQuery}
             results={results}
+            onSubmit={onSubmit}
             onNavigate={onNavigate}
           />
         ) : null}

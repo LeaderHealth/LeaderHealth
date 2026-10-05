@@ -2,10 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { assets, GET_STARTED_URL, PORTAL_URL, site } from "@/lib/content/site";
-import { products } from "@/lib/content/products";
+import { searchHref, searchSuggestions } from "@/lib/search";
 import {
   type FeatureCard,
   type MegaCategory,
@@ -461,6 +461,14 @@ function SearchIcon() {
   );
 }
 
+function SearchSubmitArrow() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden>
+      <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function UserIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden>
@@ -477,6 +485,7 @@ function UserIcon() {
 
 export function Header() {
   const pathname = usePathname();
+  const router = useRouter();
 
   const onCheckout = pathname.startsWith("/checkout");
   const isProductPage = pathname.startsWith("/products/");
@@ -576,13 +585,16 @@ export function Header() {
     if (next === "search") setQuery("");
   }
 
-  const results = query.trim()
-    ? products.filter(
-        (p) =>
-          p.listed !== false &&
-          p.name.toLowerCase().includes(query.trim().toLowerCase()),
-      )
-    : [];
+  const results = searchSuggestions(query);
+
+  function submitSearch(value = query) {
+    const term = value.trim();
+    if (!term) return;
+    setQuery(term);
+    setSearch(false);
+    setTabletPanel(null);
+    router.push(searchHref(term));
+  }
 
   const shell = isProductPage
     ? "bg-[linear-gradient(rgba(183,47,61,0.80),rgba(150,39,50,0.84))] backdrop-blur-[23px]"
@@ -781,7 +793,8 @@ export function Header() {
             panel={tabletPanel}
             query={query}
             onQuery={setQuery}
-            results={results.map((product) => ({ slug: product.slug, name: product.name }))}
+            results={results}
+            onSubmit={submitSearch}
             onNavigate={() => setTabletPanel(null)}
           />
         </div>
@@ -827,23 +840,46 @@ export function Header() {
             className="lh-popup-panel mx-auto max-w-lg rounded-3xl bg-white p-5 text-ink shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <input
-              autoFocus
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search…"
-              className="w-full rounded-full border border-ink/10 bg-background px-4 py-3 outline-none"
-            />
+            <h2 id="navbar-search-title" className="mb-3 text-2xl leading-none">
+              Search
+            </h2>
+            <form
+              className="relative"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const field = event.currentTarget.elements.namedItem("q");
+                submitSearch(field instanceof HTMLInputElement ? field.value : query);
+              }}
+            >
+              <input
+                name="q"
+                autoFocus
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search…"
+                aria-labelledby="navbar-search-title"
+                enterKeyHint="search"
+                className="w-full rounded-full border border-ink/10 bg-background py-3 pr-12 pl-4 outline-none"
+              />
+              <button
+                type="submit"
+                aria-label="Submit search"
+                className="absolute top-1/2 right-1.5 grid size-8 -translate-y-1/2 place-items-center rounded-full bg-ink text-white transition-[transform,background-color] duration-200 ease-out hover:scale-[1.06] hover:bg-accent active:scale-95 motion-reduce:transform-none"
+              >
+                <SearchSubmitArrow />
+              </button>
+            </form>
 
             <div className="mt-3 space-y-1">
-              {results.map((p) => (
+              {results.map((hit) => (
                 <Link
-                  key={p.slug}
-                  href={`/products/${p.slug}`}
+                  key={hit.href}
+                  href={hit.href}
                   className="block rounded-xl px-3 py-2 hover:bg-background"
                   onClick={() => setSearch(false)}
                 >
-                  {p.name}
+                  <span className="block">{hit.title}</span>
+                  <span className="block text-xs text-taupe">{hit.category}</span>
                 </Link>
               ))}
 

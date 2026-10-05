@@ -2,9 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import { assets, GET_STARTED_URL, PORTAL_URL, site } from "@/lib/content/site";
-import { getProduct, products } from "@/lib/content/products";
+import { getProduct } from "@/lib/content/products";
+import { searchHref, searchSuggestions } from "@/lib/search";
 import {
   findMegaCategory,
   menDefaultCard,
@@ -234,29 +236,52 @@ function SearchField({
   id,
   query,
   onQuery,
+  onSubmit,
 }: {
   id: string;
   query: string;
   onQuery: (value: string) => void;
+  onSubmit: (value?: string) => void;
 }) {
   return (
-    <label htmlFor={id} className="relative block">
-      <span className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-ink/45">
+    <form
+      className="relative"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const field = event.currentTarget.elements.namedItem("q");
+        const value = field instanceof HTMLInputElement ? field.value : query;
+        onQuery(value);
+        onSubmit(value);
+      }}
+    >
+      <label htmlFor={id} className="relative block">
+        <span className="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-ink/45">
+          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden>
+            <circle cx="11" cy="11" r="6.25" stroke="currentColor" strokeWidth="1.8" />
+            <path d="m16 16 4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          </svg>
+        </span>
+        <input
+          id={id}
+          name="q"
+          value={query}
+          onChange={(event) => onQuery(event.target.value)}
+          placeholder="Search..."
+          autoComplete="off"
+          enterKeyHint="search"
+          className={`h-12 w-full min-w-0 rounded-full bg-white pr-12 pl-11 text-base text-ink outline-none placeholder:text-ink/40 ${tapFocus} focus-visible:outline-ink`}
+        />
+      </label>
+      <button
+        type="submit"
+        aria-label="Submit search"
+        className={`absolute top-1/2 right-1.5 grid size-8 -translate-y-1/2 place-items-center rounded-full bg-ink text-white transition-[transform,background-color] duration-200 ease-out hover:scale-[1.06] hover:bg-accent active:scale-95 motion-reduce:transform-none ${tapFocus} focus-visible:outline-ink`}
+      >
         <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden>
-          <circle cx="11" cy="11" r="6.25" stroke="currentColor" strokeWidth="1.8" />
-          <path d="m16 16 4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-      </span>
-      <input
-        id={id}
-        value={query}
-        onChange={(event) => onQuery(event.target.value)}
-        placeholder="Search..."
-        autoComplete="off"
-        enterKeyHint="search"
-        className={`h-12 w-full min-w-0 rounded-full bg-white pl-11 pr-4 text-base text-ink outline-none placeholder:text-ink/40 ${tapFocus} focus-visible:outline-ink`}
-      />
-    </label>
+      </button>
+    </form>
   );
 }
 
@@ -349,6 +374,7 @@ export function MobileNav({
   onClose: () => void;
   isProductPage?: boolean;
 }) {
+  const router = useRouter();
   const searchId = useId();
   const menuId = useId();
   const toggleRef = useRef<HTMLButtonElement>(null);
@@ -490,13 +516,15 @@ export function MobileNav({
     return () => root.removeEventListener("keydown", onKey);
   }, [phase, screen]);
 
-  const results = query.trim()
-    ? products.filter(
-        (product) =>
-          product.listed !== false &&
-          product.name.toLowerCase().includes(query.trim().toLowerCase()),
-      )
-    : [];
+  const results = searchSuggestions(query);
+
+  function submitSearch(value = query) {
+    const term = value.trim();
+    if (!term) return;
+    setQuery(term);
+    beginClose(true);
+    router.push(searchHref(term));
+  }
 
   const isRoot = screen.name === "root";
   const showSearch = screen.name === "root" || screen.name === "audience";
@@ -705,7 +733,7 @@ export function MobileNav({
           >
             {showSearch ? (
               <div className="mb-3.5" style={introStyle(revealed, intro, reducedMotion, 120, 220, 8)}>
-                <SearchField id={searchId} query={query} onQuery={setQuery} />
+                <SearchField id={searchId} query={query} onQuery={setQuery} onSubmit={submitSearch} />
               </div>
             ) : null}
 
@@ -715,13 +743,14 @@ export function MobileNav({
             >
               {query.trim() && showSearch ? (
                 <div className="rounded-2xl bg-white/10">
-                  {results.map((product) => (
+                  {results.map((hit) => (
                     <Link
-                      key={product.slug}
-                      href={`/products/${product.slug}`}
-                      className={`flex min-h-12 items-center border-b border-white/15 px-4 py-3.5 text-[15px] leading-snug font-medium break-words last:border-b-0 ${tapFocus}`}
+                      key={hit.href}
+                      href={hit.href}
+                      className={`flex min-h-12 flex-col justify-center border-b border-white/15 px-4 py-3 text-[15px] leading-snug font-medium break-words last:border-b-0 ${tapFocus}`}
                     >
-                      {product.name}
+                      <span>{hit.title}</span>
+                      <span className="text-[13px] font-normal text-white/70">{hit.category}</span>
                     </Link>
                   ))}
                   {results.length === 0 ? (
