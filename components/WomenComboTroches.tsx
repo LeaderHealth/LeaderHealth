@@ -31,6 +31,7 @@ const blends = [
   {
     name: "Arousal Blend",
     price: "$89/mo",
+    badge: null,
     image:
       "https://framerusercontent.com/images/fPt1kPTjO7NFkRQolR18SbAMU.png?width=1821&height=1467",
     body: (
