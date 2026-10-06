@@ -1,6 +1,7 @@
 import Image from "next/image";
 import type { ReactNode } from "react";
 import { ContactForm } from "@/components/ContactForm";
+import { HeroTitleFade } from "@/components/HeroTitleFade";
 import { assets, site } from "@/lib/content/site";
 import type { Metadata } from "next";
 
@@ -18,14 +19,16 @@ export default function ContactPage() {
           className="object-cover object-[62%_center]"
           sizes="100vw"
         />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(40,12,14,0.55)_0%,rgba(40,12,14,0.22)_42%,rgba(40,12,14,0.08)_68%,rgba(40,12,14,0)_100%)]" />
-        <div className="relative mx-auto w-full max-w-6xl px-6 text-center">
-          <h1 className="text-6xl md:text-[84px] md:leading-[0.95]">
-            Contact <span className="font-serif-italic">Us</span>
-          </h1>
-          <p className="mx-auto mt-5 max-w-xl text-base text-white/90 md:text-lg">
-            Have a question or ready to get started? Our team is available to help you take the first step.
-          </p>
+        <div className="relative isolate mx-auto w-full max-w-6xl px-6 text-center">
+          <div className="relative mx-auto w-full max-w-[40rem]">
+            <HeroTitleFade />
+            <h1 className="relative z-10 text-6xl md:text-[84px] md:leading-[0.95]">
+              Contact <span className="font-serif-italic">Us</span>
+            </h1>
+            <p className="relative z-10 mx-auto mt-5 max-w-xl text-base text-white/90 md:text-lg">
+              Have a question or ready to get started? Our team is available to help you take the first step.
+            </p>
+          </div>
         </div>
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[3px] bg-[#e33d4d]" />
       </section>

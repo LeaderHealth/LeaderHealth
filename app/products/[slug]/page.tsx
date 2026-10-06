@@ -9,6 +9,8 @@ import { ArticleLibrary } from "@/components/ArticleLibrary";
 import { FaqDropdownItems } from "@/components/PeptidesFaq";
 import { ProductSignupPrompt } from "@/components/ProductSignupPrompt";
 import { WomenHormoneTherapy } from "@/components/WomenHormoneTherapy";
+import { WomenComboTroches, womenComboTrochesFaqs } from "@/components/WomenComboTroches";
+import { MenComboTroches, menComboTrochesFaqs } from "@/components/MenComboTroches";
 import type { Metadata } from "next";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -57,6 +59,61 @@ export default async function ProductPage({ params }: Props) {
             </div>
           </div>
         </section>
+        <ProductSignupPrompt />
+        <ArticleLibrary
+          slugs={[
+            "semaglutide-vs-tirzepatide-comparison-guide",
+            "recovery-peptides-anti-doping-sourcing-guide",
+            "low-libido-in-women-causes-evaluation-guide",
+          ]}
+        />
+      </>
+    );
+  }
+
+  if (slug === "men-sexual-health-combo-troches") {
+    return (
+      <>
+        <MenComboTroches />
+        <SiteTestimonials />
+        <section className="bg-white px-6 py-16">
+          <div className="mx-auto max-w-3xl">
+            <h2 className="text-left font-sans text-[40px] leading-[1.1] font-medium !tracking-[-0.04em] text-[#331110]">
+              FAQ: We&apos;ve Got <span className="font-serif-italic !tracking-[-0.04em] text-[#e43d4e]">Answers</span>.
+            </h2>
+            <div className="mt-[26px]">
+              <FaqDropdownItems items={menComboTrochesFaqs} />
+            </div>
+          </div>
+        </section>
+        <ProductSignupPrompt />
+        <ArticleLibrary
+          slugs={[
+            "semaglutide-vs-tirzepatide-comparison-guide",
+            "recovery-peptides-anti-doping-sourcing-guide",
+            "low-libido-in-women-causes-evaluation-guide",
+          ]}
+        />
+      </>
+    );
+  }
+
+  if (slug === "women-sexual-health-combo-troches") {
+    return (
+      <>
+        <WomenComboTroches />
+        <SiteTestimonials />
+        <section className="bg-white px-6 py-16">
+          <div className="mx-auto max-w-3xl">
+            <h2 className="text-left font-sans text-[40px] leading-[1.1] font-medium !tracking-[-0.04em] text-[#331110]">
+              FAQ: We&apos;ve Got <span className="font-serif-italic !tracking-[-0.04em] text-[#e43d4e]">Answers</span>.
+            </h2>
+            <div className="mt-[26px]">
+              <FaqDropdownItems items={womenComboTrochesFaqs} />
+            </div>
+          </div>
+        </section>
+        <ProductSignupPrompt />
         <ArticleLibrary
           slugs={[
             "semaglutide-vs-tirzepatide-comparison-guide",

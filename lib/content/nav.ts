@@ -7,6 +7,7 @@ export type FeatureCard = {
   heading: string;
   subline: string;
   price: string;
+  imagePosition?: string;
 };
 
 export type MegaItem = {
@@ -101,8 +102,16 @@ export const longevityCategory: MegaCategory = {
   card: productCard("longevity-nad"),
 };
 
-export const menDefaultCard = productCard("weight-loss-semaglutide");
-export const womenDefaultCard = productCard("women-hormone-therapy");
+export const menDefaultCard: FeatureCard = {
+  ...productCard("weight-loss-semaglutide"),
+  image: "/images/featured/semaglutide-vial.jpg",
+  imagePosition: "center 46%",
+};
+export const womenDefaultCard: FeatureCard = {
+  ...productCard("women-hormone-therapy"),
+  image: "/images/featured/womens-hormone-therapy.jpg",
+  imagePosition: "center 68%",
+};
 
 export const menMegaCategories: MegaCategory[] = [
   {
@@ -154,7 +163,7 @@ export const womenMegaCategories: MegaCategory[] = [
     label: "Hormone Therapy",
     kind: "link",
     href: "/products/women-hormone-therapy",
-    card: womenDefaultCard,
+    card: productCard("women-hormone-therapy"),
   },
   {
     id: "sexual",
