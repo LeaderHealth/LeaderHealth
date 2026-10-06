@@ -1,3 +1,21 @@
+import { articleBodies } from "./article-bodies";
+import { articleFaqs, type ArticleFaq } from "./article-faqs";
+
+export type ArticleRun = { text: string; href?: string };
+
+export type ArticleBlock =
+  | { type: "heading"; level: 2 | 3; text: string }
+  | { type: "paragraph"; runs: ArticleRun[] }
+  | { type: "list"; ordered?: boolean; items: ArticleRun[][] };
+
+export type ArticleExpert = {
+  heading?: string;
+  quote: string;
+  authorImage?: string;
+  authorName?: string;
+  authorTitle?: string;
+};
+
 export type Article = {
   slug: string;
   title: string;
@@ -5,7 +23,10 @@ export type Article = {
   excerpt: string;
   category: string;
   body: string[];
+  blocks?: ArticleBlock[];
+  faqs?: ArticleFaq[];
   listed?: boolean;
+  expert?: ArticleExpert;
 };
 
 const glp1Stop = {
@@ -320,7 +341,15 @@ export const articleCovers: Record<string, { src: string; alt: string }> = {
 };
 
 export function getArticle(slug: string) {
-  return articles.find((a) => a.slug === slug);
+  const article = articles.find((a) => a.slug === slug);
+  if (!article) return;
+  const blocks = articleBodies[slug];
+  const faqs = articleFaqs[slug];
+  return {
+    ...article,
+    ...(blocks ? { blocks } : {}),
+    ...(faqs?.length ? { faqs } : {}),
+  };
 }
 
 export function publishedArticles() {
