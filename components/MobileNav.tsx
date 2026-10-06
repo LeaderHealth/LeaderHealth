@@ -100,14 +100,9 @@ function listItems(audience: Audience, categoryId: string): MegaItem[] {
   return category.items;
 }
 
-function featuredFor(audience: Audience, categoryId?: string): { label: string; card: FeatureCard } {
+function featuredFor(audience: Audience): { label: string; card: FeatureCard } {
   const label = audience === "men" ? "Explore Popular Treatment" : "Popular Therapies";
-  if (!categoryId) {
-    return { label, card: audience === "men" ? menDefaultCard : womenDefaultCard };
-  }
-  const categories = audience === "men" ? menMegaCategories : womenMegaCategories;
-  const category = findMegaCategory(categories, categoryId);
-  return { label, card: category?.card ?? (audience === "men" ? menDefaultCard : womenDefaultCard) };
+  return { label, card: audience === "men" ? menDefaultCard : womenDefaultCard };
 }
 
 const MORPH_EASE = "cubic-bezier(0.32,0.72,0,1)";
@@ -346,8 +341,9 @@ function FeaturedCard({ label, card }: { label: string; card: FeatureCard }) {
               src={card.image}
               alt={card.heading}
               fill
-              className="object-cover object-center"
-              sizes="400px"
+              className="object-cover"
+              style={{ objectPosition: card.imagePosition ?? "center" }}
+              sizes="(min-width: 768px) 360px, 90vw"
             />
           ) : null}
         </div>
@@ -961,7 +957,7 @@ function MobileScreenView({
     screen.categoryId,
   );
   const items = listItems(screen.audience, screen.categoryId);
-  const featured = featuredFor(screen.audience, screen.categoryId);
+  const featured = featuredFor(screen.audience);
   const backLabel = screen.audience === "men" && screen.categoryId === "hormone"
     ? "Testosterone Replacement Therapy"
     : screen.audience === "women" && screen.categoryId === "hormone"

@@ -95,7 +95,8 @@ function FeatureCardLink({
             src={card.image}
             alt={card.heading}
             fill
-            className="object-contain object-center"
+            className="object-cover"
+            style={{ objectPosition: card.imagePosition ?? "center" }}
             sizes="320px"
           />
         ) : null}
@@ -267,16 +268,11 @@ function MegaMenuPanel({
 }) {
   const [view, setView] = useState("root");
   const [longevityOpen, setLongevityOpen] = useState(false);
-  const [hovered, setHovered] = useState<FeatureCard | null>(null);
   const activeCategory = categories.find((category) => category.id === view);
-  const lockedCard =
-    view === "root" || !activeCategory ? defaultCard : activeCategory.card;
-  const card = hovered ?? lockedCard;
 
   function openDrill(id: string) {
     setView(id);
     setLongevityOpen(false);
-    setHovered(null);
   }
 
   return (
@@ -294,17 +290,13 @@ function MegaMenuPanel({
                   onClick={() => {
                     setView("root");
                     setLongevityOpen(false);
-                    setHovered(null);
                   }}
                 >
                   ‹ {activeCategory.label}
                 </button>
               )}
               <nav className="mt-4 flex min-h-0 flex-1 flex-col">
-                <div
-                  className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto"
-                  onMouseLeave={() => setHovered(null)}
-                >
+                <div className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto">
                   {view === "root"
                     ? categories.map((category) => {
                         if (category.kind === "link") {
@@ -313,7 +305,6 @@ function MegaMenuPanel({
                               key={category.id}
                               href={category.href}
                               className={megaLinkClass}
-                              onMouseEnter={() => setHovered(category.card)}
                             >
                               {category.label}
                             </Link>
@@ -326,7 +317,6 @@ function MegaMenuPanel({
                               <button
                                 type="button"
                                 className={megaLinkClass}
-                                onMouseEnter={() => setHovered(category.card)}
                                 onClick={() => setLongevityOpen((value) => !value)}
                               >
                                 {category.label}
@@ -355,7 +345,6 @@ function MegaMenuPanel({
                             key={category.id}
                             type="button"
                             className={megaLinkClass}
-                            onMouseEnter={() => setHovered(category.card)}
                             onClick={() => openDrill(category.id)}
                           >
                             {category.label}
@@ -368,7 +357,6 @@ function MegaMenuPanel({
                             key={item.href + item.label}
                             href={item.href}
                             className={megaLinkClass}
-                            onMouseEnter={() => setHovered(item.card)}
                           >
                             {item.label}
                           </Link>
@@ -400,7 +388,7 @@ function MegaMenuPanel({
               </a>
             </div>
             <div className="flex w-[55%] flex-col px-5 py-6 pr-6">
-              <FeatureCardView label={featureLabel} card={card} />
+              <FeatureCardView label={featureLabel} card={defaultCard} />
             </div>
           </div>
         </div>

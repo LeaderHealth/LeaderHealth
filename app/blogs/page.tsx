@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { BlogSection } from "@/components/blogs/BlogSection";
+import { HeroTitleFade } from "@/components/HeroTitleFade";
 import { blogArticles, blogCategories } from "@/components/blogs/content";
 import type { Metadata } from "next";
 
@@ -19,15 +20,17 @@ export default function BlogsPage() {
           sizes="100vw"
         />
         <div className="absolute inset-0 flex items-center justify-center px-6 pt-16 text-center">
-          <div className="flex w-full max-w-[640px] flex-col items-center">
-            <h1 className="font-sans text-[48px] font-medium leading-[0.95] tracking-[-0.03em] text-white sm:text-[64px] md:text-[80px]">
+          <div className="relative isolate flex w-full max-w-[640px] flex-col items-center">
+            <HeroTitleFade />
+            <h1 className="relative z-10 font-sans text-[48px] font-medium leading-[0.95] tracking-[-0.03em] text-white sm:text-[64px] md:text-[80px]">
               Learn <span className="font-serif-italic font-normal tracking-normal">More</span>
             </h1>
-            <p className="mt-4 max-w-[26rem] font-sans text-[15px] font-normal leading-snug text-white sm:text-[17px] md:mt-5 md:text-[18px]">
+            <p className="relative z-10 mt-4 max-w-[26rem] font-sans text-[15px] font-normal leading-snug text-white sm:text-[17px] md:mt-5 md:text-[18px]">
               Articles on treatment, dosing, and what the research actually says.
             </p>
           </div>
         </div>
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[3px] bg-[#e33d4d]" />
       </section>
       <div className="mx-auto max-w-5xl px-6 pb-16">
         <div className="mx-auto mt-10 grid max-w-[760px] grid-cols-1 gap-3 sm:grid-cols-2">

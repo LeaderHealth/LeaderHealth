@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { HeroTitleFade } from "@/components/HeroTitleFade";
 import { assets } from "@/lib/content/site";
 
 export function FaqHero() {
@@ -12,21 +13,13 @@ export function FaqHero() {
         className="object-cover object-[center_58%]"
         sizes="100vw"
       />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse 42% 36% at 50% 58%, rgba(48, 24, 16, 0.38) 0%, rgba(48, 24, 16, 0.16) 46%, rgba(48, 24, 16, 0) 74%)",
-        }}
-      />
-
       <div className="absolute inset-0 flex items-center justify-center px-6 pt-16 text-center md:px-10">
-        <div className="flex w-full max-w-[40rem] flex-col items-center">
-          <h1 className="font-sans text-[42px] font-medium leading-[0.95] tracking-[-0.035em] text-white sm:text-[56px] md:text-[72px] lg:text-[84px]">
+        <div className="relative isolate flex w-full max-w-[40rem] flex-col items-center">
+          <HeroTitleFade />
+          <h1 className="relative z-10 font-sans text-[42px] font-medium leading-[0.95] tracking-[-0.035em] text-white sm:text-[56px] md:text-[72px] lg:text-[84px]">
             FAQs
           </h1>
-          <p className="mt-4 max-w-[34rem] text-[15px] leading-snug text-white/95 sm:text-base md:mt-5 md:text-lg">
+          <p className="relative z-10 mt-4 max-w-[34rem] text-[15px] leading-snug text-white/95 sm:text-base md:mt-5 md:text-lg">
             We&apos;ve made it easy to understand how our service works for you, offering clear answers and
             reliable guidance whenever you need helpful support
           </p>
