@@ -9,6 +9,7 @@ import { PriceCompare } from "@/components/PriceCompare";
 import { SafetyInformationModal } from "@/components/SafetyInformationModal";
 import { IconHoverButton } from "@/components/IconHoverButton";
 import { IllustrationNote } from "@/components/IllustrationNote";
+import { ChooseTreatmentButton } from "@/components/ProductHeroCta";
 
 const HERO_IMAGE =
   "https://framerusercontent.com/images/NNkqjkjcButh0STKbHYnciyEKA.png?width=1000&height=1119";
@@ -326,15 +327,7 @@ export function WomenHormoneTherapy() {
                 <p className="mt-3 text-[14px] leading-relaxed text-white/90">
                   Already have your labs? You can upload them during intake. If not, we&apos;ll schedule your panel for you — no extra steps.
                 </p>
-                <a
-                  href="#womenintakes"
-                  className="mt-6 flex w-full items-center justify-center gap-2 rounded-[10px] bg-[#dbd4bd] py-3.5 text-xs font-medium tracking-[0.08em] text-[#331110]"
-                >
-                  CHOOSE YOUR TREATMENT
-                  <span aria-hidden className="text-[10px]">
-                    ▾
-                  </span>
-                </a>
+                <ChooseTreatmentButton href="#womenintakes" className="mt-6" />
                 {trigger}
               </div>
             </div>
@@ -372,7 +365,7 @@ export function WomenHormoneTherapy() {
                             key={link.href}
                             href={link.href}
                             aria-label={`${link.label} — ${item.title}`}
-                            className="inline-flex h-11 w-full items-center justify-center rounded-[6px] bg-[#f7f3f5] px-3 text-center text-[11px] font-medium tracking-[0.06em] text-[#331110] uppercase transition-colors duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[#331110] hover:text-white focus-visible:bg-[#331110] focus-visible:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#331110] motion-reduce:transition-none"
+                            className="inline-flex h-11 w-full items-center justify-center rounded-[6px] bg-[#f7f3f5] px-3 text-center text-[11px] font-medium tracking-[0.06em] text-[#331110] uppercase transition-colors duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[#331110] hover:text-[#F7F3F5] focus-visible:bg-[#331110] focus-visible:text-[#F7F3F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#331110] motion-reduce:transition-none"
                           >
                             {link.label}
                           </a>
@@ -446,11 +439,14 @@ export function WomenHormoneTherapy() {
                 <p className="mt-4 max-w-3xl text-[16px] leading-relaxed text-white/95">
                   Perimenopause marks the beginning of your hormonal transition — and it&apos;s one of the most important windows for protecting your long-term health. Even without noticeable symptoms, small imbalances during this time can compound into larger issues if left untreated.
                 </p>
-                <div className="mt-8 grid items-start gap-4 md:grid-cols-2">
-                  {symptomGroups.map((group) => {
+                <div className="mt-8 flex flex-col gap-4 md:grid md:grid-cols-2 md:items-start">
+                  {[0, 1].map((column) => (
+                    <div key={column} className="contents md:flex md:flex-col md:gap-4">
+                  {symptomGroups.map((group, index) => {
+                    if (index % 2 !== column) return null;
                     const isOpen = open === group.title;
                     return (
-                      <div key={group.title} className="self-start rounded-[27px] bg-[#efe6d4] px-5 py-4 text-[#331110]">
+                      <div key={group.title} className={`${["order-1", "order-2", "order-3", "order-4"][index]} rounded-[27px] bg-[#efe6d4] px-5 py-4 text-[#331110] md:order-none`}>
                         <button
                           type="button"
                           className="flex w-full items-center gap-3 text-left"
@@ -484,6 +480,8 @@ export function WomenHormoneTherapy() {
                       </div>
                     );
                   })}
+                    </div>
+                  ))}
                 </div>
 
                 <div className="mx-auto mt-16 max-w-4xl text-center sm:mt-20">

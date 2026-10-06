@@ -5,6 +5,7 @@ import Link from "next/link";
 import { getLegal } from "@/lib/content/legal";
 import { getProductSafety } from "@/lib/content/product-safety";
 import { IllustrationNote } from "@/components/IllustrationNote";
+import { ChooseTreatmentButton } from "@/components/ProductHeroCta";
 import { PriceCompare } from "@/components/PriceCompare";
 import { SafetyInformationModal } from "@/components/SafetyInformationModal";
 
@@ -227,8 +228,9 @@ export function WomenComboTroches() {
                     <strong>Starting at $89/month. Recommended Intimacy Blend: $229/month.</strong>
                   </p>
                 </div>
-                <a
+                <ChooseTreatmentButton
                   href="#find-what-fits"
+                  className="mt-8"
                   onClick={(event) => {
                     const section = document.getElementById("find-what-fits");
                     if (!section) return;
@@ -237,10 +239,7 @@ export function WomenComboTroches() {
                     section.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
                     history.pushState(null, "", "#find-what-fits");
                   }}
-                  className="mt-8 flex h-[57px] w-full items-center justify-center rounded-[12px] bg-[#f7f3f4] text-[16px] font-medium tracking-normal text-[#331110] uppercase transition-colors duration-200 hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none"
-                >
-                  Choose treatment
-                </a>
+                />
                 {trigger}
               </div>
             </div>

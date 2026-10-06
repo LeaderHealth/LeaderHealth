@@ -346,7 +346,7 @@ export default function AboutPage() {
           {leaders.map((leader) => (
             <RevealItem key={leader.name}>
             <article
-              className="relative h-[425px] w-full overflow-hidden rounded-[16px] shadow-[0_12px_28px_rgba(51,17,16,0)] transition-[translate,scale,box-shadow] duration-[700ms] ease-out hover:-translate-y-1 hover:scale-[1.01] hover:shadow-[0_12px_28px_rgba(51,17,16,0.14)] motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100"
+              className="relative h-[425px] w-full overflow-hidden rounded-[16px] shadow-[0_12px_28px_rgba(51,17,16,0)] transition-[translate,scale,box-shadow] duration-[1200ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-1 hover:scale-[1.01] hover:shadow-[0_12px_28px_rgba(51,17,16,0.14)] motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:hover:scale-100"
             >
               <Image
                 src={leader.image}

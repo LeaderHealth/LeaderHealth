@@ -862,11 +862,11 @@ export function HomePage() {
                 </div>
                 <a
                   href={GET_STARTED_URL}
-                  className="group relative inline-flex items-center justify-center self-end overflow-hidden rounded-[39px] bg-[#f9f9f9] px-6 py-[5px] text-[15px] font-medium text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
+                  className="group relative inline-flex items-center justify-center self-end overflow-hidden rounded-[39px] bg-[#f9f9f9] px-9 py-[5px] text-[15px] font-medium text-ink transition-[background-color,color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[#331110] hover:text-[#F7F3F5] focus-visible:bg-[#331110] focus-visible:text-[#F7F3F5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink motion-reduce:transition-none"
                 >
                   <span
                     aria-hidden="true"
-                    className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#e4d0ce] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
+                    className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#331110] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
                   />
                   <span className="relative z-10 whitespace-nowrap transition-transform duration-[400ms] ease-out group-hover:-translate-x-[15px] motion-reduce:translate-x-0! motion-reduce:transition-none">
                     Get Started
@@ -912,11 +912,11 @@ export function HomePage() {
                   </p>
                   <Link
                     href="/aboutus"
-                    className="group relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-[39px] bg-[#f9f9f9] px-6 py-[5px] text-[15px] font-medium text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
+                    className="group relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-[39px] bg-[#f9f9f9] px-9 py-[5px] text-[15px] font-medium text-ink transition-[background-color,color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[#331110] hover:text-[#F7F3F5] focus-visible:bg-[#331110] focus-visible:text-[#F7F3F5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink motion-reduce:transition-none"
                   >
                     <span
                       aria-hidden="true"
-                      className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#e4d0ce] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
+                      className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#331110] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
                     />
                     <span className="relative z-10 whitespace-nowrap transition-transform duration-[400ms] ease-out group-hover:-translate-x-[15px] motion-reduce:translate-x-0! motion-reduce:transition-none">
                       About Us

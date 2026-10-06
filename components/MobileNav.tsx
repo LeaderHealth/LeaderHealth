@@ -792,18 +792,18 @@ export function MobileNav({
             </a>
             <a
               href={GET_STARTED_URL}
-              className={`group relative flex min-h-12 items-center justify-center overflow-hidden rounded-full bg-white text-[15px] font-medium text-ink ${tapFocus} focus-visible:outline-ink`}
+              className={`group relative flex min-h-12 items-center justify-center overflow-hidden rounded-full bg-white text-[15px] font-medium text-ink transition-[background-color,color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[#331110] hover:text-[#F7F3F5] motion-reduce:transition-none ${tapFocus} focus-visible:bg-[#331110] focus-visible:text-[#F7F3F5] focus-visible:outline-ink`}
             >
               <span
                 aria-hidden
                 className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#331110] transition-transform duration-[400ms] ease-out group-hover:scale-[80] group-focus-visible:scale-[80] motion-reduce:scale-100! motion-reduce:transition-none"
               />
-              <span className="relative z-10 whitespace-nowrap text-ink transition-[transform,color] duration-[400ms] ease-out group-hover:-translate-x-[15px] group-hover:text-white group-focus-visible:-translate-x-[15px] group-focus-visible:text-white motion-reduce:translate-x-0! motion-reduce:text-ink! motion-reduce:transition-none">
+              <span className="relative z-10 whitespace-nowrap text-ink transition-[transform,color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:-translate-x-[15px] group-hover:text-[#F7F3F5] group-focus-visible:-translate-x-[15px] group-focus-visible:text-[#F7F3F5] motion-reduce:translate-x-0! motion-reduce:transition-none">
                 Get Started
               </span>
               <span
                 aria-hidden
-                className="pointer-events-none absolute top-1/2 right-0 z-10 -translate-y-1/2 translate-x-full text-white transition-transform duration-[400ms] ease-out group-hover:translate-x-[calc(100%-35px)] group-focus-visible:translate-x-[calc(100%-35px)] motion-reduce:translate-x-full! motion-reduce:transition-none"
+                className="pointer-events-none absolute top-1/2 right-0 z-10 -translate-y-1/2 translate-x-full text-[#F7F3F5] transition-transform duration-[400ms] ease-out group-hover:translate-x-[calc(100%-35px)] group-focus-visible:translate-x-[calc(100%-35px)] motion-reduce:translate-x-full! motion-reduce:transition-none"
               >
                 →
               </span>

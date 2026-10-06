@@ -18,7 +18,7 @@ export function Button({
 }: Props) {
   const styles = {
     light:
-      "bg-white text-ink hover:bg-rose",
+      "bg-white text-ink transition-colors duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[#331110] hover:text-[#F7F3F5] motion-reduce:transition-none",
     dark: "bg-ink text-white hover:bg-brown",
     outline: "border border-ink/20 text-ink hover:bg-white",
   }[variant];

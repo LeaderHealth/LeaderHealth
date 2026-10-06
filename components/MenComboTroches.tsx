@@ -5,6 +5,7 @@ import Link from "next/link";
 import { getLegal } from "@/lib/content/legal";
 import { getProductSafety } from "@/lib/content/product-safety";
 import { IllustrationNote } from "@/components/IllustrationNote";
+import { ChooseTreatmentButton } from "@/components/ProductHeroCta";
 import { PriceCompare } from "@/components/PriceCompare";
 import { SafetyInformationModal } from "@/components/SafetyInformationModal";
 
@@ -227,8 +228,9 @@ export function MenComboTroches() {
                     <strong>Start with our Arousal Troche at $89/month.</strong>
                   </p>
                 </div>
-                <a
+                <ChooseTreatmentButton
                   href="#find-what-fits"
+                  className="mt-8"
                   onClick={(event) => {
                     const section = document.getElementById("find-what-fits");
                     if (!section) return;
@@ -237,10 +239,7 @@ export function MenComboTroches() {
                     section.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
                     history.pushState(null, "", "#find-what-fits");
                   }}
-                  className="mt-8 flex h-[57px] w-full items-center justify-center rounded-[12px] bg-[#dbd3bc] text-[16px] font-medium tracking-normal text-[#331110] uppercase transition-colors duration-200 hover:bg-[#efe6d6] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none"
-                >
-                  Choose treatment
-                </a>
+                />
                 {trigger}
               </div>
             </div>

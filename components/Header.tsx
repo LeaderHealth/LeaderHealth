@@ -128,7 +128,7 @@ function FeatureCardLink({
         </p>
         <a
           href={GET_STARTED_URL}
-          className="group relative inline-flex h-10 min-h-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#331110] px-3.5 text-[13px] font-semibold text-[#F7F3F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#331110]"
+          className="group relative inline-flex h-10 min-h-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#331110] px-6 text-[13px] font-semibold text-[#F7F3F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#331110]"
         >
           <span
             aria-hidden
@@ -369,11 +369,11 @@ function MegaMenuPanel({
               </nav>
               <a
                 href={GENERAL_FORM_URL}
-                className="group relative mt-4 flex h-12 w-[285px] max-w-full items-center gap-3 overflow-hidden rounded-full bg-white px-3 text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                className="group relative mt-4 flex h-12 w-[285px] max-w-full items-center gap-3 overflow-hidden rounded-full bg-white px-3 text-ink transition-[background-color,color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[#331110] hover:text-[#F7F3F5] focus-visible:bg-[#331110] focus-visible:text-[#F7F3F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none"
               >
                 <span
                   aria-hidden
-                  className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#e4d0ce] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
+                  className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#331110] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
                 />
                 <span className="relative z-10 shrink-0">
                   <DocumentIcon />
@@ -732,11 +732,11 @@ export function Header() {
             {!onCheckout ? (
               <a
                 href={GET_STARTED_URL}
-                className="group relative inline-flex items-center justify-center overflow-hidden rounded-full bg-white px-6 py-1.5 text-[13px] font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                className="group relative inline-flex items-center justify-center overflow-hidden rounded-full bg-white px-6 py-1.5 text-[13px] font-medium text-ink transition-[background-color,color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[#331110] hover:text-[#F7F3F5] focus-visible:bg-[#331110] focus-visible:text-[#F7F3F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none"
               >
                 <span
                   aria-hidden
-                  className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#e4d0ce] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
+                  className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#331110] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
                 />
                 <span className="relative z-10 whitespace-nowrap transition-transform duration-[400ms] ease-out group-hover:-translate-x-[15px] motion-reduce:translate-x-0! motion-reduce:transition-none">
                   Get Started
@@ -758,11 +758,11 @@ export function Header() {
             {!onCheckout ? (
               <a
                 href={GET_STARTED_URL}
-                className="group relative inline-flex items-center justify-center overflow-hidden rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:px-3 sm:py-1.5 sm:text-xs"
+                className="group relative inline-flex items-center justify-center overflow-hidden rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-ink transition-[background-color,color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[#331110] hover:text-[#F7F3F5] focus-visible:bg-[#331110] focus-visible:text-[#F7F3F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none sm:px-3 sm:py-1.5 sm:text-xs"
               >
                 <span
                   aria-hidden
-                  className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#e4d0ce] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
+                  className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#331110] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
                 />
                 <span className="relative z-10 whitespace-nowrap transition-transform duration-[400ms] ease-out group-hover:-translate-x-[10px] motion-reduce:translate-x-0! motion-reduce:transition-none">
                   Start

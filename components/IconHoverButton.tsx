@@ -46,7 +46,7 @@ export function IconHoverButton({
   const palette =
     variant === "accent"
       ? "bg-[#e43d4e] text-white hover:bg-[#f04d5c] focus-visible:bg-[#f04d5c]"
-      : "bg-white text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink";
+      : "bg-white text-ink transition-[background-color,color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[#331110] hover:text-[#F7F3F5] focus-visible:bg-[#331110] focus-visible:text-[#F7F3F5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink motion-reduce:transition-none";
 
   const ease = "duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]";
   const hoverEase = "duration-[400ms] ease-out motion-reduce:transition-none";

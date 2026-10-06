@@ -247,7 +247,7 @@ function BrowseRow({
       <Link
         href={href}
         onClick={onNavigate}
-        className="inline-flex min-h-14 items-center gap-3 rounded-full bg-white px-3 py-2 text-[#331110] transition-[background-color,transform] duration-200 ease-out hover:bg-[#f3eeec] active:scale-[0.99] motion-reduce:transform-none"
+        className="inline-flex min-h-14 items-center gap-3 rounded-full bg-white px-3 py-2 text-[#331110] transition-[background-color,color,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[#331110] hover:text-[#F7F3F5] active:scale-[0.99] motion-reduce:transform-none motion-reduce:transition-none"
       >
         <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-[#331110]/20">
           <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden>
@@ -312,7 +312,7 @@ export function TabletNavBar({
       </button>
       <a
         href={GET_STARTED_URL}
-        className="inline-flex h-11 items-center justify-center rounded-full bg-white px-4 font-sans text-[15px] font-medium text-[#331110] transition-[background-color,transform] duration-200 ease-out hover:bg-[#f3eeec] active:scale-[0.98] motion-reduce:transform-none"
+        className="inline-flex h-11 items-center justify-center rounded-full bg-white px-4 font-sans text-[15px] font-medium text-[#331110] transition-[background-color,color,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[#331110] hover:text-[#F7F3F5] active:scale-[0.98] motion-reduce:transform-none motion-reduce:transition-none"
       >
         Get Started
       </a>
@@ -400,7 +400,7 @@ export function TabletNavPanel({
             <button
               type="submit"
               aria-label="Submit search"
-              className="absolute top-1/2 right-1.5 grid size-8 -translate-y-1/2 place-items-center rounded-full bg-white text-[#331110] transition-[transform,background-color] duration-200 ease-out hover:scale-[1.06] hover:bg-[#f3eeec] active:scale-95 motion-reduce:transform-none"
+              className="absolute top-1/2 right-1.5 grid size-8 -translate-y-1/2 place-items-center rounded-full bg-white text-[#331110] transition-[transform,background-color,color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:scale-[1.06] hover:bg-[#331110] hover:text-[#F7F3F5] active:scale-95 motion-reduce:transform-none motion-reduce:transition-none"
             >
               <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden>
                 <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />

@@ -192,7 +192,7 @@ export function FaqBrowse() {
                     className={`hidden h-11 w-11 shrink-0 place-items-center rounded-[12px] xl:grid ${
                       active
                         ? "bg-white/15 text-white"
-                        : "bg-white/35 text-[#C44751] transition-[background-color,color] duration-[400ms] ease-[cubic-bezier(0.44,0,0.56,1)] delay-100 group-hover:bg-[#331110] group-hover:text-white"
+                        : "bg-white/35 text-[#C44751] transition-[background-color,color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] delay-100 group-hover:bg-[#331110] group-hover:text-[#F7F3F5]"
                     }`}
                   >
                     <CategoryIcon id={item.id} />

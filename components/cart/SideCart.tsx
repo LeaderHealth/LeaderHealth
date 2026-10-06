@@ -51,7 +51,7 @@ export function SideCart() {
               <button
                 type="button"
                 onClick={closeCart}
-                className="grid h-9 w-9 place-items-center rounded-full bg-white text-lg"
+                className="grid h-9 w-9 place-items-center rounded-full bg-white text-lg text-ink transition-colors duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[#331110] hover:text-[#F7F3F5] motion-reduce:transition-none"
                 aria-label="Close cart"
               >
                 ×
