@@ -8,6 +8,7 @@ import { getProductSafety } from "@/lib/content/product-safety";
 import { PriceCompare } from "@/components/PriceCompare";
 import { SafetyInformationModal } from "@/components/SafetyInformationModal";
 import { IconHoverButton } from "@/components/IconHoverButton";
+import { IllustrationNote } from "@/components/IllustrationNote";
 
 const HERO_IMAGE =
   "https://framerusercontent.com/images/NNkqjkjcButh0STKbHYnciyEKA.png?width=1000&height=1119";
@@ -284,7 +285,7 @@ export function WomenHormoneTherapy() {
         <>
           <section className="bg-gradient-to-b from-[#f37477] to-[#e9989f] px-6 pb-16 pt-28 text-white">
             <div className="mx-auto grid max-w-6xl items-center gap-8 md:grid-cols-[1.05fr_minmax(280px,460px)] md:gap-8 lg:gap-10">
-              <div className="flex min-h-[280px] items-center justify-center sm:min-h-[420px]">
+              <div className="flex min-h-[280px] flex-col items-center justify-center sm:min-h-[420px]">
                 <Image
                   src={HERO_IMAGE}
                   alt="Women's hormone therapy medications"
@@ -294,6 +295,7 @@ export function WomenHormoneTherapy() {
                   className="h-auto w-full max-w-[460px] object-contain drop-shadow-2xl"
                   sizes="(max-width: 1024px) 80vw, 460px"
                 />
+                <IllustrationNote />
               </div>
               <div className="rounded-[28px] border border-white/30 bg-white/15 p-6 shadow-[0_18px_50px_rgba(51,17,16,0.12)] backdrop-blur-md sm:p-8">
                 <div className="flex items-start justify-between gap-4">

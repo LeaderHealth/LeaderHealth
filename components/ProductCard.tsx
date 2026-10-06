@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Product } from "@/lib/content/products";
 import { cartItemFromProduct } from "@/lib/cart/items";
+import { IllustrationNote } from "@/components/IllustrationNote";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
 
 export function ProductCard({ product }: { product: Product }) {
@@ -22,9 +23,7 @@ export function ProductCard({ product }: { product: Product }) {
             Lab required
           </span>
         )}
-        <p className="absolute inset-x-0 bottom-3 px-4 text-center font-serif-italic text-[11px] text-ink/55">
-          Illustration only. Actual medication and label may vary.
-        </p>
+        <IllustrationNote tone="dark" className="absolute inset-x-0 bottom-3 mt-0" />
       </Link>
       <div className="flex flex-1 flex-col p-5">
         <Link href={`/products/${product.slug}`}>

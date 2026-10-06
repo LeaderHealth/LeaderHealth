@@ -4,6 +4,7 @@ import Image from "next/image";
 import type { Product } from "@/lib/content/products";
 import { getLegal } from "@/lib/content/legal";
 import { getProductSafety } from "@/lib/content/product-safety";
+import { IllustrationNote } from "./IllustrationNote";
 import { ProductHeroCta } from "./ProductHeroCta";
 import { SafetyInformationModal } from "./SafetyInformationModal";
 
@@ -20,9 +21,13 @@ export function productEyebrow(product: Product) {
   return "Treatment";
 }
 
+const tadalafilCover =
+  "linear-gradient(339deg, #E43D4E 0%, #331110 100%)";
+
 export function ProductHero({ product }: { product: Product }) {
   const badge = product.badge ?? (product.disclaimer?.toLowerCase().includes("fda approved") ? undefined : "Medication");
   const safetySections = getProductSafety(product.slug);
+  const menHormoneCover = product.category === "hormone" && product.audience === "men";
 
   return (
     <SafetyInformationModal
@@ -30,9 +35,24 @@ export function ProductHero({ product }: { product: Product }) {
       sections={safetySections ?? getLegal("important-safety-information")?.sections ?? []}
     >
     {(trigger) => (
-    <section className="relative bg-gradient-to-b from-[#d07a7c] to-[#a24b4e] pb-16 pt-28 text-white">
+    <section
+      className={`relative pb-16 pt-28 text-white ${menHormoneCover ? "overflow-hidden" : "bg-gradient-to-b from-[#d07a7c] to-[#a24b4e]"}`}
+      style={menHormoneCover ? { backgroundImage: tadalafilCover } : undefined}
+    >
       <div className="relative mx-auto grid max-w-6xl items-center gap-8 px-6 lg:grid-cols-[1fr_minmax(320px,440px)]">
         <div className="flex min-h-[480px] flex-col items-center justify-center">
+          {menHormoneCover ? (
+            <div className="relative mx-auto aspect-[363/623] w-full max-w-[363px] overflow-hidden">
+              <Image
+                src={product.image}
+                alt={product.name}
+                fill
+                className="object-contain object-center"
+                sizes="363px"
+                priority
+              />
+            </div>
+          ) : (
           <Image
             src={product.image}
             alt={product.name}
@@ -42,9 +62,8 @@ export function ProductHero({ product }: { product: Product }) {
             sizes="(max-width: 1024px) 80vw, 480px"
             priority
           />
-          <p className="mt-6 text-center text-[13px] text-white/80">
-            Illustration only. Actual medication and label may vary.
-          </p>
+          )}
+          <IllustrationNote />
         </div>
 
         <div className="rounded-[28px] border border-white/25 bg-white/14 p-7 shadow-xl backdrop-blur-md md:p-8">

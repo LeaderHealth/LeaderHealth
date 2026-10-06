@@ -1,42 +1,26 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useLayoutEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { Children, cloneElement, isValidElement, useEffect, useRef, useState, type ReactNode } from "react";
 
 const ease = "cubic-bezier(0.22, 1, 0.36, 1)";
 
-type RevealState = {
-  ready: boolean;
-  shown: boolean;
-  nextDelay: () => number;
-};
+const revealOverride =
+  "motion-reduce:opacity-100! motion-reduce:transform-none! motion-reduce:transition-none!";
 
-const RevealContext = createContext<RevealState | null>(null);
+function withRevealClass(className?: string) {
+  return className ? `${className} ${revealOverride}` : revealOverride;
+}
 
 function useReveal(enabled: boolean) {
   const ref = useRef<HTMLDivElement>(null);
-  const [ready, setReady] = useState(false);
   const [shown, setShown] = useState(false);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (!enabled) return;
     const el = ref.current;
     if (!el) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce) {
-      setReady(true);
-      setShown(true);
-      return;
-    }
-
-    setReady(true);
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (!entry?.isIntersecting) return;
@@ -49,17 +33,10 @@ function useReveal(enabled: boolean) {
     return () => observer.disconnect();
   }, [enabled]);
 
-  return { ref, ready, shown };
+  return { ref, shown };
 }
 
-function motionStyle(
-  ready: boolean,
-  shown: boolean,
-  hidden: string,
-  visible: string,
-  delay = 0,
-): React.CSSProperties | undefined {
-  if (!ready) return undefined;
+function motionStyle(shown: boolean, hidden: string, visible: string, delay = 0): React.CSSProperties {
   if (!shown) return { opacity: 0, transform: hidden };
   return {
     opacity: 1,
@@ -77,53 +54,58 @@ export function Reveal({
   className?: string;
   delay?: number;
 }) {
-  const { ref, ready, shown } = useReveal(true);
+  const { ref, shown } = useReveal(true);
 
   return (
-    <div ref={ref} className={className} style={motionStyle(ready, shown, "translateY(32px)", "translateY(0)", delay)}>
+    <div
+      ref={ref}
+      className={withRevealClass(className)}
+      style={motionStyle(shown, "translateY(32px)", "translateY(0)", delay)}
+    >
       {children}
     </div>
   );
 }
 
-export function RevealGroup({ children, className }: { children: ReactNode; className?: string }) {
-  const { ref, ready, shown } = useReveal(true);
-  const index = useRef(0);
-  index.current = 0;
+type GroupedItemProps = {
+  delay?: number;
+  shown?: boolean;
+  grouped?: boolean;
+};
 
-  const value: RevealState = {
-    ready,
-    shown,
-    nextDelay: () => {
-      const delay = index.current * 0.12;
-      index.current += 1;
-      return delay;
-    },
-  };
+export function RevealGroup({ children, className }: { children: ReactNode; className?: string }) {
+  const { ref, shown } = useReveal(true);
+
+  const items = Children.toArray(children).map((child, index) => {
+    if (!isValidElement<GroupedItemProps>(child)) return child;
+    return cloneElement(child, { delay: index * 0.12, shown, grouped: true });
+  });
 
   return (
-    <RevealContext.Provider value={value}>
-      <div ref={ref} className={className}>
-        {children}
-      </div>
-    </RevealContext.Provider>
+    <div ref={ref} className={className}>
+      {items}
+    </div>
   );
 }
 
-export function RevealItem({ children, className }: { children: ReactNode; className?: string }) {
-  const group = useContext(RevealContext);
-  const own = useReveal(!group);
-  const delay = useRef<number | null>(null);
-  if (group && delay.current === null) delay.current = group.nextDelay();
-
-  const ready = group ? group.ready : own.ready;
-  const shown = group ? group.shown : own.shown;
+export function RevealItem({
+  children,
+  className,
+  delay = 0,
+  shown: shownFromGroup = false,
+  grouped = false,
+}: GroupedItemProps & {
+  children: ReactNode;
+  className?: string;
+}) {
+  const own = useReveal(!grouped);
+  const shown = grouped ? shownFromGroup : own.shown;
 
   return (
     <div
-      ref={group ? undefined : own.ref}
-      className={className}
-      style={motionStyle(ready, shown, "translateY(28px)", "translateY(0)", delay.current ?? 0)}
+      ref={grouped ? undefined : own.ref}
+      className={withRevealClass(className)}
+      style={motionStyle(shown, "translateY(28px)", "translateY(0)", delay)}
     >
       {children}
     </div>
@@ -131,24 +113,24 @@ export function RevealItem({ children, className }: { children: ReactNode; class
 }
 
 export function RevealPhoto({ children, className }: { children: ReactNode; className?: string }) {
-  const { ref, ready, shown } = useReveal(true);
+  const { ref, shown } = useReveal(true);
 
   return (
-    <div ref={ref} className={className} style={motionStyle(ready, shown, "scale(1.08)", "scale(1)")}>
+    <div ref={ref} className={withRevealClass(className)} style={motionStyle(shown, "scale(1.08)", "scale(1)")}>
       {children}
     </div>
   );
 }
 
 export function DrawRule({ className }: { className?: string }) {
-  const { ref, ready, shown } = useReveal(true);
+  const { ref, shown } = useReveal(true);
 
   return (
     <div
       ref={ref}
       aria-hidden
-      className={className}
-      style={motionStyle(ready, shown, "scaleX(0)", "scaleX(1)")}
+      className={withRevealClass(className)}
+      style={motionStyle(shown, "scaleX(0)", "scaleX(1)")}
     />
   );
 }

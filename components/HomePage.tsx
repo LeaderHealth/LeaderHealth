@@ -862,7 +862,7 @@ export function HomePage() {
                 </div>
                 <a
                   href={GET_STARTED_URL}
-                  className="group relative inline-flex items-center justify-center self-end overflow-hidden rounded-[39px] bg-[#f9f9f9] px-[18px] py-[5px] text-[15px] font-medium text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
+                  className="group relative inline-flex items-center justify-center self-end overflow-hidden rounded-[39px] bg-[#f9f9f9] px-6 py-[5px] text-[15px] font-medium text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
                 >
                   <span
                     aria-hidden="true"
@@ -912,7 +912,7 @@ export function HomePage() {
                   </p>
                   <Link
                     href="/aboutus"
-                    className="group relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-[39px] bg-[#f9f9f9] px-[18px] py-[5px] text-[15px] font-medium text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
+                    className="group relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-[39px] bg-[#f9f9f9] px-6 py-[5px] text-[15px] font-medium text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
                   >
                     <span
                       aria-hidden="true"

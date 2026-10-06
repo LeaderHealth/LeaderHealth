@@ -611,7 +611,7 @@ export function Header() {
         }`}
       >
         <div
-          className={`lh-tablet-shell pointer-events-auto relative flex w-full max-w-[1120px] min-w-0 items-center gap-1.5 rounded-full px-2 py-1.5 text-white shadow-lg shadow-ink/10 transition-colors duration-300 sm:gap-3 sm:px-5 sm:py-2 ${
+          className={`lh-tablet-shell pointer-events-auto relative flex w-full max-w-[1152px] min-w-0 items-center gap-1.5 rounded-full px-2 py-1.5 text-white shadow-lg shadow-ink/10 transition-colors duration-300 sm:gap-3 sm:px-5 sm:py-2 ${
             tabletPanel ? "lh-tablet-open" : ""
           } ${shell}`}
         >
@@ -732,7 +732,7 @@ export function Header() {
             {!onCheckout ? (
               <a
                 href={GET_STARTED_URL}
-                className="group relative inline-flex items-center justify-center overflow-hidden rounded-full bg-white px-4 py-1.5 text-[13px] font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                className="group relative inline-flex items-center justify-center overflow-hidden rounded-full bg-white px-6 py-1.5 text-[13px] font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
               >
                 <span
                   aria-hidden

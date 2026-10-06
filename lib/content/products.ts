@@ -223,8 +223,7 @@ export const products: Product[] = [
     audience: "men",
     price: "Starting at $109/month",
     labRequired: true,
-    image:
-      "https://framerusercontent.com/images/v18TtF6idRTxtVpZ4ELVTqQf8Q.png?width=1080&height=1350",
+    image: "/images/products/enclomiphene.png",
     tagline: "A fertility-minded option for men who need testosterone support.",
     description:
       "Enclomiphene may be considered when a clinician wants to support testosterone while preserving downstream signaling. Labs and fertility goals drive the decision.",
@@ -241,8 +240,7 @@ export const products: Product[] = [
     audience: "men",
     price: "Starting at $119/month",
     labRequired: true,
-    image:
-      "https://framerusercontent.com/images/v18TtF6idRTxtVpZ4ELVTqQf8Q.png?width=1080&height=1350",
+    image: "/images/products/testosterone-cream.png",
     tagline: "Transdermal testosterone when a cream fits your routine better than injections.",
     description:
       "Compounded testosterone cream is one delivery option after labs and a clinician visit. Transfer precautions and follow-up labs still apply.",

@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { getLegal } from "@/lib/content/legal";
 import { getProductSafety } from "@/lib/content/product-safety";
+import { IllustrationNote } from "@/components/IllustrationNote";
 import { PriceCompare } from "@/components/PriceCompare";
 import { SafetyInformationModal } from "@/components/SafetyInformationModal";
 
@@ -196,9 +197,7 @@ export function WomenComboTroches() {
                   className="h-auto w-full max-w-[420px] object-contain lg:max-w-[460px]"
                   sizes="(max-width: 1024px) 80vw, 460px"
                 />
-                <p className="mt-4 max-w-[252px] text-center font-geist text-[16px] leading-snug text-[#f7f3f4] italic">
-                  Illustration only. Actual medication and label may vary.
-                </p>
+                <IllustrationNote />
               </div>
 
               <div className="rounded-[28px] border border-white/30 bg-white/14 px-6 py-7 shadow-[0_22px_50px_-18px_rgba(51,17,16,0.28)] backdrop-blur-xl sm:px-8 sm:py-8">
