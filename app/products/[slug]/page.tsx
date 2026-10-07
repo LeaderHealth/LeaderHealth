@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getProduct, products } from "@/lib/content/products";
-import { productFaqs, tirzepatideFaqs, tadalafilFaqs, womenHrtFaqs } from "@/lib/content/faqs";
+import { menComboTrochesFaqs, productFaqs, tadalafilFaqs, tirzepatideFaqs, womenComboTrochesFaqs, womenHrtFaqs } from "@/lib/content/faqs";
 import { ProductHero } from "@/components/ProductHero";
 import { PriceCompare } from "@/components/PriceCompare";
 import { ProductVariants } from "@/components/ProductVariants";
@@ -9,8 +9,11 @@ import { ArticleLibrary } from "@/components/ArticleLibrary";
 import { FaqDropdownItems } from "@/components/PeptidesFaq";
 import { ProductSignupPrompt } from "@/components/ProductSignupPrompt";
 import { WomenHormoneTherapy } from "@/components/WomenHormoneTherapy";
-import { WomenComboTroches, womenComboTrochesFaqs } from "@/components/WomenComboTroches";
-import { MenComboTroches, menComboTrochesFaqs } from "@/components/MenComboTroches";
+import { WomenComboTroches } from "@/components/WomenComboTroches";
+import { MenComboTroches } from "@/components/MenComboTroches";
+import { IntimacyBlend } from "@/components/IntimacyBlend";
+import { JsonLd } from "@/components/JsonLd";
+import { buildProductPageSchema } from "@/lib/seo/schema";
 import type { Metadata } from "next";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -44,9 +47,18 @@ export default async function ProductPage({ params }: Props) {
   const product = getProduct(slug);
   if (!product) notFound();
 
+  const faqs =
+    slug === "men-sexual-health-combo-troches" || slug === "intimacy-blend-(pt-141-oxytocin-tadalafil)"
+      ? menComboTrochesFaqs
+      : slug === "women-sexual-health-combo-troches"
+        ? womenComboTrochesFaqs
+        : (product.faqs ?? faqsFor(slug));
+  const structuredData = <JsonLd data={buildProductPageSchema(product, faqs)} />;
+
   if (slug === "women-hormone-therapy") {
     return (
       <>
+        {structuredData}
         <WomenHormoneTherapy />
         <SiteTestimonials />
         <section className="bg-white px-6 py-16">
@@ -74,7 +86,36 @@ export default async function ProductPage({ params }: Props) {
   if (slug === "men-sexual-health-combo-troches") {
     return (
       <>
+        {structuredData}
         <MenComboTroches />
+        <SiteTestimonials />
+        <section className="bg-white px-6 py-16">
+          <div className="mx-auto max-w-3xl">
+            <h2 className="text-left font-sans text-[40px] leading-[1.1] font-medium !tracking-[-0.04em] text-[#331110]">
+              FAQ: We&apos;ve Got <span className="font-serif-italic !tracking-[-0.04em] text-[#e43d4e]">Answers</span>.
+            </h2>
+            <div className="mt-[26px]">
+              <FaqDropdownItems items={menComboTrochesFaqs} />
+            </div>
+          </div>
+        </section>
+        <ProductSignupPrompt />
+        <ArticleLibrary
+          slugs={[
+            "semaglutide-vs-tirzepatide-comparison-guide",
+            "recovery-peptides-anti-doping-sourcing-guide",
+            "low-libido-in-women-causes-evaluation-guide",
+          ]}
+        />
+      </>
+    );
+  }
+
+  if (slug === "intimacy-blend-(pt-141-oxytocin-tadalafil)") {
+    return (
+      <>
+        {structuredData}
+        <IntimacyBlend />
         <SiteTestimonials />
         <section className="bg-white px-6 py-16">
           <div className="mx-auto max-w-3xl">
@@ -101,6 +142,7 @@ export default async function ProductPage({ params }: Props) {
   if (slug === "women-sexual-health-combo-troches") {
     return (
       <>
+        {structuredData}
         <WomenComboTroches />
         <SiteTestimonials />
         <section className="bg-white px-6 py-16">
@@ -127,6 +169,7 @@ export default async function ProductPage({ params }: Props) {
 
   return (
     <>
+      {structuredData}
       <ProductHero product={product} />
       {product.compare !== false && <PriceCompare />}
       <SiteTestimonials />

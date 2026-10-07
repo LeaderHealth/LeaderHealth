@@ -1,19 +1,14 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { GET_STARTED_URL, PORTAL_URL } from "@/lib/content/site";
 import type { SearchHit } from "@/lib/search";
 
-const tabletSpring = {
-  type: "spring" as const,
-  bounce: 0.2,
-  duration: 0.4,
-  restDelta: 0.01,
-  restSpeed: 0.01,
-};
+const tabletEase = [0.45, 0, 0.55, 1] as const;
+const tabletTransition = { duration: 0.5, ease: tabletEase };
 
 export type TabletPanel = "men" | "women" | "who" | "search";
 
@@ -157,7 +152,7 @@ const washTap =
 
 function CategoryImage({ src }: { src: string }) {
   return (
-    <div className="relative aspect-[2/1] w-full overflow-hidden rounded-[12px]">
+    <div className="lh-tablet-card-media relative aspect-[2/1] w-full overflow-hidden rounded-[12px]">
       <Image
         src={src}
         alt=""
@@ -476,25 +471,34 @@ export function TabletNavDisclosure({
   return (
     <motion.div
       className="lh-tablet-clip"
-      initial={false}
       animate={{ height }}
-      transition={reduce ? { duration: 0 } : tabletSpring}
+      transition={reduce ? { duration: 0 } : tabletTransition}
       onAnimationComplete={() => {
         if (!panelRef.current) setHeld(null);
       }}
       style={{ overflow: "hidden" }}
     >
-      <div ref={innerRef}>
-        {active ? (
-          <TabletNavPanel
-            panel={active}
-            query={query}
-            onQuery={onQuery}
-            results={results}
-            onSubmit={onSubmit}
-            onNavigate={onNavigate}
-          />
-        ) : null}
+      <div ref={innerRef} className="relative">
+        <AnimatePresence mode="popLayout" initial={false}>
+          {active ? (
+            <motion.div
+              key={active}
+              initial={reduce ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={reduce ? undefined : { opacity: 0 }}
+              transition={reduce ? { duration: 0 } : tabletTransition}
+            >
+              <TabletNavPanel
+                panel={active}
+                query={query}
+                onQuery={onQuery}
+                results={results}
+                onSubmit={onSubmit}
+                onNavigate={onNavigate}
+              />
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
       </div>
     </motion.div>
   );

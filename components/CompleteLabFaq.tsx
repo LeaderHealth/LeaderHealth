@@ -1,6 +1,6 @@
 import { FaqDropdownItems } from "@/components/PeptidesFaq";
 
-const labFaqs = [
+export const labFaqs = [
   {
     q: "What's included in my lab panels?",
     a: "Your Annual Lab Panel covers 100 biomarkers; your 6-Month Recheck Panel covers 44 markers chosen to track the systems most likely to change between annual draws. Your clinician may order additional, targeted labs when a specific therapy requires closer monitoring.",

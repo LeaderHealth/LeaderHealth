@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { getLegal } from "@/lib/content/legal";
 import { getProductSafety } from "@/lib/content/product-safety";
+import { HsaFsaBadge } from "@/components/HsaFsaBadge";
 import { IllustrationNote } from "@/components/IllustrationNote";
 import { ChooseTreatmentButton } from "@/components/ProductHeroCta";
 import { PriceCompare } from "@/components/PriceCompare";
@@ -50,57 +51,6 @@ const blends = [
     learnHref: "/products/intimacy-blend-(pt-141-oxytocin-tadalafil)",
   },
 ] as const;
-
-export const menComboTrochesFaqs = [
-  {
-    q: "Why combine ingredients in one troche?",
-    a: "Sexual response can involve both vascular and central pathways. A tailored combination may address both in a single on-demand dose. Whether that is right for you depends on labs, history, and medications.",
-  },
-  {
-    q: "Who is this not a fit for?",
-    a: "Patients with uncontrolled hypertension, certain cardiovascular histories, or nitrate use are generally not candidates. A full medication list and clearance visit are required before prescribing.",
-  },
-  {
-    q: "How long until it works?",
-    a: "Most patients use the troche before anticipated activity on the timing their provider sets. Onset varies by person and formulation.",
-  },
-  {
-    q: "Can I take it daily?",
-    a: "No. Combo troches are intended for on-demand use only. Do not exceed the frequency your prescription specifies.",
-  },
-  {
-    q: "What side effects should I know about?",
-    a: "Reported effects can include headache, flushing, nausea, and blood-pressure changes. A prolonged painful erection is rare but requires urgent medical care. Your provider reviews warning signs.",
-  },
-  {
-    q: "Are combo troches available for women?",
-    a: "They may be considered for eligible women after the same labs-first review and safety screen. Your provider determines whether a formulation fits your history and goals.",
-  },
-  {
-    q: "What is included in the monthly subscription?",
-    a: "Medication and provider access for questions or adjustments are included. Follow-up visits are scheduled when your provider needs to reassess fit or safety.",
-  },
-  {
-    q: "How does the labs-first process work?",
-    a: "Start with the $49 intake, which includes the Complete Panel and a clearance visit. Cardiovascular, blood-pressure, and medication review are part of the screen.",
-  },
-  {
-    q: "Is there a commitment?",
-    a: "Therapy has a three-month minimum so your provider can adjust if needed. After month three, you can cancel anytime.",
-  },
-  {
-    q: "Do you accept insurance?",
-    a: "Leader Health does not accept insurance. Our membership model is designed to keep care simple, transparent, and accessible — with clear pricing and no surprise bills.",
-  },
-  {
-    q: "Can I use my HSA or FSA?",
-    a: "Yes — FSA and HSA cards are accepted. It's a great way to put your pre-tax health dollars to work on care that's actually built around you.",
-  },
-  {
-    q: "What if I have another questions?",
-    a: "Email us at help@leaderhealth.com with more questions.",
-  },
-];
 
 const benefits = [
   {
@@ -208,9 +158,7 @@ export function MenComboTroches() {
                     <Stars />
                     <span className="sr-only">4.8 out of 5 stars</span>
                   </p>
-                  <span className="pt-0.5 text-[11px] font-medium tracking-[0.14em] text-white/85 uppercase">
-                    HSA / FSA
-                  </span>
+                  <HsaFsaBadge />
                 </div>
                 <div className="mt-5 flex flex-wrap gap-2">
                   <span className="rounded-full bg-[#2a1212]/55 px-3 py-1 text-[11px] text-white">Sexual Health</span>

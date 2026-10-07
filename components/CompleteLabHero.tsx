@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useState, type ReactNode } from "react";
 import { useCart } from "@/components/cart/CartProvider";
+import { HsaFsaBadge } from "@/components/HsaFsaBadge";
 import { cartLineId, parsePriceAmount, type CartItem } from "@/lib/cart/types";
 
 const genderNote = "*Select gender assigned at birth for the uniquely aligned biomarkers";
@@ -193,7 +194,7 @@ export function CompleteLabHero({
                   />
                 </svg>
               </BenefitIcon>
-              HSA / FSA
+              <HsaFsaBadge tone="onLight" />
             </li>
           </ul>
 

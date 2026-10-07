@@ -9,6 +9,7 @@ import { PriceCompare } from "@/components/PriceCompare";
 import { SafetyInformationModal } from "@/components/SafetyInformationModal";
 import { IconHoverButton } from "@/components/IconHoverButton";
 import { IllustrationNote } from "@/components/IllustrationNote";
+import { HsaFsaBadge } from "@/components/HsaFsaBadge";
 import { ChooseTreatmentButton } from "@/components/ProductHeroCta";
 
 const HERO_IMAGE =
@@ -307,9 +308,7 @@ export function WomenHormoneTherapy() {
                     </span>
                     <span className="sr-only">4.8 out of 5 stars</span>
                   </p>
-                  <span className="rounded-full bg-white/20 px-3 py-1 text-[11px] font-medium tracking-[0.12em] uppercase">
-                    HSA / FSA
-                  </span>
+                  <HsaFsaBadge />
                 </div>
                 <div className="mt-5 flex flex-wrap items-center gap-2">
                   <span className="text-[13px] text-white/90">Women HRT</span>

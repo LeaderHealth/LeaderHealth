@@ -543,3 +543,57 @@ export const energyLongevityFaqs = [
     a: "Your plan is based on a clinical evaluation of your health history, symptoms, goals, and any relevant lab work. A licensed provider determines whether treatment is medically appropriate and which options fit your individual needs.",
   },
 ];
+
+const comboTrochesFaqs = [
+  {
+    q: "Why combine ingredients in one troche?",
+    a: "Sexual response can involve both vascular and central pathways. A tailored combination may address both in a single on-demand dose. Whether that is right for you depends on labs, history, and medications.",
+  },
+  {
+    q: "Who is this not a fit for?",
+    a: "Patients with uncontrolled hypertension, certain cardiovascular histories, or nitrate use are generally not candidates. A full medication list and clearance visit are required before prescribing.",
+  },
+  {
+    q: "How long until it works?",
+    a: "Most patients use the troche before anticipated activity on the timing their provider sets. Onset varies by person and formulation.",
+  },
+  {
+    q: "Can I take it daily?",
+    a: "No. Combo troches are intended for on-demand use only. Do not exceed the frequency your prescription specifies.",
+  },
+  {
+    q: "What side effects should I know about?",
+    a: "Reported effects can include headache, flushing, nausea, and blood-pressure changes. A prolonged painful erection is rare but requires urgent medical care. Your provider reviews warning signs.",
+  },
+  {
+    q: "Are combo troches available for women?",
+    a: "They may be considered for eligible women after the same labs-first review and safety screen. Your provider determines whether a formulation fits your history and goals.",
+  },
+  {
+    q: "What is included in the monthly subscription?",
+    a: "Medication and provider access for questions or adjustments are included. Follow-up visits are scheduled when your provider needs to reassess fit or safety.",
+  },
+  {
+    q: "How does the labs-first process work?",
+    a: "Start with the $49 intake, which includes the Complete Panel and a clearance visit. Cardiovascular, blood-pressure, and medication review are part of the screen.",
+  },
+  {
+    q: "Is there a commitment?",
+    a: "Therapy has a three-month minimum so your provider can adjust if needed. After month three, you can cancel anytime.",
+  },
+  {
+    q: "Do you accept insurance?",
+    a: "Leader Health does not accept insurance. Our membership model is designed to keep care simple, transparent, and accessible — with clear pricing and no surprise bills.",
+  },
+  {
+    q: "Can I use my HSA or FSA?",
+    a: "Yes — FSA and HSA cards are accepted. It's a great way to put your pre-tax health dollars to work on care that's actually built around you.",
+  },
+  {
+    q: "What if I have another questions?",
+    a: "Email us at help@leaderhealth.com with more questions.",
+  },
+];
+
+export const menComboTrochesFaqs = comboTrochesFaqs;
+export const womenComboTrochesFaqs = comboTrochesFaqs;

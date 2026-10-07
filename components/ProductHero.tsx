@@ -4,6 +4,7 @@ import Image from "next/image";
 import type { Product } from "@/lib/content/products";
 import { getLegal } from "@/lib/content/legal";
 import { getProductSafety } from "@/lib/content/product-safety";
+import { HsaFsaBadge } from "./HsaFsaBadge";
 import { IllustrationNote } from "./IllustrationNote";
 import { ProductHeroCta } from "./ProductHeroCta";
 import { SafetyInformationModal } from "./SafetyInformationModal";
@@ -23,11 +24,16 @@ export function productEyebrow(product: Product) {
 
 const tadalafilCover =
   "linear-gradient(339deg, #E43D4E 0%, #331110 100%)";
+const oxytocinCover =
+  "linear-gradient(105deg, #d85b69 0%, #b04a54 46%, #682a2d 100%)";
 
 export function ProductHero({ product }: { product: Product }) {
   const badge = product.badge ?? (product.disclaimer?.toLowerCase().includes("fda approved") ? undefined : "Medication");
   const safetySections = getProductSafety(product.slug);
   const menHormoneCover = product.category === "hormone" && product.audience === "men";
+  const redHeroCover = menHormoneCover || product.slug === "men-sexual-health-tadalafil";
+  const oxytocinHero = product.slug === "oxytocin-nasal-spray";
+  const heroCover = oxytocinHero ? oxytocinCover : redHeroCover ? tadalafilCover : undefined;
 
   return (
     <SafetyInformationModal
@@ -36,8 +42,8 @@ export function ProductHero({ product }: { product: Product }) {
     >
     {(trigger) => (
     <section
-      className={`relative pb-16 pt-28 text-white ${menHormoneCover ? "overflow-hidden" : "bg-gradient-to-b from-[#d07a7c] to-[#a24b4e]"}`}
-      style={menHormoneCover ? { backgroundImage: tadalafilCover } : undefined}
+      className={`relative pb-16 pt-28 text-white ${heroCover ? "overflow-hidden" : "bg-gradient-to-b from-[#d07a7c] to-[#a24b4e]"}`}
+      style={heroCover ? { backgroundImage: heroCover } : undefined}
     >
       <div className="relative mx-auto grid max-w-6xl items-center gap-8 px-6 lg:grid-cols-[1fr_minmax(320px,440px)]">
         <div className="flex min-h-[480px] flex-col items-center justify-center">
@@ -56,9 +62,9 @@ export function ProductHero({ product }: { product: Product }) {
           <Image
             src={product.image}
             alt={product.name}
-            width={785}
-            height={995}
-            className="mx-auto h-[min(58vh,520px)] w-auto object-contain drop-shadow-2xl"
+            width={oxytocinHero ? 281 : 785}
+            height={oxytocinHero ? 948 : 995}
+            className={`mx-auto w-auto object-contain drop-shadow-2xl ${oxytocinHero ? "h-[min(52vh,420px)]" : "h-[min(58vh,520px)]"}`}
             sizes="(max-width: 1024px) 80vw, 480px"
             priority
           />
@@ -72,7 +78,7 @@ export function ProductHero({ product }: { product: Product }) {
               <span className="font-medium">4.8</span>
               <span className="tracking-tight text-[#ff5a5a]">★★★★★</span>
             </p>
-            <span className="text-[11px] uppercase tracking-[0.14em] text-white/85">HSA / FSA</span>
+            <HsaFsaBadge />
           </div>
           <div className="mt-5 flex flex-wrap gap-2">
             <span className="rounded-full bg-[#2a1212]/55 px-3 py-1 text-[11px]">{productEyebrow(product)}</span>

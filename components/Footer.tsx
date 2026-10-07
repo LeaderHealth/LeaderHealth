@@ -59,6 +59,10 @@ const treatmentAccordions: FooterAccordion[] = [
           { label: "Combo Troches", href: "/products/women-sexual-health-combo-troches" },
         ],
       },
+      {
+        eyebrow: "Both",
+        links: [{ label: "Oxytocin Nasal Spray", href: "/products/oxytocin-nasal-spray" }],
+      },
     ],
   },
   {

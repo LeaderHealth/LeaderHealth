@@ -6,11 +6,14 @@ import { CompleteLabIncluded } from "@/components/CompleteLabIncluded";
 import { SiteTestimonials } from "@/components/TestimonialsVideoSection";
 import { CompleteLabStart } from "@/components/CompleteLabStart";
 import { CompleteLabSteps } from "@/components/CompleteLabSteps";
-import { CompleteLabFaq } from "@/components/CompleteLabFaq";
+import { CompleteLabFaq, labFaqs } from "@/components/CompleteLabFaq";
+import { JsonLd } from "@/components/JsonLd";
 import { ArticleLibrary } from "@/components/ArticleLibrary";
 import { CompleteLabHero } from "@/components/CompleteLabHero";
+import { HsaFsaBadge } from "@/components/HsaFsaBadge";
 import { LabAddToCart } from "@/components/LabAddToCart";
 import { labs } from "@/lib/content/products";
+import { buildLabPageSchema } from "@/lib/seo/schema";
 import type { Metadata } from "next";
 
 const completeLabPoints = [
@@ -100,23 +103,37 @@ export default async function LabPage({ params }: Props) {
           ]
         : alsoLike;
 
+    const visible =
+      lab.slug === "labs-advance-panel"
+        ? {
+            name: "Advanced Panel",
+            biomarkers: lab.biomarkers,
+            phoneSrc: "/images/also-like-advanced.png",
+            phoneAlt: "Phone showing the Advanced Panel results",
+            description:
+              "Energy, mood, and sex drive all rely on hormonal balance. This lab panel analyzes 100 key biomarkers, providing a streamlined assessment of your hormone health.",
+          }
+        : {
+            name: "Complete Panel",
+            description:
+              "Energy, mood, and sex drive all rely on hormonal balance. This lab panel analyzes 64 key biomarkers, providing a streamlined assessment of your hormone health.",
+          };
+
     return (
       <>
-        <CompleteLabHero
-          slug={lab.slug}
-          image={lab.image}
-          price={lab.price}
-          {...(lab.slug === "labs-advance-panel"
-            ? {
-                name: "Advanced Panel",
-                biomarkers: lab.biomarkers,
-                phoneSrc: "/images/also-like-advanced.png",
-                phoneAlt: "Phone showing the Advanced Panel results",
-                description:
-                  "Energy, mood, and sex drive all rely on hormonal balance. This lab panel analyzes 100 key biomarkers, providing a streamlined assessment of your hormone health.",
-              }
-            : {})}
+        <JsonLd
+          data={buildLabPageSchema(
+            {
+              slug: lab.slug,
+              name: visible.name,
+              description: visible.description,
+              image: lab.image,
+              price: lab.price,
+            },
+            labFaqs,
+          )}
         />
+        <CompleteLabHero slug={lab.slug} image={lab.image} price={lab.price} {...visible} />
         <section className="bg-[#f6f2f1] px-10 py-16 text-center md:py-20">
           <div className="mx-auto grid max-w-[1040px] gap-10 md:grid-cols-3 md:gap-x-16">
             {completeLabPoints.map((point) => (
@@ -174,6 +191,16 @@ export default async function LabPage({ params }: Props) {
   }
 
   return (
+    <>
+    <JsonLd
+      data={buildLabPageSchema({
+        slug: lab.slug,
+        name: lab.name,
+        description: lab.description,
+        image: lab.image,
+        price: lab.price,
+      })}
+    />
     <section className="mx-auto grid max-w-6xl items-center gap-10 px-6 pb-20 pt-32 md:grid-cols-2">
       <div className="rounded-3xl bg-[#111] p-6">
         <Image src={lab.image} alt={lab.name} width={400} height={720} className="mx-auto h-[520px] w-auto object-contain" />
@@ -188,10 +215,13 @@ export default async function LabPage({ params }: Props) {
         <ul className="mt-6 space-y-2 text-sm text-taupe">
           <li>2-5 business days from draw to results</li>
           <li>30 minutes clinical view, included</li>
-          <li>HSA / FSA eligible</li>
+          <li>
+            <HsaFsaBadge tone="onLight" />
+          </li>
         </ul>
         <LabAddToCart slug={lab.slug} />
       </div>
     </section>
+    </>
   );
 }

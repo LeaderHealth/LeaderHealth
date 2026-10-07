@@ -496,15 +496,23 @@ export const products: Product[] = [
     audience: "all",
     price: "Starting at $159",
     labRequired: true,
-    image:
-      "https://framerusercontent.com/images/pa9pIi4me0ue0YEMZpLwghozic.png?width=1024&height=587",
+    image: "/images/products/oxytocin-nasal-spray.png",
     tagline: "A clinician-guided oxytocin option for intimacy and connection.",
     description:
       "Oxytocin nasal spray is prescribed after a clinician reviews desire, relationship context, and other medications. It is not a substitute for evaluating hormones, pain, or mood.",
     benefits: [
-      { title: "Needle-free", body: "A nasal format for at-home use when prescribed." },
-      { title: "Used in blends", body: "Also appears in some combo troches when clinically useful." },
-      { title: "Evaluation first", body: "Labs may be required so the rest of the picture is not missed." },
+      {
+        title: "Intimacy support",
+        body: "Designed to complement a personalized approach to intimacy and sexual wellness.",
+      },
+      {
+        title: "Connection-focused support",
+        body: "Oxytocin has been studied for its role in social and emotional processing associated with interpersonal connection.",
+      },
+      {
+        title: "Convenient nasal delivery",
+        body: "A simple intranasal route designed for use according to your provider-prescribed treatment plan.",
+      },
     ],
   },
   {
@@ -530,8 +538,7 @@ export const products: Product[] = [
     category: "sexual",
     audience: "all",
     price: "Starting at $229/month",
-    image:
-      "https://framerusercontent.com/images/pa9pIi4me0ue0YEMZpLwghozic.png?width=1024&height=587",
+    image: "/images/products/intimacy-blend.png",
     tagline: "A more comprehensive blend for desire and physical performance together.",
     description:
       "Combines PT-141, tadalafil, and oxytocin to support both desire and physical performance. Used when low libido is part of the picture and a clinician wants a longer-lasting, more spontaneous option.",

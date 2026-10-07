@@ -1,6 +1,9 @@
 import { AdvancedPeptidesHero } from "@/components/AdvancedPeptidesHero";
 import { PeptidesBenefits } from "@/components/PeptidesBenefits";
 import { PeptidesFaq } from "@/components/PeptidesFaq";
+import { JsonLd } from "@/components/JsonLd";
+import { peptideFaqs } from "@/lib/content/faqs";
+import { buildFaqSchema } from "@/lib/seo/schema";
 import { PeptidesHowItWorks } from "@/components/PeptidesHowItWorks";
 import { PeptidesQuality } from "@/components/PeptidesQuality";
 import { GET_STARTED_URL } from "@/lib/content/site";
@@ -17,6 +20,7 @@ export const metadata: Metadata = { title: "Peptides" };
 export default function PeptidesPage() {
   return (
     <div>
+      <JsonLd data={buildFaqSchema(peptideFaqs)} />
       <AdvancedPeptidesHero />
       <PeptidesBenefits />
       <PeptidesQuality />

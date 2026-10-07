@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import Image from "next/image";
 
 type Cell = string | "yes" | "no";
@@ -52,21 +52,21 @@ function ComparisonText({ value }: { value: string }) {
   );
 }
 
-function Mark({ value, onDark = false }: { value: Cell; onDark?: boolean }) {
+function Mark({ value, onDark = false, large = false }: { value: Cell; onDark?: boolean; large?: boolean }) {
   if (value === "yes" || value === "no") {
     const isYes = value === "yes";
     return (
       <span
-        className={`mx-auto grid h-5 w-5 shrink-0 place-items-center rounded-full border sm:h-6 sm:w-6 md:h-7 md:w-7 lg:h-8 lg:w-8 ${
-          onDark ? "border-white/75 text-white" : "border-[#d9d9d9] text-[#8d8d8d]"
-        }`}
+        className={`mx-auto grid shrink-0 place-items-center rounded-full border ${
+          large ? "h-7 w-7" : "h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7 lg:h-8 lg:w-8"
+        } ${onDark ? "border-white/80 text-white" : "border-[#d5d5d5] text-[#8a8a8a]"}`}
       >
         {isYes ? (
-          <svg viewBox="0 0 16 16" className="h-2.5 w-2.5 sm:h-3 sm:w-3 lg:h-3.5 lg:w-3.5" aria-hidden>
+          <svg viewBox="0 0 16 16" className={large ? "h-3.5 w-3.5" : "h-2.5 w-2.5 sm:h-3 sm:w-3 lg:h-3.5 lg:w-3.5"} aria-hidden>
             <path d="M3.4 8.2 6.3 11.1 12.6 4.8" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         ) : (
-          <svg viewBox="0 0 16 16" className="h-2 w-2 sm:h-2.5 sm:w-2.5 lg:h-3 lg:w-3" aria-hidden>
+          <svg viewBox="0 0 16 16" className={large ? "h-3 w-3" : "h-2 w-2 sm:h-2.5 sm:w-2.5 lg:h-3 lg:w-3"} aria-hidden>
             <path d="M4.2 4.2 11.8 11.8M11.8 4.2 4.2 11.8" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
           </svg>
         )}
@@ -76,13 +76,152 @@ function Mark({ value, onDark = false }: { value: Cell; onDark?: boolean }) {
   return (
     <span
       className={`block max-w-full text-balance text-center font-semibold leading-tight tracking-[-0.02em] ${
-        onDark
-          ? "text-[13px] text-white sm:text-[16px] md:text-[20px] lg:text-[24px]"
-          : "text-[11px] text-[#2a2a2a] sm:text-[13px] md:text-[17px] lg:text-[22px]"
+        large
+          ? onDark
+            ? "text-[15px] text-white sm:text-[16px]"
+            : "text-[14px] text-[#2a2a2a] sm:text-[15px]"
+          : onDark
+            ? "text-[13px] text-white sm:text-[16px] md:text-[20px] lg:text-[24px]"
+            : "text-[11px] text-[#2a2a2a] sm:text-[13px] md:text-[17px] lg:text-[22px]"
       }`}
     >
       <ComparisonText value={value} />
     </span>
+  );
+}
+
+function CompareControl({
+  label,
+  onClick,
+  children,
+  compact = false,
+}: {
+  label: string;
+  onClick: () => void;
+  children: ReactNode;
+  compact?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      onClick={onClick}
+      className={`grid place-items-center rounded-full border border-[#d9d4cf] text-[#331110] transition-colors hover:bg-[#f7f3f0] ${compact ? "h-9 w-9" : "h-11 w-11"}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function usePrefersReducedMotion() {
+  return useSyncExternalStore(
+    (onChange) => {
+      const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+      media.addEventListener("change", onChange);
+      return () => media.removeEventListener("change", onChange);
+    },
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    () => false,
+  );
+}
+
+function PriceCompareCarousel() {
+  const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [cycle, setCycle] = useState(0);
+  const reduceMotion = usePrefersReducedMotion();
+  const held = paused || reduceMotion;
+  const brand = competitors[index];
+
+  useEffect(() => {
+    if (held) return;
+    const timer = window.setInterval(() => {
+      setIndex((current) => (current + 1) % competitors.length);
+    }, 4200);
+    return () => window.clearInterval(timer);
+  }, [held, cycle]);
+
+  function step(delta: number) {
+    setIndex((current) => (current + delta + competitors.length) % competitors.length);
+    setCycle((current) => current + 1);
+  }
+
+  return (
+    <div className="price-compare-card mx-auto w-full max-w-[440px] rounded-[28px] bg-white px-3 pt-5 pb-6 shadow-[0_16px_48px_rgba(74,52,32,0.08)] sm:px-5 sm:pt-6 md:max-w-[600px] md:px-8">
+      <div className="price-compare-mobile-grid relative grid items-stretch">
+        <div
+          aria-hidden
+          className="price-compare-mobile-leader pointer-events-none absolute -top-3 -bottom-3 z-0 rounded-[26px] bg-[linear-gradient(180deg,#c45d66_0%,#a44650_16%,#7a333c_40%,#4c2028_68%,#2a1016_100%)] shadow-[0_18px_36px_rgba(36,12,16,0.22)]"
+        />
+
+        <div className="price-compare-cell relative z-10 min-h-[72px]" style={{ "--d": "220ms" } as CSSProperties} />
+        <div className="price-compare-cell relative z-10 flex min-h-[72px] items-center justify-center px-2" style={{ "--d": "260ms" } as CSSProperties}>
+          <p className="text-center text-[11px] leading-none font-semibold tracking-[0.11em] text-white">LEADERHEALTH</p>
+        </div>
+        <div key={`${brand}-name`} className="price-compare-swap relative z-10 flex min-h-[72px] items-center justify-center px-1 text-center text-[15px] text-[#a39e99]">
+          {brand}
+        </div>
+
+        {rows.map((row, i) => {
+          const last = i === rows.length - 1;
+          const rule = last ? "" : "border-b border-[#ece7e2]";
+          return (
+            <div key={row.label} className="contents">
+              <div
+                className={`price-compare-cell relative z-10 flex min-h-[62px] items-center px-1 text-[13px] leading-snug text-[#9a9590] sm:px-2 sm:text-[14px] ${rule}`}
+                style={{ "--d": `${420 + i * 70}ms` } as CSSProperties}
+              >
+                {row.label}
+              </div>
+              <div
+                className="price-compare-cell relative z-10 flex min-h-[62px] items-center justify-center px-2"
+                style={{ "--d": `${460 + i * 70}ms` } as CSSProperties}
+              >
+                <Mark value={row.leader} onDark large />
+              </div>
+              <div
+                key={`${brand}-${row.label}`}
+                className={`price-compare-swap relative z-10 flex min-h-[62px] items-center justify-center px-1 ${rule}`}
+              >
+                <Mark value={row.others[index]} large />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-8 flex items-center justify-between px-2 sm:px-4">
+        <CompareControl label="Previous comparison" onClick={() => step(-1)}>
+          <svg viewBox="0 0 16 16" className="h-4 w-4" aria-hidden>
+            <path d="M10 3.5 5.5 8 10 12.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </CompareControl>
+        <p className="text-center" aria-live="polite">
+          <span className="block text-[15px] font-semibold tracking-[-0.02em] text-[#2a2a2a]">vs {brand}</span>
+          <span className="mt-0.5 block text-[13px] text-[#9a9590]">
+            {index + 1} of {competitors.length}
+          </span>
+        </p>
+        <CompareControl label="Next comparison" onClick={() => step(1)}>
+          <svg viewBox="0 0 16 16" className="h-4 w-4" aria-hidden>
+            <path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </CompareControl>
+      </div>
+      <div className="mt-4 flex justify-center">
+        <CompareControl compact label={held ? "Play comparison" : "Pause comparison"} onClick={() => setPaused((current) => !current)}>
+          {held ? (
+            <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" aria-hidden>
+              <path d="M6 3.5v9l7-4.5-7-4.5Z" fill="currentColor" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" aria-hidden>
+              <path d="M5.5 3.5v9M10.5 3.5v9" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+          )}
+        </CompareControl>
+      </div>
+    </div>
   );
 }
 
@@ -127,7 +266,10 @@ export function PriceCompare() {
         </h2>
 
         <div className="mt-8 sm:mt-12 lg:mt-16">
-          <div className="py-10 sm:py-14 lg:px-2 lg:py-20">
+          <div className="py-6 min-[1200px]:hidden">
+            <PriceCompareCarousel />
+          </div>
+          <div className="hidden py-10 sm:py-14 min-[1200px]:block lg:px-2 lg:py-20">
             <div className="price-compare-card rounded-[22px] bg-white px-1.5 py-2 shadow-[0_16px_48px_rgba(74,52,32,0.08)] sm:rounded-[28px] sm:px-3 md:rounded-[32px] md:px-4 md:py-2.5 lg:rounded-[36px] lg:px-8 lg:py-3">
               <div className="price-compare-grid relative grid items-stretch">
                 <div

@@ -134,6 +134,7 @@ export const menMegaCategories: MegaCategory[] = [
       { label: "Tadalafil", href: "/products/men-sexual-health-tadalafil", card: productCard("men-sexual-health-tadalafil") },
       { label: "PT-141", href: "/products/sexual-health-pt-141-nasal", card: productCard("sexual-health-pt-141-nasal") },
       { label: "Combo Troches", href: "/products/men-sexual-health-combo-troches", card: productCard("men-sexual-health-combo-troches") },
+      { label: "Oxytocin Nasal Spray", href: "/products/oxytocin-nasal-spray", card: productCard("oxytocin-nasal-spray") },
     ],
   },
   {
@@ -173,6 +174,7 @@ export const womenMegaCategories: MegaCategory[] = [
     items: [
       { label: "PT-141", href: "/products/sexual-health-pt-141-nasal", card: productCard("sexual-health-pt-141-nasal") },
       { label: "Combo Troches", href: "/products/women-sexual-health-combo-troches", card: productCard("women-sexual-health-combo-troches") },
+      { label: "Oxytocin Nasal Spray", href: "/products/oxytocin-nasal-spray", card: productCard("oxytocin-nasal-spray") },
     ],
   },
   {

@@ -3,13 +3,30 @@ import Link from "next/link";
 import { BlogSection } from "@/components/blogs/BlogSection";
 import { HeroTitleFade } from "@/components/HeroTitleFade";
 import { blogArticles, blogCategories } from "@/components/blogs/content";
+import { JsonLd } from "@/components/JsonLd";
+import { publishedArticles } from "@/lib/content/articles";
+import { buildCollectionPageSchema } from "@/lib/seo/schema";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Learn" };
 
+const title = "Learn More";
+const intro = "Articles on treatment, dosing, and what the research actually says.";
+
 export default function BlogsPage() {
   return (
     <div>
+      <JsonLd
+        data={buildCollectionPageSchema({
+          name: title,
+          description: intro,
+          path: "/blogs",
+          items: publishedArticles().map((article) => ({
+            name: article.title,
+            path: `/articles/${article.slug}`,
+          })),
+        })}
+      />
       <section className="relative h-[75svh] min-h-[480px] overflow-hidden bg-[#1a090c] text-white">
         <Image
           src="/images/blog-learn-hero.jpg"
@@ -26,7 +43,7 @@ export default function BlogsPage() {
               Learn <span className="font-serif-italic font-normal tracking-normal">More</span>
             </h1>
             <p className="relative z-10 mt-4 max-w-[26rem] font-sans text-[15px] font-normal leading-snug text-white sm:text-[17px] md:mt-5 md:text-[18px]">
-              Articles on treatment, dosing, and what the research actually says.
+              {intro}
             </p>
           </div>
         </div>

@@ -6,6 +6,8 @@ import { ArticleRichText } from "@/components/articles/ArticleRichText";
 import { FAQArticles } from "@/components/articles/FAQArticles";
 import { ArticleExpertQuoteCard } from "@/components/ArticleExpertQuoteCard";
 import { articleCovers, articles, getArticle, publishedArticles } from "@/lib/content/articles";
+import { JsonLd } from "@/components/JsonLd";
+import { buildArticlePageSchema } from "@/lib/seo/schema";
 import type { Metadata } from "next";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -40,6 +42,7 @@ export default async function ArticlePage({ params }: Props) {
 
   return (
     <article>
+      <JsonLd data={buildArticlePageSchema(article, cover?.src)} />
       <header
         className={`relative overflow-hidden bg-[#c96b74] px-6 pt-28 text-white sm:pt-36 md:pt-44 ${
           cover ? "pb-24 sm:pb-32 md:pb-40" : "pb-14 sm:pb-16"
