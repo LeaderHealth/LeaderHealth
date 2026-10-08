@@ -8,8 +8,8 @@ import { assets } from "@/lib/content/site";
 const rowSpring = { duration: 0.6, ease: [0.22, 1, 0.36, 1] as const };
 const entranceSpring = { duration: 0.9, ease: [0.22, 1, 0.36, 1] as const, delay: 0.05 };
 const imageEase = [0.22, 1, 0.36, 1] as const;
-const imageTween = { duration: 1.1, delay: 0.08, ease: imageEase };
-const imageCloseTween = { duration: 0.8, delay: 0, ease: imageEase };
+const imageTween = { duration: 2.2, delay: 0.08, ease: imageEase };
+const imageCloseTween = { duration: 1.6, delay: 0, ease: imageEase };
 const underlineSpring = { duration: 0.8, ease: imageEase, delay: 0.12 };
 
 const CLOSED = "#e98a90";

@@ -57,6 +57,9 @@ export type TestimonialsVideoSectionProps = {
   cardPadding?: number;
 };
 
+const variantSpring = { type: "spring" as const, duration: 0.4, bounce: 0.2, delay: 0 };
+const slideSpring = { type: "spring" as const, duration: 2, bounce: 0, delay: 0 };
+
 const DEFAULTS = {
   heightDesktop: 794,
   heightTablet: 740,
@@ -68,7 +71,7 @@ const DEFAULTS = {
   accentColor: "#e33d4d",
   interval: 7000,
   gap: 16,
-  transitionDuration: 0.7,
+  transitionDuration: 2,
   cardRadius: 20,
   cardPadding: 32,
 };
@@ -95,7 +98,7 @@ export function TestimonialsVideoSection({
   interval = DEFAULTS.interval,
   draggable = true,
   showDots = true,
-  showArrows = false,
+  showArrows = true,
   gap = DEFAULTS.gap,
   transitionDuration = DEFAULTS.transitionDuration,
   initialIndex = 0,
@@ -108,12 +111,14 @@ export function TestimonialsVideoSection({
   const count = testimonials.length;
   const labelId = useId();
   const videoRef = useRef<HTMLVideoElement>(null);
+  const hasEntered = useRef(false);
   const [index, setIndex] = useState(() => {
     if (testimonials.length === 0) return 0;
     return Math.min(Math.max(initialIndex, 0), testimonials.length - 1);
   });
   const [paused, setPaused] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
+  const [layoutEpoch, setLayoutEpoch] = useState(0);
 
   const featured = testimonials[index];
   const prev = testimonials[(index + count - 1) % count];
@@ -128,11 +133,27 @@ export function TestimonialsVideoSection({
   );
 
   useEffect(() => {
+    hasEntered.current = true;
+  }, []);
+
+  useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     const update = () => setReduceMotion(media.matches);
     update();
     media.addEventListener("change", update);
     return () => media.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
+    const tablet = window.matchMedia("(min-width: 768px)");
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    const onChange = () => setLayoutEpoch((epoch) => epoch + 1);
+    tablet.addEventListener("change", onChange);
+    desktop.addEventListener("change", onChange);
+    return () => {
+      tablet.removeEventListener("change", onChange);
+      desktop.removeEventListener("change", onChange);
+    };
   }, []);
 
   useEffect(() => {
@@ -180,6 +201,10 @@ export function TestimonialsVideoSection({
 
   if (!featured) return null;
 
+  const cardTransition = reduceMotion ? { duration: 0 } : { ...slideSpring, duration: transitionDuration };
+  const frameTransition = reduceMotion ? { duration: 0 } : variantSpring;
+  const playEnter = hasEntered.current && !reduceMotion;
+
   const sectionStyle = {
     backgroundColor,
     borderRadius: borderRadius ? `${borderRadius}px` : undefined,
@@ -222,7 +247,12 @@ export function TestimonialsVideoSection({
           aria-hidden="true"
         />
 
-        <div className="relative z-10 mx-auto flex h-full w-[min(370px,calc(100%-20px))] flex-col items-stretch pt-12 md:w-[min(96%,1100px)] md:items-center md:px-0 md:pt-[56px] lg:pt-[64px]">
+        <motion.div
+          layout
+          layoutDependency={layoutEpoch}
+          transition={{ layout: frameTransition }}
+          className="relative z-10 mx-auto flex h-full w-[min(370px,calc(100%-20px))] flex-col items-stretch pt-12 md:w-[min(96%,1100px)] md:items-center md:px-0 md:pt-[56px] lg:pt-[64px]"
+        >
           <div className="max-w-4xl text-left md:text-center">
             <h2 className="font-sans text-[40px] font-semibold leading-[1.05] tracking-normal text-[#331110] md:text-[44px] lg:text-[58px] lg:leading-[1.05]">
               {title}
@@ -248,9 +278,10 @@ export function TestimonialsVideoSection({
             <p id={labelId} className="sr-only">
               Member stories, slide {index + 1} of {count}
             </p>
-            <div className="flex items-stretch justify-center lg:h-[416px]" style={{ gap }}>
+            <div className="relative flex items-stretch justify-center lg:h-[416px]" style={{ gap, perspective: 1200 }}>
               {count > 1 ? (
-                <button
+                <motion.button
+                  key={`prev-${prev.name}`}
                   type="button"
                   aria-label="Previous testimonial"
                   onClick={() => go(-1)}
@@ -258,10 +289,14 @@ export function TestimonialsVideoSection({
                   style={{
                     WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 58%)",
                     maskImage: "linear-gradient(to right, transparent 0%, black 58%)",
+                    transformPerspective: 1200,
                   }}
+                  initial={playEnter ? { opacity: 0.7, x: -28, scale: 0.6, rotateY: 16 } : false}
+                  animate={{ opacity: 1, x: 0, scale: 1, rotateY: 0 }}
+                  transition={cardTransition}
                 >
                   <PeekCard item={prev} side="left" background={cardBackground} text={cardTextColor} accent={accentColor} />
-                </button>
+                </motion.button>
               ) : null}
 
               <motion.div
@@ -276,9 +311,9 @@ export function TestimonialsVideoSection({
                   if (info.offset.x < -72 || info.velocity.x < -480) go(1);
                   else if (info.offset.x > 72 || info.velocity.x > 480) go(-1);
                 }}
-                initial={reduceMotion ? false : { opacity: 0.85, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={reduceMotion ? { duration: 0 } : { duration: transitionDuration, ease: [0.22, 1, 0.36, 1] }}
+                initial={playEnter ? { opacity: 0.7, x: -120 } : false}
+                animate={{ opacity: 1, x: 0 }}
+                transition={cardTransition}
                 className={`min-w-0 w-[370px] max-w-full touch-pan-y md:w-auto md:flex-1 md:max-w-[726px] lg:h-[416px] lg:w-[726px] lg:flex-none ${draggable && count > 1 ? "cursor-grab active:cursor-grabbing" : ""}`}
               >
                 <FeaturedCard
@@ -292,7 +327,8 @@ export function TestimonialsVideoSection({
               </motion.div>
 
               {count > 1 ? (
-                <button
+                <motion.button
+                  key={`next-${next.name}`}
                   type="button"
                   aria-label="Next testimonial"
                   onClick={() => go(1)}
@@ -300,23 +336,41 @@ export function TestimonialsVideoSection({
                   style={{
                     WebkitMaskImage: "linear-gradient(to left, transparent 0%, black 58%)",
                     maskImage: "linear-gradient(to left, transparent 0%, black 58%)",
+                    transformPerspective: 1200,
                   }}
+                  initial={playEnter ? { opacity: 0.7, x: -28, scale: 0.6, rotateY: -16 } : false}
+                  animate={{ opacity: 1, x: 0, scale: 1, rotateY: 0 }}
+                  transition={cardTransition}
                 >
                   <PeekCard item={next} side="right" background={cardBackground} text={cardTextColor} accent={accentColor} />
-                </button>
+                </motion.button>
+              ) : null}
+
+              {showArrows && count > 1 ? (
+                <>
+                  <motion.div
+                    className="absolute top-1/2 left-2 z-20 -translate-y-1/2"
+                    initial={reduceMotion ? false : { opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={reduceMotion ? { duration: 0 } : { duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                  >
+                    <NavButton label="Previous story" onClick={() => go(-1)} accent={accentColor}>
+                      <Chevron direction="left" />
+                    </NavButton>
+                  </motion.div>
+                  <motion.div
+                    className="absolute top-1/2 right-2 z-20 -translate-y-1/2"
+                    initial={reduceMotion ? false : { opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={reduceMotion ? { duration: 0 } : { duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                  >
+                    <NavButton label="Next story" onClick={() => go(1)} accent={accentColor}>
+                      <Chevron direction="right" />
+                    </NavButton>
+                  </motion.div>
+                </>
               ) : null}
             </div>
-
-            {showArrows && count > 1 ? (
-              <div className="mt-6 flex justify-center gap-3">
-                <NavButton label="Previous testimonial" onClick={() => go(-1)} accent={accentColor}>
-                  ‹
-                </NavButton>
-                <NavButton label="Next testimonial" onClick={() => go(1)} accent={accentColor}>
-                  ›
-                </NavButton>
-              </div>
-            ) : null}
 
             {showDots && count > 1 ? (
               <div className="mt-7 flex justify-center gap-2" role="tablist" aria-label="Choose a testimonial">
@@ -338,7 +392,7 @@ export function TestimonialsVideoSection({
               </div>
             ) : null}
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   );
@@ -519,6 +573,20 @@ export function SiteTestimonials() {
       draggable
       initialIndex={1}
     />
+  );
+}
+
+function Chevron({ direction }: { direction: "left" | "right" }) {
+  return (
+    <svg viewBox="0 0 20 20" className="h-5 w-5" fill="none" aria-hidden="true">
+      <path
+        d={direction === "left" ? "M12.5 4.5 7 10l5.5 5.5" : "M7.5 4.5 13 10l-5.5 5.5"}
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 

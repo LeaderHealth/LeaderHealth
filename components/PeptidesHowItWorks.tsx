@@ -8,12 +8,12 @@ import { assets } from "@/lib/content/site";
 const CARD_EASE = [0.22, 1, 0.36, 1] as const;
 
 const cardTransition = {
-  duration: 0.65,
+  duration: 1.3,
   ease: CARD_EASE,
 };
 
 const parentTransition = {
-  duration: 0.7,
+  duration: 1.4,
   ease: CARD_EASE,
 };
 
@@ -118,7 +118,7 @@ function DesktopCard({
         aria-hidden={open}
         initial={false}
         animate={{ opacity: open ? 0 : 1, height: open ? 0 : 68, marginBottom: open ? 0 : 4 }}
-        transition={open ? { duration: reduced ? 0 : 0.16, ease: CARD_EASE } : transition}
+        transition={open ? { duration: reduced ? 0 : 0.32, ease: CARD_EASE } : transition}
         className="overflow-hidden font-sans text-[56px] font-medium leading-none tracking-[-0.04em] text-white"
       >
         {step.number}
@@ -137,7 +137,7 @@ function DesktopCard({
           className="absolute inset-0 grid place-items-center"
           initial={false}
           animate={{ opacity: open ? 0 : 1 }}
-          transition={{ duration: reduced ? 0 : open ? 0.2 : 0.35, ease: CARD_EASE }}
+          transition={{ duration: reduced ? 0 : open ? 0.4 : 0.7, ease: CARD_EASE }}
         >
           <Image
             src={assets.peptidesStepMosaic}
@@ -151,7 +151,7 @@ function DesktopCard({
           className="absolute inset-0"
           initial={false}
           animate={{ opacity: open ? 1 : 0 }}
-          transition={{ duration: reduced ? 0 : 0.35, ease: CARD_EASE }}
+          transition={{ duration: reduced ? 0 : 0.7, ease: CARD_EASE }}
         >
           <Image src={step.image} alt={step.alt} fill className="object-cover" sizes="360px" />
         </motion.div>
