@@ -58,7 +58,7 @@ export function IconHoverButton({
       <>
         <span
           aria-hidden
-          className={`pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#e4d0ce] transition-transform ${hoverEase} group-hover:scale-[36] group-focus-visible:scale-[36] motion-reduce:scale-100!`}
+          className={`pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#331110] transition-transform ${hoverEase} group-hover:scale-[36] group-focus-visible:scale-[36] motion-reduce:scale-100!`}
         />
         <span
           className={`relative z-10 whitespace-nowrap transition-transform ${hoverEase} group-hover:-translate-x-[15px] group-focus-visible:-translate-x-[15px] motion-reduce:translate-x-0!`}
