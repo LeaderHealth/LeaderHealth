@@ -111,7 +111,7 @@ export function TestimonialsVideoSection({
   const count = testimonials.length;
   const labelId = useId();
   const videoRef = useRef<HTMLVideoElement>(null);
-  const hasEntered = useRef(false);
+  const [hasEntered, setHasEntered] = useState(false);
   const [index, setIndex] = useState(() => {
     if (testimonials.length === 0) return 0;
     return Math.min(Math.max(initialIndex, 0), testimonials.length - 1);
@@ -133,7 +133,8 @@ export function TestimonialsVideoSection({
   );
 
   useEffect(() => {
-    hasEntered.current = true;
+    const frame = window.requestAnimationFrame(() => setHasEntered(true));
+    return () => window.cancelAnimationFrame(frame);
   }, []);
 
   useEffect(() => {
@@ -203,7 +204,7 @@ export function TestimonialsVideoSection({
 
   const cardTransition = reduceMotion ? { duration: 0 } : { ...slideSpring, duration: transitionDuration };
   const frameTransition = reduceMotion ? { duration: 0 } : variantSpring;
-  const playEnter = hasEntered.current && !reduceMotion;
+  const playEnter = hasEntered && !reduceMotion;
 
   const sectionStyle = {
     backgroundColor,

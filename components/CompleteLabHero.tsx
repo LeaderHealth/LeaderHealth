@@ -5,6 +5,7 @@ import { useState, type ReactNode } from "react";
 import { useCart } from "@/components/cart/CartProvider";
 import { HsaFsaBadge } from "@/components/HsaFsaBadge";
 import { cartLineId, parsePriceAmount, type CartItem } from "@/lib/cart/types";
+import { labs } from "@/lib/content/products";
 
 const genderNote = "*Select gender assigned at birth for the uniquely aligned biomarkers";
 
@@ -131,6 +132,7 @@ export function CompleteLabHero({
       priceLabel: price,
       amount: parsePriceAmount(price),
       quantity: 1,
+      clientProductId: labs.find((lab) => lab.slug === slug)?.clientProductIds?.[gender],
     };
     addItem(item);
   }
