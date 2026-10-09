@@ -45,7 +45,7 @@ export function IconHoverButton({
 
   const palette =
     variant === "accent"
-      ? "bg-[#e43d4e] text-white hover:bg-[#f04d5c] focus-visible:bg-[#f04d5c]"
+      ? "bg-[#e43d4e] text-white"
       : "bg-white text-ink transition-[background-color,color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[#331110] hover:text-[#F7F3F5] focus-visible:bg-[#331110] focus-visible:text-[#F7F3F5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink motion-reduce:transition-none";
 
   const ease = "duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]";
@@ -73,17 +73,23 @@ export function IconHoverButton({
         </span>
       </>
     ) : (
-      <span className="relative z-10 inline-flex items-center justify-center">
-        <span className="leading-none">{children}</span>
+      <>
         <span
           aria-hidden
-          className={`grid grid-cols-[0fr] opacity-0 transition-[grid-template-columns,opacity] ${ease} group-hover:grid-cols-[1fr] group-hover:opacity-100 group-focus-visible:grid-cols-[1fr] group-focus-visible:opacity-100`}
-        >
-          <span className="min-w-0 overflow-hidden">
-            <ArrowIcon className={`${icon} ml-2`} />
+          className={`pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#32120E] transition-transform ${hoverEase} group-hover:scale-[56] group-focus-visible:scale-[56] motion-reduce:scale-100!`}
+        />
+        <span className="relative z-10 inline-flex items-center justify-center">
+          <span className="leading-none">{children}</span>
+          <span
+            aria-hidden
+            className={`grid grid-cols-[0fr] opacity-0 transition-[grid-template-columns,opacity] ${ease} group-hover:grid-cols-[1fr] group-hover:opacity-100 group-focus-visible:grid-cols-[1fr] group-focus-visible:opacity-100`}
+          >
+            <span className="min-w-0 overflow-hidden">
+              <ArrowIcon className={`${icon} ml-2`} />
+            </span>
           </span>
         </span>
-      </span>
+      </>
     );
 
   if (href.startsWith("http") || href.startsWith("mailto") || href.startsWith("tel")) {

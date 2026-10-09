@@ -218,7 +218,7 @@ export function FaqBrowse() {
             role="tabpanel"
             id="faq-category-panel"
             aria-labelledby={`faq-tab-${category.id}`}
-            className="flex w-full max-w-[638px] flex-col gap-[17px]"
+            className="mx-auto flex w-full max-w-[638px] flex-col gap-[17px]"
           >
             {category.items.map((item) => {
               const open = openQuestionId === item.id;
