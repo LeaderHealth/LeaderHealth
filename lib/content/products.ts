@@ -163,8 +163,7 @@ export const products: Product[] = [
     threeMonthProductId: "keU1sjz2zEQ918IBpBEF_1",
     audience: "all",
     price: "Starting at $129/Month",
-    image:
-      "https://framerusercontent.com/images/au9n9RNuyjpJnXD4hpJpuUARaE.png?width=2286&height=1287",
+    image: "/images/products/glutathione.png",
     tagline: "Antioxidant support delivered in a format that can actually be absorbed.",
     description:
       "Injectable glutathione is used as a wellness essential for cellular protection and recovery. Your clinician reviews whether it belongs in your protocol.",
@@ -181,8 +180,7 @@ export const products: Product[] = [
     audience: "all",
     listed: false,
     price: "Starting at $119",
-    image:
-      "https://framerusercontent.com/images/au9n9RNuyjpJnXD4hpJpuUARaE.png?width=2286&height=1287",
+    image: "/images/products/nad.png",
     tagline: "Cellular energy support with injectable and nasal options.",
     description:
       "NAD+ protocols are used for energy and recovery. Your provider helps choose injectable or nasal delivery based on your goals and tolerance.",
@@ -601,8 +599,7 @@ export const products: Product[] = [
     threeMonthProductId: "prod_3d638894ad732191af0214fa_2",
     audience: "all",
     price: "Starting at $149/month",
-    image:
-      "https://framerusercontent.com/images/au9n9RNuyjpJnXD4hpJpuUARaE.png?width=2286&height=1287",
+    image: "/images/products/nad.png",
     tagline: "Injectable NAD+ for cellular energy support under clinician direction.",
     description:
       "NAD+ injectable protocols are used in longevity care focused on cellular metabolism. Your provider sets frequency and whether a nasal option is a better fit.",
@@ -619,8 +616,7 @@ export const products: Product[] = [
     clientProductId: "prod_3d638894ad732191af0214fa_1",
     audience: "all",
     price: "Starting at $119",
-    image:
-      "https://framerusercontent.com/images/au9n9RNuyjpJnXD4hpJpuUARaE.png?width=2286&height=1287",
+    image: "/images/products/nad.png",
     tagline: "Needle-free NAD+ when a nasal format fits your routine.",
     description:
       "NAD+ nasal spray is an at-home option for patients whose clinician prefers not to start with injections. It is still a prescribed protocol, not an over-the-counter wellness spray.",

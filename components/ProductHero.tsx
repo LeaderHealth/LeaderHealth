@@ -36,8 +36,18 @@ export function ProductHero({ product }: { product: Product }) {
   const redHeroCover = menHormoneCover || product.slug === "men-sexual-health-tadalafil";
   const oxytocinHero = product.slug === "oxytocin-nasal-spray";
   const pt141Hero = product.slug === "sexual-health-pt-141-nasal";
+  const glutathioneHero = product.slug === "longevity-glutathione";
+  const nadHero =
+    product.slug === "longevity-nad" ||
+    product.slug === "nad-injectable" ||
+    product.slug === "longevity-nad-nasal-spray";
   const nasalHero = oxytocinHero || pt141Hero;
-  const heroCover = pt141Hero ? pt141Cover : oxytocinHero ? oxytocinCover : redHeroCover ? tadalafilCover : undefined;
+  const pt141CoverHero =
+    pt141Hero ||
+    glutathioneHero ||
+    product.slug === "weight-loss-semaglutide" ||
+    product.slug === "weight-loss-tirzepatide";
+  const heroCover = pt141CoverHero ? pt141Cover : oxytocinHero ? oxytocinCover : redHeroCover ? tadalafilCover : undefined;
 
   return (
     <SafetyInformationModal
@@ -66,8 +76,8 @@ export function ProductHero({ product }: { product: Product }) {
           <Image
             src={product.image}
             alt={product.name}
-            width={pt141Hero ? 208 : oxytocinHero ? 281 : 785}
-            height={pt141Hero ? 691 : oxytocinHero ? 948 : 995}
+            width={pt141Hero ? 208 : oxytocinHero ? 281 : glutathioneHero ? 249 : nadHero ? 416 : 785}
+            height={pt141Hero ? 691 : oxytocinHero ? 948 : glutathioneHero ? 625 : nadHero ? 604 : 995}
             className={`mx-auto w-auto object-contain drop-shadow-2xl ${nasalHero ? "h-[min(52vh,420px)]" : "h-[min(58vh,520px)]"}`}
             sizes="(max-width: 1024px) 80vw, 480px"
             priority

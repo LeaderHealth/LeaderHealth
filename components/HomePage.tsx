@@ -133,40 +133,36 @@ const careOptions = [
     name: "Testosterone Cypionate",
     category: "Hormone Therapy",
     price: "Starting at $109 per month",
-    image: "https://framerusercontent.com/images/v18TtF6idRTxtVpZ4ELVTqQf8Q.png?width=1080&height=1350",
-    width: 1080,
-    height: 1350,
-    imageClass: "max-h-[73.07%]",
+    image: "/images/products/testosterone-cypionate.png",
+    width: 583,
+    height: 1275,
   },
   {
     href: "/products/men-sexual-health-combo-troches",
     name: "Combo Troches",
     category: "Sexual Health",
     price: "Starting at $99 per month",
-    image: "https://framerusercontent.com/images/xiLmspoD4quCotY2Ro6T9VdAuU.png?width=1890&height=2363",
-    width: 1890,
-    height: 2363,
-    imageClass: "max-h-full",
+    image: "/images/products/combo-troche.png",
+    width: 937,
+    height: 597,
   },
   {
     href: "/products/longevity-nad",
     name: "NAD+",
     category: "Longevity",
     price: "Starting at $139 per month",
-    image: "https://framerusercontent.com/images/au9n9RNuyjpJnXD4hpJpuUARaE.png?width=2286&height=1287",
-    width: 2286,
-    height: 1287,
-    imageClass: "max-h-full",
+    image: "/images/products/nad.png",
+    width: 416,
+    height: 604,
   },
   {
     href: "/products/weight-loss-semaglutide",
     name: "Semaglutide",
     category: "Weight",
     price: "Starting at $159 per month",
-    image: "https://framerusercontent.com/images/qjehMU3idCiDUkHLomxHWBSbnkk.png?width=626&height=888",
-    width: 626,
-    height: 888,
-    imageClass: "max-h-full",
+    image: "/images/products/semaglutide.png",
+    width: 293,
+    height: 634,
   },
 ];
 
@@ -624,7 +620,7 @@ export function HomePage() {
                       alt=""
                       width={item.width}
                       height={item.height}
-                      className={`h-auto w-auto max-w-full object-contain ${item.imageClass}`}
+                      className="h-auto max-h-[240px] w-auto max-w-[88%] object-contain"
                     />
                   </div>
                   <p className="mt-1 text-center font-sans text-[12px] leading-snug text-[#8a817e] sm:text-[13px]">
