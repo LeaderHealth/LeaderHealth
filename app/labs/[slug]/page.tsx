@@ -133,7 +133,14 @@ export default async function LabPage({ params }: Props) {
             labFaqs,
           )}
         />
-        <CompleteLabHero slug={lab.slug} image={lab.image} price={lab.price} {...visible} />
+        <CompleteLabHero
+          slug={lab.slug}
+          image={lab.image}
+          price={lab.price}
+          menUrl={`/checkout?product=${lab.slug}&variant=${encodeURIComponent("For Men")}`}
+          womenUrl={`/checkout?product=${lab.slug}&variant=${encodeURIComponent("For Women")}`}
+          {...visible}
+        />
         <section className="bg-[#f6f2f1] px-10 py-16 text-center md:py-20">
           <div className="mx-auto grid max-w-[1040px] gap-10 md:grid-cols-3 md:gap-x-16">
             {completeLabPoints.map((point) => (

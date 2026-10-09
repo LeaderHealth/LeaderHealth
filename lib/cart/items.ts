@@ -41,5 +41,12 @@ export function cartItemFromSlug(slug: string, variantName?: string) {
     return cartItemFromProduct(product, variant);
   }
   const lab = labs.find((item) => item.slug === slug);
-  return lab ? cartItemFromLab(lab) : null;
+  if (!lab) return null;
+  const item = cartItemFromLab(lab);
+  if (!variantName) return item;
+  return {
+    ...item,
+    id: cartLineId(lab.slug, variantName),
+    variant: variantName,
+  };
 }
