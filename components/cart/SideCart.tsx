@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCart } from "./CartProvider";
 import { formatPrice } from "@/lib/genhealth/types";
@@ -11,6 +12,12 @@ export function SideCart() {
   const pathname = usePathname();
   const { items, isOpen, closeCart, removeItem, setQuantity, subtotal, count } = useCart();
   const onCheckout = pathname.startsWith("/checkout");
+  const [notice, setNotice] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    setNotice(null);
+  }, [items]);
 
   function go(href: string) {
     if (href === pathname || (href === "/checkout" && onCheckout)) {
@@ -21,8 +28,37 @@ export function SideCart() {
     closeCart();
   }
 
-  function continueToCheckout() {
-    go("/checkout");
+  async function continueToCheckout() {
+    if (!items.length || onCheckout) {
+      go("/checkout");
+      return;
+    }
+    setPending(true);
+    setNotice(null);
+    try {
+      const response = await fetch("/api/cart/checkout", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          items: items.map((item) => ({
+            slug: item.slug,
+            name: item.name,
+            variant: item.variant,
+            clientProductId: item.clientProductId,
+          })),
+        }),
+      });
+      const data = (await response.json()) as { ok?: boolean; url?: string; error?: string; item?: string };
+      if (!data.ok || typeof data.url !== "string") {
+        setNotice(data.error || `Couldn't match ${data.item || "an item"} to a checkout product.`);
+        return;
+      }
+      window.location.assign(data.url);
+    } catch {
+      setNotice(`Couldn't match ${items[0]?.name || "an item"} to a checkout product.`);
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
@@ -128,10 +164,13 @@ export function SideCart() {
                 <p className="text-sm text-taupe">Subtotal</p>
                 <p className="text-2xl">{formatPrice(subtotal)}</p>
               </div>
+              {notice ? <p className="mt-3 text-sm text-accent">{notice}</p> : null}
               <button
                 type="button"
                 onClick={continueToCheckout}
-                className="mt-4 flex w-full items-center justify-center rounded-[10px] bg-ink py-3.5 text-xs font-medium tracking-[0.08em] text-white"
+                disabled={pending}
+                aria-busy={pending}
+                className="mt-4 flex w-full items-center justify-center rounded-[10px] bg-ink py-3.5 text-xs font-medium tracking-[0.08em] text-white disabled:opacity-60"
               >
                 {onCheckout ? "BACK TO CHECKOUT" : items.length ? "CONTINUE TO CHECKOUT" : "START CHECKOUT"}
               </button>
