@@ -1,7 +1,6 @@
-import { labs, products, type Product } from "@/lib/content/products";
+import { labs, products, type Lab, type Product } from "@/lib/content/products";
 import { cartLineId, parsePriceAmount, type CartItem } from "./types";
 
-type Lab = (typeof labs)[number];
 type Variant = NonNullable<Product["variants"]>[number];
 
 export function cartItemFromProduct(product: Product, variant?: Variant): CartItem {
@@ -16,19 +15,22 @@ export function cartItemFromProduct(product: Product, variant?: Variant): CartIt
     priceLabel,
     amount: parsePriceAmount(priceLabel),
     quantity: 1,
+    clientProductId: variant?.clientProductId ?? product.clientProductId,
   };
 }
 
-export function cartItemFromLab(lab: Lab): CartItem {
+export function cartItemFromLab(lab: Lab, gender?: "Men" | "Women"): CartItem {
   return {
-    id: cartLineId(lab.slug),
+    id: cartLineId(lab.slug, gender),
     slug: lab.slug,
     name: lab.name,
+    variant: gender ? `For ${gender}` : undefined,
     href: `/labs/${lab.slug}`,
     image: lab.image,
     priceLabel: lab.price,
     amount: parsePriceAmount(lab.price),
     quantity: 1,
+    clientProductId: (gender && lab.clientProductIds?.[gender]) || lab.clientProductId,
   };
 }
 
@@ -42,6 +44,8 @@ export function cartItemFromSlug(slug: string, variantName?: string) {
   }
   const lab = labs.find((item) => item.slug === slug);
   if (!lab) return null;
+  const gender = variantName === "For Men" ? "Men" : variantName === "For Women" ? "Women" : undefined;
+  if (gender) return cartItemFromLab(lab, gender);
   const item = cartItemFromLab(lab);
   if (!variantName) return item;
   return {

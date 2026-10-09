@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getProduct, products } from "@/lib/content/products";
-import { menComboTrochesFaqs, productFaqs, tadalafilFaqs, tirzepatideFaqs, womenComboTrochesFaqs, womenHrtFaqs } from "@/lib/content/faqs";
+import { faqsForProduct } from "@/lib/content/faqs";
 import { ProductHero } from "@/components/ProductHero";
 import { PriceCompare } from "@/components/PriceCompare";
 import { ProductVariants } from "@/components/ProductVariants";
@@ -17,13 +17,6 @@ import { buildProductPageSchema } from "@/lib/seo/schema";
 import type { Metadata } from "next";
 
 type Props = { params: Promise<{ slug: string }> };
-
-function faqsFor(slug: string) {
-  if (slug === "weight-loss-tirzepatide") return tirzepatideFaqs;
-  if (slug === "men-sexual-health-tadalafil") return tadalafilFaqs;
-  if (slug === "women-hormone-therapy") return womenHrtFaqs;
-  return productFaqs;
-}
 
 export function generateStaticParams() {
   return products.map((p) => ({ slug: p.slug }));
@@ -47,12 +40,7 @@ export default async function ProductPage({ params }: Props) {
   const product = getProduct(slug);
   if (!product) notFound();
 
-  const faqs =
-    slug === "men-sexual-health-combo-troches" || slug === "intimacy-blend-(pt-141-oxytocin-tadalafil)"
-      ? menComboTrochesFaqs
-      : slug === "women-sexual-health-combo-troches"
-        ? womenComboTrochesFaqs
-        : (product.faqs ?? faqsFor(slug));
+  const faqs = product.faqs ?? faqsForProduct(slug);
   const structuredData = <JsonLd data={buildProductPageSchema(product, faqs)} />;
 
   if (slug === "women-hormone-therapy") {
@@ -67,7 +55,7 @@ export default async function ProductPage({ params }: Props) {
               FAQ: We&apos;ve Got <span className="font-serif-italic !tracking-[-0.04em] text-[#e43d4e]">Answers</span>.
             </h2>
             <div className="mt-[26px]">
-              <FaqDropdownItems items={womenHrtFaqs} />
+              <FaqDropdownItems items={faqs} />
             </div>
           </div>
         </section>
@@ -95,7 +83,7 @@ export default async function ProductPage({ params }: Props) {
               FAQ: We&apos;ve Got <span className="font-serif-italic !tracking-[-0.04em] text-[#e43d4e]">Answers</span>.
             </h2>
             <div className="mt-[26px]">
-              <FaqDropdownItems items={menComboTrochesFaqs} />
+              <FaqDropdownItems items={faqs} />
             </div>
           </div>
         </section>
@@ -123,7 +111,7 @@ export default async function ProductPage({ params }: Props) {
               FAQ: We&apos;ve Got <span className="font-serif-italic !tracking-[-0.04em] text-[#e43d4e]">Answers</span>.
             </h2>
             <div className="mt-[26px]">
-              <FaqDropdownItems items={menComboTrochesFaqs} />
+              <FaqDropdownItems items={faqs} />
             </div>
           </div>
         </section>
@@ -151,7 +139,7 @@ export default async function ProductPage({ params }: Props) {
               FAQ: We&apos;ve Got <span className="font-serif-italic !tracking-[-0.04em] text-[#e43d4e]">Answers</span>.
             </h2>
             <div className="mt-[26px]">
-              <FaqDropdownItems items={womenComboTrochesFaqs} />
+              <FaqDropdownItems items={faqs} />
             </div>
           </div>
         </section>
@@ -180,7 +168,7 @@ export default async function ProductPage({ params }: Props) {
             FAQ: We&apos;ve Got <span className="font-serif-italic !tracking-[-0.04em] text-[#e43d4e]">Answers</span>.
           </h2>
           <div className="mt-[26px]">
-            <FaqDropdownItems items={product.faqs ?? faqsFor(slug)} />
+            <FaqDropdownItems items={faqs} />
           </div>
         </div>
       </section>

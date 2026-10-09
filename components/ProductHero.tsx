@@ -26,6 +26,8 @@ const tadalafilCover =
   "linear-gradient(339deg, #E43D4E 0%, #331110 100%)";
 const oxytocinCover =
   "linear-gradient(105deg, #d85b69 0%, #b04a54 46%, #682a2d 100%)";
+const pt141Cover =
+  "linear-gradient(105deg, #e5616f 0%, #b84d58 48%, #562224 100%)";
 
 export function ProductHero({ product }: { product: Product }) {
   const badge = product.badge ?? (product.disclaimer?.toLowerCase().includes("fda approved") ? undefined : "Medication");
@@ -33,7 +35,9 @@ export function ProductHero({ product }: { product: Product }) {
   const menHormoneCover = product.category === "hormone" && product.audience === "men";
   const redHeroCover = menHormoneCover || product.slug === "men-sexual-health-tadalafil";
   const oxytocinHero = product.slug === "oxytocin-nasal-spray";
-  const heroCover = oxytocinHero ? oxytocinCover : redHeroCover ? tadalafilCover : undefined;
+  const pt141Hero = product.slug === "sexual-health-pt-141-nasal";
+  const nasalHero = oxytocinHero || pt141Hero;
+  const heroCover = pt141Hero ? pt141Cover : oxytocinHero ? oxytocinCover : redHeroCover ? tadalafilCover : undefined;
 
   return (
     <SafetyInformationModal
@@ -62,9 +66,9 @@ export function ProductHero({ product }: { product: Product }) {
           <Image
             src={product.image}
             alt={product.name}
-            width={oxytocinHero ? 281 : 785}
-            height={oxytocinHero ? 948 : 995}
-            className={`mx-auto w-auto object-contain drop-shadow-2xl ${oxytocinHero ? "h-[min(52vh,420px)]" : "h-[min(58vh,520px)]"}`}
+            width={pt141Hero ? 208 : oxytocinHero ? 281 : 785}
+            height={pt141Hero ? 691 : oxytocinHero ? 948 : 995}
+            className={`mx-auto w-auto object-contain drop-shadow-2xl ${nasalHero ? "h-[min(52vh,420px)]" : "h-[min(58vh,520px)]"}`}
             sizes="(max-width: 1024px) 80vw, 480px"
             priority
           />

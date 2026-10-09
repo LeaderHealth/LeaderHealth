@@ -2,6 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useCart } from "@/components/cart/CartProvider";
+import { cartItemFromSlug } from "@/lib/cart/items";
 import { getLegal } from "@/lib/content/legal";
 import { getProductSafety } from "@/lib/content/product-safety";
 import { HsaFsaBadge } from "@/components/HsaFsaBadge";
@@ -30,8 +32,7 @@ const blends = [
     ),
     best: ["Low libido or reduced desire", "Physical arousal support", "Longer-lasting spontaneity"],
     startLabel: "Start the Intimacy Blend",
-    startHref:
-      "https://products.leaderhealth.clinic/checkout?product=lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_0016ad161e63a4281e6cc27e",
+    slug: "intimacy-blend-(pt-141-oxytocin-tadalafil)",
     learnHref: "/products/intimacy-blend-(pt-141-oxytocin-tadalafil)",
   },
   {
@@ -47,7 +48,7 @@ const blends = [
     ),
     best: ["Physical arousal support", "Enhanced sensation", "Entry-level treatment option"],
     startLabel: "Start the Arousal Blend",
-    startHref: "https://products.leaderhealth.clinic/checkout?product=prod_0016ad161e63a4281e6cc27e_1",
+    slug: "sildenafil-combo-troche-(sildenafil-oxytocin-b12)",
     learnHref: "/products/sildenafil-combo-troche-(sildenafil-oxytocin-b12)",
   },
 ] as const;
@@ -90,6 +91,22 @@ function Stars() {
         </span>
       ))}
     </span>
+  );
+}
+
+function BlendAddButton({ slug, label }: { slug: string; label: string }) {
+  const { addItem } = useCart();
+  const item = cartItemFromSlug(slug);
+  if (!item) return null;
+  return (
+    <button
+      type="button"
+      onClick={() => addItem(item)}
+      className="flex h-[46px] w-full items-center justify-between gap-3 rounded-[14px] bg-[#dcd4bd] px-5 text-[13px] font-semibold tracking-[0.1em] text-[#331110] uppercase transition-colors duration-200 hover:bg-[#efe6d6] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none"
+    >
+      <span>{label}</span>
+      <span aria-hidden>→</span>
+    </button>
   );
 }
 
@@ -252,7 +269,7 @@ export function WomenComboTroches() {
                         ))}
                       </ul>
                       <div className="mt-auto flex flex-col gap-3 pt-8">
-                        <BlendLink href={blend.startHref} label={blend.startLabel} external tone="solid" />
+                        <BlendAddButton slug={blend.slug} label={blend.startLabel} />
                         <BlendLink href={blend.learnHref} label="Learn More" tone="glass" />
                       </div>
                     </div>

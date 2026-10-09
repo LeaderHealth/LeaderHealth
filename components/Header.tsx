@@ -106,6 +106,7 @@ function FeatureCardLink({
   const amount = card.price.match(/\$[\d,]+(?:\.\d+)?/)?.[0] ?? card.price;
   const slug = card.href.split("/").filter(Boolean).pop() ?? "";
   const cartItem = cartItemFromSlug(slug);
+  const learnMore = slug === "women-hormone-therapy";
   const actionClass =
     "group relative inline-flex h-10 min-h-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#331110] px-6 text-[13px] font-semibold text-[#F7F3F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#331110]";
   const actionLabel = (
@@ -115,7 +116,7 @@ function FeatureCardLink({
         className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#5A3431] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
       />
       <span className="relative z-10 whitespace-nowrap transition-transform duration-[400ms] ease-out group-hover:-translate-x-[15px] motion-reduce:translate-x-0! motion-reduce:transition-none">
-        {cartItem ? "Add to cart" : "Get started"}
+        {learnMore ? "Find out more" : cartItem ? "Add to cart" : "Get started"}
       </span>
       <span
         aria-hidden
@@ -167,7 +168,11 @@ function FeatureCardLink({
             <span className="text-[13px] font-medium text-[#6B4A48]">/mo</span>
           </span>
         </p>
-        {cartItem ? (
+        {learnMore ? (
+          <Link href={card.href} className={actionClass}>
+            {actionLabel}
+          </Link>
+        ) : cartItem ? (
           <button type="button" onClick={() => addItem(cartItem)} className={actionClass}>
             {actionLabel}
           </button>

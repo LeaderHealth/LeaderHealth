@@ -22,6 +22,8 @@ export type Product = {
   seoTitle?: string;
   faqs?: { q: string; a: string }[];
   benefits: { title: string; body: string }[];
+  clientProductId?: string;
+  threeMonthProductId?: string;
   variants?: {
     name: string;
     eyebrow?: string;
@@ -30,6 +32,8 @@ export type Product = {
     priceAmount?: string;
     notes: string[];
     image?: string;
+    clientProductId?: string;
+    threeMonthProductId?: string;
   }[];
 };
 
@@ -62,6 +66,7 @@ export const products: Product[] = [
       {
         name: "Semaglutide Injectable",
         eyebrow: "Weekly injection",
+        clientProductId: "lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_48ed6c335e9719fef64960ca",
         detail: "Titrated dosing, adjusted as you progress.",
         price: "From $159 / month",
         priceAmount: "$159",
@@ -72,6 +77,7 @@ export const products: Product[] = [
       {
         name: "Semaglutide Sublingual",
         eyebrow: "Daily sublingual",
+        clientProductId: "lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_ed9cf69ee67ee9d531a8168e",
         detail: "Needle-free troche that dissolves under the tongue.",
         price: "From $129 / month",
         priceAmount: "$129",
@@ -108,6 +114,7 @@ export const products: Product[] = [
       {
         name: "Tirzepatide Injectable",
         eyebrow: "Weekly injection",
+        clientProductId: "lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_SRmQByuZLrUgRE9Kid01",
         detail: "Titrated dosing, adjusted as you progress.",
         price: "From $249 / month",
         priceAmount: "$249",
@@ -118,6 +125,7 @@ export const products: Product[] = [
       {
         name: "Tirzepatide Sublingual",
         eyebrow: "Daily sublingual",
+        clientProductId: "lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_80847dd1802c8e722b24959e",
         detail: "Needle-free troche that dissolves under the tongue.",
         price: "From $229 / month",
         priceAmount: "$229",
@@ -131,6 +139,8 @@ export const products: Product[] = [
     slug: "longevity-sermorelin",
     name: "Sermorelin",
     category: "longevity",
+    clientProductId: "lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_901e56cf05c4aa2bf0d0109d",
+    threeMonthProductId: "prod_901e56cf05c4aa2bf0d0109d_1",
     audience: "all",
     price: "Starting From $149/mo",
     labRequired: true,
@@ -149,6 +159,8 @@ export const products: Product[] = [
     slug: "longevity-glutathione",
     name: "Glutathione",
     category: "longevity",
+    clientProductId: "lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_keU1sjz2zEQ918IBpBEF",
+    threeMonthProductId: "keU1sjz2zEQ918IBpBEF_1",
     audience: "all",
     price: "Starting at $129/Month",
     image:
@@ -183,6 +195,8 @@ export const products: Product[] = [
       {
         name: "NAD+ Injectable",
         eyebrow: "Injectable",
+        clientProductId: "lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_3d638894ad732191af0214fa",
+        threeMonthProductId: "prod_3d638894ad732191af0214fa_2",
         detail: "Clinician-guided injectable protocol.",
         price: "From $149 / month",
         priceAmount: "$149",
@@ -191,6 +205,7 @@ export const products: Product[] = [
       {
         name: "NAD+ Nasal Spray",
         eyebrow: "Nasal spray",
+        clientProductId: "prod_3d638894ad732191af0214fa_1",
         detail: "Needle-free option for at-home use.",
         price: "From $119",
         priceAmount: "$119",
@@ -202,6 +217,7 @@ export const products: Product[] = [
     slug: "men-trt-testosterone-cypionate",
     name: "Testosterone Cypionate",
     category: "hormone",
+    clientProductId: "lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_9e90b3a402901fa3eaa65d7b",
     audience: "men",
     price: "Starting at $109/month",
     labRequired: true,
@@ -220,6 +236,7 @@ export const products: Product[] = [
     slug: "men-trt-enclomiphene",
     name: "Enclomiphene",
     category: "hormone",
+    clientProductId: "lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_e3bf281c42eef9b1907037e2",
     audience: "men",
     price: "Starting at $109/month",
     labRequired: true,
@@ -237,6 +254,7 @@ export const products: Product[] = [
     slug: "men-trt-testosterone-cream",
     name: "Testosterone Cream",
     category: "hormone",
+    clientProductId: "lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_t4oaNGfHRRklQGOdBzKO",
     audience: "men",
     price: "Starting at $119/month",
     labRequired: true,
@@ -273,6 +291,8 @@ export const products: Product[] = [
     slug: "men-sexual-health-tadalafil",
     name: "Tadalafil",
     seoTitle: "Tadalafil for Erectile Dysfunction Online",
+    clientProductId: "lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_09762d5a6da3bd6912cc6be3",
+    threeMonthProductId: "prod_09762d5a6da3bd6912cc6be3_1",
     category: "sexual",
     audience: "men",
     price: "$79/mo",
@@ -298,17 +318,29 @@ export const products: Product[] = [
     slug: "sexual-health-pt-141-nasal",
     name: "PT-141 nasal",
     category: "sexual",
+    clientProductId: "lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_4b6c9e4f2344d501bb305b5e",
     audience: "all",
     price: "Starting at $189/month",
-    image:
-      "https://framerusercontent.com/images/pa9pIi4me0ue0YEMZpLwghozic.png?width=1024&height=587",
+    image: "/images/products/pt-141-nasal.png",
     tagline: "A CNS peptide used for desire — for men and women — when clinically appropriate.",
     description:
-      "PT-141 (bremelanotide) acts on the central nervous system rather than blood flow. It is prescribed after a clinician sorts out what is actually driving low desire.",
+      "PT-141 is a compounded nasal spray that takes a different route than oral ED meds. Rather than working on blood flow, bremelanotide acts on your brain's sexual pathways — supporting desire itself. You use it on demand, before the moment. Your provider reviews your cardiovascular health and blood pressure first, since it can affect blood pressure.",
+    highlight: "$189/month, three-month start, then cancel anytime.",
+    safety:
+      "*Do not use if you have uncontrolled high blood pressure or heart disease, or if you are or may be pregnant. Compounded. Not FDA approved. No bremelanotide nasal spray is FDA approved.",
     benefits: [
-      { title: "Desire-focused", body: "Different pathway than PDE5 medications." },
-      { title: "Men and women", body: "Used in both when the evaluation supports it." },
-      { title: "Nasal option", body: "A needle-free format for at-home use." },
+      {
+        title: "Route-specific review",
+        body: "PT-141 is designed to act centrally on pathways linked to sexual desire and arousal.",
+      },
+      {
+        title: "Supports desire",
+        body: "Provider evaluates if nasal route is suitable based on differing evidence.",
+      },
+      {
+        title: "Safety-screened",
+        body: "Cardiovascular and medication safety screened pre-prescription.",
+      },
     ],
   },
   {
@@ -368,6 +400,7 @@ export const products: Product[] = [
     slug: "women-hrt-testosterone-cream",
     name: "Testosterone Cream",
     category: "hormone",
+    clientProductId: "lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_6iIhc7giORvkHheSgDLi",
     audience: "women",
     price: "Starting at $297/month",
     image:
@@ -391,6 +424,7 @@ export const products: Product[] = [
     slug: "women-hrt-testosterone-injection-low-dose",
     name: "Testosterone injection (low-dose)",
     category: "hormone",
+    clientProductId: "lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_bf762c10c31501cffa97b613",
     audience: "women",
     price: "Starting at $195/month",
     image:
@@ -407,6 +441,7 @@ export const products: Product[] = [
   {
     slug: "women-hormone-therapy-vaginal-estrogen-cream",
     name: "Vaginal Estrogen Cream",
+    clientProductId: "lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_760a918920adf50705f785f4",
     category: "hormone",
     audience: "women",
     price: "Starting at $267",
@@ -424,6 +459,8 @@ export const products: Product[] = [
   {
     slug: "women-hrt-vaginal-estrogen-suppository",
     name: "Vaginal Estrogen Suppository",
+    clientProductId: "lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_838073b1b57336246da98f60",
+    threeMonthProductId: "prod_838073b1b57336246da98f60_1",
     category: "hormone",
     audience: "women",
     price: "Starting at $69",
@@ -441,6 +478,8 @@ export const products: Product[] = [
   {
     slug: "women-hormone-therapy-estradiol-patch",
     name: "Estradiol Patch",
+    clientProductId: "prod_4f6c68b97e6447cf8869b3dc_1",
+    threeMonthProductId: "prod_4f6c68b97e6447cf8869b3dc_2",
     category: "hormone",
     audience: "women",
     price: "Starting at $169",
@@ -459,6 +498,7 @@ export const products: Product[] = [
     slug: "women-hormone-therapy-estradiol-pill",
     name: "Estradiol Pill",
     category: "hormone",
+    clientProductId: "lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_4f6c68b97e6447cf8869b3dc",
     audience: "women",
     price: "Starting at $207",
     image:
@@ -476,6 +516,7 @@ export const products: Product[] = [
     slug: "women-hormone-therapy-progesterone-(oral)",
     name: "Progesterone (oral)",
     category: "hormone",
+    clientProductId: "lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_iZT4cfCiDcwOkqT3TCLg",
     audience: "women",
     price: "Starting at $207",
     image:
@@ -493,6 +534,8 @@ export const products: Product[] = [
     slug: "oxytocin-nasal-spray",
     name: "Oxytocin Nasal Spray",
     category: "sexual",
+    clientProductId: "lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_899becab62423bae7c0cb086",
+    threeMonthProductId: "prod_899becab62423bae7c0cb086_1",
     audience: "all",
     price: "Starting at $159",
     labRequired: true,
@@ -519,6 +562,7 @@ export const products: Product[] = [
     slug: "sildenafil-combo-troche-(sildenafil-oxytocin-b12)",
     name: "Sildenafil Combo Troche (Sildenafil + Oxytocin + B12)",
     category: "sexual",
+    clientProductId: "prod_0016ad161e63a4281e6cc27e_1",
     audience: "all",
     price: "Starting at $89/month",
     image:
@@ -536,6 +580,7 @@ export const products: Product[] = [
     slug: "intimacy-blend-(pt-141-oxytocin-tadalafil)",
     name: "Intimacy Blend (PT-141 + Oxytocin + Tadalafil)",
     category: "sexual",
+    clientProductId: "lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_0016ad161e63a4281e6cc27e",
     audience: "all",
     price: "Starting at $229/month",
     image: "/images/products/intimacy-blend.png",
@@ -552,6 +597,8 @@ export const products: Product[] = [
     slug: "nad-injectable",
     name: "NAD+ Injectable",
     category: "longevity",
+    clientProductId: "lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_3d638894ad732191af0214fa",
+    threeMonthProductId: "prod_3d638894ad732191af0214fa_2",
     audience: "all",
     price: "Starting at $149/month",
     image:
@@ -569,6 +616,7 @@ export const products: Product[] = [
     slug: "longevity-nad-nasal-spray",
     name: "NAD+ Nasal Spray",
     category: "longevity",
+    clientProductId: "prod_3d638894ad732191af0214fa_1",
     audience: "all",
     price: "Starting at $119",
     image:
@@ -584,11 +632,27 @@ export const products: Product[] = [
   },
 ];
 
-export const labs = [
+export type Lab = {
+  slug: string;
+  name: string;
+  biomarkers: string;
+  price: string;
+  image: string;
+  description: string;
+  recommended?: boolean;
+  clientProductId?: string;
+  clientProductIds?: { Men: string; Women: string };
+};
+
+export const labs: Lab[] = [
   {
     slug: "labs-complete-panel",
     name: "Complete Lab",
     biomarkers: "64 biomarkers",
+    clientProductIds: {
+      Men: "lab-quest-a530dda9-complete-lab-panel-men",
+      Women: "lab-junction-a530dda9-complete-panel-mktg-women",
+    },
     price: "$179",
     image:
       "https://framerusercontent.com/images/F7x0JTDFEFbHV8R25qS1PWofP6g.png?width=1620&height=2880",
@@ -599,6 +663,10 @@ export const labs = [
     slug: "labs-advance-panel",
     name: "Advanced Lab",
     biomarkers: "100 biomarkers",
+    clientProductIds: {
+      Men: "lab-junction-a530dda9-advanced-panel-mktg-men",
+      Women: "lab-junction-a530dda9-advanced-panel-mktg-women",
+    },
     price: "$399",
     recommended: true,
     image:

@@ -21,6 +21,10 @@ export function SideCart() {
     closeCart();
   }
 
+  function continueToCheckout() {
+    go("/checkout");
+  }
+
   return (
     <AnimatePresence>
       {isOpen ? (
@@ -126,7 +130,7 @@ export function SideCart() {
               </div>
               <button
                 type="button"
-                onClick={() => go("/checkout")}
+                onClick={continueToCheckout}
                 className="mt-4 flex w-full items-center justify-center rounded-[10px] bg-ink py-3.5 text-xs font-medium tracking-[0.08em] text-white"
               >
                 {onCheckout ? "BACK TO CHECKOUT" : items.length ? "CONTINUE TO CHECKOUT" : "START CHECKOUT"}
