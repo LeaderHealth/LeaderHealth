@@ -56,9 +56,13 @@ export default function PeptidesPage() {
           <div className="flex flex-col items-center gap-3">
             <a
               href={GET_STARTED_URL}
-              className="group inline-flex h-[47px] items-center justify-center rounded-full bg-[#DF4452] px-7 text-base font-medium text-[#F7F3F5] transition-colors duration-500 ease-[cubic-bezier(0.44,0,0.56,1)] hover:bg-[#E33D4E] hover:text-white focus-visible:bg-[#E33D4E] focus-visible:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#32120E]"
+              className="group relative inline-flex h-[47px] items-center justify-center overflow-hidden rounded-full bg-[#DF4452] px-7 text-base font-medium text-[#F7F3F5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#32120E]"
             >
-              <span className="inline-flex items-center justify-center">
+              <span
+                aria-hidden
+                className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#32120E] transition-transform duration-[400ms] ease-out group-hover:scale-[56] group-focus-visible:scale-[56] motion-reduce:scale-100! motion-reduce:transition-none"
+              />
+              <span className="relative z-10 inline-flex items-center justify-center">
                 <span>Start Assessment</span>
                 <span
                   aria-hidden

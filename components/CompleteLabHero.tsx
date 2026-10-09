@@ -15,14 +15,41 @@ function labsCta(title: string) {
   return "Get your labs started";
 }
 
+function ArrowIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="ml-1.5 h-3.5 w-3.5" fill="none" aria-hidden>
+      <path
+        d="M5 12h13M13.5 6.5 19 12l-5.5 5.5"
+        stroke="currentColor"
+        strokeWidth="2.15"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function GenderLink({ href, children }: { href: string; children: string }) {
   return (
     <Link
       href={href}
-      className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full bg-[#e23d4c] px-3 font-sans text-[13px] font-medium tracking-[0.04em] text-white transition-colors hover:bg-[#c42e3c] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e23d4c]"
+      className="group relative inline-flex h-10 w-full min-w-0 flex-1 items-center justify-center overflow-hidden rounded-full bg-[#DF4452] font-sans text-[13px] font-medium tracking-[0.04em] text-[#F7F3F5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#32120E]"
     >
-      <span>{children}</span>
-      <span aria-hidden>→</span>
+      <span
+        aria-hidden
+        className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#32120E] transition-transform duration-[400ms] ease-out group-hover:scale-[56] group-focus-visible:scale-[56] motion-reduce:scale-100! motion-reduce:transition-none"
+      />
+      <span className="relative z-10 inline-flex items-center justify-center">
+        <span>{children}</span>
+        <span
+          aria-hidden
+          className="grid grid-cols-[0fr] opacity-0 transition-[grid-template-columns,opacity] duration-500 ease-[cubic-bezier(0.44,0,0.56,1)] group-hover:grid-cols-[1fr] group-hover:opacity-100 group-focus-visible:grid-cols-[1fr] group-focus-visible:opacity-100"
+        >
+          <span className="min-w-0 overflow-hidden">
+            <ArrowIcon />
+          </span>
+        </span>
+      </span>
     </Link>
   );
 }
