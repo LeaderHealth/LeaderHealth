@@ -149,7 +149,10 @@ export function LabsTeaser() {
   const reduce = useReducedMotion();
 
   return (
-    <section className="relative left-1/2 w-screen max-w-[100vw] -translate-x-1/2 overflow-x-clip bg-white py-[30px]">
+    <section
+      id="explore-labs"
+      className="relative left-1/2 w-screen max-w-[100vw] -translate-x-1/2 scroll-mt-24 overflow-x-clip bg-white py-[30px]"
+    >
       <div className="mx-auto grid w-full max-w-[1200px] items-center gap-10 px-6 min-[810px]:grid-cols-12 min-[810px]:gap-8">
         <motion.div
           className="min-w-0 min-[810px]:col-span-5"
