@@ -438,7 +438,7 @@ export function Footer() {
                   rel="noreferrer"
                   className="inline-flex h-[37px] items-center gap-2 rounded-[12px] border border-[#F7F3F5]/70 bg-[rgba(227,79,94,0.6)] px-3 font-sans text-[15px] font-medium text-[#F7F3F5] transition-colors duration-200 hover:bg-[rgba(227,79,94,0.8)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
                 >
-                  Patient portal
+                  Patient Portal
                   <UserIcon />
                 </a>
               </li>

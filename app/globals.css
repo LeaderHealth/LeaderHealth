@@ -625,13 +625,14 @@ h3.font-sans,
   }
 }
 
-/* Tablet navbar (768–1199). Unlayered so these beat Tailwind md: utilities
-   without changing the desktop bar at 1200px and up. */
+/* Tablet navbar (765–1199). Unlayered so these beat Tailwind md: utilities
+   without changing the desktop bar at 1200px and up. 765px matches the
+   layout width just under the 768px utility breakpoint. */
 .lh-tablet-clip {
   display: none;
 }
 
-@media (min-width: 768px) and (max-width: 1199px) {
+@media (min-width: 765px) and (max-width: 1199px) {
   .lh-tablet-header {
     top: 12px;
     padding-left: 0;
@@ -662,10 +663,12 @@ h3.font-sans,
 
   .lh-tablet-row {
     display: flex;
-    height: 48px;
+    height: auto;
     width: 100%;
     min-width: 0;
     align-items: center;
+    padding-top: 6px;
+    padding-bottom: 6px;
   }
 
   .lh-desktop-nav {
@@ -706,7 +709,7 @@ h3.font-sans,
   /* Keep every menu control on screen. Card art shrinks only when the
      viewport is too short for the full set of links and actions. */
   .lh-tablet-card-media {
-    height: min(123px, max(56px, calc((100dvh - 522px) / 2)));
+    height: min(123px, max(56px, calc((100dvh - 534px) / 2)));
     aspect-ratio: auto;
   }
 }

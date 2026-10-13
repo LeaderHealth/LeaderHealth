@@ -147,12 +147,15 @@ export const products: Product[] = [
     image:
       "https://framerusercontent.com/images/Nxmvv0V7wJmcL1463SseCeRgh8.png?width=1080&height=1350",
     tagline: "Peptide support for recovery, body composition, and overnight repair.",
+    highlight: "$149/month, three-month start, then cancel anytime.",
+    safety:
+      "*Do not use if you have active cancer, or if you are pregnant or breastfeeding. Compounded. Not FDA approved. No FDA approved sermorelin product is on the market.",
     description:
-      "Sermorelin is a growth-hormone–releasing peptide used in physician-guided protocols. Treatment starts with labs so your clinician can confirm it fits your history and goals.",
+      "Sermorelin is a nightly injectable that works with your body's own growth hormone system. Rather than replacing growth hormone the way HGH does, it gently prompts your pituitary gland to release more of your own — a different approach by design. Your provider tracks your IGF-1 levels and checks in on how you're responding over time. It's offered as a provider-guided wellness trial focused on better sleep, recovery, and how you feel day to day.",
     benefits: [
-      { title: "Overnight support", body: "Typically used at night as part of a recovery-focused plan." },
-      { title: "Body composition", body: "Paired with training and protein for lean-mass support." },
-      { title: "Lab-first", body: "Prescribed only after evaluation by a licensed provider." },
+      { title: "Monitored with labs", body: "Sermorelin is designed to stimulate the body's own GH/IGF-1 axis, but symptom outcomes in healthy adults remain uncertain." },
+      { title: "Mechanism-led trial", body: "Your provider may track IGF-1 and safety markers to avoid overexposure and reassess whether continuing makes sense." },
+      { title: "Supports GH signaling", body: "Sermorelin is designed to encourage pulsatile growth hormone release rather than replace growth hormone directly." },
     ],
   },
   {
@@ -165,12 +168,13 @@ export const products: Product[] = [
     price: "Starting at $129/Month",
     image: "/images/products/glutathione.png",
     tagline: "Antioxidant support delivered in a format that can actually be absorbed.",
+    highlight: "Starting at $129/Month",
     description:
-      "Injectable glutathione is used as a wellness essential for cellular protection and recovery. Your clinician reviews whether it belongs in your protocol.",
+      "Glutathione is a powerful antioxidant that helps protect cells from oxidative stress while supporting cellular health and detoxification processes. It also plays a key role in helping the body manage free radicals and maintain healthy cell function. Glutathione therapy is designed to support antioxidant levels as part of a broader approach to wellness and longevity. Your provider reviews your health history, goals, and treatment needs to determine if glutathione is a good fit for you.",
     benefits: [
-      { title: "Cellular support", body: "An antioxidant that does not survive well in the stomach." },
-      { title: "Weekly ritual", body: "Often used as a standing wellness injection." },
-      { title: "Clinician guided", body: "Dosing and frequency are set by your provider." },
+      { title: "Antioxidant support", body: "Helps support the body’s natural defenses against oxidative stress." },
+      { title: "Cellular health", body: "Supports healthy cellular function and the body’s natural repair processes." },
+      { title: "Detoxification support", body: "Supports the liver and the body’s natural pathways for processing and eliminating compounds." },
     ],
   },
   {
@@ -182,12 +186,13 @@ export const products: Product[] = [
     price: "Starting at $119",
     image: "/images/products/nad.png",
     tagline: "Cellular energy support with injectable and nasal options.",
+    highlight: "$139/month, three-month start, then cancel anytime.",
     description:
-      "NAD+ protocols are used for energy and recovery. Your provider helps choose injectable or nasal delivery based on your goals and tolerance.",
+      "NAD+ is an injectable coenzyme your cells rely on for energy production and DNA repair. Levels naturally dip as we age, and many patients report feeling more energized and focused. Your provider guides you through gradual dose adjustments to keep you comfortable and minimize flushing, so you build up tolerance at the right pace. It's offered as a wellness trial with easy at-home subcutaneous dosing.",
     benefits: [
-      { title: "Energy support", body: "Used in longevity protocols focused on cellular metabolism." },
-      { title: "Two paths", body: "Injectable from $149/mo or nasal spray from $119." },
-      { title: "Provider oversight", body: "Not a one-size wellness add-on — dosing is individualized." },
+      { title: "Evidence still emerging", body: "NAD+ is involved in mitochondrial energy metabolism and related cellular pathways." },
+      { title: "Restores Cellular Energy", body: "Results vary, clinical evidence in healthy adults is still emerging." },
+      { title: "At-home route", body: "Subcutaneous dosing removes the need for clinic-based infusions when prescribed." },
     ],
     variants: [
       {
@@ -222,12 +227,15 @@ export const products: Product[] = [
     image:
       "https://framerusercontent.com/images/v18TtF6idRTxtVpZ4ELVTqQf8Q.png?width=1080&height=1350",
     tagline: "Clinician-led TRT after labs, history, and a real plan for follow-up.",
+    highlight: "Medication, provider access, and labs are included for $109/month. Three-month start, then cancel anytime.",
+    safety:
+      "*Do not use if you have breast cancer or known or suspected prostate cancer, or if you are pregnant. FDA approved medication. Schedule III controlled substance; federal law limits refills to five within six months.",
     description:
-      "Testosterone cypionate is prescribed only after evaluation. Your clinician reviews symptoms, labs, and risk factors, then sets a protocol with ongoing monitoring.",
+      "Feeling the effects of low testosterone? This injectable option is for men whose symptoms and lab results point to therapy. You start with a 64-marker panel and a clearance visit, then your clinician personalizes your dose and monitoring.",
     benefits: [
-      { title: "Energy and drive", body: "Used when labs and symptoms support replacement." },
-      { title: "Follow-up built in", body: "Dosing is adjusted to labs, not set-and-forget." },
-      { title: "Safety first", body: "Hematocrit, estradiol, and symptoms are watched over time." },
+      { title: "May support libido", body: "Testosterone may improve libido; results vary." },
+      { title: "Supports monitored levels", body: "Safety labs ensure proper treatment levels." },
+      { title: "May support lean mass", body: "Normalizing low testosterone supports lean mass." },
     ],
   },
   {
@@ -240,12 +248,13 @@ export const products: Product[] = [
     labRequired: true,
     image: "/images/products/enclomiphene.png",
     tagline: "A fertility-minded option for men who need testosterone support.",
+    highlight: "$109/month, three-month start, then cancel anytime.",
     description:
-      "Enclomiphene may be considered when a clinician wants to support testosterone while preserving downstream signaling. Labs and fertility goals drive the decision.",
+      "Want to support your own testosterone instead of replacing it? This daily pill may help your body make more naturally, and can fit if you'd rather avoid injections or keep fertility in mind. You start with labs and a clearance visit, then your clinician tracks your progress.",
     benefits: [
-      { title: "Alternative path", body: "Not every man needs injectable testosterone first." },
-      { title: "Lab guided", body: "Baseline and follow-up labs shape dose and duration." },
-      { title: "Goals first", body: "Fertility, symptoms, and safety are reviewed together." },
+      { title: "Supports natural production", body: "Stimulates natural testosterone production via pituitary." },
+      { title: "May preserve fertility", body: "Preserves fertility; doesn't replace testosterone directly." },
+      { title: "Oral, no injections", body: "Daily pill offers lower-friction injection alternative." },
     ],
   },
   {
@@ -277,12 +286,13 @@ export const products: Product[] = [
     image:
       "https://framerusercontent.com/images/NNkqjkjcButh0STKbHYnciyEKA.png?width=1000&height=1119",
     tagline: "Perimenopause and menopause care with more than one delivery option.",
+    highlight: "Starting at just $69/Month.",
     description:
-      "Women's hormone therapy is built around symptoms, labs, and the formats that are actually available — cream, patch, pill, or vaginal options — with a clinician choosing what fits.",
+      "Women's Hormone Therapy is a clinician-led program for perimenopause and menopause symptoms. After a 64-marker lab panel and clearance visit, your provider may recommend estradiol, progesterone, testosterone, or other options. Treatment is personalized based on your symptoms, age, health history, and individual risk factors. Ongoing monitoring ensures safe and effective care.",
     benefits: [
-      { title: "Format flexibility", body: "Patch, cream, oral, and vaginal options when one runs short." },
-      { title: "Symptom-led", body: "Sleep, mood, vasomotor symptoms, and bone health are considered together." },
-      { title: "Ongoing review", body: "Plans change as your cycle and labs change." },
+      { title: "Lab-guided HRT", body: "Your provider uses labs, history, and symptoms to choose the safest appropriate hormone plan." },
+      { title: "May support comfort", body: "A monitored regimen may support temperature comfort, sleep, mood, libido, or vaginal comfort depending on the prescription." },
+      { title: "Ongoing monitoring", body: "Follow-up labs and visits help your provider adjust the plan as your biomarkers and symptoms change." },
     ],
   },
   {
@@ -322,7 +332,7 @@ export const products: Product[] = [
     image: "/images/products/pt-141-nasal.png",
     tagline: "A CNS peptide used for desire — for men and women — when clinically appropriate.",
     description:
-      "PT-141 is a compounded nasal spray that takes a different route than oral ED meds. Rather than working on blood flow, bremelanotide acts on your brain's sexual pathways — supporting desire itself. You use it on demand, before the moment. Your provider reviews your cardiovascular health and blood pressure first, since it can affect blood pressure.",
+      "PT-141 is a compounded nasal spray that takes a different route than oral ED meds. Rather than working on blood flow, bremelanotide acts on your brain's arousal pathways — supporting desire itself. You use it on demand, before the moment. Your provider screens your cardiovascular health and blood pressure first, since it can affect blood pressure.",
     highlight: "$189/month, three-month start, then cancel anytime.",
     safety:
       "*Do not use if you have uncontrolled high blood pressure or heart disease, or if you are or may be pregnant. Compounded. Not FDA approved. No bremelanotide nasal spray is FDA approved.",
@@ -368,12 +378,13 @@ export const products: Product[] = [
     image:
       "https://framerusercontent.com/images/pa9pIi4me0ue0YEMZpLwghozic.png?width=1024&height=587",
     tagline: "Combination troches when a clinician wants more than a single agent.",
+    highlight: "Starting at $89/month.",
     description:
-      "Men's combo troches may include agents such as sildenafil with supportive ingredients. Your provider decides if a combination belongs in your plan.",
+      "Personalized support for performance, arousal, and intimacy. Our custom-compounded combo troches are designed to support men's sexual wellness with provider-guided treatment tailored to your needs. For most men seeking physical performance support, we recommend our Arousal Troche, which combines sildenafil, oxytocin, and B12 for on-demand support. If reduced desire or libido is also part of the picture, your licensed provider may recommend our more comprehensive Intimacy Blend instead.",
     benefits: [
-      { title: "Combination approach", body: "More than one pathway when clinically useful." },
-      { title: "Dissolvable", body: "Troche format for at-home use." },
-      { title: "Prescribed, not stacked DIY", body: "Doses are set by a licensed clinician." },
+      { title: "Discreet, on-demand", body: "Prescribed only after your provider determines the right combination for you." },
+      { title: "Multi-pathway review", body: "A sublingual troche is taken before activity without an injection or nasal spray." },
+      { title: "Provider-tailored", body: "Formulated to your exact needs by your clinician." },
     ],
   },
   {
@@ -386,12 +397,13 @@ export const products: Product[] = [
     image:
       "https://framerusercontent.com/images/pa9pIi4me0ue0YEMZpLwghozic.png?width=1024&height=587",
     tagline: "Intimacy blends prescribed after a clinician evaluates desire, hormones, and safety.",
+    highlight: "Starting at $89/month. Recommended Intimacy Blend: $229/month.",
     description:
-      "Women's combo troches may combine agents such as PT-141 with other supportive ingredients. This is a clinical decision, not a wellness stack.",
+      "Personalized support for desire, arousal, and intimacy. Our custom-compounded combo troches are designed to support women's sexual wellness with provider-guided treatment tailored to your needs. For most women, we recommend our Intimacy Blend, which combines PT-141, tadalafil, and oxytocin to support both desire and physical arousal in a single treatment. Your licensed provider will determine the formula that's right for you.",
     benefits: [
-      { title: "Whole-picture eval", body: "Hormones, medications, and desire are reviewed together." },
-      { title: "Personalized blend", body: "Only used when the evaluation supports it." },
-      { title: "Follow-up", body: "Side effects and benefit are checked, not assumed." },
+      { title: "Discreet, on-demand", body: "Prescribed only after your provider determines the right combination for you." },
+      { title: "Multi-pathway review", body: "A sublingual troche is taken before activity without an injection or nasal spray." },
+      { title: "Provider-tailored", body: "Formulated to your exact needs by your clinician." },
     ],
   },
   {
@@ -539,8 +551,9 @@ export const products: Product[] = [
     labRequired: true,
     image: "/images/products/oxytocin-nasal-spray.png",
     tagline: "A clinician-guided oxytocin option for intimacy and connection.",
+    highlight: "Starting at $159",
     description:
-      "Oxytocin nasal spray is prescribed after a clinician reviews desire, relationship context, and other medications. It is not a substitute for evaluating hormones, pain, or mood.",
+      "A compounded oxytocin nasal spray used to support emotional connection, intimacy, and sexual arousal in both men and women. Oxytocin works through the nervous system to enhance bonding and pleasure response, taken on demand ahead of intimacy or as directed by your provider. Delivered through a convenient nasal spray, oxytocin has been studied for its role in social and emotional processing and interpersonal connection.",
     benefits: [
       {
         title: "Intimacy support",

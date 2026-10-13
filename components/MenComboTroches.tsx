@@ -187,10 +187,10 @@ export function MenComboTroches() {
                 <p className="mt-4 font-serif-italic text-[12px] leading-relaxed text-white/88">{compoundedDisclaimer}</p>
                 <div className="mt-5 space-y-4 text-[15px] leading-6 font-light text-[#f7f3f4] [&_strong]:font-semibold">
                   <p>
-                    <strong>Personalized support for desire, arousal, and intimacy.</strong> Our custom-compounded combo troches are designed to support men&apos;s sexual wellness with provider-guided treatment tailored to your needs. For most men seeking <strong>physical performance support</strong>, we recommend our <strong>Arousal Troche</strong>, which combines sildenafil, oxytocin, and B12 for on-demand support. If reduced desire or libido is also part of the picture, your licensed provider may recommend our more comprehensive <strong>Intimacy Blend</strong> instead.
+                    <strong>Personalized support for performance, arousal, and intimacy.</strong> Our custom-compounded combo troches are designed to support men&apos;s sexual wellness with provider-guided treatment tailored to your needs. For most men seeking <strong>physical performance support</strong>, we recommend our <strong>Arousal Troche</strong>, which combines sildenafil, oxytocin, and B12 for on-demand support. If reduced desire or libido is also part of the picture, your licensed provider may recommend our more comprehensive <strong>Intimacy Blend</strong> instead.
                   </p>
                   <p>
-                    <strong>Start with our Arousal Troche at $89/month.</strong>
+                    <strong>Starting at $89/month.</strong>
                   </p>
                 </div>
                 <ChooseTreatmentButton

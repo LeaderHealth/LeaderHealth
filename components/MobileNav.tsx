@@ -115,7 +115,7 @@ const OPEN_CLIP = "inset(0px 0px 0px 0px round 0px)";
 const PILL_VARS = {
   ["--lh-nav-top" as string]: "max(12px, env(safe-area-inset-top, 0px))",
   ["--lh-nav-x" as string]: "clamp(12px, 4vw, 16px)",
-  ["--lh-nav-h" as string]: "50px",
+  ["--lh-nav-h" as string]: "62px",
   ["--lh-nav-pad" as string]: "clamp(16px, 4.5vw, 18px)",
 };
 
@@ -591,7 +591,7 @@ export function MobileNav({
   return (
     <div
       ref={shellRef}
-      className={`fixed inset-0 z-50 min-[441px]:hidden touch-manipulation overflow-x-hidden ${
+      className={`fixed inset-0 z-50 min-[765px]:hidden touch-manipulation overflow-x-hidden ${
         showBar ? "translate-y-0" : "-translate-y-[calc(100%+1rem)]"
       } ${phase === "closed" ? "pointer-events-none" : ""} transition-transform duration-300 ease-out motion-reduce:transition-none`}
     >
@@ -648,7 +648,7 @@ export function MobileNav({
         <div
           className="absolute z-10 flex h-[50px] min-w-0 items-center justify-between gap-3"
           style={{
-            top: expanded ? "12px" : "var(--lh-nav-top)",
+            top: expanded ? "12px" : "calc(var(--lh-nav-top) + 6px)",
             left: expanded ? "16px" : "calc(var(--lh-nav-x) + var(--lh-nav-pad))",
             right: expanded ? "16px" : "calc(var(--lh-nav-x) + var(--lh-nav-pad))",
             transform: expanded
@@ -788,7 +788,7 @@ export function MobileNav({
               href={PORTAL_URL}
               className={`flex min-h-12 items-center justify-center rounded-full border border-white/70 text-[15px] font-medium text-white ${tapFocus}`}
             >
-              Log In / Sign Up
+              Patient Portal
             </a>
             <a
               href={GET_STARTED_URL}

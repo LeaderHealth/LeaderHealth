@@ -193,43 +193,47 @@ export const tirzepatideFaqs = [
 export const tadalafilFaqs = [
   {
     q: "Daily vs. on-demand - which is right for me?",
-    a: "Daily low-dose tadalafil is built for spontaneity so you are not timing a pill. On-demand dosing may still be discussed if that better fits your routine. Your clinician helps choose.",
+    a: "Daily low-dose tadalafil keeps a steady level in the body, which some patients prefer for spontaneity. On-demand dosing is taken before activity. Your provider will help decide based on your routine, medications, and goals.",
   },
   {
     q: "How long does it take to work?",
-    a: "Daily tadalafil builds to a steady level over several days. Your provider will tell you what to expect for your dose and when to follow up if it is not working as planned.",
+    a: "With daily dosing, many patients reach a steady level after several days. Erectile response still depends on sexual stimulation. Your provider will set expectations during your visit.",
   },
   {
     q: "Can I drink alcohol on tadalafil?",
-    a: "Light alcohol may be tolerated, but drinking can worsen dizziness and blood-pressure drops. Ask your clinician what is safe for you.",
+    a: "Moderate alcohol may be compatible for some patients, but heavy alcohol can worsen side effects and reduce response. Discuss your drinking pattern with your provider.",
   },
   {
     q: "What side effects should I know about?",
-    a: "Headache, flushing, indigestion, back pain, and nasal congestion can occur. Seek care immediately for chest pain, an erection lasting more than four hours, or sudden vision or hearing changes.",
+    a: "Reported effects include headache, flushing, indigestion, back discomfort, and nasal congestion. A prolonged painful erection is rare but requires urgent medical care. Your provider will review warning signs.",
   },
   {
     q: "What interactions and warnings are most important?",
-    a: "Do not use tadalafil with any nitrate medicine, including nitroglycerin and poppers. Your provider also reviews blood pressure, heart history, and other medications before prescribing.",
+    a: "Tadalafil is contraindicated with nitrate medications and recreational nitrates ('poppers'); the combination can cause severe, even fatal, low blood pressure. Alpha-blockers, other blood-pressure medications, heavy alcohol, and strong CYP3A4 inhibitors also need review. Class warnings include sudden vision loss (NAION) and sudden hearing loss. Seek urgent care for an erection lasting more than four hours.",
   },
   {
     q: "What is included in the monthly subscription?",
-    a: "Typically the prescribed tablets and clinician follow-up as defined for that protocol. Exact inclusions are shown at checkout.",
+    a: "Your medication and provider access for questions or dose adjustments are included. Labs may be used to evaluate contributing hormone or metabolic factors.",
   },
   {
     q: "How does the labs-first process work?",
-    a: "Your clinician reviews intake and, when needed, labs or vitals before prescribing. Tadalafil is only issued if it is a safe fit.",
+    a: "Start with the $49 intake if you are entering the broader Leader Health clinical pathway. Lab markers like testosterone, lipids, glucose, and PSA when appropriate help your provider understand contributing factors.",
   },
   {
     q: "Where is it compounded?",
-    a: "Tadalafil on this page is an FDA-approved, commercially manufactured product dispensed by a licensed U.S. pharmacy. It is not compounded.",
+    a: "Your prescription is prepared by a licensed compounding pharmacy. Compounded medications are not FDA-approved and are not reviewed by the FDA for safety or efficacy.",
   },
   {
     q: "Is there a commitment?",
-    a: "Plans are typically a three-month start, then cancel anytime, billed monthly according to the Subscription Terms.",
+    a: "Therapy has a three-month minimum so your provider can adjust if needed. After month three, you can cancel anytime.",
   },
   {
     q: "Do you accept insurance?",
-    a: "No insurance is required. Care is cash-pay with transparent monthly pricing.",
+    a: "Leader Health is a cash-pay service; we don't bill insurance. This keeps pricing transparent and care free of coverage restrictions. We'll provide itemized receipts you can submit to your insurer or HSA/FSA administrator for possible reimbursement, though coverage isn't guaranteed.",
+  },
+  {
+    q: "Can I use my HSA or FSA?",
+    a: "Yes — most members can use HSA or FSA funds, and we provide itemized receipts on request. Because plan rules vary, confirm eligibility with your administrator.",
   },
   {
     q: "What if I have another questions?",
@@ -780,6 +784,120 @@ export const productFaqsBySlug: Record<string, FaqItem[]> = {
       "a": "Some patients use vaginal estrogen with systemic HRT, while others use it alone. Your provider will decide based on symptoms, risks, and goals."
     }
   ],
+  "longevity-sermorelin": [
+    {
+      q: "How is sermorelin different from growth hormone (HGH)?",
+      a: "Sermorelin is a growth hormone-releasing hormone analog designed to support your body's own signaling; it is not HGH and is not prescribed for the same indications. Prescribing HGH off-label for anti-aging or athletic use is illegal under federal law, which is one reason GHRH-analog peptides are handled differently. Your provider will be clear about what is known and what is uncertain.",
+    },
+    {
+      q: "Who is sermorelin a fit for?",
+      a: "It may be considered for adults whose labs, history, and goals support a monitored trial. Pregnancy, active cancer, and certain pituitary conditions may make it inappropriate. Your provider decides after review.",
+    },
+    {
+      q: "What does the evidence show?",
+      a: "Sermorelin has been studied primarily in growth-hormone deficiency contexts. Evidence for sleep, recovery, and body-composition outcomes in otherwise healthy adults is limited. Your provider will be direct about what is known and what is uncertain.",
+    },
+    {
+      q: "What side effects should I know about?",
+      a: "Reported effects include injection-site reactions, headache, flushing, and changes in IGF-1 that may warrant lab monitoring. Your provider reviews specific warning signs.",
+    },
+    {
+      q: "Can this affect athletic testing?",
+      a: "Growth-hormone signaling peptides may be relevant for athletic, military, or occupational testing. If you are subject to testing, disclose that before starting.",
+    },
+    {
+      q: "What is included in the monthly subscription?",
+      a: "Medication, injection supplies, provider access, and monitoring labs on the cadence your clinician sets are included.",
+    },
+    {
+      q: "How long until I notice changes?",
+      a: "Some patients notice sleep changes within weeks. Recovery or body-composition changes are more variable and typically require months plus training and nutrition consistency.",
+    },
+    {
+      q: "Where is it compounded?",
+      a: "Your prescription is prepared by a licensed compounding pharmacy. Compounded medications are not FDA-approved and are not reviewed by the FDA for safety or efficacy.",
+    },
+    {
+      q: "Is there a commitment?",
+      a: "Therapy has a three-month minimum so your provider can evaluate response and adjust safely. After month three, you can cancel anytime.",
+    },
+  ],
+  "longevity-nad": [
+    {
+      q: "What does NAD+ do?",
+      a: "NAD+ is a coenzyme involved in energy metabolism, DNA repair, and several signaling pathways. Whether injection produces durable clinical benefit in healthy adults is still being studied. Your provider will discuss the uncertainty clearly.",
+    },
+    {
+      q: "Injection vs. IV vs. oral - what is different?",
+      a: "IV NAD+ delivers a larger dose in a clinical setting. Subcutaneous injection allows lower-dose home administration. Oral precursors follow different absorption and conversion pathways.",
+    },
+    {
+      q: "What is the flushing reaction?",
+      a: "Some patients experience warmth, flushing, or chest tightness during or after dosing. It usually resolves quickly and may improve with slower titration. Tell your provider if symptoms are intense or persistent.",
+    },
+    {
+      q: "Who is NAD+ not a fit for?",
+      a: "Pregnancy, active cancer, and certain medical conditions may be reasons to wait or avoid use. A 64-marker panel and clearance visit are required before prescribing.",
+    },
+    {
+      q: "What side effects should I know about?",
+      a: "Reported effects include injection-site reactions, flushing, headache, and nausea, especially at higher doses. Your provider reviews specific warning signs.",
+    },
+    {
+      q: "What is included in the monthly subscription?",
+      a: "Medication, injection supplies, provider access, and monitoring labs when your clinician determines they are needed are included.",
+    },
+    {
+      q: "How long until I notice changes?",
+      a: "Some patients describe changes in energy or sleep within weeks, while others notice subtle or no changes. It is best evaluated alongside labs and how you feel over several months.",
+    },
+    {
+      q: "Where is it compounded?",
+      a: "Your prescription is prepared by a licensed compounding pharmacy. Compounded medications are not FDA-approved and are not reviewed by the FDA for safety or efficacy.",
+    },
+    {
+      q: "Is there a commitment?",
+      a: "Therapy has a three-month minimum so your provider can evaluate fit and tolerance. After month three, you can cancel anytime.",
+    },
+  ],
+  "oxytocin-nasal-spray": [
+    {
+      q: "What is Oxytocin Nasal Spray?",
+      a: "Oxytocin Nasal Spray is a provider-guided treatment designed to support aspects of intimacy, connection, and sexual wellness.",
+    },
+    {
+      q: "What is Oxytocin Nasal Spray used for?",
+      a: "Depending on the individual treatment plan, a provider may consider oxytocin as part of an approach to intimacy, connection, and sexual wellness. Research into intranasal oxytocin continues, and individual responses may vary.",
+    },
+    {
+      q: "How do I use Oxytocin Nasal Spray?",
+      a: "It is administered through the nose according to your provider's instructions. Your prescribed dose, frequency, and timing will depend on your individual treatment plan.",
+    },
+    {
+      q: "How often is Oxytocin Nasal Spray used?",
+      a: "Frequency varies depending on your prescription and treatment goals. Follow the dosing schedule provided by your clinician rather than adjusting how often you use it on your own.",
+    },
+    {
+      q: "How quickly will I notice a difference?",
+      a: "Responses to intranasal oxytocin vary between individuals, and a specific response or timeline cannot be guaranteed. Your provider can help assess how you are responding and whether your treatment plan should be adjusted.",
+    },
+    {
+      q: "What should I do if I miss a dose?",
+      a: "Follow your prescription instructions. Do not use extra Oxytocin Nasal Spray to make up for a missed dose unless your healthcare provider specifically instructs you to do so.",
+    },
+    {
+      q: "Can I use Oxytocin Nasal Spray during pregnancy or breastfeeding?",
+      a: "Discuss pregnancy, plans to become pregnant, and breastfeeding with your healthcare provider before using Oxytocin Nasal Spray. Your provider can help determine whether it is appropriate for your situation.",
+    },
+    {
+      q: "How should I clean or use the nasal spray device?",
+      a: "Use the nasal spray according to the instructions provided with your prescription. Do not alter the device or share it with anyone, and contact your dispensing pharmacy if you have questions about its use.",
+    },
+    {
+      q: "When should I contact my healthcare provider?",
+      a: "Contact your healthcare provider if you have questions about your treatment, notice unexpected symptoms, or are concerned about how you are responding to Oxytocin Nasal Spray. Seek urgent medical attention for severe or rapidly worsening symptoms.",
+    },
+  ],
   "weight-loss-semaglutide": [
     {
       "q": "Am I a candidate, and who should not take it?",
@@ -946,6 +1064,36 @@ export const productFaqsBySlug: Record<string, FaqItem[]> = {
   ],
 };
 
+const closingProductFaqs: FaqItem[] = [
+  {
+    q: "Do you accept insurance?",
+    a: "Leader Health is a cash-pay service; we don't bill insurance. This keeps pricing transparent and care free of coverage restrictions. We'll provide itemized receipts you can submit to your insurer or HSA/FSA administrator for possible reimbursement, though coverage isn't guaranteed.",
+  },
+  {
+    q: "Can I use my HSA or FSA?",
+    a: "Yes — most members can use HSA or FSA funds, and we provide itemized receipts on request. Because plan rules vary, confirm eligibility with your administrator.",
+  },
+  {
+    q: "What if I have another questions?",
+    a: "Email help@myleaderhealth.com or call (254) 244-0104. Existing patients can also message through the patient portal.",
+  },
+];
+
+const closingFaqSlugs = new Set([
+  "weight-loss-semaglutide",
+  "weight-loss-tirzepatide",
+  "longevity-sermorelin",
+  "longevity-nad",
+  "men-trt-testosterone-cypionate",
+  "men-trt-enclomiphene",
+  "sexual-health-pt-141-nasal",
+  "men-sexual-health-combo-troches",
+  "women-sexual-health-combo-troches",
+  "intimacy-blend-(pt-141-oxytocin-tadalafil)",
+]);
+
 export function faqsForProduct(slug: string): FaqItem[] {
-  return productFaqsBySlug[slug] ?? productFaqs;
+  const items = productFaqsBySlug[slug] ?? productFaqs;
+  if (!closingFaqSlugs.has(slug) || items.some((item) => item.q === "Do you accept insurance?")) return items;
+  return [...items, ...closingProductFaqs];
 }

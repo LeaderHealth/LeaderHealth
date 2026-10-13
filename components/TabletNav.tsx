@@ -262,7 +262,7 @@ function BrowseRow({
         href={PORTAL_URL}
         className="inline-flex min-h-12 items-center rounded-full border border-white/50 px-5 font-sans text-[15px] font-medium text-white transition-[background-color,border-color] duration-200 ease-out hover:border-white/80 hover:bg-white/10 active:bg-white/15 motion-reduce:transition-none"
       >
-        Log In / Sign Up
+        Patient Portal
       </a>
     </div>
   );

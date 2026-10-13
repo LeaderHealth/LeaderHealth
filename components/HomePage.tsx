@@ -152,8 +152,8 @@ const careOptions = [
     category: "Longevity",
     price: "Starting at $139 per month",
     image: "/images/products/nad.png",
-    width: 416,
-    height: 604,
+    width: 819,
+    height: 1024,
   },
   {
     href: "/products/weight-loss-semaglutide",

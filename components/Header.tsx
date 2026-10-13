@@ -22,25 +22,6 @@ import { TabletNavBar, TabletNavDisclosure, type TabletPanel } from "./TabletNav
 
 const GENERAL_FORM_URL = "https://products.leaderhealth.clinic/";
 
-const menLinks = [
-  { href: "/shop-men-products", label: "Shop All Men" },
-  { href: "/products/men-trt-testosterone-cypionate", label: "Testosterone Cypionate" },
-  { href: "/products/men-trt-enclomiphene", label: "Enclomiphene" },
-  { href: "/products/men-trt-testosterone-cream", label: "Testosterone Cream" },
-  { href: "/products/men-sexual-health-tadalafil", label: "Tadalafil" },
-  { href: "/products/weight-loss-semaglutide", label: "Semaglutide" },
-];
-
-const womenLinks = [
-  { href: "/shop-women-products", label: "Shop All Women" },
-  { href: "/products/women-hormone-therapy", label: "Women's Hormone Therapy" },
-  { href: "/products/women-hrt-testosterone-cream", label: "Testosterone Cream" },
-  { href: "/products/women-hormone-therapy-estradiol-patch", label: "Estradiol Patch" },
-  { href: "/products/sexual-health-pt-141-nasal", label: "PT-141" },
-  { href: "/products/intimacy-blend-(pt-141-oxytocin-tadalafil)", label: "Intimacy Blend" },
-  { href: "/products/weight-loss-semaglutide", label: "Semaglutide" },
-];
-
 const whoLinks = [
   { href: "/aboutus", label: "About Us" },
   { href: "/contact-us", label: "Contact" },
@@ -106,7 +87,7 @@ function FeatureCardLink({
   const amount = card.price.match(/\$[\d,]+(?:\.\d+)?/)?.[0] ?? card.price;
   const slug = card.href.split("/").filter(Boolean).pop() ?? "";
   const cartItem = cartItemFromSlug(slug);
-  const learnMore = slug === "women-hormone-therapy";
+  const learnMore = slug === "women-hormone-therapy" || slug === "weight-loss-semaglutide";
   const actionClass =
     "group relative inline-flex h-10 min-h-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#331110] px-6 text-[13px] font-semibold text-[#F7F3F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#331110]";
   const actionLabel = (
@@ -680,6 +661,30 @@ export function Header() {
   }, [mobile, search, tabletPanel]);
 
   useEffect(() => {
+    const mobileQuery = window.matchMedia("(max-width: 764px)");
+    const tabletQuery = window.matchMedia("(min-width: 765px) and (max-width: 1199px)");
+    const desktopQuery = window.matchMedia("(min-width: 1200px)");
+
+    const sync = () => {
+      if (!mobileQuery.matches) setMobile(false);
+      if (!tabletQuery.matches) setTabletPanel(null);
+      if (!desktopQuery.matches) {
+        setMega(null);
+        setSearch(false);
+      }
+    };
+
+    mobileQuery.addEventListener("change", sync);
+    tabletQuery.addEventListener("change", sync);
+    desktopQuery.addEventListener("change", sync);
+    return () => {
+      mobileQuery.removeEventListener("change", sync);
+      tabletQuery.removeEventListener("change", sync);
+      desktopQuery.removeEventListener("change", sync);
+    };
+  }, []);
+
+  useEffect(() => {
     const canScrollWithin = (panel: Element, target: EventTarget | null, deltaY: number) => {
       if (!(target instanceof Element)) return false;
       let node: Element | null = target;
@@ -842,7 +847,7 @@ export function Header() {
 
       <header
         ref={headerRef}
-        className={`lh-tablet-header pointer-events-none fixed inset-x-0 top-2 z-50 hidden justify-center px-2 transition-transform duration-300 ease-out min-[441px]:flex sm:top-3 sm:px-3 md:top-4 ${
+        className={`lh-tablet-header pointer-events-none fixed inset-x-0 top-2 z-50 hidden justify-center px-2 transition-transform duration-300 ease-out min-[765px]:flex sm:top-3 sm:px-3 md:top-4 ${
           navVisible || mobile || search || tabletPanel
             ? "translate-y-0"
             : "-translate-y-[calc(100%+1rem)]"
@@ -903,19 +908,6 @@ export function Header() {
             </button>
           </div>
 
-          {/* MOBILE MENU */}
-          <button
-            className="shrink-0 px-1.5 text-xs transition-transform duration-200 ease-out hover:scale-[1.05] active:scale-[0.96] sm:px-2 sm:text-sm md:hidden"
-            onClick={() => {
-              setMega(null);
-              setMobile((v) => !v);
-            }}
-            type="button"
-            aria-label="Menu"
-          >
-            Menu
-          </button>
-
           {/* CENTER LOGO */}
           <Link
             href="/"
@@ -961,10 +953,10 @@ export function Header() {
 
             <a
               href={PORTAL_URL}
-              aria-label="Patient portal"
+              aria-label="Patient Portal"
               className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-white/35 bg-white/10 px-3 text-[13px] text-white transition-[transform,background-color] duration-200 ease-out hover:scale-[1.04] hover:bg-white/20 active:scale-[0.96]"
             >
-              Log In / Sign Up
+              Patient Portal
               <UserIcon />
             </a>
 
@@ -992,31 +984,6 @@ export function Header() {
             ) : null}
           </div>
 
-          {/* MOBILE RIGHT */}
-          <div className="ml-auto flex shrink-0 items-center gap-1.5 md:hidden">
-            <CartButton compact />
-
-            {!onCheckout ? (
-              <a
-                href={GET_STARTED_URL}
-                className="group relative inline-flex items-center justify-center overflow-hidden rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-ink transition-[background-color,color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[#331110] hover:text-[#F7F3F5] focus-visible:bg-[#331110] focus-visible:text-[#F7F3F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none sm:px-3 sm:py-1.5 sm:text-xs"
-              >
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#331110] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
-                />
-                <span className="relative z-10 whitespace-nowrap transition-transform duration-[400ms] ease-out group-hover:-translate-x-[10px] motion-reduce:translate-x-0! motion-reduce:transition-none">
-                  Start
-                </span>
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute top-1/2 right-0 z-10 -translate-y-1/2 translate-x-full transition-transform duration-[400ms] ease-out group-hover:translate-x-[calc(100%-18px)] motion-reduce:translate-x-full! motion-reduce:transition-none"
-                >
-                  →
-                </span>
-              </a>
-            ) : null}
-          </div>
           </div>
           <TabletNavDisclosure
             panel={tabletPanel}
@@ -1028,36 +995,6 @@ export function Header() {
           />
         </div>
       </header>
-
-      {/* MOBILE NAV */}
-      {mobile && (
-        <div className="lh-popup-backdrop fixed inset-0 z-40 hidden bg-ink/80 pt-24 max-[440px]:hidden min-[441px]:block md:hidden">
-          <nav className="lh-popup-panel mx-4 space-y-3 rounded-3xl bg-white p-6 text-ink">
-            {[
-              ...menLinks.slice(0, 1),
-              ...womenLinks.slice(0, 1),
-              {
-                href: "/shop-all-products",
-                label: "Shop All",
-              },
-              ...whoLinks,
-            ].map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="block text-lg"
-                onClick={() => setMobile(false)}
-              >
-                {item.label}
-              </Link>
-            ))}
-
-            <a href={GET_STARTED_URL} className="block text-lg text-accent">
-              Get Started
-            </a>
-          </nav>
-        </div>
-      )}
 
       {/* SEARCH MODAL */}
       {search && (
