@@ -1,5 +1,6 @@
 import { ShopGrid } from "@/components/ShopGrid";
-import { SexualHealthBlends } from "@/components/SexualHealthBlends";
+import { HormoneTreatmentFeature } from "@/components/HormoneTreatmentFeature";
+import { RecommendedProducts } from "@/components/RecommendedProducts";
 import { ArticleLibrary } from "@/components/ArticleLibrary";
 import { JsonLd } from "@/components/JsonLd";
 import { labs, productsFor } from "@/lib/content/products";
@@ -10,7 +11,7 @@ export const metadata: Metadata = { title: "Shop Women" };
 
 const title = "Care made for her.";
 const intro =
-  "Hormones, weight, longevity, and intimacy — physician-led treatments built around a woman's biology, reviewed by clinicians who listen.";
+  "Hormones, weight, longevity, and intimacy, physician-led treatments built around a woman's biology, reviewed by clinicians who listen.";
 
 export default function ShopWomenPage() {
   return (
@@ -26,12 +27,24 @@ export default function ShopWomenPage() {
           ],
         })}
       />
-      <ShopGrid audience="women" title={title} intro={intro}>
-        <p className="mt-16 max-w-xl text-lg text-brown">
-          Hormone imbalances are becoming increasingly common in younger women. Personalized care can help you restore balance and feel your best.
-        </p>
-        <SexualHealthBlends audience="women" />
-      </ShopGrid>
+      <ShopGrid
+        audience="women"
+        title={title}
+        intro={intro}
+        heroImage="/images/shop-women-hero.jpg"
+        heroAlt="Woman standing among garden plants in warm sunlight"
+        heroTitle={
+          <>
+            <span className="block">Care made</span>
+            <span className="block">
+              for <span className="font-serif-italic text-[#ee5d6c]">her.</span>
+            </span>
+          </>
+        }
+        catalogTitle="All Women's Products"
+        spotlight={<HormoneTreatmentFeature />}
+        feature={<RecommendedProducts />}
+      />
       <ArticleLibrary />
     </>
   );
