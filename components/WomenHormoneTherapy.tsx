@@ -12,8 +12,7 @@ import { IllustrationNote } from "@/components/IllustrationNote";
 import { HsaFsaBadge } from "@/components/HsaFsaBadge";
 import { ChooseTreatmentButton } from "@/components/ProductHeroCta";
 
-const HERO_IMAGE =
-  "https://framerusercontent.com/images/NNkqjkjcButh0STKbHYnciyEKA.png?width=1000&height=1119";
+const HERO_IMAGE = "/images/products/womens-hormone-therapy.png";
 const LIFESTYLE_IMAGE =
   "https://framerusercontent.com/images/fXdgvQ4jAyAXXNvdduQOz4TVZgY.png?width=1122&height=1402";
 

@@ -28,6 +28,8 @@ export function ShopGrid({
   heroAlt = "",
   heroTitle,
   catalogTitle,
+  catalogTone = "light",
+  searchPlaceholder = "Search for a product or treatment…",
 }: {
   audience?: Audience;
   title: string;
@@ -40,6 +42,8 @@ export function ShopGrid({
   heroAlt?: string;
   heroTitle?: React.ReactNode;
   catalogTitle?: string;
+  catalogTone?: "light" | "dark";
+  searchPlaceholder?: string;
 }) {
   const [active, setActive] = useState<Category | undefined>();
   const [who, setWho] = useState<Audience | undefined>(audience);
@@ -128,7 +132,7 @@ export function ShopGrid({
             <h2 className="font-geist text-[clamp(34px,4vw,48px)] leading-none font-medium tracking-[-0.02em] text-[#2c1614]">
               {catalogHeading}
             </h2>
-            <label className="mt-8 flex h-[55px] w-full items-center gap-3 rounded-full border-0 bg-[#E4D6C3] px-[18px] py-[15px] shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_8px_16px_rgba(50,17,16,0.06)]">
+            <label className={`mt-8 flex h-[55px] w-full items-center gap-3 rounded-full border-0 px-[18px] py-[15px] shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_8px_16px_rgba(50,17,16,0.06)] ${catalogTone === "dark" ? "bg-[#ECE8E0]" : "bg-[#E4D6C3]"}`}>
               <svg viewBox="0 0 24 24" className="h-[18px] w-[18px] shrink-0 text-[#32120E]" fill="none" aria-hidden>
                 <circle cx="11" cy="11" r="6.25" stroke="currentColor" strokeWidth="1.8" />
                 <path d="M16 16.5 20.2 20.7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
@@ -136,19 +140,33 @@ export function ShopGrid({
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search for a product or treatment…"
-                aria-label="Search for a product or treatment"
+                placeholder={searchPlaceholder}
+                aria-label={searchPlaceholder.replace(/…$/, "")}
                 className="w-full bg-transparent font-sans text-[15px] font-semibold text-[#32120E] outline-none placeholder:text-[#32120E]"
               />
             </label>
-            <div className="relative left-1/2 mt-5 flex min-h-[58px] w-screen max-w-[100vw] -translate-x-1/2 flex-wrap items-center justify-center gap-x-3 gap-y-2 bg-[#F6F1DC] px-4 py-2 text-center sm:px-6">
-              <p className="min-w-0 text-center font-sans text-[16px] leading-snug text-[#32120E] sm:text-[17px]">
-                <span className="font-semibold">First-time patient?</span> Lab work is required to help your provider
-                determine the right treatment plan for you.
+            <div
+              className={`relative left-1/2 mt-5 flex min-h-[58px] w-screen max-w-[100vw] -translate-x-1/2 flex-wrap items-center justify-center gap-x-3 gap-y-2 px-4 py-2 text-center sm:px-6 ${
+                catalogTone === "dark" ? "bg-[#32120E]" : "bg-[#F6F1DC]"
+              }`}
+            >
+              <p
+                className={`min-w-0 text-center font-sans text-[16px] leading-snug sm:text-[17px] ${
+                  catalogTone === "dark" ? "text-white" : "text-[#32120E]"
+                }`}
+              >
+                <span className={catalogTone === "dark" ? "font-semibold text-[#E04450]" : "font-semibold"}>
+                  First-time patient?
+                </span>{" "}
+                Lab work is required to help your provider determine the right treatment plan for you.
               </p>
               <a
                 href="#explore-labs"
-                className="group relative inline-flex h-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#E23D4C] px-4 font-sans text-[14px] font-medium text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#32120E]"
+                className={`group relative inline-flex h-9 shrink-0 items-center justify-center overflow-hidden rounded-full px-4 font-sans text-[14px] font-medium text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${
+                  catalogTone === "dark"
+                    ? "bg-[#DC4450] focus-visible:outline-white"
+                    : "bg-[#E23D4C] focus-visible:outline-[#32120E]"
+                }`}
               >
                 <span className="relative z-10 whitespace-nowrap transition-transform duration-[400ms] ease-[cubic-bezier(0.34,1.45,0.64,1)] group-hover:-translate-x-3 group-focus-visible:-translate-x-3 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0 motion-reduce:group-focus-visible:translate-x-0">
                   Explore Labs
