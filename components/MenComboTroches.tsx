@@ -68,32 +68,6 @@ const benefits = [
   },
 ];
 
-function Stars() {
-  return (
-    <span className="flex items-center gap-0.5" aria-hidden>
-      {Array.from({ length: 5 }, (_, index) => (
-        <span key={index} className="relative inline-block h-[18px] w-[18px] shrink-0">
-          <svg viewBox="0 0 24 24" className="h-full w-full">
-            <polygon
-              points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"
-              fill="#e43d4e"
-              opacity={index === 4 ? 0.35 : 1}
-            />
-          </svg>
-          {index === 4 ? (
-            <svg viewBox="0 0 24 24" className="absolute inset-0 h-full w-full" style={{ clipPath: "inset(0 20% 0 0)" }}>
-              <polygon
-                points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"
-                fill="#e43d4e"
-              />
-            </svg>
-          ) : null}
-        </span>
-      ))}
-    </span>
-  );
-}
-
 function BlendAddButton({ slug, label }: { slug: string; label: string }) {
   const { addItem } = useCart();
   const item = cartItemFromSlug(slug);
@@ -169,18 +143,10 @@ export function MenComboTroches() {
               </div>
 
               <div className="rounded-[28px] border border-white/25 bg-white/10 px-6 py-7 shadow-[0_22px_50px_-18px_rgba(51,17,16,0.45)] backdrop-blur-xl sm:px-8 sm:py-8">
-                <div className="flex items-start justify-between gap-4">
-                  <p className="flex items-center gap-2 text-[15px] font-semibold text-[#f7f3f4]">
-                    <span>4.8</span>
-                    <Stars />
-                    <span className="sr-only">4.8 out of 5 stars</span>
-                  </p>
+                <div className="flex justify-end">
                   <HsaFsaBadge />
                 </div>
-                <div className="mt-5 flex flex-wrap gap-2">
-                  <span className="rounded-full bg-[#2a1212]/55 px-3 py-1 text-[11px] text-white">Sexual Health</span>
-                  <span className="rounded-full bg-[#2a1212]/55 px-3 py-1 text-[11px] text-white">Medication</span>
-                </div>
+                <p className="mt-5 text-[13px] text-white/90">Sexual Health</p>
                 <h1 className="mt-3 font-geist text-[40px] leading-none font-semibold tracking-[-0.04em]">
                   Combo Troches
                 </h1>

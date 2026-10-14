@@ -10,6 +10,7 @@ import { SafetyInformationModal } from "@/components/SafetyInformationModal";
 import { IconHoverButton } from "@/components/IconHoverButton";
 import { IllustrationNote } from "@/components/IllustrationNote";
 import { HsaFsaBadge } from "@/components/HsaFsaBadge";
+import { BundledLabPanel } from "@/components/BundledLabPanel";
 import { ChooseTreatmentButton } from "@/components/ProductHeroCta";
 
 const HERO_IMAGE =
@@ -300,22 +301,10 @@ export function WomenHormoneTherapy() {
                 <IllustrationNote />
               </div>
               <div className="rounded-[28px] border border-white/30 bg-white/15 p-6 shadow-[0_18px_50px_rgba(51,17,16,0.12)] backdrop-blur-md sm:p-8">
-                <div className="flex items-start justify-between gap-4">
-                  <p className="flex items-center gap-2 text-sm">
-                    <span className="font-medium">4.8</span>
-                    <span className="tracking-tight text-[#ff5a5a]" aria-hidden>
-                      ★★★★★
-                    </span>
-                    <span className="sr-only">4.8 out of 5 stars</span>
-                  </p>
+                <div className="flex justify-end">
                   <HsaFsaBadge />
                 </div>
-                <div className="mt-5 flex flex-wrap items-center gap-2">
-                  <span className="text-[13px] text-white/90">Women HRT</span>
-                  <span className="rounded-full bg-[#331110] px-3 py-1 text-[11px] text-white">
-                    Lab + clinician visit required
-                  </span>
-                </div>
+                <p className="mt-5 text-[13px] text-white/90">Women HRT</p>
                 <h1 className="mt-4 text-[40px] leading-[0.95] font-medium tracking-[-0.04em] text-balance sm:text-[52px]">
                   Women&apos;s Hormone Therapy
                 </h1>
@@ -326,6 +315,7 @@ export function WomenHormoneTherapy() {
                 <p className="mt-3 text-[14px] leading-relaxed text-white/90">
                   Already have your labs? You can upload them during intake. If not, we&apos;ll schedule your panel for you — no extra steps.
                 </p>
+                <BundledLabPanel slug="women-hormone-therapy" />
                 <ChooseTreatmentButton href="#womenintakes" className="mt-6" />
                 {trigger}
               </div>

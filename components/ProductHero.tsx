@@ -6,6 +6,7 @@ import { getLegal } from "@/lib/content/legal";
 import { getProductSafety } from "@/lib/content/product-safety";
 import { HsaFsaBadge } from "./HsaFsaBadge";
 import { IllustrationNote } from "./IllustrationNote";
+import { BundledLabPanel } from "./BundledLabPanel";
 import { ProductHeroCta } from "./ProductHeroCta";
 import { SafetyInformationModal } from "./SafetyInformationModal";
 
@@ -30,7 +31,6 @@ const pt141Cover =
   "linear-gradient(105deg, #e5616f 0%, #b84d58 48%, #562224 100%)";
 
 export function ProductHero({ product }: { product: Product }) {
-  const badge = product.badge ?? (product.disclaimer?.toLowerCase().includes("fda approved") ? undefined : "Medication");
   const safetySections = getProductSafety(product.slug);
   const menHormoneCover = product.category === "hormone" && product.audience === "men";
   const redHeroCover = menHormoneCover || product.slug === "men-sexual-health-tadalafil";
@@ -88,17 +88,10 @@ export function ProductHero({ product }: { product: Product }) {
         </div>
 
         <div className="rounded-[28px] border border-white/25 bg-white/14 p-7 shadow-xl backdrop-blur-md md:p-8">
-          <div className="flex items-start justify-between gap-4">
-            <p className="flex items-center gap-2 text-sm">
-              <span className="font-medium">4.8</span>
-              <span className="tracking-tight text-[#ff5a5a]">★★★★★</span>
-            </p>
+          <div className="flex justify-end">
             <HsaFsaBadge />
           </div>
-          <div className="mt-5 flex flex-wrap gap-2">
-            <span className="rounded-full bg-[#2a1212]/55 px-3 py-1 text-[11px]">{productEyebrow(product)}</span>
-            {badge && <span className="rounded-full bg-[#2a1212]/55 px-3 py-1 text-[11px]">{badge}</span>}
-          </div>
+          <p className="mt-5 text-[13px] text-white/90">{productEyebrow(product)}</p>
           <h1 className="mt-3 text-[40px] leading-none">{product.name}</h1>
           <p className="mt-4 font-serif-italic text-[12px] leading-relaxed text-white/88">
             {product.disclaimer ?? defaultDisclaimer}
@@ -110,6 +103,7 @@ export function ProductHero({ product }: { product: Product }) {
             {product.highlight && <p className="font-medium">{product.highlight}</p>}
             {product.safety && <p className="text-[13px] text-white/90">{product.safety}</p>}
           </div>
+          <BundledLabPanel slug={product.slug} />
           <ProductHeroCta product={product} />
           {trigger}
         </div>
