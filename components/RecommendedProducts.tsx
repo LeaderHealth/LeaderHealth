@@ -1,15 +1,23 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { GET_STARTED_URL } from "@/lib/content/site";
+import { getProduct } from "@/lib/content/products";
 
-const intimacyImage =
-  "https://framerusercontent.com/images/ntNnrXlKONfgOvYhVoBLrqDAuo.png?width=2230&height=1796";
-const arousalImage =
-  "https://framerusercontent.com/images/fPt1kPTjO7NFkRQolR18SbAMU.png?width=1821&height=1467";
+const intimacyImage = "/images/products/intimacy-blend.png";
+const arousalImage = "/images/products/arousal-blend.png";
 
-const intimacyHref = "/products/intimacy-blend-(pt-141-oxytocin-tadalafil)";
-const arousalHref = "/products/sildenafil-combo-troche-(sildenafil-oxytocin-b12)";
+const intimacySlug = "intimacy-blend-(pt-141-oxytocin-tadalafil)";
+const arousalSlug = "sildenafil-combo-troche-(sildenafil-oxytocin-b12)";
+
+function productHref(slug: string) {
+  return `/products/${slug}`;
+}
+
+function checkoutHref(slug: string) {
+  const id = getProduct(slug)?.clientProductId;
+  if (!id) return productHref(slug);
+  return `https://products.leaderhealth.clinic/checkout?product=${encodeURIComponent(id)}`;
+}
 
 type RecommendedProductsProps = {
   eyebrow?: string;
@@ -197,9 +205,9 @@ export function RecommendedProducts({
   card1Benefit2 = "Physical arousal support",
   card1Benefit3 = "Longer-lasting spontaneity",
   card1PrimaryButtonLabel = "Start the Intimacy Blend",
-  card1PrimaryButtonUrl = GET_STARTED_URL,
+  card1PrimaryButtonUrl = checkoutHref(intimacySlug),
   card1SecondaryButtonLabel = "Learn More",
-  card1SecondaryButtonUrl = intimacyHref,
+  card1SecondaryButtonUrl = productHref(intimacySlug),
   card2Image = arousalImage,
   card2ImageAlt = "Couple resting together in bed",
   card2BadgeLabel = "Recommended for Men",
@@ -216,9 +224,9 @@ export function RecommendedProducts({
   card2Benefit2 = "Enhanced sensation",
   card2Benefit3 = "Entry-level treatment option",
   card2PrimaryButtonLabel = "Start the Arousal Blend",
-  card2PrimaryButtonUrl = GET_STARTED_URL,
+  card2PrimaryButtonUrl = checkoutHref(arousalSlug),
   card2SecondaryButtonLabel = "Learn More",
-  card2SecondaryButtonUrl = arousalHref,
+  card2SecondaryButtonUrl = productHref(arousalSlug),
 }: RecommendedProductsProps) {
   const cards = [
     {

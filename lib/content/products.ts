@@ -46,8 +46,7 @@ export const products: Product[] = [
     audience: "all",
     price: "Starting From $129/mo",
     labRequired: true,
-    image:
-      "https://framerusercontent.com/images/xDyQlFKKF945ielQLHRmWsJply8.png?width=785&height=995",
+    image: "/images/products/semaglutide.png",
     tagline: "Provider-guided GLP-1 support for sustainable weight management.",
     eyebrow: "Weight Loss",
     badge: "Medication",
@@ -95,8 +94,7 @@ export const products: Product[] = [
     audience: "all",
     price: "Starting at $229",
     labRequired: true,
-    image:
-      "https://framerusercontent.com/images/MKfQvxNUoASTK8K9iYyxletrY0.png?width=952&height=1213",
+    image: "/images/products/tirzepatide.png",
     tagline: "Dual-agonist support for appetite, metabolism, and body composition.",
     eyebrow: "Weight Loss",
     badge: "Medication",
@@ -144,8 +142,7 @@ export const products: Product[] = [
     audience: "all",
     price: "Starting From $149/mo",
     labRequired: true,
-    image:
-      "https://framerusercontent.com/images/Nxmvv0V7wJmcL1463SseCeRgh8.png?width=1080&height=1350",
+    image: "/images/products/sermorelin.png",
     tagline: "Peptide support for recovery, body composition, and overnight repair.",
     highlight: "$149/month, three-month start, then cancel anytime.",
     safety:
@@ -184,7 +181,7 @@ export const products: Product[] = [
     audience: "all",
     listed: false,
     price: "Starting at $119",
-    image: "/images/products/nad.png",
+    image: "/images/products/nad-overview.png",
     tagline: "Cellular energy support with injectable and nasal options.",
     highlight: "$139/month, three-month start, then cancel anytime.",
     description:
@@ -224,8 +221,7 @@ export const products: Product[] = [
     audience: "men",
     price: "Starting at $109/month",
     labRequired: true,
-    image:
-      "https://framerusercontent.com/images/v18TtF6idRTxtVpZ4ELVTqQf8Q.png?width=1080&height=1350",
+    image: "/images/products/testosterone-cypionate.png",
     tagline: "Clinician-led TRT after labs, history, and a real plan for follow-up.",
     highlight: "Medication, provider access, and labs are included for $109/month. Three-month start, then cancel anytime.",
     safety:
@@ -265,7 +261,7 @@ export const products: Product[] = [
     audience: "men",
     price: "Starting at $119/month",
     labRequired: true,
-    image: "/images/products/testosterone-cream.png",
+    image: "/images/products/testosterone-cream-men.png",
     tagline: "Transdermal testosterone when a cream fits your routine better than injections.",
     description:
       "Compounded testosterone cream is one delivery option after labs and a clinician visit. Transfer precautions and follow-up labs still apply.",
@@ -283,8 +279,7 @@ export const products: Product[] = [
     price: "Starting at $69/month",
     labRequired: true,
     seoTitle: "Hormone Therapy for Women (HRT) Online",
-    image:
-      "https://framerusercontent.com/images/NNkqjkjcButh0STKbHYnciyEKA.png?width=1000&height=1119",
+    image: "/images/products/womens-hormone-therapy.png",
     tagline: "Perimenopause and menopause care with more than one delivery option.",
     highlight: "Starting at just $69/Month.",
     description:
@@ -304,8 +299,7 @@ export const products: Product[] = [
     category: "sexual",
     audience: "men",
     price: "$79/mo",
-    image:
-      "https://framerusercontent.com/images/xiLmspoD4quCotY2Ro6T9VdAuU.png?width=1890&height=2363",
+    image: "/images/products/tadalafil.png",
     tagline: "Daily or as-needed tadalafil after a clinician screens for safety.",
     eyebrow: "Sexual Health",
     compare: true,
@@ -375,8 +369,7 @@ export const products: Product[] = [
     audience: "men",
     listed: false,
     price: "Starting at $89/month",
-    image:
-      "https://framerusercontent.com/images/pa9pIi4me0ue0YEMZpLwghozic.png?width=1024&height=587",
+    image: "/images/products/combo-troches.png",
     tagline: "Combination troches when a clinician wants more than a single agent.",
     highlight: "Starting at $89/month.",
     description:
@@ -394,8 +387,7 @@ export const products: Product[] = [
     audience: "women",
     listed: false,
     price: "Starting at $229/month",
-    image:
-      "https://framerusercontent.com/images/pa9pIi4me0ue0YEMZpLwghozic.png?width=1024&height=587",
+    image: "/images/products/combo-troches.png",
     tagline: "Intimacy blends prescribed after a clinician evaluates desire, hormones, and safety.",
     highlight: "Starting at $89/month. Recommended Intimacy Blend: $229/month.",
     description:
@@ -413,8 +405,7 @@ export const products: Product[] = [
     clientProductId: "lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_6iIhc7giORvkHheSgDLi",
     audience: "women",
     price: "Starting at $297/month",
-    image:
-      "https://framerusercontent.com/images/z3UQWonIr4HVs8sU45l8CqF9Y.png?width=1080&height=1350",
+    image: "/images/products/testosterone-cream-women.png",
     tagline: "Low-dose transdermal testosterone for selected postmenopausal women.",
     eyebrow: "Women HRT",
     paragraphs: [
@@ -437,8 +428,7 @@ export const products: Product[] = [
     clientProductId: "lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_bf762c10c31501cffa97b613",
     audience: "women",
     price: "Starting at $195/month",
-    image:
-      "https://framerusercontent.com/images/v18TtF6idRTxtVpZ4ELVTqQf8Q.png?width=1080&height=1350",
+    image: "/images/products/testosterone-injection-women.png",
     tagline: "Low-dose injectable testosterone when a clinician selects injection over cream.",
     description:
       "Low-dose testosterone injection is one option in women's hormone care when labs, symptoms, and transfer precautions make a cream a poor fit. Dosing is conservative and monitored.",
@@ -455,8 +445,7 @@ export const products: Product[] = [
     category: "hormone",
     audience: "women",
     price: "Starting at $267",
-    image:
-      "https://framerusercontent.com/images/z3UQWonIr4HVs8sU45l8CqF9Y.png?width=1080&height=1350",
+    image: "/images/products/vaginal-estrogen-cream.png",
     tagline: "Local estrogen for vaginal dryness and tissue comfort.",
     description:
       "Vaginal estrogen cream is used for local genitourinary symptoms of menopause. It is a local therapy, not a substitute for systemic HRT when that is what the evaluation supports.",
@@ -474,8 +463,7 @@ export const products: Product[] = [
     category: "hormone",
     audience: "women",
     price: "Starting at $69",
-    image:
-      "https://framerusercontent.com/images/z3UQWonIr4HVs8sU45l8CqF9Y.png?width=1080&height=1350",
+    image: "/images/products/vaginal-estrogen-suppository.png",
     tagline: "A lower-mess local estrogen option for genitourinary symptoms.",
     description:
       "Vaginal estrogen suppositories are another local option when cream is messy or poorly tolerated. Your clinician chooses format based on symptoms and preference.",
@@ -493,8 +481,7 @@ export const products: Product[] = [
     category: "hormone",
     audience: "women",
     price: "Starting at $169",
-    image:
-      "https://framerusercontent.com/images/GMDs0BF7J9LSEZf6TeYNopUk.png?width=2308&height=836",
+    image: "/images/products/estradiol-patch.png",
     tagline: "Transdermal estradiol when a patch is the right delivery route.",
     description:
       "Estradiol patches deliver systemic estrogen through the skin. If a format is hard to fill, your clinician can discuss cream, gel, oral, or vaginal alternatives and how to switch safely.",
@@ -511,8 +498,7 @@ export const products: Product[] = [
     clientProductId: "lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_4f6c68b97e6447cf8869b3dc",
     audience: "women",
     price: "Starting at $207",
-    image:
-      "https://framerusercontent.com/images/GMDs0BF7J9LSEZf6TeYNopUk.png?width=2308&height=836",
+    image: "/images/products/estradiol-pill.png",
     tagline: "Oral estradiol when a clinician prefers a pill to a patch or cream.",
     description:
       "Oral estradiol is one systemic option for menopausal symptoms. Route is chosen with clotting history, preference, and availability in mind — not by default.",
@@ -529,8 +515,7 @@ export const products: Product[] = [
     clientProductId: "lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_iZT4cfCiDcwOkqT3TCLg",
     audience: "women",
     price: "Starting at $207",
-    image:
-      "https://framerusercontent.com/images/GMDs0BF7J9LSEZf6TeYNopUk.png?width=2308&height=836",
+    image: "/images/products/progesterone.png",
     tagline: "Oral progesterone for endometrial protection and selected sleep/mood symptoms.",
     description:
       "Oral progesterone is commonly used with estrogen in women who have a uterus. It is prescribed as part of a hormone plan, not as a standalone sleep aid.",
@@ -576,8 +561,7 @@ export const products: Product[] = [
     clientProductId: "prod_0016ad161e63a4281e6cc27e_1",
     audience: "all",
     price: "Starting at $89/month",
-    image:
-      "https://framerusercontent.com/images/pa9pIi4me0ue0YEMZpLwghozic.png?width=1024&height=587",
+    image: "/images/products/arousal-blend.png",
     tagline: "Arousal Blend — on-demand support for physical performance and blood flow.",
     description:
       "Supports physical performance and blood flow with a personalized combination of sildenafil, oxytocin, and B12. Ideal when desire is not the primary concern and a clinician wants an affordable, on-demand option.",
@@ -612,7 +596,7 @@ export const products: Product[] = [
     threeMonthProductId: "prod_3d638894ad732191af0214fa_2",
     audience: "all",
     price: "Starting at $149/month",
-    image: "/images/products/nad.png",
+    image: "/images/products/nad-injectable.png",
     tagline: "Injectable NAD+ for cellular energy support under clinician direction.",
     description:
       "NAD+ injectable protocols are used in longevity care focused on cellular metabolism. Your provider sets frequency and whether a nasal option is a better fit.",
@@ -629,7 +613,7 @@ export const products: Product[] = [
     clientProductId: "prod_3d638894ad732191af0214fa_1",
     audience: "all",
     price: "Starting at $119",
-    image: "/images/products/nad.png",
+    image: "/images/products/nad-overview.png",
     tagline: "Needle-free NAD+ when a nasal format fits your routine.",
     description:
       "NAD+ nasal spray is an at-home option for patients whose clinician prefers not to start with injections. It is still a prescribed protocol, not an over-the-counter wellness spray.",

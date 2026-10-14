@@ -27,7 +27,7 @@ const campaign = [
     href: "/products/men-trt-testosterone-cypionate",
     title: "Reclaim Your Energy",
     sub: "with Compounded Testosterone",
-    img: "https://framerusercontent.com/images/v18TtF6idRTxtVpZ4ELVTqQf8Q.png?width=1080&height=1350",
+    img: "/images/products/testosterone-cypionate.png",
   },
 ];
 
@@ -37,9 +37,9 @@ const featured = [
     category: "LONGEVITY",
     name: "Sermorelin",
     price: "Starting From $149/mo",
-    image: "https://framerusercontent.com/images/Nxmvv0V7wJmcL1463SseCeRgh8.png?width=1080&height=1350",
-    imageWidth: 1080,
-    imageHeight: 1350,
+    image: "/images/products/sermorelin.png",
+    imageWidth: 587,
+    imageHeight: 1041,
     assetSlot: "h-[301px]",
   },
   {
@@ -57,9 +57,9 @@ const featured = [
     category: "SEXUAL HEALTH",
     name: "Tadalafil",
     price: "$79/mo",
-    image: "https://framerusercontent.com/images/pa9pIi4me0ue0YEMZpLwghozic.png?width=1024&height=587",
-    imageWidth: 1024,
-    imageHeight: 587,
+    image: "/images/products/tadalafil.png",
+    imageWidth: 1890,
+    imageHeight: 2363,
     assetSlot: "h-[138px]",
   },
 ];
@@ -134,26 +134,26 @@ const careOptions = [
     category: "Hormone Therapy",
     price: "Starting at $109 per month",
     image: "/images/products/testosterone-cypionate.png",
-    width: 583,
-    height: 1275,
+    width: 461,
+    height: 984,
   },
   {
     href: "/products/men-sexual-health-combo-troches",
     name: "Combo Troches",
     category: "Sexual Health",
     price: "Starting at $99 per month",
-    image: "/images/products/combo-troche.png",
-    width: 937,
-    height: 597,
+    image: "/images/products/combo-troches.png",
+    width: 1080,
+    height: 1350,
   },
   {
     href: "/products/longevity-nad",
     name: "NAD+",
     category: "Longevity",
     price: "Starting at $139 per month",
-    image: "/images/products/nad.png",
-    width: 819,
-    height: 1024,
+    image: "/images/products/nad-overview.png",
+    width: 1122,
+    height: 1402,
   },
   {
     href: "/products/weight-loss-semaglutide",
@@ -161,8 +161,8 @@ const careOptions = [
     category: "Weight",
     price: "Starting at $159 per month",
     image: "/images/products/semaglutide.png",
-    width: 293,
-    height: 634,
+    width: 1312,
+    height: 996,
   },
 ];
 
@@ -1041,10 +1041,10 @@ export function HomePage() {
             >
               <div className="sermorelin-vial-float relative pb-14 md:pb-0">
                 <Image
-                  src="https://framerusercontent.com/images/Nxmvv0V7wJmcL1463SseCeRgh8.png?width=1080&height=1350"
+                  src="/images/products/sermorelin.png"
                   alt="Sermorelin injection vial"
-                  width={579}
-                  height={677}
+                  width={587}
+                  height={1041}
                   className="sermorelin-vial h-auto w-full object-contain"
                 />
                 <p className="absolute bottom-0 left-1/2 flex h-11 -translate-x-1/2 items-center justify-center rounded-[13px] bg-black/50 px-4 font-serif-italic text-[18px] leading-none text-[#f7f3f4] md:bottom-16 md:left-auto md:right-8 md:h-16 md:translate-x-0 md:px-6 md:text-[28px] md:leading-[33.6px]">

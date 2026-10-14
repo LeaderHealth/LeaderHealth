@@ -25,7 +25,14 @@ export default function ShopAllPage() {
           ],
         })}
       />
-      <ShopGrid centeredHero title={title} intro={intro} />
+      <ShopGrid
+        centeredHero
+        title={title}
+        intro={intro}
+        catalogTitle="All Products"
+        catalogTone="dark"
+        searchPlaceholder="Search for a product"
+      />
       <ArticleLibrary
         slugs={[
           "hormone-therapy-options-when-estrogen-format-runs-short",
