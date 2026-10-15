@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, type CSSProperties } from "react";
+import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 
 export type BiomarkerCategory = {
@@ -45,35 +45,35 @@ const defaultCategories: BiomarkerCategory[] = [
   {
     name: "Hormones & Thyroid",
     description: "The signals driving energy, drive, mood, and body composition.",
-    biomarkers: ["Total Testosterone", "Free Testosterone", "Estradiol", "TSH"],
+    biomarkers: ["Testosterone", "Thyroxine (T4)", "Follicle Stimulating Hormone", "SHBG"],
     image: "/images/biomarker-hormones.jpg",
     imageAlt: "Hands holding a dropper bottle",
   },
   {
     name: "Inflammation & Stress",
     description: "Chronic load your body carries, and how well it recovers from it.",
-    biomarkers: ["hs-CRP", "Homocysteine", "DHEA-S", "White Blood Cell Count"],
+    biomarkers: ["Cortisol", "DHEA-Sulfate"],
     image: "/images/biomarker-inflammation.jpg",
     imageAlt: "Person sitting at the end of a dock on a mountain lake",
   },
   {
     name: "Liver & Kidney",
     description: "Filtration and processing — quiet systems that flag problems early.",
-    biomarkers: ["ALT", "AST", "Creatinine", "eGFR"],
+    biomarkers: ["Albumin", "Blood Urea Nitrogen", "BUN/Creatinine Ratio", "Alkaline Phosphatase"],
     image: "/images/biomarker-liver.jpg",
     imageAlt: "Glass medicine vials and an infusion bottle",
   },
   {
     name: "Immune Defense",
     description: "White cell balance showing how prepared your defenses are.",
-    biomarkers: ["Neutrophils", "Lymphocytes", "Monocytes", "Eosinophils"],
+    biomarkers: ["White Blood Cell Count", "Basophils", "Eosinophils", "Lymphocytes"],
     image: "/images/biomarker-immune.jpg",
     imageAlt: "Stethoscope and blood pressure cuff on a white coat",
   },
   {
     name: "Nutrients",
     description: "The deficiencies most often mistaken for burnout or poor sleep.",
-    biomarkers: ["Vitamin D", "Vitamin B12", "Ferritin", "Iron"],
+    biomarkers: ["Vitamin D", "Iron", "Magnesium", "Sodium"],
     image: "/images/biomarker-nutrients.jpg",
     imageAlt: "Bowl of vegetables, eggs, and avocado on a wooden table",
   },
@@ -141,11 +141,43 @@ export function BiomarkerRing({
   enableAnimation = true,
 }: BiomarkerRingProps) {
   const reduce = useReducedMotion();
+  const stageRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [connector, setConnector] = useState({ left: 0, width: 0, top: 0 });
   const count = Math.max(categories.length, 1);
   const initial = Math.min(Math.max(defaultActiveIndex, 0), count - 1);
   const [activeIndex, setActiveIndex] = useState(initial);
   const active = categories[Math.min(activeIndex, count - 1)] ?? categories[0];
   const motionOn = enableAnimation && !reduce;
+
+  useLayoutEffect(() => {
+    const stage = stageRef.current;
+    const panel = panelRef.current;
+    const grid = stage?.parentElement;
+    if (!stage || !panel || !grid) return;
+
+    const measure = () => {
+      const gridBox = grid.getBoundingClientRect();
+      const stageBox = stage.getBoundingClientRect();
+      const panelBox = panel.getBoundingClientRect();
+      const start = stageBox.right - stageBox.width * 0.27;
+      const top = stageBox.top + stageBox.height / 2 - 30 - gridBox.top;
+      setConnector({
+        left: start - gridBox.left,
+        width: Math.max(0, panelBox.left - start),
+        top,
+      });
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(grid);
+    window.addEventListener("resize", measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
 
   const ctaClass =
     "inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[var(--ring-accent)] px-6 font-sans text-[13px] font-semibold tracking-[0.12em] text-[#F7F3F5] uppercase transition-colors duration-200 hover:bg-[#32120E] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none";
@@ -171,8 +203,13 @@ export function BiomarkerRing({
           </h2>
         </header>
 
-        <div className="mt-6 grid items-center gap-8 min-[1100px]:mt-4 min-[1100px]:grid-cols-[minmax(0,1.15fr)_minmax(280px,340px)] min-[1100px]:gap-2">
-          <div className="relative mx-auto aspect-square w-full max-w-[340px] sm:max-w-[480px] min-[1100px]:max-w-[640px]!">
+        <div className="relative mt-6 grid items-center gap-8 min-[1100px]:mt-4 min-[1100px]:grid-cols-[minmax(0,1.15fr)_minmax(280px,340px)] min-[1100px]:gap-2">
+          <span
+            aria-hidden
+            className="pointer-events-none absolute z-[5] hidden h-px bg-[#E33D4D]/90 min-[1100px]:block"
+            style={{ left: connector.left, top: connector.top, width: connector.width }}
+          />
+          <div ref={stageRef} className="relative mx-auto aspect-square w-full max-w-[340px] sm:max-w-[480px] min-[1100px]:max-w-[640px]!">
             <div
               aria-hidden
               className="absolute inset-[2%] rounded-full bg-[radial-gradient(circle,rgba(227,61,77,0.5)_0%,rgba(227,61,77,0.16)_46%,transparent_70%)]"
@@ -192,10 +229,6 @@ export function BiomarkerRing({
             <span
               aria-hidden
               className="absolute top-[calc(50%-30px)] right-[27%] z-[5] hidden size-2 -translate-y-1/2 rounded-full bg-[#E33D4D] shadow-[0_0_12px_#E33D4D] min-[1100px]:block"
-            />
-            <span
-              aria-hidden
-              className="absolute top-[calc(50%-30px)] -right-44 z-[5] hidden h-px w-[calc(27%+11rem)] -translate-y-1/2 bg-[#E33D4D]/90 min-[1100px]:block"
             />
 
             <div className="absolute inset-[27%] overflow-hidden rounded-full border border-white/15 shadow-[0_0_48px_rgba(227,61,77,0.35)]">
@@ -259,6 +292,7 @@ export function BiomarkerRing({
 
           <div className="min-[1100px]:col-start-2 min-[1100px]:row-start-1">
             <div
+              ref={panelRef}
               id="biomarker-detail"
               aria-live="polite"
               className="rounded-[22px] border border-white/10 bg-[#241014]/90 p-5 sm:p-6"
