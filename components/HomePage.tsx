@@ -28,6 +28,11 @@ const campaign = [
     title: "Reclaim Your Energy",
     sub: "with Compounded Testosterone",
     img: "/images/products/testosterone-cypionate.png",
+    // The source file has more empty space around the vial than the other cards,
+    // and the bottle sits higher in that frame. Scale matches the height; the
+    // offset drops it onto the same line as the other two tiles.
+    imageScale: 1.6,
+    imageOffset: "4.06%",
   },
 ];
 
@@ -40,7 +45,8 @@ const featured = [
     image: "/images/products/sermorelin.png",
     imageWidth: 587,
     imageHeight: 1041,
-    assetSlot: "h-[301px]",
+    // Fitted in the shared frame, then scaled so the bottle's longest side matches the other products.
+    imageScale: 1.29,
   },
   {
     href: "/products/weight-loss-semaglutide#find-what-fits",
@@ -50,7 +56,7 @@ const featured = [
     image: "https://framerusercontent.com/images/b3PWiNtSYn3mtcfXtpoTxo38Zo.png?width=1024&height=1024",
     imageWidth: 1024,
     imageHeight: 1024,
-    assetSlot: "h-[241px]",
+    imageScale: 1.04,
   },
   {
     href: "/products/men-sexual-health-tadalafil",
@@ -60,7 +66,7 @@ const featured = [
     image: "/images/products/tadalafil.png",
     imageWidth: 1890,
     imageHeight: 2363,
-    assetSlot: "h-[138px]",
+    imageScale: 2,
   },
 ];
 
@@ -102,14 +108,15 @@ function FeaturedCareTile({ item }: { item: (typeof featured)[number] }) {
       <p className="relative z-10 font-sans text-[25px] font-bold leading-[30px] tracking-normal text-ink">
         {item.category}
       </p>
-      <div className={`relative z-10 flex w-full max-w-[241px] items-center justify-center ${item.assetSlot}`}>
-        <div ref={assetRef} className="flex h-[88%] w-[88%] items-center justify-center">
+      <div className="relative z-10 flex size-[200px] items-center justify-center">
+        <div ref={assetRef} className="flex h-full w-full items-center justify-center">
           <Image
             src={item.image}
             alt={item.name}
             width={item.imageWidth}
             height={item.imageHeight}
-            className="h-auto max-h-full w-auto max-w-full object-contain"
+            style={{ scale: item.imageScale }}
+            className="h-auto max-h-full w-auto max-w-full origin-center object-contain"
           />
         </div>
       </div>
@@ -956,13 +963,18 @@ export function HomePage() {
                   </svg>
                 </span>
                 <div className="show-up-vial flex min-h-0 flex-1 items-center justify-center">
-                  <Image
-                    src={card.img}
-                    alt=""
-                    width={1080}
-                    height={1350}
-                    className="h-[420px] w-auto max-w-none shrink-0 origin-center object-contain transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.045] group-hover:-translate-y-2 motion-reduce:transition-none motion-reduce:group-hover:translate-y-0 motion-reduce:group-hover:scale-100 md:h-[560px]"
-                  />
+                  <div
+                    className="w-fit"
+                    style={card.imageOffset ? { transform: `translateY(${card.imageOffset})` } : undefined}
+                  >
+                    <Image
+                      src={card.img}
+                      alt=""
+                      width={1080}
+                      height={1350}
+                      className={`h-[420px] w-auto max-w-none shrink-0 origin-center object-contain transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:-translate-y-2 motion-reduce:transition-none motion-reduce:group-hover:translate-y-0 md:h-[560px] ${card.imageScale ? "scale-[1.6] group-hover:scale-[1.67] motion-reduce:scale-[1.6] motion-reduce:group-hover:scale-[1.6]" : "group-hover:scale-[1.045] motion-reduce:group-hover:scale-100"}`}
+                    />
+                  </div>
                 </div>
                 <div className="mt-4 w-full shrink-0">
                   <h3 className="font-sans text-[26px] leading-[1.15] font-semibold tracking-normal text-[#e86a6e] transition-colors duration-300 ease-out group-hover:text-[#e33d4d] motion-reduce:transition-none md:min-h-[2.4em] md:text-[34px]">
