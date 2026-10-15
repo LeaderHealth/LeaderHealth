@@ -20,8 +20,6 @@ import { useCart } from "./cart/CartProvider";
 import { MobileNav } from "./MobileNav";
 import { TabletNavBar, TabletNavDisclosure, type TabletPanel } from "./TabletNav";
 
-const GENERAL_FORM_URL = "https://products.leaderhealth.clinic/";
-
 const whoLinks = [
   { href: "/aboutus", label: "About Us" },
   { href: "/contact-us", label: "Contact" },
@@ -458,7 +456,7 @@ function MegaMenuPanel({
                 {shopAll.label}
               </Link>
               <a
-                href={GENERAL_FORM_URL}
+                href={GET_STARTED_URL}
                 className="group relative mt-4 flex h-12 w-[285px] max-w-full items-center gap-3 overflow-hidden rounded-full bg-white px-3 text-ink transition-[background-color,color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[#331110] hover:text-[#F7F3F5] focus-visible:bg-[#331110] focus-visible:text-[#F7F3F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none"
               >
                 <span

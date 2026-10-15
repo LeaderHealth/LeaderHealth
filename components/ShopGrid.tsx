@@ -64,7 +64,7 @@ export function ShopGrid({
       <section
         className={
           heroImage
-            ? "relative flex min-h-[88svh] items-center justify-center overflow-hidden bg-[#2a1814] text-white md:aspect-[1024/571] md:min-h-[72vh]"
+            ? "relative flex h-[78vh] items-center justify-center overflow-hidden bg-[#2a1814] text-white"
             : centeredHero
               ? "relative h-[78vh] overflow-hidden bg-ink text-white"
               : "relative flex min-h-[70vh] items-end overflow-hidden bg-ink pb-16 pt-32 text-white"
