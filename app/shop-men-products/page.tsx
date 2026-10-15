@@ -1,5 +1,6 @@
 import { ShopGrid } from "@/components/ShopGrid";
-import { SexualHealthBlends } from "@/components/SexualHealthBlends";
+import { BiomarkerRing } from "@/components/BiomarkerRing";
+import { RecommendedProducts } from "@/components/RecommendedProducts";
 import { ArticleLibrary } from "@/components/ArticleLibrary";
 import { JsonLd } from "@/components/JsonLd";
 import { labs, productsFor } from "@/lib/content/products";
@@ -42,9 +43,9 @@ export default function ShopMenPage() {
         }
         catalogTitle="All Men's Products"
         catalogTone="dark"
-      >
-        <SexualHealthBlends audience="men" />
-      </ShopGrid>
+        feature={<RecommendedProducts tone="men" />}
+      />
+      <BiomarkerRing />
       <ArticleLibrary />
     </>
   );
