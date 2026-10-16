@@ -149,11 +149,23 @@ export function resolveCartHandoff(
 const INTERNAL_CHECKOUT_ORIGIN =
   "https://leader-health-internal-checkout-page-git-main-leader-health.vercel.app";
 
-export function storefrontAppOrigin() {
+function configuredStorefrontOrigin() {
   const configured =
     process.env.STOREFRONT_APP_ORIGIN?.trim() || process.env.NEXT_PUBLIC_STOREFRONT_ORIGIN?.trim();
-  if (configured) return configured.replace(/\/$/, "");
-  if (process.env.NODE_ENV === "development") return "http://localhost:8888";
+  if (!configured) return "";
+  return configured.replace(/\/$/, "");
+}
+
+function isLocalOrigin(origin: string) {
+  return /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+}
+
+export function storefrontAppOrigin() {
+  const configured = configuredStorefrontOrigin();
+  if (process.env.NODE_ENV === "development") {
+    return configured && !isLocalOrigin(configured) ? configured : "http://localhost:8888";
+  }
+  if (configured && !isLocalOrigin(configured)) return configured;
   return INTERNAL_CHECKOUT_ORIGIN;
 }
 
