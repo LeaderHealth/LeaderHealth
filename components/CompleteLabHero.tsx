@@ -1,5 +1,9 @@
+"use client";
+
 import Image from "next/image";
-import Link from "next/link";
+import { labs } from "@/lib/content/products";
+import { cartItemFromLab } from "@/lib/cart/items";
+import { useCart } from "@/components/cart/CartProvider";
 
 const serif = {
   fontFamily: "var(--font-instrument-serif), Georgia, serif",
@@ -29,10 +33,17 @@ function ArrowIcon() {
   );
 }
 
-function GenderLink({ href, children }: { href: string; children: string }) {
+function GenderButton({ slug, gender, children }: { slug: string; gender: "Men" | "Women"; children: string }) {
+  const { addItem } = useCart();
+
   return (
-    <Link
-      href={href}
+    <button
+      type="button"
+      onClick={() => {
+        const lab = labs.find((item) => item.slug === slug);
+        if (!lab) return;
+        addItem(cartItemFromLab(lab, gender));
+      }}
       className="group relative inline-flex h-10 w-full min-w-0 flex-1 items-center justify-center overflow-hidden rounded-full bg-[#DF4452] font-sans text-[13px] font-medium tracking-[0.04em] text-[#F7F3F5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#32120E]"
     >
       <span
@@ -50,7 +61,7 @@ function GenderLink({ href, children }: { href: string; children: string }) {
           </span>
         </span>
       </span>
-    </Link>
+    </button>
   );
 }
 
@@ -68,14 +79,13 @@ function PhonePreview({ src, alt }: { src: string; alt: string }) {
 }
 
 export function CompleteLabHero({
+  slug,
   price,
   name = "Complete Panel",
   biomarkers = "64 biomarkers",
   phoneSrc = "/images/complete-lab-phone.png",
   phoneAlt = "Phone showing the Complete Panel annual baseline, with 64 core biomarkers and a View Results button",
   description = "Energy, mood, and sex drive all rely on hormonal balance. This lab panel analyzes 64 key biomarkers, providing a streamlined assessment of your hormone health.",
-  menUrl,
-  womenUrl,
 }: {
   slug: string;
   image: string;
@@ -85,8 +95,6 @@ export function CompleteLabHero({
   phoneSrc?: string;
   phoneAlt?: string;
   description?: string;
-  menUrl: string;
-  womenUrl: string;
 }) {
   return (
     <section
@@ -139,8 +147,8 @@ export function CompleteLabHero({
             {labsCta(name)}
           </p>
           <div className="mt-3 flex flex-col gap-2.5 min-[380px]:flex-row">
-            <GenderLink href={menUrl}>FOR MEN</GenderLink>
-            <GenderLink href={womenUrl}>FOR WOMEN</GenderLink>
+            <GenderButton slug={slug} gender="Men">FOR MEN</GenderButton>
+            <GenderButton slug={slug} gender="Women">FOR WOMEN</GenderButton>
           </div>
           <p className="mx-auto mt-3 max-w-[22rem] text-center font-sans text-[12px] leading-[1.4] text-[#6d5a56]">
             Select the sex assigned at birth so we match the right biomarkers and reference ranges.

@@ -146,12 +146,41 @@ export function resolveCartHandoff(
   return { ok: true, ids };
 }
 
-export function storefrontCheckoutOrigin() {
-  return (process.env.NEXT_PUBLIC_STOREFRONT_ORIGIN?.trim() || "http://localhost:8888").replace(/\/$/, "");
+const INTERNAL_CHECKOUT_ORIGIN =
+  "https://leader-health-internal-checkout-page-git-main-leader-health.vercel.app";
+
+function configuredStorefrontOrigin() {
+  const configured =
+    process.env.STOREFRONT_APP_ORIGIN?.trim() || process.env.NEXT_PUBLIC_STOREFRONT_ORIGIN?.trim();
+  if (!configured) return "";
+  return configured.replace(/\/$/, "");
+}
+
+function isLocalOrigin(origin: string) {
+  return /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+}
+
+export function storefrontAppOrigin() {
+  const configured = configuredStorefrontOrigin();
+  if (process.env.NODE_ENV === "development") {
+    return configured && !isLocalOrigin(configured) ? configured : "http://localhost:8888";
+  }
+  if (configured && !isLocalOrigin(configured)) return configured;
+  return INTERNAL_CHECKOUT_ORIGIN;
 }
 
 export function storefrontCheckoutUrl(ids: string[], ref?: string) {
   const parts = ids.map((id) => `product=${encodeURIComponent(id)}`);
   if (ref) parts.push(`ref=${encodeURIComponent(ref)}`);
-  return `${storefrontCheckoutOrigin()}/checkout?${parts.join("&")}`;
+  const query = parts.join("&");
+  return query ? `/checkout?${query}` : "/checkout";
+}
+
+export function embeddedCheckoutSrc(product: string | string[] | undefined, ref?: string) {
+  const params = new URLSearchParams();
+  const ids = (Array.isArray(product) ? product : product ? [product] : []).filter(Boolean);
+  for (const id of ids) params.append("product", id);
+  if (ref) params.set("ref", ref);
+  params.set("embed", "1");
+  return `${storefrontAppOrigin()}/checkout?${params.toString()}`;
 }

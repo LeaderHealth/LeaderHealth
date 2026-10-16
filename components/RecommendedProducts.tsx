@@ -16,7 +16,7 @@ function productHref(slug: string) {
 function checkoutHref(slug: string) {
   const id = getProduct(slug)?.clientProductId;
   if (!id) return productHref(slug);
-  return `https://products.leaderhealth.clinic/checkout?product=${encodeURIComponent(id)}`;
+  return `/checkout?product=${encodeURIComponent(id)}`;
 }
 
 type RecommendedTone = "women" | "men";

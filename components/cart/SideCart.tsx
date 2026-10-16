@@ -128,7 +128,10 @@ export function SideCart() {
                       >
                         {item.name}
                       </button>
-                      <p className="mt-1 text-sm text-taupe">{item.priceLabel}</p>
+                      <p className="mt-1 text-sm text-taupe">
+                        {item.variant ? `${item.variant} · ` : ""}
+                        {item.priceLabel}
+                      </p>
                       <div className="mt-3 flex items-center justify-between">
                         <div className="flex items-center rounded-full bg-background">
                           <button
