@@ -78,7 +78,7 @@ function FeaturedCareTile({ item }: { item: (typeof featured)[number] }) {
     if (!asset || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     asset.style.transition = "none";
     asset.style.transform = "";
-    asset.style.animation = "featuredTileFloat 4.8s ease-in-out infinite";
+    asset.style.animation = "featuredTileFloat 2.2s ease-in-out infinite";
   }
 
   function stopFloat() {
@@ -143,6 +143,7 @@ const careOptions = [
     image: "/images/products/testosterone-cypionate.png",
     width: 461,
     height: 984,
+    imageScale: 1.12,
   },
   {
     href: "/products/men-sexual-health-combo-troches",
@@ -152,6 +153,7 @@ const careOptions = [
     image: "/images/products/combo-troches.png",
     width: 1080,
     height: 1350,
+    imageScale: 1.28,
   },
   {
     href: "/products/longevity-nad",
@@ -161,6 +163,7 @@ const careOptions = [
     image: "/images/products/nad-overview.png",
     width: 1122,
     height: 1402,
+    imageScale: 0.68,
   },
   {
     href: "/products/weight-loss-semaglutide",
@@ -170,6 +173,7 @@ const careOptions = [
     image: "/images/products/semaglutide.png",
     width: 1312,
     height: 996,
+    imageScale: 1.55,
   },
 ];
 
@@ -601,7 +605,7 @@ export function HomePage() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="group relative flex h-full flex-col rounded-[20px] border border-transparent bg-white px-3.5 pt-3.5 pb-4 transition-colors duration-300 ease-out hover:border-[#e33d4d] sm:px-4 sm:pt-4 sm:pb-5"
+                  className="group relative flex h-full flex-col overflow-hidden rounded-[20px] border border-transparent bg-white px-3.5 pt-3.5 pb-4 transition-colors duration-300 ease-out hover:border-[#e33d4d] sm:px-4 sm:pt-4 sm:pb-5"
                 >
                   <span
                     aria-hidden
@@ -628,7 +632,8 @@ export function HomePage() {
                       alt=""
                       width={item.width}
                       height={item.height}
-                      className="h-auto max-h-[240px] w-auto max-w-[88%] object-contain"
+                      style={{ scale: item.imageScale }}
+                      className="h-auto max-h-[240px] w-auto max-w-[88%] origin-center object-contain"
                     />
                   </div>
                   <p className="mt-1 text-center font-sans text-[12px] leading-snug text-[#8a817e] sm:text-[13px]">

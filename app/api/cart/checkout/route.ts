@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { affiliateCodeFromCookies } from "@/lib/affiliate/store";
 import { labs } from "@/lib/content/products";
 import { listCheckoutProducts } from "@/lib/genhealth/catalog";
 import { genHealthConfigured } from "@/lib/genhealth/client";
@@ -71,7 +72,8 @@ export async function POST(request: Request) {
     const products = await listCheckoutProducts();
     const result = resolveCartHandoff(lines, products, labSlugs);
     if (!result.ok) return NextResponse.json(result, { status: 422 });
-    return NextResponse.json({ ok: true, url: storefrontCheckoutUrl(result.ids) });
+    const ref = await affiliateCodeFromCookies();
+    return NextResponse.json({ ok: true, url: storefrontCheckoutUrl(result.ids, ref ?? undefined) });
   } catch {
     return NextResponse.json(
       { ok: false, item: first, error: `Couldn't match ${first} to a checkout product.` },

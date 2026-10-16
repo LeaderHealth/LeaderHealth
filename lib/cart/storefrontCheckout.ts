@@ -150,7 +150,8 @@ export function storefrontCheckoutOrigin() {
   return (process.env.NEXT_PUBLIC_STOREFRONT_ORIGIN?.trim() || "http://localhost:8888").replace(/\/$/, "");
 }
 
-export function storefrontCheckoutUrl(ids: string[]) {
-  const query = ids.map((id) => `product=${encodeURIComponent(id)}`).join("&");
-  return `${storefrontCheckoutOrigin()}/checkout?${query}`;
+export function storefrontCheckoutUrl(ids: string[], ref?: string) {
+  const parts = ids.map((id) => `product=${encodeURIComponent(id)}`);
+  if (ref) parts.push(`ref=${encodeURIComponent(ref)}`);
+  return `${storefrontCheckoutOrigin()}/checkout?${parts.join("&")}`;
 }
