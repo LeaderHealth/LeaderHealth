@@ -146,11 +146,26 @@ export function resolveCartHandoff(
   return { ok: true, ids };
 }
 
-export function storefrontCheckoutOrigin() {
-  return (process.env.NEXT_PUBLIC_STOREFRONT_ORIGIN?.trim() || "http://localhost:8888").replace(/\/$/, "");
+const INTERNAL_CHECKOUT_ORIGIN =
+  "https://leader-health-internal-checkout-page-git-main-leader-health.vercel.app";
+
+export function storefrontAppOrigin() {
+  const configured =
+    process.env.STOREFRONT_APP_ORIGIN?.trim() || process.env.NEXT_PUBLIC_STOREFRONT_ORIGIN?.trim();
+  if (configured) return configured.replace(/\/$/, "");
+  if (process.env.NODE_ENV === "development") return "http://localhost:8888";
+  return INTERNAL_CHECKOUT_ORIGIN;
 }
 
 export function storefrontCheckoutUrl(ids: string[]) {
   const query = ids.map((id) => `product=${encodeURIComponent(id)}`).join("&");
-  return `${storefrontCheckoutOrigin()}/checkout?${query}`;
+  return query ? `/checkout?${query}` : "/checkout";
+}
+
+export function embeddedCheckoutSrc(product: string | string[] | undefined) {
+  const params = new URLSearchParams();
+  const ids = (Array.isArray(product) ? product : product ? [product] : []).filter(Boolean);
+  for (const id of ids) params.append("product", id);
+  params.set("embed", "1");
+  return `${storefrontAppOrigin()}/checkout?${params.toString()}`;
 }

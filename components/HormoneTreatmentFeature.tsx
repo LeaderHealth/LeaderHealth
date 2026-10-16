@@ -31,11 +31,11 @@ const defaultProducts: HormoneProductCard[] = [
     routes: [
       {
         label: "Start with pill",
-        href: "https://products.leaderhealth.clinic/checkout?product=lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_4f6c68b97e6447cf8869b3dc",
+        href: "/checkout?product=lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_4f6c68b97e6447cf8869b3dc",
       },
       {
         label: "Start with patch",
-        href: "https://products.leaderhealth.clinic/checkout?product=prod_4f6c68b97e6447cf8869b3dc_1",
+        href: "/checkout?product=prod_4f6c68b97e6447cf8869b3dc_1",
       },
     ],
   },
@@ -47,11 +47,11 @@ const defaultProducts: HormoneProductCard[] = [
     routes: [
       {
         label: "Start with suppository",
-        href: "https://products.leaderhealth.clinic/checkout?product=lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_838073b1b57336246da98f60",
+        href: "/checkout?product=lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_838073b1b57336246da98f60",
       },
       {
         label: "Start with cream",
-        href: "https://products.leaderhealth.clinic/checkout?product=lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_4c65ccba2e29c45050817b74",
+        href: "/checkout?product=lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_4c65ccba2e29c45050817b74",
       },
     ],
   },
@@ -63,7 +63,7 @@ const defaultProducts: HormoneProductCard[] = [
     routes: [
       {
         label: "Start with capsule",
-        href: "https://products.leaderhealth.clinic/checkout?product=lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_iZT4cfCiDcwOkqT3TCLg",
+        href: "/checkout?product=lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_iZT4cfCiDcwOkqT3TCLg",
       },
     ],
   },
