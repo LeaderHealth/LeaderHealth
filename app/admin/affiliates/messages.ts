@@ -1,0 +1,14 @@
+export const ADMIN_ERRORS: Record<string, string> = {
+  password: "That email or password is incorrect.",
+  unconfigured: "Set AFFILIATE_ADMIN_EMAIL and AFFILIATE_ADMIN_PASSWORD before signing in.",
+  invalid: "Check the name, email, and commission. Passwords need 8–128 characters.",
+  exists: "Could not assign a unique affiliate ID. Try again.",
+  email: "That email is already in use.",
+  weak: "Passwords need 8–128 characters.",
+  missing: "That affiliate code was not found.",
+  unavailable: "Affiliate tracking is unavailable right now.",
+  promo: "That promo code was not found.",
+  affiliate: "Choose an affiliate account.",
+  assign: "Could not update that promo code.",
+  clear: "That affiliate is not assigned to this promo code.",
+};

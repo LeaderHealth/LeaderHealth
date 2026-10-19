@@ -2,13 +2,19 @@ import { createHash, randomBytes, scrypt as scryptCallback, timingSafeEqual } fr
 import { promisify } from "node:util";
 import { type DocumentData, type Timestamp } from "firebase-admin/firestore";
 import { cookies } from "next/headers";
+import { affiliateTrackingPath } from "@/lib/affiliate/link";
 import { absoluteUrl } from "@/lib/seo/schema";
 import {
+  type CommissionMode,
+  DEFAULT_COMMISSION_PERCENT,
+  commissionForOrder,
   normalizeAffiliateCode,
   normalizeAffiliateEmail,
   normalizeAffiliateName,
   normalizeAffiliatePassword,
+  normalizeCommissionMode,
   normalizeCommissionPercent,
+  normalizeFixedCommissionCents,
 } from "./code";
 import { affiliateFirebaseConfigured, affiliateFirestore } from "./firebase";
 
@@ -51,7 +57,9 @@ export type AffiliateSummary = {
   code: string;
   name: string;
   email: string;
+  commissionMode: CommissionMode;
   commissionPercent: number;
+  commissionFixedCents: number;
   active: boolean;
   clickCount: number;
   paidConversionCount: number;
@@ -72,6 +80,10 @@ export type ConversionSummary = {
 
 function asNumber(value: unknown, fallback = 0) {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function commissionModeFrom(value: unknown): CommissionMode {
+  return value === "default" || value === "fixed" ? value : "percent";
 }
 
 function asTimestamp(value: unknown) {
@@ -116,13 +128,31 @@ function magicLinkHash(token: string) {
   return createHash("sha256").update(token).digest("base64url");
 }
 
+const AFFILIATE_ID_ALPHABET = "abcdefghijkmnopqrstuvwxyz23456789";
+
+function generateAffiliateCode() {
+  const bytes = randomBytes(8);
+  let code = "";
+  for (let index = 0; index < bytes.length; index += 1) {
+    code += AFFILIATE_ID_ALPHABET[bytes[index] % AFFILIATE_ID_ALPHABET.length];
+  }
+  return code;
+}
+
+function alreadyExists(error: unknown) {
+  const codeNumber = (error as { code?: unknown }).code;
+  return codeNumber === 6 || codeNumber === "already-exists" || codeNumber === "ALREADY_EXISTS";
+}
+
 function affiliateFrom(code: string, data: DocumentData | undefined): AffiliateSummary | null {
   if (!data) return null;
   return {
     code,
     name: typeof data.name === "string" ? data.name : code,
     email: typeof data.email === "string" ? data.email : "",
+    commissionMode: commissionModeFrom(data.commissionMode),
     commissionPercent: asNumber(data.commissionPercent),
+    commissionFixedCents: asNumber(data.commissionFixedCents),
     active: data.active === true,
     clickCount: asNumber(data.clickCount),
     paidConversionCount: asNumber(data.paidConversionCount),
@@ -218,14 +248,24 @@ export async function recordAffiliateConversion(input: {
     if (existing.exists) return false;
     const affiliate = await tx.get(affiliateRef);
     if (!affiliate.exists || affiliate.data()?.active !== true) return false;
-    const commissionPercent = asNumber(affiliate.data()?.commissionPercent);
-    const commissionCents = amountCents == null ? 0 : Math.round((amountCents * commissionPercent) / 100);
+    const affiliateData = affiliate.data();
+    const commissionMode = commissionModeFrom(affiliateData?.commissionMode);
+    const commissionPercent = asNumber(affiliateData?.commissionPercent);
+    const commissionFixedCents = asNumber(affiliateData?.commissionFixedCents);
+    const commissionCents = commissionForOrder({
+      mode: commissionMode,
+      percent: commissionPercent,
+      fixedCents: commissionFixedCents,
+      amountCents,
+    });
     tx.set(conversionRef, {
       code,
       orderId,
       amountCents,
       productName: productLabel(input.productName),
+      commissionMode,
       commissionPercent,
+      commissionFixedCents,
       commissionCents,
       dryRun: input.dryRun,
       createdAt: new Date(),
@@ -246,47 +286,59 @@ export async function affiliateCodeFromCookies() {
 }
 
 export async function createAffiliate(input: {
-  code: string;
   name: string;
   email: string;
-  commissionPercent: number;
+  commissionMode?: unknown;
+  commissionPercent?: unknown;
+  commissionFixed?: unknown;
   password?: string;
 }) {
   if (!affiliateFirebaseConfigured()) {
     throw new AffiliateStoreError("unavailable", "Firestore is not configured.");
   }
-  const code = normalizeAffiliateCode(input.code);
   const name = normalizeAffiliateName(input.name);
   const email = normalizeAffiliateEmail(input.email);
-  const commissionPercent = normalizeCommissionPercent(input.commissionPercent, 10);
+  const commissionMode = normalizeCommissionMode(input.commissionMode) ?? "percent";
+  const commissionPercent =
+    commissionMode === "default"
+      ? DEFAULT_COMMISSION_PERCENT
+      : commissionMode === "fixed"
+        ? 0
+        : normalizeCommissionPercent(input.commissionPercent, null);
+  const commissionFixedCents = commissionMode === "fixed" ? normalizeFixedCommissionCents(input.commissionFixed) : 0;
   const passwordProvided = typeof input.password === "string" && input.password.length > 0;
   const password = passwordProvided ? normalizeAffiliatePassword(input.password) : null;
-  if (!code || !name || !email || commissionPercent == null || (passwordProvided && !password)) {
-    throw new AffiliateStoreError("invalid", "Check the code, name, email, commission, and password.");
+  if (!name || !email || commissionPercent == null || commissionFixedCents == null || (passwordProvided && !password)) {
+    throw new AffiliateStoreError("invalid", "Check the name, email, commission, and password.");
   }
   const db = affiliateFirestore();
   const taken = await db.collection("affiliates").where("email", "==", email).limit(1).get();
   if (!taken.empty) throw new AffiliateStoreError("email", "That email is already in use.");
-  try {
-    await db.collection("affiliates").doc(code).create({
-      name,
-      email,
-      commissionPercent,
-      passwordHash: password ? await hashPassword(password) : null,
-      active: true,
-      clickCount: 0,
-      paidConversionCount: 0,
-      commissionCents: 0,
-      createdAt: new Date(),
-    });
-  } catch (error) {
-    const codeNumber = (error as { code?: unknown }).code;
-    if (codeNumber === 6 || codeNumber === "already-exists" || codeNumber === "ALREADY_EXISTS") {
-      throw new AffiliateStoreError("exists", "That code is already in use.");
+  const passwordHash = password ? await hashPassword(password) : null;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const code = generateAffiliateCode();
+    try {
+      await db.collection("affiliates").doc(code).create({
+        name,
+        email,
+        commissionMode,
+        commissionPercent,
+        commissionFixedCents,
+        passwordHash,
+        active: true,
+        clickCount: 0,
+        paidConversionCount: 0,
+        commissionCents: 0,
+        trackingPath: affiliateTrackingPath(code),
+        createdAt: new Date(),
+      });
+      return code;
+    } catch (error) {
+      if (alreadyExists(error)) continue;
+      throw error;
     }
-    throw error;
   }
-  return code;
+  throw new AffiliateStoreError("exists", "Could not assign a unique affiliate ID.");
 }
 
 export async function setAffiliateActive(code: string, active: boolean) {

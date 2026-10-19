@@ -1,3 +1,5 @@
+import { applyAffiliateTracking } from "@/lib/affiliate/link";
+
 export type HandoffLine = {
   slug: string;
   name: string;
@@ -169,18 +171,19 @@ export function storefrontAppOrigin() {
   return INTERNAL_CHECKOUT_ORIGIN;
 }
 
-export function storefrontCheckoutUrl(ids: string[], ref?: string) {
-  const parts = ids.map((id) => `product=${encodeURIComponent(id)}`);
-  if (ref) parts.push(`ref=${encodeURIComponent(ref)}`);
-  const query = parts.join("&");
+export function storefrontCheckoutUrl(ids: string[], ref?: string, campaign?: string | null) {
+  const params = new URLSearchParams();
+  for (const id of ids) params.append("product", id);
+  applyAffiliateTracking(params, ref, campaign);
+  const query = params.toString();
   return query ? `/checkout?${query}` : "/checkout";
 }
 
-export function embeddedCheckoutSrc(product: string | string[] | undefined, ref?: string) {
+export function embeddedCheckoutSrc(product: string | string[] | undefined, ref?: string, campaign?: string | null) {
   const params = new URLSearchParams();
   const ids = (Array.isArray(product) ? product : product ? [product] : []).filter(Boolean);
   for (const id of ids) params.append("product", id);
-  if (ref) params.set("ref", ref);
+  applyAffiliateTracking(params, ref, campaign);
   params.set("embed", "1");
   return `${storefrontAppOrigin()}/checkout?${params.toString()}`;
 }

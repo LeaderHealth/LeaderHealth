@@ -3,6 +3,7 @@ import { affiliateCodeFromCookies } from "@/lib/affiliate/store";
 import { labs } from "@/lib/content/products";
 import { listCheckoutProducts } from "@/lib/genhealth/catalog";
 import { genHealthConfigured } from "@/lib/genhealth/client";
+import { campaignForAffiliateCode } from "@/lib/genhealth/promocodes";
 import {
   isLabSlug,
   resolveCartHandoff,
@@ -73,7 +74,8 @@ export async function POST(request: Request) {
     const result = resolveCartHandoff(lines, products, labSlugs);
     if (!result.ok) return NextResponse.json(result, { status: 422 });
     const ref = await affiliateCodeFromCookies();
-    return NextResponse.json({ ok: true, url: storefrontCheckoutUrl(result.ids, ref ?? undefined) });
+    const campaign = ref ? await campaignForAffiliateCode(ref) : null;
+    return NextResponse.json({ ok: true, url: storefrontCheckoutUrl(result.ids, ref ?? undefined, campaign) });
   } catch {
     return NextResponse.json(
       { ok: false, item: first, error: `Couldn't match ${first} to a checkout product.` },

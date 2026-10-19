@@ -17,5 +17,5 @@ export async function GET(request: Request) {
     redirect("/affiliates?error=unavailable");
   }
   if (!code || !(await setPortalSession(code))) redirect("/affiliates?error=denied");
-  redirect("/affiliates");
+  redirect("/affiliates/tracking-link");
 }

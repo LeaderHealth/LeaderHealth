@@ -24,7 +24,7 @@ export async function loginAffiliatePortal(formData: FormData) {
     fail("unavailable");
   }
   if (!code || !(await setPortalSession(code))) fail("denied");
-  redirect("/affiliates");
+  redirect("/affiliates/tracking-link");
 }
 
 export async function requestAffiliateLink(formData: FormData) {

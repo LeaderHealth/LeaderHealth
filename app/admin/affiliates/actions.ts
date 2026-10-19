@@ -1,7 +1,9 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { AffiliateStoreError, createAffiliate, setAffiliateActive, setAffiliatePassword } from "@/lib/affiliate/store";
+import { PromoCodeError, assignPromoCode, unassignPromoCode } from "@/lib/genhealth/promocodes";
 import {
   adminCredentialsMatch,
   adminIsSignedIn,
@@ -10,8 +12,8 @@ import {
   setAdminSession,
 } from "@/lib/affiliate/session";
 
-function fail(error: string): never {
-  redirect(`/admin/affiliates?error=${encodeURIComponent(error)}`);
+function fail(error: string, path = "/admin/affiliates"): never {
+  redirect(`${path}?error=${encodeURIComponent(error)}`);
 }
 
 export async function loginAffiliateAdmin(formData: FormData) {
@@ -20,7 +22,7 @@ export async function loginAffiliateAdmin(formData: FormData) {
   const password = String(formData.get("password") ?? "");
   if (!adminCredentialsMatch(email, password)) fail("password");
   await setAdminSession();
-  redirect("/admin/affiliates");
+  redirect("/admin/affiliates/accounts");
 }
 
 export async function logoutAffiliateAdmin() {
@@ -34,20 +36,22 @@ async function requireAdmin() {
 
 export async function createAffiliateAction(formData: FormData) {
   await requireAdmin();
+  let code = "";
   try {
-    await createAffiliate({
-      code: String(formData.get("code") ?? ""),
+    code = await createAffiliate({
       name: String(formData.get("name") ?? ""),
       email: String(formData.get("email") ?? ""),
-      commissionPercent: Number(formData.get("commissionPercent") ?? 10),
+      commissionMode: formData.get("commissionMode"),
+      commissionPercent: formData.get("commissionPercent"),
+      commissionFixed: formData.get("commissionFixed"),
       password: String(formData.get("password") ?? ""),
     });
   } catch (error) {
-    if (error instanceof AffiliateStoreError) fail(error.code);
+    if (error instanceof AffiliateStoreError) fail(error.code, "/admin/affiliates/add");
     console.error("[affiliate] create failed", error instanceof Error ? error.message : "unknown");
-    fail("unavailable");
+    fail("unavailable", "/admin/affiliates/add");
   }
-  redirect("/admin/affiliates");
+  redirect(`/admin/affiliates/accounts?created=${encodeURIComponent(code)}`);
 }
 
 export async function setAffiliatePasswordAction(formData: FormData) {
@@ -55,11 +59,11 @@ export async function setAffiliatePasswordAction(formData: FormData) {
   try {
     await setAffiliatePassword(String(formData.get("code") ?? ""), String(formData.get("password") ?? ""));
   } catch (error) {
-    if (error instanceof AffiliateStoreError) fail(error.code);
+    if (error instanceof AffiliateStoreError) fail(error.code, "/admin/affiliates/accounts");
     console.error("[affiliate] password update failed", error instanceof Error ? error.message : "unknown");
-    fail("unavailable");
+    fail("unavailable", "/admin/affiliates/accounts");
   }
-  redirect("/admin/affiliates");
+  redirect("/admin/affiliates/accounts");
 }
 
 export async function setAffiliateActiveAction(formData: FormData) {
@@ -68,9 +72,45 @@ export async function setAffiliateActiveAction(formData: FormData) {
   try {
     await setAffiliateActive(String(formData.get("code") ?? ""), active);
   } catch (error) {
-    if (error instanceof AffiliateStoreError) fail(error.code);
+    if (error instanceof AffiliateStoreError) fail(error.code, "/admin/affiliates/accounts");
     console.error("[affiliate] status update failed", error instanceof Error ? error.message : "unknown");
-    fail("unavailable");
+    fail("unavailable", "/admin/affiliates/accounts");
   }
-  redirect("/admin/affiliates");
+  redirect("/admin/affiliates/accounts");
+}
+
+const PROMO_PATH = "/admin/affiliates/promo-codes";
+const ACCOUNTS_PATH = "/admin/affiliates/accounts";
+
+function refreshAssignments() {
+  revalidatePath(PROMO_PATH);
+  revalidatePath(ACCOUNTS_PATH);
+}
+
+export async function assignPromoCodeAction(formData: FormData) {
+  await requireAdmin();
+  const code = String(formData.get("code") ?? "").trim();
+  try {
+    await assignPromoCode(code, String(formData.get("affiliate") ?? ""));
+  } catch (error) {
+    if (error instanceof PromoCodeError) fail(error.code, PROMO_PATH);
+    console.error("[affiliate] promo assign failed", error instanceof Error ? error.message : "unknown");
+    fail("assign", PROMO_PATH);
+  }
+  refreshAssignments();
+  redirect(`${PROMO_PATH}?assigned=${encodeURIComponent(code)}`);
+}
+
+export async function unassignPromoCodeAction(formData: FormData) {
+  await requireAdmin();
+  const code = String(formData.get("code") ?? "").trim();
+  try {
+    await unassignPromoCode(code, String(formData.get("affiliate") ?? ""));
+  } catch (error) {
+    if (error instanceof PromoCodeError) fail(error.code, PROMO_PATH);
+    console.error("[affiliate] promo unassign failed", error instanceof Error ? error.message : "unknown");
+    fail("assign", PROMO_PATH);
+  }
+  refreshAssignments();
+  redirect(`${PROMO_PATH}?removed=${encodeURIComponent(code)}`);
 }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { embeddedCheckoutSrc } from "@/lib/cart/storefrontCheckout";
+import { campaignForAffiliateCode } from "@/lib/genhealth/promocodes";
 
 export const metadata: Metadata = { title: "Checkout" };
 
@@ -10,7 +11,7 @@ type Props = {
 export default async function CheckoutPage({ searchParams }: Props) {
   const query = await searchParams;
   const ref = Array.isArray(query.ref) ? query.ref[0] : query.ref;
-  const src = embeddedCheckoutSrc(query.product, ref);
+  const src = embeddedCheckoutSrc(query.product, ref, ref ? await campaignForAffiliateCode(ref) : null);
 
   return (
     <section className="bg-background pt-28">

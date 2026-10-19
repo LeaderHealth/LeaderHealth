@@ -1056,7 +1056,7 @@ export function HomePage() {
               className="live-vial relative mx-auto w-full max-w-[340px] lg:min-h-[520px] lg:max-w-[579px]"
               style={{ "--d": "180ms" } as CSSProperties}
             >
-              <div className="sermorelin-vial-float relative pb-14 md:pb-0">
+              <div className="sermorelin-vial-float relative">
                 <Image
                   src="/images/products/sermorelin.png"
                   alt="Sermorelin injection vial"
@@ -1064,7 +1064,7 @@ export function HomePage() {
                   height={1041}
                   className="sermorelin-vial h-auto w-full object-contain"
                 />
-                <p className="absolute bottom-0 left-1/2 flex h-11 -translate-x-1/2 items-center justify-center rounded-[13px] bg-black/50 px-4 font-serif-italic text-[18px] leading-none text-[#f7f3f4] md:bottom-16 md:left-auto md:right-8 md:h-16 md:translate-x-0 md:px-6 md:text-[28px] md:leading-[33.6px]">
+                <p className="absolute top-[73%] left-[57%] z-10 flex h-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-[13px] bg-black/50 px-4 font-serif-italic text-[18px] leading-none text-[#f7f3f4] md:h-16 md:px-6 md:text-[28px] md:leading-[33.6px]">
                   More by design.
                 </p>
               </div>
