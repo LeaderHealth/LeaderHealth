@@ -34,6 +34,7 @@ export function MarkPaidButton({
 
   useEffect(() => {
     if (!open) return;
+    const trigger = triggerRef.current;
     amountRef.current?.focus();
     const root = dialogRef.current;
     const previousOverflow = document.body.style.overflow;
@@ -61,7 +62,7 @@ export function MarkPaidButton({
     return () => {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", onKeyDown);
-      triggerRef.current?.focus();
+      trigger?.focus();
     };
   }, [open]);
 

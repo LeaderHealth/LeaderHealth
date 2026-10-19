@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 
 function initials(name: string) {
@@ -19,7 +20,17 @@ function Avatar({ name, src }: { name: string; src: string | null }) {
       </span>
     );
   }
-  return <img src={src} alt="" className="size-11 shrink-0 rounded-full object-cover" onError={() => setFailed(true)} />;
+  return (
+    <Image
+      src={src}
+      alt=""
+      width={44}
+      height={44}
+      unoptimized
+      className="size-11 shrink-0 rounded-full object-cover"
+      onError={() => setFailed(true)}
+    />
+  );
 }
 
 function EmailAddress({ email }: { email: string }) {
