@@ -49,24 +49,32 @@ function asString(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : "";
 }
 
+function customFieldSource(order: Record<string, unknown>) {
+  const fields = asRecord(order.customFields);
+  return fields ? asString(fields.utm_source) : "";
+}
+
 function hasAttributionField(order: Record<string, unknown>) {
-  if (asString(order.utm_source)) return true;
+  if (asString(order.utm_source) || customFieldSource(order)) return true;
   return ATTRIBUTION_KEYS.some((key) => asRecord(order[key]));
 }
 
 function utmSource(order: Record<string, unknown>) {
+  const candidates: string[] = [];
   const direct = asString(order.utm_source);
-  if (direct) return direct;
+  if (direct) candidates.push(direct);
   for (const key of ATTRIBUTION_KEYS) {
     const bag = asRecord(order[key]);
     if (!bag) continue;
     const source = asString(bag.utm_source) || asString(bag.source);
-    if (source) return source;
+    if (source) candidates.push(source);
     const nested = asRecord(bag.utm);
     const nestedSource = nested ? asString(nested.utm_source) || asString(nested.source) : "";
-    if (nestedSource) return nestedSource;
+    if (nestedSource) candidates.push(nestedSource);
   }
-  return "";
+  const custom = customFieldSource(order);
+  if (custom) candidates.push(custom);
+  return candidates.find((value) => normalizeAffiliateCode(value)) ?? candidates[0] ?? "";
 }
 
 function amountCents(value: unknown) {

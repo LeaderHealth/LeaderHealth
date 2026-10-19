@@ -26,9 +26,9 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await settleCheckout(parsed.value);
+    const code = await affiliateCodeFromCookies();
+    const result = await settleCheckout(parsed.value, code);
     try {
-      const code = await affiliateCodeFromCookies();
       if (code) {
         await recordAffiliateConversion({
           code,

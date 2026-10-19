@@ -35,7 +35,7 @@ export function parseCheckoutPaymentInput(body: unknown) {
   return { ok: true as const, value: { ...parsed.value, paymentToken: paymentToken || undefined } };
 }
 
-export async function settleCheckout(input: CheckoutPaymentInput): Promise<SettledCheckout> {
+export async function settleCheckout(input: CheckoutPaymentInput, affiliateCode?: string | null): Promise<SettledCheckout> {
   const chargesEnabled = ALLOW_LIVE_NMI_CHARGES;
   if (chargesEnabled && !input.paymentToken) {
     throw new CheckoutHttpError("Please check your card details and try again.", 400, true);
@@ -44,7 +44,7 @@ export async function settleCheckout(input: CheckoutPaymentInput): Promise<Settl
     throw new CheckoutHttpError("Payment is temporarily unavailable.", 503);
   }
 
-  const order = await placeCheckoutOrder(input);
+  const order = await placeCheckoutOrder(input, affiliateCode);
   const base: SettledCheckout = {
     ...order,
     charged: false,

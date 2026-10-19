@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { normalizeAffiliateCode } from "@/lib/affiliate/code";
+import { affiliateCodeFromCookies } from "@/lib/affiliate/store";
 import { embeddedCheckoutSrc } from "@/lib/cart/storefrontCheckout";
 import { campaignForAffiliateCode } from "@/lib/genhealth/promocodes";
 
@@ -10,7 +12,8 @@ type Props = {
 
 export default async function CheckoutPage({ searchParams }: Props) {
   const query = await searchParams;
-  const ref = Array.isArray(query.ref) ? query.ref[0] : query.ref;
+  const fromQuery = Array.isArray(query.ref) ? query.ref[0] : query.ref;
+  const ref = normalizeAffiliateCode(fromQuery) ?? (await affiliateCodeFromCookies()) ?? undefined;
   const src = embeddedCheckoutSrc(query.product, ref, ref ? await campaignForAffiliateCode(ref) : null);
 
   return (
