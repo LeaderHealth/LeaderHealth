@@ -264,7 +264,7 @@ export const peptideFaqs = [
   },
   {
     q: "Which medications can I learn about on the site?",
-    a: "The following are available to explore and purchase directly:\n\nSermorelin — $149/month\n\nNAD+ (injectable) — $149/month\n\nNAD+ nasal spray — $119/month\n\nGlutathione — $129/month\n\nAdditional advanced peptide therapies are available through the patient portal after a consultation with a licensed provider determines they are clinically appropriate for you. These are not advertised publicly because the evidence does not support advertising them to strangers — but they may be part of your treatment plan after a clinical evaluation.",
+    a: "The following are available to explore and purchase directly:\n\nSermorelin — $149/month\n\nNAD+ (injectable) — $149/month\n\nGlutathione — $129/month\n\nAdditional advanced peptide therapies are available through the patient portal after a consultation with a licensed provider determines they are clinically appropriate for you. These are not advertised publicly because the evidence does not support advertising them to strangers — but they may be part of your treatment plan after a clinical evaluation.",
   },
   {
     q: "Who should not use these?",

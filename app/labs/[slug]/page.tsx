@@ -1,5 +1,4 @@
 import Image from "next/image";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CompleteLabBiomarkers } from "@/components/CompleteLabBiomarkers";
 import { CompleteLabIncluded } from "@/components/CompleteLabIncluded";
@@ -31,42 +30,6 @@ const completeLabPoints = [
   },
 ];
 
-const alsoLike = [
-  {
-    href: "/labs/labs-advance-panel",
-    title: "Advanced Panel",
-    body: "Expanded Panel covering 100 biomarkers",
-    price: "$399",
-    src: "/images/also-like-advanced.png",
-    alt: "Phone showing the Advanced Panel results",
-    width: 515,
-    height: 967,
-    imageClass: "max-h-[270px] max-w-[78%]",
-  },
-  {
-    href: "/products/sexual-health-pt-141-nasal",
-    title: "PT-141 nasal",
-    body: "A fast-acting nasal spray for sexual desire and arousal.",
-    price: "$179",
-    src: "/images/also-like-pt141.png",
-    alt: "PT-141 nasal spray bottle",
-    width: 186,
-    height: 553,
-    imageClass: "max-h-[270px] max-w-full",
-  },
-  {
-    href: "/products/men-sexual-health-tadalafil",
-    title: "Tadalafil/Slidenadil PRN",
-    body: "A clinically proven PDE5 inhibitor",
-    price: "$39",
-    src: "/images/also-like-tadalafil.png",
-    alt: "Yellow tablet stamped LH",
-    width: 417,
-    height: 262,
-    imageClass: "max-h-[150px] max-w-[220px]",
-  },
-];
-
 type Props = { params: Promise<{ slug: string }> };
 
 export function generateStaticParams() {
@@ -85,24 +48,6 @@ export default async function LabPage({ params }: Props) {
   if (!lab) notFound();
 
   if (lab.slug === "labs-complete-panel" || lab.slug === "labs-advance-panel") {
-    const suggestions =
-      lab.slug === "labs-advance-panel"
-        ? [
-            {
-              href: "/labs/labs-complete-panel",
-              title: "Complete Panel",
-              body: "Baseline panel covering 64 biomarkers",
-              price: "$179",
-              src: "/images/complete-lab-phone.png",
-              alt: "Phone showing the Complete Panel results",
-              width: 457,
-              height: 931,
-              imageClass: "max-h-[270px] max-w-[78%]",
-            },
-            ...alsoLike.slice(1),
-          ]
-        : alsoLike;
-
     const visible =
       lab.slug === "labs-advance-panel"
         ? {
@@ -157,33 +102,6 @@ export default async function LabPage({ params }: Props) {
         <SiteTestimonials />
         <CompleteLabFaq />
         <CompleteLabStart />
-        <section className="bg-[#F7F3F2] px-5 py-12 md:px-10 md:py-16">
-          <div className="mx-auto w-full max-w-[1080px]">
-            <h2 className="font-sans text-[28px] font-medium tracking-normal text-[#321110] md:text-[32px]">
-              You might also like
-            </h2>
-            <div className="mt-8 grid grid-cols-1 gap-10 min-[810px]:grid-cols-3 min-[810px]:gap-6">
-              {suggestions.map((item) => (
-                <Link key={item.href} href={item.href} className="group block">
-                  <div className="mx-auto flex aspect-[305/321] w-full max-w-[305px] items-center justify-center overflow-hidden rounded-[10px] bg-gradient-to-b from-[#FAF4EA] to-[#DDD3BE]">
-                    <Image
-                      src={item.src}
-                      alt={item.alt}
-                      width={item.width}
-                      height={item.height}
-                      className={`h-auto w-auto object-contain ${item.imageClass}`}
-                    />
-                  </div>
-                  <h3 className="mt-4 font-sans text-[22px] font-medium leading-tight tracking-normal text-[#321110]">
-                    {item.title}
-                  </h3>
-                  <p className="mt-1 font-sans text-[15px] leading-snug text-[#5c4a46]">{item.body}</p>
-                  <p className="mt-2 font-sans text-[15px] text-[#321110]">{item.price}</p>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
         <ArticleLibrary
           slugs={[
             "semaglutide-vs-tirzepatide-comparison-guide",
