@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { PasswordInput } from "@/components/affiliate/PasswordInput";
 import { SignInChoice } from "@/components/affiliate/SignInChoice";
 import { affiliateAdminConfigured, adminIsSignedIn } from "@/lib/affiliate/session";
 import { loginAffiliateAdmin } from "./actions";
@@ -86,15 +87,13 @@ function Login({ configured, invalid }: { configured: boolean; invalid: boolean 
         <label className="block text-sm font-medium text-ink" htmlFor="password">
           Password
         </label>
-        <input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           required
           autoComplete="current-password"
           aria-invalid={invalid || undefined}
           aria-describedby={invalid ? "affiliate-admin-error" : undefined}
-          className={fieldClass}
         />
       </div>
       <button type="submit" className={buttonClass}>

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { CommissionOptions } from "@/components/affiliate/CommissionOptions";
+import { PasswordInput } from "@/components/affiliate/PasswordInput";
 import { createAffiliateAction } from "../../actions";
 import { ADMIN_ERRORS } from "../../messages";
 
@@ -52,15 +53,13 @@ export default async function AddAffiliatePage({
         <CommissionOptions />
         <label className="block text-sm font-medium text-ink md:col-span-2" htmlFor="affiliate-password">
           Portal password
-          <input
+          <PasswordInput
             id="affiliate-password"
             name="password"
-            type="password"
             autoComplete="new-password"
             minLength={8}
             maxLength={128}
             placeholder="Optional, 8 or more characters"
-            className={fieldClass}
           />
         </label>
         <p className="text-sm text-brown md:col-span-2">

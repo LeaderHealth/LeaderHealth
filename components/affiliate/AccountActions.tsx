@@ -3,9 +3,8 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { setAffiliateActiveAction, setAffiliatePasswordAction } from "@/app/admin/affiliates/actions";
+import { PasswordInput } from "@/components/affiliate/PasswordInput";
 
-const fieldClass =
-  "mt-2 w-full min-h-11 rounded-full border border-ink/40 bg-background px-4 py-3 text-sm text-ink placeholder:text-brown focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
 const buttonClass =
   "inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-5 text-sm font-medium text-white hover:bg-brown focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
 
@@ -110,17 +109,15 @@ export function AccountActions({
                   <input type="hidden" name="code" value={code} />
                   <label className="block text-sm font-medium text-ink" htmlFor={`portal-password-${code}`}>
                     Password
-                    <input
+                    <PasswordInput
                       ref={passwordRef}
                       id={`portal-password-${code}`}
                       name="password"
-                      type="password"
                       required
                       minLength={8}
                       maxLength={128}
                       autoComplete="new-password"
                       placeholder="8 or more characters"
-                      className={fieldClass}
                     />
                   </label>
                   <div className="mt-6 flex flex-wrap gap-3">

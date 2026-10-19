@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { PasswordInput } from "@/components/affiliate/PasswordInput";
 import { SignInChoice } from "@/components/affiliate/SignInChoice";
 import { affiliateEmailConfigured } from "@/lib/affiliate/email";
 import { affiliateFirebaseConfigured } from "@/lib/affiliate/firebase";
@@ -101,15 +102,13 @@ function Login({ ready, emailLinks, invalid }: { ready: boolean; emailLinks: boo
           <label className="block text-sm font-medium text-ink" htmlFor="portal-password">
             Password
           </label>
-          <input
+          <PasswordInput
             id="portal-password"
             name="password"
-            type="password"
             required
             autoComplete="current-password"
             aria-invalid={invalid || undefined}
             aria-describedby={invalid ? "affiliate-portal-error" : undefined}
-            className={fieldClass}
           />
         </div>
         <button type="submit" className={buttonClass}>
