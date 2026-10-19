@@ -1064,7 +1064,7 @@ export function HomePage() {
                   height={1041}
                   className="sermorelin-vial h-auto w-full object-contain"
                 />
-                <p className="absolute top-[73%] left-[57%] z-10 flex h-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-[13px] bg-black/50 px-4 font-serif-italic text-[18px] leading-none text-[#f7f3f4] md:h-16 md:px-6 md:text-[28px] md:leading-[33.6px]">
+                <p className="absolute top-[62%] left-[66%] z-10 flex h-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center whitespace-nowrap rounded-[13px] bg-black/50 px-4 font-serif-italic text-[18px] leading-none text-[#f7f3f4] md:h-16 md:px-6 md:text-[28px] md:leading-[33.6px]">
                   More by design.
                 </p>
               </div>
