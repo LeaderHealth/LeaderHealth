@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
 import { affiliateCodeFromCookies } from "@/lib/affiliate/store";
-import { labs } from "@/lib/content/products";
 import { listCheckoutProducts } from "@/lib/genhealth/catalog";
 import { genHealthConfigured } from "@/lib/genhealth/client";
 import { campaignForAffiliateCode } from "@/lib/genhealth/promocodes";
 import {
-  isLabSlug,
   resolveCartHandoff,
   storefrontCheckoutUrl,
   type HandoffLine,
@@ -52,15 +50,6 @@ export async function POST(request: Request) {
   const lines = parseLines(body);
   if (!lines) return NextResponse.json({ ok: false, error: "Invalid cart." }, { status: 400 });
 
-  const labSlugs = new Set(labs.map((lab) => lab.slug));
-  const blocked = lines.find((line) => isLabSlug(line.slug, labSlugs));
-  if (blocked) {
-    return NextResponse.json(
-      { ok: false, item: blocked.name, error: `${blocked.name} can't be checked out here.` },
-      { status: 422 },
-    );
-  }
-
   const first = lines[0].name;
   if (!genHealthConfigured()) {
     return NextResponse.json(
@@ -71,7 +60,7 @@ export async function POST(request: Request) {
 
   try {
     const products = await listCheckoutProducts();
-    const result = resolveCartHandoff(lines, products, labSlugs);
+    const result = resolveCartHandoff(lines, products);
     if (!result.ok) return NextResponse.json(result, { status: 422 });
     const ref = await affiliateCodeFromCookies();
     const campaign = ref ? await campaignForAffiliateCode(ref) : null;

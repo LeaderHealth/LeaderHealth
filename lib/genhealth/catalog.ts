@@ -107,7 +107,8 @@ export type CheckoutCatalogProduct = {
  * Products the local checkout can sell.
  * That app ignores Gen Health's storefrontEligible flag, so this list keeps
  * products listCatalog() would drop for storefrontEligible or showPatient.
- * Labs and inactive or uncategorized rows are still left out: checkout refuses them.
+ * Inactive or uncategorized rows are still left out.
+ * Lab panels that checkout can sell are product records, included here by id.
  */
 export async function listCheckoutProducts(): Promise<CheckoutCatalogProduct[]> {
   const [rawProducts, categoryResponse] = await Promise.all([
@@ -137,7 +138,6 @@ export async function listCheckoutProducts(): Promise<CheckoutCatalogProduct[]> 
     if (!record) continue;
     const status = str(record.status).toLowerCase();
     if (status === "inactive" || status === "archived") continue;
-    if (str(record.type).toLowerCase() === "lab") continue;
     const clientProductId = str(record.clientProductId);
     if (!clientProductId || seen.has(clientProductId)) continue;
     const categoryIds = Array.isArray(record.categories) ? record.categories.map((id) => String(id)) : [];

@@ -624,8 +624,8 @@ export const labs: Lab[] = [
     name: "Complete Lab",
     biomarkers: "64 biomarkers",
     clientProductIds: {
-      Men: "lab-quest-a530dda9-complete-lab-panel-men",
-      Women: "lab-junction-a530dda9-complete-panel-mktg-women",
+      Men: "prod_2ffa3e2c3529d51fdc902bb9",
+      Women: "MOm8K4PW2aanX9qiz35M",
     },
     price: "$179",
     image:
@@ -638,8 +638,8 @@ export const labs: Lab[] = [
     name: "Advanced Lab",
     biomarkers: "100 biomarkers",
     clientProductIds: {
-      Men: "lab-junction-a530dda9-advanced-panel-mktg-men",
-      Women: "lab-junction-a530dda9-advanced-panel-mktg-women",
+      Men: "o5OqsW4Mva0AhsKMq5E2",
+      Women: "1IMJ6w6iDS0IiHYGDTWP",
     },
     price: "$399",
     recommended: true,
