@@ -17,6 +17,7 @@ export type PromoCodeRow = {
     | { kind: "price"; amount: string }
     | { kind: "unknown"; label: string };
   scope: string;
+  productIds: string[];
   usage: string;
   validUntil: string;
   statusLabel: "Active" | "Inactive" | "Expired";
@@ -97,8 +98,21 @@ function discountOf(value: unknown): PromoCodeRow["discount"] {
   return { kind: "unknown", label: type || "—" };
 }
 
+function productIdsOf(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  const ids: string[] = [];
+  for (const item of value) {
+    const id = str(item);
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    ids.push(id);
+  }
+  return ids;
+}
+
 function scopeOf(value: unknown) {
-  const count = Array.isArray(value) ? value.length : 0;
+  const count = productIdsOf(value).length;
   return `${count} ${count === 1 ? "product" : "products"}`;
 }
 
@@ -132,6 +146,7 @@ function mapRow(raw: unknown): PromoCodeRow | null {
     mode: modeOf(record.assignmentType),
     discount: discountOf(record.discount),
     scope: scopeOf(record.eligibleClientProductIds),
+    productIds: productIdsOf(record.eligibleClientProductIds),
     usage: usageOf(record.usageCount, record.maxUsage),
     validUntil: until.label,
     statusLabel: until.expired ? "Expired" : active ? "Active" : "Inactive",
@@ -252,10 +267,14 @@ export async function campaignForAffiliateCode(affiliateCode: string) {
   }
 }
 
-export function promoCodesForAffiliate(codes: PromoCodeRow[], affiliateCode: string) {
+export function promoRowsForAffiliate(codes: PromoCodeRow[], affiliateCode: string) {
   return codes
     .filter((promo) => promo.affiliates.some((item) => sameSlug(item.utmSlug, affiliateCode)))
-    .map((promo) => promo.code);
+    .sort((left, right) => left.code.localeCompare(right.code, "en"));
+}
+
+export function promoCodesForAffiliate(codes: PromoCodeRow[], affiliateCode: string) {
+  return promoRowsForAffiliate(codes, affiliateCode).map((promo) => promo.code);
 }
 
 export function assignmentNames(promo: PromoCodeRow, accounts: { code: string; name: string }[]) {

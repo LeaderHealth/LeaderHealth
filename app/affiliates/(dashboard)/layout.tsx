@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 
 const items = [
   { href: "/affiliates/tracking-link", label: "Tracking link" },
+  { href: "/affiliates/promo-codes", label: "Promo codes" },
   { href: "/affiliates/results", label: "Results" },
   { href: "/affiliates/orders", label: "Orders" },
 ];
@@ -22,7 +23,9 @@ export default async function AffiliateDashboardLayout({ children }: { children:
         <h1 className="text-4xl sm:text-5xl">
           Affiliate <span className="font-serif-italic text-accent">portal</span>
         </h1>
-        <p className="mt-4 max-w-2xl text-taupe">Sign in to see your tracking link, clicks, paid orders, and commission.</p>
+        <p className="mt-4 max-w-2xl text-taupe">
+          Sign in to see your tracking link, promo codes, clicks, paid orders, and commission.
+        </p>
         <div className="mt-8 xl:grid xl:grid-cols-[12rem_minmax(0,1fr)] xl:items-start xl:gap-8">
           <AreaNav label="Affiliate portal" items={items}>
             <form action={logoutAffiliatePortal}>

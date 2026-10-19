@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { CopyTrackingLink } from "@/components/affiliate/CopyTrackingLink";
 import { formatCommissionRate } from "@/lib/affiliate/format";
 import { affiliateTrackingLink } from "@/lib/affiliate/link";
 import { campaignForAffiliateCode } from "@/lib/genhealth/promocodes";
@@ -12,31 +13,34 @@ export const metadata: Metadata = {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const fieldClass =
-  "mt-2 w-full min-w-0 min-h-11 rounded-full border border-ink/40 bg-background px-4 py-3 text-sm text-ink placeholder:text-brown focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
+const badgeClass = "inline-flex max-w-full items-center rounded-full bg-rose px-3 py-1 text-xs font-medium leading-5 text-ink";
 
 export default async function TrackingLinkPage() {
   const affiliate = await currentAffiliate();
   if (!affiliate) redirect("/affiliates");
+  const url = affiliateTrackingLink(affiliate.code, await campaignForAffiliateCode(affiliate.code));
+  const commission =
+    affiliate.commissionMode === "fixed" ? `${formatCommissionRate(affiliate)} per order` : `${formatCommissionRate(affiliate)} commission`;
 
   return (
     <div className="min-w-0 rounded-[28px] bg-white p-4 sm:p-8">
       <h2 className="text-2xl">{affiliate.name}</h2>
-      <p className="mt-2 text-brown">
-        Code {affiliate.code} ·{" "}
-        {affiliate.commissionMode === "fixed"
-          ? `${formatCommissionRate(affiliate)} per order`
-          : `${formatCommissionRate(affiliate)} commission`}
-      </p>
-      <label className="mt-6 block text-sm font-medium text-ink" htmlFor="referral-link">
-        Tracking link
-        <input
-          id="referral-link"
-          readOnly
-          value={affiliateTrackingLink(affiliate.code, await campaignForAffiliateCode(affiliate.code))}
-          className={fieldClass}
-        />
-      </label>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <span className={badgeClass}>
+          <span className="shrink-0 text-brown">Affiliate ID</span>
+          <span className="ml-1.5 min-w-0 break-all">{affiliate.code}</span>
+        </span>
+        <span className={badgeClass}>{commission}</span>
+      </div>
+      <div className="mt-6">
+        <p id="referral-link-label" className="text-sm font-medium text-ink">
+          Tracking link
+        </p>
+        <p id="referral-link" aria-labelledby="referral-link-label" className="mt-2 break-all rounded-[24px] bg-background px-4 py-3 text-sm leading-6 text-ink">
+          {url}
+        </p>
+        <CopyTrackingLink url={url} />
+      </div>
     </div>
   );
 }

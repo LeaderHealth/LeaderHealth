@@ -1,6 +1,6 @@
 import { createHash, randomBytes, scrypt as scryptCallback, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
-import { type DocumentData, type Timestamp } from "firebase-admin/firestore";
+import { FieldValue, type DocumentData, type Timestamp } from "firebase-admin/firestore";
 import { cookies } from "next/headers";
 import { affiliateTrackingPath } from "@/lib/affiliate/link";
 import { absoluteUrl } from "@/lib/seo/schema";
@@ -351,6 +351,32 @@ export async function setAffiliateActive(code: string, active: boolean) {
   const snap = await ref.get();
   if (!snap.exists) throw new AffiliateStoreError("missing", "Unknown affiliate code.");
   await ref.update({ active });
+}
+
+export async function loadSavedPromoCodes(code: string) {
+  if (!affiliateFirebaseConfigured()) return [];
+  const normalized = normalizeAffiliateCode(code);
+  if (!normalized) return [];
+  const snap = await affiliateFirestore().collection("affiliates").doc(normalized).get();
+  const saved = snap.data()?.savedLinks;
+  if (!Array.isArray(saved)) return [];
+  return saved.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+}
+
+export async function saveAffiliatePromoCode(code: string, promoCode: string) {
+  if (!affiliateFirebaseConfigured()) {
+    throw new AffiliateStoreError("unavailable", "Firestore is not configured.");
+  }
+  const normalized = normalizeAffiliateCode(code);
+  const promo = promoCode.trim();
+  if (!normalized) throw new AffiliateStoreError("invalid", "Unknown affiliate code.");
+  if (!promo || promo.length > 80 || /[\u0000-\u001f]/.test(promo)) {
+    throw new AffiliateStoreError("invalid", "Unknown promo code.");
+  }
+  const ref = affiliateFirestore().collection("affiliates").doc(normalized);
+  const snap = await ref.get();
+  if (!snap.exists || snap.data()?.active !== true) throw new AffiliateStoreError("missing", "Unknown affiliate code.");
+  await ref.update({ savedLinks: FieldValue.arrayUnion(promo) });
 }
 
 export async function setAffiliatePassword(code: string, passwordInput: string) {

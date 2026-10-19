@@ -81,6 +81,27 @@ async function paginate(path: string, collectionKey: "products" | "labs"): Promi
   return items;
 }
 
+function namedProduct(raw: unknown) {
+  const record = asRecord(raw);
+  const clientProductId = str(record?.clientProductId);
+  if (!record || !clientProductId) return null;
+  const name = str(record.displayName) || str(record.name);
+  return name ? { clientProductId, name } : null;
+}
+
+export async function catalogProductNames(): Promise<Record<string, string>> {
+  const [products, labs] = await Promise.all([
+    paginate("/v2/client/products", "products"),
+    paginate("/v2/client/labs", "labs"),
+  ]);
+  const names: Record<string, string> = {};
+  for (const item of [...products, ...labs]) {
+    const named = namedProduct(item);
+    if (named) names[named.clientProductId] = named.name;
+  }
+  return names;
+}
+
 export async function listCatalog(): Promise<CatalogItem[]> {
   const [products, labs] = await Promise.all([
     paginate("/v2/client/products", "products"),

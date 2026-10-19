@@ -1,10 +1,18 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { affiliateFirebaseConfigured } from "@/lib/affiliate/firebase";
 import { affiliateEmailConfigured, sendAffiliateSignInEmail } from "@/lib/affiliate/email";
-import { affiliateAdminConfigured, clearPortalSession, setPortalSession } from "@/lib/affiliate/session";
-import { affiliateCodeForPassword, clearAffiliateMagicLink, issueAffiliateMagicLink } from "@/lib/affiliate/store";
+import { affiliateAdminConfigured, clearPortalSession, portalAffiliateCode, setPortalSession } from "@/lib/affiliate/session";
+import {
+  AffiliateStoreError,
+  affiliateCodeForPassword,
+  clearAffiliateMagicLink,
+  issueAffiliateMagicLink,
+  saveAffiliatePromoCode,
+} from "@/lib/affiliate/store";
+import { listPromoCodes, promoRowsForAffiliate } from "@/lib/genhealth/promocodes";
 
 function fail(error: string): never {
   redirect(`/affiliates?error=${encodeURIComponent(error)}`);
@@ -51,6 +59,22 @@ export async function requestAffiliateLink(formData: FormData) {
     fail("unavailable");
   }
   redirect("/affiliates?sent=1");
+}
+
+export async function saveAffiliateLinkAction(promoCode: string) {
+  const code = await portalAffiliateCode();
+  if (!code) return { ok: false, message: "Sign in to save this link." };
+  try {
+    const assigned = promoRowsForAffiliate(await listPromoCodes(), code).some((promo) => promo.code === promoCode.trim());
+    if (!assigned) return { ok: false, message: "That promo code is not assigned to you." };
+    await saveAffiliatePromoCode(code, promoCode);
+  } catch (error) {
+    console.error("[affiliate] save link failed", error instanceof Error ? error.message : "unknown");
+    const message = error instanceof AffiliateStoreError ? error.message : "Couldn't save this link.";
+    return { ok: false, message };
+  }
+  revalidatePath("/affiliates/promo-codes");
+  return { ok: true, message: "Saved to your links." };
 }
 
 export async function logoutAffiliatePortal() {
