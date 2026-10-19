@@ -126,21 +126,13 @@ export function matchCheckoutProduct(line: HandoffLine, products: CheckoutProduc
   return best.id;
 }
 
-export function isLabSlug(slug: string, labSlugs: ReadonlySet<string>) {
-  return labSlugs.has(slug) || slug.startsWith("labs-");
-}
-
 export function resolveCartHandoff(
   lines: HandoffLine[],
   products: CheckoutProduct[],
-  labSlugs: ReadonlySet<string>,
 ): HandoffResult {
   const ids: string[] = [];
   for (const line of lines) {
     const item = line.name.trim() || line.slug;
-    if (isLabSlug(line.slug, labSlugs)) {
-      return { ok: false, item, error: `${item} can't be checked out here.` };
-    }
     const id = matchCheckoutProduct(line, products);
     if (!id) return { ok: false, item, error: `Couldn't match ${item} to a checkout product.` };
     ids.push(id);
