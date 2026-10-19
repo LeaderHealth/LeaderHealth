@@ -16,7 +16,7 @@ export function AreaNav({
   const pathname = usePathname();
 
   return (
-    <nav aria-label={label} className="z-20 xl:sticky xl:top-28 xl:self-start">
+    <nav aria-label={label}>
       <div className="flex flex-col gap-4 rounded-[28px] bg-white p-3 sm:p-4">
         <div className="flex flex-wrap gap-2 xl:flex-col">
           {items.map((item) => {

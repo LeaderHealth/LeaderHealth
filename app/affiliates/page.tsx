@@ -17,7 +17,9 @@ export const dynamic = "force-dynamic";
 const fieldClass =
   "mt-2 w-full min-h-11 rounded-full border border-ink/40 bg-background px-4 py-3 text-sm text-ink placeholder:text-brown focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
 const buttonClass =
-  "inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-5 text-sm font-medium text-white hover:bg-brown focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
+  "mt-auto inline-flex min-h-11 w-fit items-center justify-center rounded-full bg-ink px-5 text-sm font-medium text-white hover:bg-brown focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
+const panelClass =
+  "flex min-h-[22.5rem] w-full max-w-md flex-col gap-5 rounded-[28px] border border-ink/15 bg-white p-8";
 
 const ERRORS: Record<string, string> = {
   denied: "That sign-in didn't work. Check the email and password, or request a new link.",
@@ -31,7 +33,7 @@ export default async function AffiliatePortalPage({
 }: {
   searchParams: Promise<{ error?: string; sent?: string }>;
 }) {
-  if (await currentAffiliate()) redirect("/affiliates/tracking-link");
+  if (await currentAffiliate()) redirect("/affiliates/overview");
 
   const query = await searchParams;
   const error = query.error ? ERRORS[query.error] : "";
@@ -75,12 +77,8 @@ function Login({ ready, emailLinks, invalid }: { ready: boolean; emailLinks: boo
   }
 
   return (
-    <div className="mt-6 grid max-w-3xl gap-6 md:grid-cols-2">
-      <form
-        action={loginAffiliatePortal}
-        aria-labelledby="affiliate-password-title"
-        className="space-y-5 rounded-[28px] border border-ink/15 bg-white p-8"
-      >
+    <div className={`mt-6 flex flex-col gap-6 ${emailLinks ? "lg:flex-row" : ""}`}>
+      <form action={loginAffiliatePortal} aria-labelledby="affiliate-password-title" className={panelClass}>
         <h2 id="affiliate-password-title" className="text-2xl text-ink">
           Sign in
         </h2>
@@ -119,11 +117,7 @@ function Login({ ready, emailLinks, invalid }: { ready: boolean; emailLinks: boo
         </button>
       </form>
       {emailLinks ? (
-        <form
-          action={requestAffiliateLink}
-          aria-labelledby="affiliate-link-title"
-          className="space-y-5 rounded-[28px] border border-ink/15 bg-white p-8"
-        >
+        <form action={requestAffiliateLink} aria-labelledby="affiliate-link-title" className={panelClass}>
           <h2 id="affiliate-link-title" className="text-2xl text-ink">
             Email me a link
           </h2>

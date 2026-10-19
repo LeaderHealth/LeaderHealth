@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { TrackingLinks } from "@/components/affiliate/TrackingLinks";
 import { affiliateTrackingLink } from "@/lib/affiliate/link";
 import { AffiliateStoreError, loadAffiliateDashboard } from "@/lib/affiliate/store";
-import { campaignForAffiliate, listPromoCodes, type PromoCodeRow } from "@/lib/genhealth/promocodes";
+import { campaignForAffiliate, listPromoCodes, promoRowsForAffiliate, type PromoCodeRow } from "@/lib/genhealth/promocodes";
 
 export const metadata: Metadata = {
   title: "Tracking links",
@@ -27,6 +27,10 @@ export default async function TrackingLinksPage() {
           name: affiliate.name,
           active: affiliate.active,
           url: affiliateTrackingLink(affiliate.code, campaignForAffiliate(catalog, affiliate.code)),
+          promos: promoRowsForAffiliate(catalog, affiliate.code).map((promo) => ({
+            code: promo.code,
+            url: affiliateTrackingLink(affiliate.code, promo.code),
+          })),
         }))}
       />
     );

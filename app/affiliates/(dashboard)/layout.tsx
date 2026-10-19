@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { AreaNav } from "@/components/affiliate/AreaNav";
+import { ProfileCard } from "@/components/affiliate/ProfileCard";
 import { logoutAffiliatePortal } from "../actions";
 import { currentAffiliate } from "../current";
 
@@ -8,14 +9,18 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const items = [
+  { href: "/affiliates/overview", label: "Overview" },
   { href: "/affiliates/tracking-link", label: "Tracking link" },
   { href: "/affiliates/promo-codes", label: "Promo codes" },
+  { href: "/affiliates/saved-links", label: "Saved links" },
   { href: "/affiliates/results", label: "Results" },
   { href: "/affiliates/orders", label: "Orders" },
+  { href: "/affiliates/payouts", label: "Payouts" },
 ];
 
 export default async function AffiliateDashboardLayout({ children }: { children: ReactNode }) {
-  if (!(await currentAffiliate())) redirect("/affiliates");
+  const affiliate = await currentAffiliate();
+  if (!affiliate) redirect("/affiliates");
 
   return (
     <section className="bg-background px-4 pb-20 pt-32 text-ink sm:px-6">
@@ -24,19 +29,19 @@ export default async function AffiliateDashboardLayout({ children }: { children:
           Affiliate <span className="font-serif-italic text-accent">portal</span>
         </h1>
         <p className="mt-4 max-w-2xl text-taupe">
-          Sign in to see your tracking link, promo codes, clicks, paid orders, and commission.
+          Your sales, orders, commission, payouts, tracking link, and promo codes.
         </p>
-        <div className="mt-8 xl:grid xl:grid-cols-[12rem_minmax(0,1fr)] xl:items-start xl:gap-8">
-          <AreaNav label="Affiliate portal" items={items}>
-            <form action={logoutAffiliatePortal}>
-              <button
-                type="submit"
-                className="text-sm font-medium text-ink underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-              >
-                Sign out
-              </button>
-            </form>
-          </AreaNav>
+        <div className="mt-8 xl:grid xl:grid-cols-[16rem_minmax(0,1fr)] xl:items-start xl:gap-8">
+          <div className="z-20 flex flex-col gap-4 xl:sticky xl:top-28 xl:self-start">
+            <ProfileCard
+              name={affiliate.name}
+              email={affiliate.email}
+              role="Affiliate"
+              avatarUrl={affiliate.avatarUrl}
+              signOut={logoutAffiliatePortal}
+            />
+            <AreaNav label="Affiliate portal" items={items} />
+          </div>
           <div className="mt-8 min-w-0 xl:mt-0">{children}</div>
         </div>
       </div>

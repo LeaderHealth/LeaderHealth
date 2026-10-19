@@ -18,6 +18,10 @@ function adminEmail() {
   return normalizeAffiliateEmail(process.env.AFFILIATE_ADMIN_EMAIL);
 }
 
+export function adminAccountEmail() {
+  return adminEmail();
+}
+
 function digest(value: string) {
   return createHash("sha256").update(value).digest();
 }

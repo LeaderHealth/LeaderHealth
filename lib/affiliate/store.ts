@@ -57,6 +57,7 @@ export type AffiliateSummary = {
   code: string;
   name: string;
   email: string;
+  avatarUrl: string | null;
   commissionMode: CommissionMode;
   commissionPercent: number;
   commissionFixedCents: number;
@@ -72,7 +73,9 @@ export type ConversionSummary = {
   code: string;
   productName: string;
   amountCents: number | null;
+  commissionMode: CommissionMode;
   commissionPercent: number;
+  commissionFixedCents: number;
   commissionCents: number;
   dryRun: boolean;
   createdAt: string | null;
@@ -144,12 +147,21 @@ function alreadyExists(error: unknown) {
   return codeNumber === 6 || codeNumber === "already-exists" || codeNumber === "ALREADY_EXISTS";
 }
 
+function avatarUrlFrom(data: DocumentData) {
+  const value = data.avatarUrl ?? data.photoURL ?? data.photoUrl;
+  if (typeof value !== "string") return null;
+  const url = value.trim();
+  if (!url.startsWith("https://") || url.length > 500) return null;
+  return url;
+}
+
 function affiliateFrom(code: string, data: DocumentData | undefined): AffiliateSummary | null {
   if (!data) return null;
   return {
     code,
     name: typeof data.name === "string" ? data.name : code,
     email: typeof data.email === "string" ? data.email : "",
+    avatarUrl: avatarUrlFrom(data),
     commissionMode: commissionModeFrom(data.commissionMode),
     commissionPercent: asNumber(data.commissionPercent),
     commissionFixedCents: asNumber(data.commissionFixedCents),
@@ -183,7 +195,9 @@ function conversionFrom(id: string, data: DocumentData): ConversionSummary {
     code: typeof data.code === "string" ? data.code : "",
     productName: typeof data.productName === "string" ? data.productName : "Order",
     amountCents: typeof data.amountCents === "number" ? data.amountCents : null,
+    commissionMode: commissionModeFrom(data.commissionMode),
     commissionPercent: asNumber(data.commissionPercent),
+    commissionFixedCents: asNumber(data.commissionFixedCents),
     commissionCents: asNumber(data.commissionCents),
     dryRun: data.dryRun === true,
     createdAt: asTimestamp(data.createdAt),
@@ -232,6 +246,7 @@ export async function recordAffiliateConversion(input: {
   amount: number | null;
   productName: string;
   dryRun: boolean;
+  createdAt?: Date;
 }) {
   if (!affiliateFirebaseConfigured()) return false;
   const code = normalizeAffiliateCode(input.code);
@@ -268,7 +283,10 @@ export async function recordAffiliateConversion(input: {
       commissionFixedCents,
       commissionCents,
       dryRun: input.dryRun,
-      createdAt: new Date(),
+      createdAt:
+        input.createdAt instanceof Date && !Number.isNaN(input.createdAt.getTime())
+          ? input.createdAt
+          : new Date(),
     });
     if (!input.dryRun) {
       tx.update(affiliateRef, {
@@ -379,6 +397,22 @@ export async function saveAffiliatePromoCode(code: string, promoCode: string) {
   await ref.update({ savedLinks: FieldValue.arrayUnion(promo) });
 }
 
+export async function removeAffiliatePromoCode(code: string, promoCode: string) {
+  if (!affiliateFirebaseConfigured()) {
+    throw new AffiliateStoreError("unavailable", "Firestore is not configured.");
+  }
+  const normalized = normalizeAffiliateCode(code);
+  const promo = promoCode.trim();
+  if (!normalized) throw new AffiliateStoreError("invalid", "Unknown affiliate code.");
+  if (!promo || promo.length > 80 || /[\u0000-\u001f]/.test(promo)) {
+    throw new AffiliateStoreError("invalid", "Unknown promo code.");
+  }
+  const ref = affiliateFirestore().collection("affiliates").doc(normalized);
+  const snap = await ref.get();
+  if (!snap.exists || snap.data()?.active !== true) throw new AffiliateStoreError("missing", "Unknown affiliate code.");
+  await ref.update({ savedLinks: FieldValue.arrayRemove(promo) });
+}
+
 export async function setAffiliatePassword(code: string, passwordInput: string) {
   if (!affiliateFirebaseConfigured()) {
     throw new AffiliateStoreError("unavailable", "Firestore is not configured.");
@@ -463,6 +497,26 @@ export async function redeemAffiliateMagicLink(token: string | null) {
   });
 }
 
+export async function loadAffiliateActivity(code: string) {
+  if (!affiliateFirebaseConfigured()) {
+    throw new AffiliateStoreError("unavailable", "Firestore is not configured.");
+  }
+  const normalized = normalizeAffiliateCode(code);
+  if (!normalized) return { conversions: [] as ConversionSummary[], clickTimes: [] as string[] };
+  const db = affiliateFirestore();
+  const [conversionsSnap, clicksSnap] = await Promise.all([
+    db.collection("conversions").where("code", "==", normalized).get(),
+    db.collection("clicks").where("code", "==", normalized).get(),
+  ]);
+  const conversions = conversionsSnap.docs
+    .map((doc) => conversionFrom(doc.id, doc.data()))
+    .sort((left, right) => (right.createdAt ?? "").localeCompare(left.createdAt ?? ""));
+  const clickTimes = clicksSnap.docs
+    .map((doc) => asTimestamp(doc.data().createdAt))
+    .filter((value): value is string => Boolean(value));
+  return { conversions, clickTimes };
+}
+
 export async function loadAffiliateConversions(code: string) {
   if (!affiliateFirebaseConfigured()) {
     throw new AffiliateStoreError("unavailable", "Firestore is not configured.");
@@ -474,6 +528,22 @@ export async function loadAffiliateConversions(code: string) {
     .map((doc) => conversionFrom(doc.id, doc.data()))
     .sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""))
     .slice(0, 20);
+}
+
+export async function loadAffiliateOverview() {
+  if (!affiliateFirebaseConfigured()) {
+    throw new AffiliateStoreError("unavailable", "Firestore is not configured.");
+  }
+  const db = affiliateFirestore();
+  const [affiliatesSnap, conversionsSnap] = await Promise.all([
+    db.collection("affiliates").get(),
+    db.collection("conversions").get(),
+  ]);
+  const affiliates = affiliatesSnap.docs
+    .map((doc) => affiliateFrom(doc.id, doc.data()))
+    .filter((affiliate): affiliate is AffiliateSummary => affiliate != null);
+  const conversions = conversionsSnap.docs.map((doc) => conversionFrom(doc.id, doc.data()));
+  return { affiliates, conversions };
 }
 
 export async function loadAffiliateDashboard() {

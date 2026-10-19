@@ -3,8 +3,8 @@ import { redirect } from "next/navigation";
 import { PromoCodeCard } from "@/components/affiliate/PromoCodeCard";
 import { loadSavedPromoCodes } from "@/lib/affiliate/store";
 import { affiliateTrackingLink } from "@/lib/affiliate/link";
-import { labs, products } from "@/lib/content/products";
-import { catalogProductNames } from "@/lib/genhealth/catalog";
+import { labs, products, type Audience, type Category } from "@/lib/content/products";
+import { catalogProductLabels, groupProductsByCategory, type CatalogProductLabel } from "@/lib/genhealth/catalog";
 import { listPromoCodes, promoRowsForAffiliate, type PromoCodeRow } from "@/lib/genhealth/promocodes";
 import { currentAffiliate } from "../../current";
 
@@ -21,27 +21,58 @@ function discountLabel(promo: PromoCodeRow) {
   return promo.discount.label;
 }
 
+function localCategory(category: Category, audience: Audience) {
+  if (category === "hormone") return audience === "women" ? "Hormone Therapy - Women" : "Hormone Therapy - Men";
+  if (category === "sexual") return "Sexual Health";
+  if (category === "weight-loss") return "Weight Loss";
+  return "Longevity";
+}
+
 function localProductNames() {
-  const names = new Map<string, string>();
+  const names = new Map<string, CatalogProductLabel>();
+  const add = (id: string | undefined, name: string, category: string) => {
+    if (id && name && !names.has(id)) names.set(id, { name, category });
+  };
   for (const product of products) {
-    if (product.clientProductId) names.set(product.clientProductId, product.name);
-    if (product.threeMonthProductId) names.set(product.threeMonthProductId, product.name);
+    const category = localCategory(product.category, product.audience);
+    add(product.clientProductId, product.name, category);
+    add(product.threeMonthProductId, product.name, category);
     for (const variant of product.variants ?? []) {
-      const label = variant.name ? `${product.name} · ${variant.name}` : product.name;
-      if (variant.clientProductId) names.set(variant.clientProductId, label);
-      if (variant.threeMonthProductId) names.set(variant.threeMonthProductId, label);
+      const label = variant.name || product.name;
+      add(variant.clientProductId, label, category);
+      add(variant.threeMonthProductId, label, category);
     }
   }
   for (const lab of labs) {
-    if (lab.clientProductId) names.set(lab.clientProductId, lab.name);
-    if (lab.clientProductIds?.Men) names.set(lab.clientProductIds.Men, lab.name);
-    if (lab.clientProductIds?.Women) names.set(lab.clientProductIds.Women, lab.name);
+    add(lab.clientProductId, lab.name, "Labs");
+    add(lab.clientProductIds?.Men, lab.name, "Labs");
+    add(lab.clientProductIds?.Women, lab.name, "Labs");
   }
   return names;
 }
 
-function productLabels(ids: string[], catalog: Record<string, string>, local: Map<string, string>) {
-  return ids.map((id) => ({ id, name: catalog[id] || local.get(id) || id }));
+function labelFor(id: string, catalog: Map<string, CatalogProductLabel>, local: Map<string, CatalogProductLabel>) {
+  const fromCatalog = catalog.get(id);
+  let fromLocal = local.get(id);
+  if (!fromLocal) {
+    for (const [key, value] of local) {
+      if (key.endsWith(`_${id}`)) {
+        fromLocal = value;
+        break;
+      }
+    }
+  }
+  const name = fromCatalog?.name || fromLocal?.name || "";
+  if (!name) return null;
+  return { id, name, category: fromCatalog?.category || fromLocal?.category || "Other" };
+}
+
+function productGroups(ids: string[], catalog: Map<string, CatalogProductLabel>, local: Map<string, CatalogProductLabel>) {
+  const labeled = ids.flatMap((id) => {
+    const label = labelFor(id, catalog, local);
+    return label ? [label] : [];
+  });
+  return groupProductsByCategory(labeled);
 }
 
 export default async function AffiliatePromoCodesPage() {
@@ -55,12 +86,12 @@ export default async function AffiliatePromoCodesPage() {
     return <p className="rounded-[28px] bg-white px-8 py-6 text-sm text-ink">Promo codes are unavailable right now.</p>;
   }
 
-  let catalog: Record<string, string> = {};
+  let catalog = new Map<string, CatalogProductLabel>();
   if (codes.some((promo) => promo.productIds.length > 0)) {
     try {
-      catalog = await catalogProductNames();
+      catalog = await catalogProductLabels();
     } catch {
-      catalog = {};
+      catalog = new Map();
     }
   }
   const local = localProductNames();
@@ -90,7 +121,7 @@ export default async function AffiliatePromoCodesPage() {
             status={promo.statusLabel}
             usage={promo.usage}
             validUntil={promo.validUntil}
-            products={productLabels(promo.productIds, catalog, local)}
+            products={productGroups(promo.productIds, catalog, local)}
             url={affiliateTrackingLink(affiliate.code, promo.code)}
             saved={savedCodes.has(promo.code)}
           />

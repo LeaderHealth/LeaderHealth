@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { AreaNav } from "@/components/affiliate/AreaNav";
+import { ProfileCard } from "@/components/affiliate/ProfileCard";
+import { adminAccountProfile } from "@/lib/affiliate/admin-profile";
 import { affiliateFirebaseConfigured } from "@/lib/affiliate/firebase";
 import { adminIsSignedIn } from "@/lib/affiliate/session";
 import { logoutAffiliateAdmin } from "../actions";
@@ -9,15 +11,18 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const items = [
+  { href: "/admin/affiliates/overview", label: "Overview" },
   { href: "/admin/affiliates/add", label: "Add" },
   { href: "/admin/affiliates/accounts", label: "Accounts" },
   { href: "/admin/affiliates/tracking-links", label: "Tracking links" },
   { href: "/admin/affiliates/promo-codes", label: "Promo codes" },
   { href: "/admin/affiliates/orders", label: "Orders" },
+  { href: "/admin/affiliates/payouts", label: "Payouts" },
 ];
 
 export default async function AdminDashboardLayout({ children }: { children: ReactNode }) {
   if (!(await adminIsSignedIn())) redirect("/admin/affiliates");
+  const admin = await adminAccountProfile();
 
   return (
     <section className="bg-background px-4 pb-20 pt-32 text-ink sm:px-6">
@@ -31,17 +36,19 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
           skip dry-run checkouts.
         </p>
         {affiliateFirebaseConfigured() ? (
-          <div className="mt-8 xl:grid xl:grid-cols-[12rem_minmax(0,1fr)] xl:items-start xl:gap-8">
-            <AreaNav label="Affiliate admin" items={items}>
-              <form action={logoutAffiliateAdmin}>
-                <button
-                  type="submit"
-                  className="text-sm font-medium text-ink underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-                >
-                  Sign out
-                </button>
-              </form>
-            </AreaNav>
+          <div className="mt-8 xl:grid xl:grid-cols-[16rem_minmax(0,1fr)] xl:items-start xl:gap-8">
+            <div className="z-20 flex flex-col gap-4 xl:sticky xl:top-28 xl:self-start">
+              {admin ? (
+                <ProfileCard
+                  name={admin.name}
+                  email={admin.email}
+                  role="Admin"
+                  avatarUrl={admin.avatarUrl}
+                  signOut={logoutAffiliateAdmin}
+                />
+              ) : null}
+              <AreaNav label="Affiliate admin" items={items} />
+            </div>
             <div className="mt-8 min-w-0 xl:mt-0">{children}</div>
           </div>
         ) : (

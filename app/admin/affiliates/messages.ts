@@ -11,4 +11,10 @@ export const ADMIN_ERRORS: Record<string, string> = {
   affiliate: "Choose an affiliate account.",
   assign: "Could not update that promo code.",
   clear: "That affiliate is not assigned to this promo code.",
+  "payout-empty": "There is no new commission to approve for that month.",
+  "payout-status": "Approve the payout before marking it paid.",
+  "payout-amount": "Enter a paid amount of zero or more.",
+  "payout-date": "Enter the payment date.",
+  "payout-missing": "That affiliate was not found.",
+  "payout-unavailable": "Payouts are unavailable right now.",
 };

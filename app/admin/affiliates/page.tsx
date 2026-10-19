@@ -15,14 +15,16 @@ export const dynamic = "force-dynamic";
 const fieldClass =
   "mt-2 w-full min-h-11 rounded-full border border-ink/40 bg-background px-4 py-3 text-sm text-ink placeholder:text-brown focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
 const buttonClass =
-  "inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-5 text-sm font-medium text-white hover:bg-brown focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
+  "mt-auto inline-flex min-h-11 w-fit items-center justify-center rounded-full bg-ink px-5 text-sm font-medium text-white hover:bg-brown focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
+const panelClass =
+  "mt-6 flex min-h-[22.5rem] w-full max-w-md flex-col gap-5 rounded-[28px] border border-ink/15 bg-white p-8";
 
 export default async function AffiliatesAdminPage({
   searchParams,
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
-  if (await adminIsSignedIn()) redirect("/admin/affiliates/accounts");
+  if (await adminIsSignedIn()) redirect("/admin/affiliates/overview");
 
   const query = await searchParams;
   const error = query.error ? ADMIN_ERRORS[query.error] : "";
@@ -61,11 +63,7 @@ function Login({ configured, invalid }: { configured: boolean; invalid: boolean 
   }
 
   return (
-    <form
-      action={loginAffiliateAdmin}
-      aria-labelledby="affiliate-signin-title"
-      className="mt-6 max-w-md space-y-5 rounded-[28px] border border-ink/15 bg-white p-8"
-    >
+    <form action={loginAffiliateAdmin} aria-labelledby="affiliate-signin-title" className={panelClass}>
       <h2 id="affiliate-signin-title" className="text-2xl text-ink">
         Sign in
       </h2>

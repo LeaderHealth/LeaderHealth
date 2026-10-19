@@ -57,12 +57,16 @@ function mapItem(raw: unknown, kind: CatalogKind): CatalogItem | null {
   };
 }
 
-async function paginate(path: string, collectionKey: "products" | "labs"): Promise<unknown[]> {
+async function paginate(
+  path: string,
+  collectionKey: "products" | "labs",
+  query: Record<string, string | undefined> = {},
+): Promise<unknown[]> {
   const items: unknown[] = [];
   let cursor: string | undefined;
   for (let page = 0; page < 20; page += 1) {
     const response = await genHealthRequest<Record<string, unknown>>(path, {
-            query: { limit: "100", startAfter: cursor },
+      query: { limit: "100", startAfter: cursor, ...query },
     });
     if (!response.success || !response.data) {
       if (page === 0 && response.status === 404) return [];
@@ -100,6 +104,110 @@ export async function catalogProductNames(): Promise<Record<string, string>> {
     if (named) names[named.clientProductId] = named.name;
   }
   return names;
+}
+
+export type CatalogProductLabel = {
+  name: string;
+  category: string;
+};
+
+const categoryOrder = [
+  "Hormone Therapy - Men",
+  "Hormone Therapy - Women",
+  "Sexual Health",
+  "Weight Loss",
+  "Longevity",
+  "Peptides",
+  "Labs",
+];
+
+function looksLikeId(value: string) {
+  return /^prod_[a-z0-9_]+$/i.test(value) || /^[A-Za-z0-9]{16,}$/.test(value);
+}
+
+function readableName(record: Record<string, unknown>) {
+  const name = str(record.displayName) || str(record.name);
+  return name && !looksLikeId(name) ? name : "";
+}
+
+function preferLabel(
+  current: (CatalogProductLabel & { active: boolean; months: number | null }) | undefined,
+  next: CatalogProductLabel & { active: boolean; months: number | null },
+) {
+  if (!current?.name) return next;
+  if (!next.name) return current;
+  if (current.active !== next.active) return next.active ? next : current;
+  if ((current.months === 1) !== (next.months === 1)) return next.months === 1 ? next : current;
+  return current;
+}
+
+function rememberLabel(
+  labels: Map<string, CatalogProductLabel & { active: boolean; months: number | null }>,
+  key: string,
+  label: CatalogProductLabel & { active: boolean; months: number | null },
+) {
+  if (!key) return;
+  labels.set(key, preferLabel(labels.get(key), label));
+}
+
+/**
+ * Names and categories for promo eligible-product ids.
+ * Those ids are Gen Health productIds, including products that are no longer
+ * storefront-active, so this list includes inactive rows.
+ */
+export async function catalogProductLabels(): Promise<Map<string, CatalogProductLabel>> {
+  const [products, labs, categoryResponse] = await Promise.all([
+    paginate("/v2/client/products", "products", { includeInactive: "true" }),
+    paginate("/v2/client/labs", "labs", { includeInactive: "true" }),
+    genHealthRequest<Record<string, unknown>>("/v2/client/categories"),
+  ]);
+  const categoryNames = new Map<string, string>();
+  const categoryRows = asRecord(categoryResponse.data)?.categories;
+  if (Array.isArray(categoryRows)) {
+    for (const row of categoryRows) {
+      const record = asRecord(row);
+      const id = str(record?.categoryId);
+      const name = str(record?.categoryName);
+      if (id && name) categoryNames.set(id, name);
+    }
+  }
+
+  const labels = new Map<string, CatalogProductLabel & { active: boolean; months: number | null }>();
+  for (const item of [...products, ...labs]) {
+    const record = asRecord(item);
+    if (!record) continue;
+    const name = readableName(record);
+    if (!name) continue;
+    const categoryIds = Array.isArray(record.displayCategoryIds) ? record.displayCategoryIds.map((id) => String(id)) : [];
+    const category = categoryIds.map((id) => categoryNames.get(id)).find((value): value is string => Boolean(value)) || "";
+    const months = typeof record.quantityMonths === "number" ? record.quantityMonths : null;
+    const label = { name, category, active: str(record.status).toLowerCase() === "active", months };
+    const keys = [str(record.productId), str(record.clientProductId), str(record.sourceProductId)];
+    for (const key of keys) rememberLabel(labels, key, label);
+  }
+
+  const published = new Map<string, CatalogProductLabel>();
+  for (const [key, label] of labels) published.set(key, { name: label.name, category: label.category });
+  return published;
+}
+
+export function groupProductsByCategory(products: { id: string; name: string; category: string }[]) {
+  const groups = new Map<string, { id: string; name: string }[]>();
+  for (const product of products) {
+    const category = product.category || "Other";
+    const items = groups.get(category) ?? [];
+    if (!items.some((item) => item.name === product.name)) items.push({ id: product.id, name: product.name });
+    groups.set(category, items);
+  }
+  return [...groups.entries()]
+    .sort((left, right) => {
+      const rank = (name: string) => (name === "Other" ? categoryOrder.length + 1 : categoryOrder.indexOf(name) === -1 ? categoryOrder.length : categoryOrder.indexOf(name));
+      return rank(left[0]) - rank(right[0]) || left[0].localeCompare(right[0], "en");
+    })
+    .map(([category, items]) => ({
+      category,
+      items: items.sort((left, right) => left.name.localeCompare(right.name, "en")),
+    }));
 }
 
 export async function listCatalog(): Promise<CatalogItem[]> {
