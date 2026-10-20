@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
 
@@ -218,7 +219,7 @@ export function PortalSignIn({
               ? "Your referrals, commissions, and payouts — all in one place."
               : "Affiliate accounts, commissions, and payouts — all in one place."}
           </h2>
-          <PortalMark />
+          {affiliate ? <AffiliatePhoto /> : <PortalMark />}
           <div className="rounded-[24px] bg-[#fbf8f8] p-4 sm:p-5">
             <div className="flex items-center justify-between gap-3">
               <div className="flex flex-wrap gap-2">
@@ -329,6 +330,21 @@ function PasswordControl({ id, invalid, describedBy }: { id: string; invalid: bo
         {visible ? <EyeOffIcon /> : <EyeIcon />}
       </button>
     </>
+  );
+}
+
+function AffiliatePhoto() {
+  return (
+    <div className="relative my-6 min-h-72 flex-1 overflow-hidden rounded-[24px]">
+      <Image
+        src="/images/affiliate-login.jpg"
+        alt="Two people smiling while looking at a phone together"
+        fill
+        priority
+        sizes="(min-width: 1024px) 36rem, 100vw"
+        className="object-cover object-[center_30%]"
+      />
+    </div>
   );
 }
 
