@@ -16,8 +16,9 @@ import {
 } from "@/lib/affiliate/store";
 import { listPromoCodes, promoRowsForAffiliate } from "@/lib/genhealth/promocodes";
 
-function fail(error: string): never {
-  redirect(`/affiliates?error=${encodeURIComponent(error)}`);
+function fail(error: string, method: "password" | "link" = "password"): never {
+  const methodQuery = method === "link" ? "&method=link" : "";
+  redirect(`/affiliates?error=${encodeURIComponent(error)}${methodQuery}`);
 }
 
 function portalReady() {
@@ -38,17 +39,17 @@ export async function loginAffiliatePortal(formData: FormData) {
 }
 
 export async function requestAffiliateLink(formData: FormData) {
-  if (!portalReady() || !affiliateEmailConfigured()) fail("unconfigured");
+  if (!portalReady() || !affiliateEmailConfigured()) fail("unconfigured", "link");
   let issued: Awaited<ReturnType<typeof issueAffiliateMagicLink>>;
   try {
     issued = await issueAffiliateMagicLink(String(formData.get("email") ?? ""));
   } catch (error) {
     console.error("[affiliate] sign-in link failed", error instanceof Error ? error.message : "unknown");
-    fail("unavailable");
+    fail("unavailable", "link");
   }
-  if (issued.status === "limited") fail("limited");
-  if (issued.status === "unavailable") fail("unavailable");
-  if (issued.status !== "sent") fail("denied");
+  if (issued.status === "limited") fail("limited", "link");
+  if (issued.status === "unavailable") fail("unavailable", "link");
+  if (issued.status !== "sent") fail("denied", "link");
   try {
     await sendAffiliateSignInEmail(issued.email, issued.url);
   } catch (error) {
@@ -58,9 +59,9 @@ export async function requestAffiliateLink(formData: FormData) {
       console.error("[affiliate] sign-in link clear failed", clearError instanceof Error ? clearError.message : "unknown");
     }
     console.error("[affiliate] sign-in email failed", error instanceof Error ? error.message : "unknown");
-    fail("unavailable");
+    fail("unavailable", "link");
   }
-  redirect("/affiliates?sent=1");
+  redirect("/affiliates?sent=1&method=link");
 }
 
 export async function saveAffiliateLinkAction(promoCode: string) {

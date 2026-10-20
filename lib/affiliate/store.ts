@@ -317,6 +317,15 @@ export async function savePendingAffiliateOrder(input: { code: string; orderId: 
   });
 }
 
+export async function pendingAffiliateCode(orderId: string) {
+  if (!affiliateFirebaseConfigured()) return null;
+  const id = orderDocId(orderId);
+  if (!id) return null;
+  const snap = await affiliateFirestore().collection("pendingOrders").doc(id).get();
+  if (!snap.exists) return null;
+  return normalizeAffiliateCode(snap.data()?.code);
+}
+
 export async function loadUncommissionedPendingOrders() {
   const rows = new Map<string, string>();
   if (!affiliateFirebaseConfigured()) return rows;
