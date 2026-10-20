@@ -31,15 +31,13 @@ export async function patchOrderPaid(orderId: string, transactionId: string) {
     throw Object.assign(new Error(lastError), { status: 502 });
 }
 
-export type AttributedOrder = {
+export type PaidOrder = {
   orderId: string;
-  code: string;
   amountCents: number | null;
   productName: string;
   createdAt: Date;
+  source: string;
 };
-
-const ATTRIBUTION_KEYS = ["tracking", "utm", "utms", "attribution"] as const;
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
@@ -54,27 +52,8 @@ function customFieldSource(order: Record<string, unknown>) {
   return fields ? asString(fields.utm_source) : "";
 }
 
-function hasAttributionField(order: Record<string, unknown>) {
-  if (asString(order.utm_source) || customFieldSource(order)) return true;
-  return ATTRIBUTION_KEYS.some((key) => asRecord(order[key]));
-}
-
-function utmSource(order: Record<string, unknown>) {
-  const candidates: string[] = [];
-  const direct = asString(order.utm_source);
-  if (direct) candidates.push(direct);
-  for (const key of ATTRIBUTION_KEYS) {
-    const bag = asRecord(order[key]);
-    if (!bag) continue;
-    const source = asString(bag.utm_source) || asString(bag.source);
-    if (source) candidates.push(source);
-    const nested = asRecord(bag.utm);
-    const nestedSource = nested ? asString(nested.utm_source) || asString(nested.source) : "";
-    if (nestedSource) candidates.push(nestedSource);
-  }
-  const custom = customFieldSource(order);
-  if (custom) candidates.push(custom);
-  return candidates.find((value) => normalizeAffiliateCode(value)) ?? candidates[0] ?? "";
+function fallbackSource(order: Record<string, unknown>) {
+  return normalizeAffiliateCode(asString(order.utm_source)) || normalizeAffiliateCode(customFieldSource(order)) || "";
 }
 
 function amountCents(value: unknown) {
@@ -104,24 +83,22 @@ function orderTime(order: Record<string, unknown>) {
   return null;
 }
 
-function mapPaidOrder(order: Record<string, unknown>, affiliateIds: ReadonlySet<string>): AttributedOrder | null {
+function mapPaidOrder(order: Record<string, unknown>): PaidOrder | null {
   if (asString(order.paymentStatus).toLowerCase() !== "paid") return null;
-  const code = normalizeAffiliateCode(utmSource(order));
-  if (!code || !affiliateIds.has(code)) return null;
   const orderId = asString(order.orderId);
   const createdAt = orderTime(order);
   if (!orderId || !createdAt) return null;
   return {
     orderId,
-    code,
     amountCents: amountCents(order.amount),
     productName: productName(order),
     createdAt,
+    source: fallbackSource(order),
   };
 }
 
-export async function listAttributedOrders(affiliateIds: ReadonlySet<string>): Promise<AttributedOrder[]> {
-  const rows: AttributedOrder[] = [];
+export async function listPaidOrders(): Promise<PaidOrder[]> {
+  const rows: PaidOrder[] = [];
   const seen = new Set<string>();
   let cursor: string | undefined;
 
@@ -139,13 +116,8 @@ export async function listAttributedOrders(affiliateIds: ReadonlySet<string>): P
       return record ? [record] : [];
     }) : [];
 
-    if (page === 0 && orders.length > 0 && !orders.some(hasAttributionField)) {
-      console.warn("[affiliate] Gen Health order payload has no affiliate source");
-      return [];
-    }
-
     for (const order of orders) {
-      const row = mapPaidOrder(order, affiliateIds);
+      const row = mapPaidOrder(order);
       if (!row || seen.has(row.orderId)) continue;
       seen.add(row.orderId);
       rows.push(row);
@@ -159,4 +131,39 @@ export async function listAttributedOrders(affiliateIds: ReadonlySet<string>): P
   }
 
   return rows;
+}
+
+function orderRecord(data: Record<string, unknown> | null): Record<string, unknown> | null {
+  if (!data) return null;
+  const nested = asRecord(data.order);
+  if (nested) return nested;
+  if (Array.isArray(data.orders)) {
+    const first = asRecord(data.orders[0]);
+    if (first) return first;
+  }
+  if (asString(data.orderId) || asString(data.paymentStatus)) return data;
+  return null;
+}
+
+export async function getPaidOrder(orderId: string): Promise<PaidOrder | null> {
+  const id = orderId.trim();
+  if (!id) return null;
+
+  try {
+    const response = await genHealthRequest<Record<string, unknown>>(
+      `/v2/client/orders/${encodeURIComponent(id)}`,
+    );
+    if (!response.success || !response.data) {
+      console.error("[affiliate] Gen Health order lookup failed", id, response.error || response.status);
+      return null;
+    }
+    const record = orderRecord(response.data);
+    if (!record) return null;
+    const order = asString(record.orderId) ? record : { ...record, orderId: id };
+    return mapPaidOrder(order);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "unknown error";
+    console.error("[affiliate] Gen Health order lookup failed", id, message);
+    return null;
+  }
 }

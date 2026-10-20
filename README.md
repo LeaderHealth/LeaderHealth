@@ -36,3 +36,58 @@ Set `AFFILIATE_ADMIN_EMAIL` and `AFFILIATE_ADMIN_PASSWORD`, then open [http://lo
 Affiliates sign in at [http://localhost:3000/affiliates](http://localhost:3000/affiliates) with the email and portal password from the admin page. They see only their own clicks, paid orders, commission, and referral link. A wrong email, wrong password, or deactivated code all show the same message.
 
 Email sign-in links stay hidden until both `RESEND_API_KEY` and `AFFILIATE_FROM_EMAIL` are set. `AFFILIATE_FROM_EMAIL` must be a verified Resend sender, for example `Leader Health <affiliates@leaderhealth.clinic>`. A link expires in 15 minutes, works once, and can be requested again after one minute. Existing affiliates have no password until you set one; until then they can sign in only by email link, and only after Resend is configured.
+
+## Affiliate order tracking
+
+Affiliate order tracking is integrated between the Leader Health website and internal checkout repositories using Firebase Firestore. Leader Health stores the affiliate ID alongside the corresponding Gen Health order ID, rather than relying on Gen Health to store affiliate information.
+
+### How it works
+
+The internal checkout captures the affiliate ID from `utm_source`. Once Gen Health creates an order, checkout sends both the affiliate ID and Gen Health order ID to Leader Health through `POST /api/affiliate/order`. The endpoint validates the request using a shared secret and saves the association in Firestore. Once Gen Health confirms payment, the dashboard matches the order ID, attributes the sale, and calculates commission using the affiliate's assigned rule.
+
+Creating an order does not guarantee a completed purchase. Waiting for Gen Health to confirm payment prevents commissions from being calculated on unpaid or abandoned orders.
+
+### Environment variables
+
+Both repositories must use the same shared secret, which developers can configure themselves in their local environment files. No additional secret-generation setup is required.
+
+Leader Health website (`.env.local`):
+
+```env
+AFFILIATE_ORDER_SECRET=YOUR_SHARED_SECRET
+```
+
+Internal checkout (`.env`):
+
+```env
+LEADERHEALTH_ORIGIN=http://localhost:3000
+LEADERHEALTH_AFFILIATE_SECRET=YOUR_SHARED_SECRET
+```
+
+For production, replace `localhost:3000` with the deployed Leader Health website origin. Keep secrets server-side.
+
+### Testing without a card
+
+Manually test affiliate order attribution using an existing paid Gen Health order ID.
+
+```powershell
+Invoke-RestMethod -Method POST -Uri "http://localhost:3000/api/affiliate/order" -Headers @{ "x-affiliate-secret" = "YOUR_SHARED_SECRET" } -ContentType "application/json" -Body '{"orderId":"YOUR_PAID_GENHEALTH_ORDER_ID","utm_source":"YOUR_AFFILIATE_ID"}'
+```
+
+- `YOUR_SHARED_SECRET`: shared secret configured locally in both repositories.
+- `YOUR_PAID_GENHEALTH_ORDER_ID`: existing paid order ID from Gen Health.
+- `YOUR_AFFILIATE_ID`: unique affiliate ID used as `utm_source`.
+
+The endpoint saves the order-to-affiliate association in Firestore. When the dashboard imports paid Gen Health orders, it matches the order ID and calculates the affiliate's commission.
+
+This command manually associates an existing order with an affiliate. It does not verify automatic checkout integration. Use test orders to avoid incorrectly attributing real customer purchases.
+
+### Real transaction testing
+
+Complete a real purchase through an affiliate tracking link to verify that:
+
+- The affiliate ID and Gen Health order ID are automatically sent to Leader Health and saved in Firestore.
+- The paid order appears under Admin → Affiliates → Orders with accurate sales and commission amounts.
+- The order is recorded only once, preventing duplicate commissions.
+
+Affiliate order tracking is implemented and supports manual testing. A real transaction is still required to validate the complete checkout-to-commission workflow.

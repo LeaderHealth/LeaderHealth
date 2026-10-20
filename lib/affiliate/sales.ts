@@ -1,7 +1,18 @@
 import { normalizeAffiliateCode } from "./code";
 import { affiliateFirebaseConfigured, affiliateFirestore } from "./firebase";
-import { recordAffiliateConversion } from "./store";
-import { listAttributedOrders } from "@/lib/genhealth/payment";
+import { loadUncommissionedPendingOrders, markPendingOrderCommissioned, recordAffiliateConversion } from "./store";
+import { getPaidOrder, listPaidOrders, type PaidOrder } from "@/lib/genhealth/payment";
+
+async function recordPaidOrder(order: PaidOrder, code: string) {
+  await recordAffiliateConversion({
+    code,
+    orderId: order.orderId,
+    amount: order.amountCents == null ? null : order.amountCents / 100,
+    productName: order.productName,
+    dryRun: false,
+    createdAt: order.createdAt,
+  });
+}
 
 async function affiliateIds() {
   const ids = new Set<string>();
@@ -15,17 +26,44 @@ async function affiliateIds() {
 
 export async function syncAttributedGenHealthSales() {
   if (!affiliateFirebaseConfigured()) return;
+  let ids: Set<string>;
   try {
-    const orders = await listAttributedOrders(await affiliateIds());
+    ids = await affiliateIds();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "unknown error";
+    console.error("[affiliate] Gen Health sales sync failed", message);
+    return;
+  }
+
+  try {
+    const pending = await loadUncommissionedPendingOrders();
+    const orders = await listPaidOrders();
     for (const order of orders) {
-      await recordAffiliateConversion({
-        code: order.code,
-        orderId: order.orderId,
-        amount: order.amountCents == null ? null : order.amountCents / 100,
-        productName: order.productName,
-        dryRun: false,
-        createdAt: order.createdAt,
-      });
+      const pendingCode = pending.get(order.orderId) ?? "";
+      const fallback = pendingCode ? "" : order.source;
+      const code = pendingCode && ids.has(pendingCode) ? pendingCode : fallback && ids.has(fallback) ? fallback : "";
+      if (!code) continue;
+      await recordPaidOrder(order, code);
+      if (pendingCode) await markPendingOrderCommissioned(order.orderId);
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "unknown error";
+    console.error("[affiliate] Gen Health sales sync failed", message);
+  }
+
+  try {
+    const remaining = await loadUncommissionedPendingOrders();
+    for (const [orderId, code] of remaining) {
+      if (!ids.has(code)) continue;
+      try {
+        const order = await getPaidOrder(orderId);
+        if (!order) continue;
+        await recordPaidOrder(order, code);
+        await markPendingOrderCommissioned(order.orderId);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "unknown error";
+        console.error("[affiliate] Gen Health order lookup failed", orderId, message);
+      }
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : "unknown error";

@@ -4,11 +4,13 @@ import { MarkPaidButton } from "@/components/affiliate/MarkPaidButton";
 import { formatCents } from "@/lib/affiliate/format";
 import {
   currentPayoutPeriod,
-  formatPayoutDate,
   formatPayoutMonth,
   loadPayoutRecords,
   normalizePayoutPeriod,
   payoutLines,
+  payoutPaidAmount,
+  payoutPaidOn,
+  payoutReferenceText,
   payoutMonths,
   type PayoutLine,
   type PayoutStatus,
@@ -121,7 +123,7 @@ export default async function AffiliatePayoutsPage({
       <div>
         <h2 className="text-2xl">Payouts</h2>
         <p className="mt-2 max-w-2xl text-sm text-brown">
-          Review earned commission, approve a month, then record a payment completed outside this dashboard.
+          Review earned commission, approve a month, then record the payment. Mark paid only records a payment that was already made somewhere else.
         </p>
       </div>
 
@@ -178,15 +180,15 @@ export default async function AffiliatePayoutsPage({
                   </div>
                   <div>
                     <dt className="text-xs text-brown">Paid</dt>
-                    <dd className="mt-1">{line.paidCents == null ? "—" : formatCents(line.paidCents)}</dd>
+                    <dd className="mt-1">{payoutPaidAmount(line)}</dd>
                   </div>
                   <div>
                     <dt className="text-xs text-brown">Paid on</dt>
-                    <dd className="mt-1">{formatPayoutDate(line.paidAt)}</dd>
+                    <dd className="mt-1">{payoutPaidOn(line)}</dd>
                   </div>
                   <div>
                     <dt className="text-xs text-brown">Reference</dt>
-                    <dd className="mt-1 break-words">{line.reference || "—"}</dd>
+                    <dd className="mt-1 break-words">{payoutReferenceText(line)}</dd>
                   </div>
                 </dl>
                 <div className="mt-5">
@@ -226,9 +228,9 @@ export default async function AffiliatePayoutsPage({
                   <td className="px-4 py-5 align-top">
                     <PayoutStatusBadge status={line.status} />
                   </td>
-                  <td className="px-4 py-5 align-top">{line.paidCents == null ? "—" : formatCents(line.paidCents)}</td>
-                  <td className="px-4 py-5 align-top">{formatPayoutDate(line.paidAt)}</td>
-                  <td className="break-words px-4 py-5 align-top">{line.reference || "—"}</td>
+                  <td className="px-4 py-5 align-top">{payoutPaidAmount(line)}</td>
+                  <td className="px-4 py-5 align-top">{payoutPaidOn(line)}</td>
+                  <td className="break-words px-4 py-5 align-top">{payoutReferenceText(line)}</td>
                   <td className="px-4 py-5 align-top">
                     <PayoutAction line={line} updated={approvedCodes.has(line.code)} paidOn={paidOn} />
                   </td>
