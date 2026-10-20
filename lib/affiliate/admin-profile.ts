@@ -1,4 +1,3 @@
-import { getAuth } from "firebase-admin/auth";
 import { affiliateFirebaseConfigured, affiliateFirestore } from "./firebase";
 import { adminAccountEmail } from "./session";
 
@@ -21,15 +20,16 @@ export async function adminAccountProfile() {
   let name = "";
   let avatarUrl: string | null = null;
   if (affiliateFirebaseConfigured()) {
-    affiliateFirestore();
     try {
+      const { getAuth } = await import("firebase-admin/auth");
+      affiliateFirestore();
       const user = await getAuth().getUserByEmail(email);
       name = user.displayName?.trim() ?? "";
       avatarUrl = httpsUrl(user.photoURL);
     } catch (error) {
       const code = (error as { code?: string }).code;
-      if (code && code !== "auth/user-not-found") {
-        console.error("[affiliate] admin profile load failed", code);
+      if (code !== "auth/user-not-found") {
+        console.error("[affiliate] admin profile load failed", code ?? (error instanceof Error ? error.message : "unknown"));
       }
     }
   }
