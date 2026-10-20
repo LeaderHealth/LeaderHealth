@@ -8,6 +8,7 @@ export type CartItem = {
   priceLabel: string;
   amount: number | null;
   quantity: number;
+  clientProductId?: string;
 };
 
 export function parsePriceAmount(label?: string | null) {

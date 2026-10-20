@@ -73,7 +73,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const existing = current.find((entry) => entry.id === item.id);
     const next = existing
       ? current.map((entry) =>
-          entry.id === item.id ? { ...entry, quantity: entry.quantity + (item.quantity || 1) } : entry,
+          entry.id === item.id
+            ? {
+                ...entry,
+                quantity: entry.quantity + (item.quantity || 1),
+                clientProductId: item.clientProductId ?? entry.clientProductId,
+              }
+            : entry,
         )
       : [...current, { ...item, quantity: item.quantity || 1 }];
     commitCart(next);

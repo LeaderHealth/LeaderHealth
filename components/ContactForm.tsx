@@ -133,7 +133,7 @@ function SendMessageButton({
     status === "idle" && disabled ? "disabled" : status;
 
   const styles: Record<typeof visual, string> = {
-    idle: "bg-[#581e24] text-white hover:bg-[#6e262e] active:bg-[#4a191e]",
+    idle: "bg-[#581e24] text-white hover:shadow-[0_12px_28px_rgba(223,68,82,0.35)]",
     loading: "cursor-wait bg-[#581e24] text-white shadow-[0_12px_24px_rgba(232,84,40,0.48)]",
     disabled: "cursor-not-allowed bg-[#321618] text-white/35",
     success: "bg-[#b4232e] text-white shadow-[0_12px_24px_rgba(90,170,55,0.38)]",
@@ -153,9 +153,15 @@ function SendMessageButton({
       disabled={visual === "disabled" || visual === "loading" || visual === "success"}
       aria-busy={visual === "loading"}
       aria-live="polite"
-      className={`mt-8 flex h-12 w-full items-center justify-center rounded-full text-sm transition-[background-color,box-shadow,color] duration-200 disabled:opacity-100 ${styles[visual]}`}
+      className={`group relative mt-8 flex h-12 w-full items-center justify-center overflow-hidden rounded-full text-sm transition-[background-color,box-shadow,color] duration-500 disabled:opacity-100 ${styles[visual]}`}
     >
-      {visual === "loading" ? <Spinner /> : label}
+      {visual === "idle" ? (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-y-0 left-1/2 w-full -translate-x-1/2 scale-x-0 rounded-full bg-[#DF4452] transition-transform duration-500 ease-out group-hover:scale-x-100 group-focus-visible:scale-x-100 motion-reduce:transition-none motion-reduce:group-hover:scale-x-0 motion-reduce:group-focus-visible:scale-x-0"
+        />
+      ) : null}
+      <span className="relative z-10">{visual === "loading" ? <Spinner /> : label}</span>
     </button>
   );
 }

@@ -45,36 +45,52 @@ export function IconHoverButton({
 
   const palette =
     variant === "accent"
-      ? "bg-[#e43d4e] text-white hover:bg-[#f04d5c] focus-visible:bg-[#f04d5c]"
-      : "bg-white text-ink group-hover:text-white group-focus-visible:text-white";
-
-  const fillClass = variant === "light" ? "bg-[#0055ff]" : "";
+      ? "bg-[#e43d4e] text-white"
+      : "bg-white text-ink transition-[background-color,color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[#331110] hover:text-[#F7F3F5] focus-visible:bg-[#331110] focus-visible:text-[#F7F3F5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink motion-reduce:transition-none";
 
   const ease = "duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]";
+  const hoverEase = "duration-[400ms] ease-out motion-reduce:transition-none";
 
-  const cls = `group relative inline-flex items-center justify-center overflow-hidden rounded-[39px] text-center leading-none ${ease} ${sizes} ${palette} ${className}`;
+  const cls = `group relative inline-flex items-center justify-center overflow-hidden rounded-[39px] text-center leading-none ${variant === "accent" ? ease : ""} ${sizes} ${palette} ${className}`;
 
-  const content = (
-    <>
-      {variant === "light" ? (
+  const content =
+    variant === "light" ? (
+      <>
         <span
           aria-hidden
-          className={`pointer-events-none absolute top-full left-1/2 h-2 w-2 -translate-x-1/2 rounded-full ${fillClass} transition-transform ${ease} group-hover:scale-[55] group-focus-visible:scale-[55]`}
+          className={`pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#331110] transition-transform ${hoverEase} group-hover:scale-[36] group-focus-visible:scale-[36] motion-reduce:scale-100!`}
         />
-      ) : null}
-      <span className="relative z-10 inline-flex items-center justify-center">
-        <span className="leading-none">{children}</span>
+        <span
+          className={`relative z-10 whitespace-nowrap transition-transform ${hoverEase} group-hover:-translate-x-[15px] group-focus-visible:-translate-x-[15px] motion-reduce:translate-x-0!`}
+        >
+          {children}
+        </span>
         <span
           aria-hidden
-          className={`grid grid-cols-[0fr] opacity-0 transition-[grid-template-columns,opacity] ${ease} group-hover:grid-cols-[1fr] group-hover:opacity-100 group-focus-visible:grid-cols-[1fr] group-focus-visible:opacity-100`}
+          className={`pointer-events-none absolute top-1/2 right-0 z-10 -translate-y-1/2 translate-x-full transition-transform ${hoverEase} group-hover:translate-x-[calc(100%-35px)] group-focus-visible:translate-x-[calc(100%-35px)] motion-reduce:translate-x-full!`}
         >
-          <span className="min-w-0 overflow-hidden">
-            <ArrowIcon className={`${icon} ml-2`} />
+          →
+        </span>
+      </>
+    ) : (
+      <>
+        <span
+          aria-hidden
+          className={`pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#32120E] transition-transform ${hoverEase} group-hover:scale-[56] group-focus-visible:scale-[56] motion-reduce:scale-100!`}
+        />
+        <span className="relative z-10 inline-flex items-center justify-center">
+          <span className="leading-none">{children}</span>
+          <span
+            aria-hidden
+            className={`grid grid-cols-[0fr] opacity-0 transition-[grid-template-columns,opacity] ${ease} group-hover:grid-cols-[1fr] group-hover:opacity-100 group-focus-visible:grid-cols-[1fr] group-focus-visible:opacity-100`}
+          >
+            <span className="min-w-0 overflow-hidden">
+              <ArrowIcon className={`${icon} ml-2`} />
+            </span>
           </span>
         </span>
-      </span>
-    </>
-  );
+      </>
+    );
 
   if (href.startsWith("http") || href.startsWith("mailto") || href.startsWith("tel")) {
     const newTab = href.startsWith("http") && href !== GET_STARTED_URL;

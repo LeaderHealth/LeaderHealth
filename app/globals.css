@@ -77,7 +77,7 @@ html {
 }
 
 .lh-page-fade {
-  animation: lh-page-fade-in 360ms ease-in-out both;
+  animation: lh-page-fade-in 640ms ease-in-out both;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -121,6 +121,17 @@ h3.font-sans,
   animation: marquee 56s linear infinite;
 }
 
+.article-ticker-track {
+  animation: articleTicker 8.1s linear infinite;
+  will-change: transform;
+}
+
+@media (max-width: 809px) {
+  .article-ticker-track {
+    animation-duration: 10.5s;
+  }
+}
+
 .nmi-card-slot iframe {
   display: block;
   width: 100%;
@@ -137,14 +148,23 @@ h3.font-sans,
   }
 }
 
+@keyframes articleTicker {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
 .sermorelin-vial-float {
-  animation: vialFloatY 2.5s ease-in-out 0.3s infinite alternate;
+  animation: vialFloatY 5.6s ease-in-out 0.4s infinite alternate;
   will-change: transform;
 }
 
 .sermorelin-vial {
   transform: rotate(-10deg);
-  animation: vialTilt 2.5s ease-in-out 0.3s infinite alternate;
+  animation: vialTilt 5.6s ease-in-out 0.4s infinite alternate;
   will-change: transform;
 }
 
@@ -153,7 +173,7 @@ h3.font-sans,
     transform: translateY(0);
   }
   to {
-    transform: translateY(-14px);
+    transform: translateY(-8px);
   }
 }
 
@@ -162,7 +182,7 @@ h3.font-sans,
     transform: rotate(-10deg);
   }
   to {
-    transform: rotate(-8deg);
+    transform: rotate(-9deg);
   }
 }
 
@@ -171,7 +191,7 @@ h3.font-sans,
     transform: translateY(0);
   }
   to {
-    transform: translateY(-8px);
+    transform: translateY(-5px);
   }
 }
 
@@ -211,7 +231,7 @@ h3.font-sans,
     transform: translateY(0) rotate(0deg);
   }
   50% {
-    transform: translateY(-9px) rotate(1.5deg);
+    transform: translateY(-5px) rotate(0.6deg);
   }
 }
 
@@ -258,40 +278,51 @@ h3.font-sans,
   }
 }
 
+.price-compare-mobile-grid {
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 1.05fr) minmax(0, 0.92fr);
+}
+
+.price-compare-mobile-leader {
+  left: calc(100% * 1.08 / 3.05 + 4px);
+  width: calc(100% * 1.05 / 3.05 - 8px);
+}
+
 .price-compare[data-phase="waiting"] .price-compare-title,
 .price-compare[data-phase="waiting"] .price-compare-card,
 .price-compare[data-phase="waiting"] .price-compare-cell {
   opacity: 0;
-  transform: translateY(18px);
+  transform: translateY(12px);
 }
 
-.price-compare[data-phase="waiting"] .price-compare-leader {
+.price-compare[data-phase="waiting"] .price-compare-leader,
+.price-compare[data-phase="waiting"] .price-compare-mobile-leader {
   opacity: 0;
-  transform: translateY(28px) scaleY(0.84);
+  transform: translateY(16px) scaleY(0.96);
   transform-origin: center bottom;
 }
 
 .price-compare[data-phase="in"] .price-compare-title {
-  animation: price-compare-rise 680ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: price-compare-rise 1000ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .price-compare[data-phase="in"] .price-compare-card {
-  animation: price-compare-rise 760ms cubic-bezier(0.22, 1, 0.36, 1) 90ms both;
+  animation: price-compare-rise 1100ms cubic-bezier(0.22, 1, 0.36, 1) 120ms both;
 }
 
-.price-compare[data-phase="in"] .price-compare-leader {
+.price-compare[data-phase="in"] .price-compare-leader,
+.price-compare[data-phase="in"] .price-compare-mobile-leader {
   transform-origin: center bottom;
-  animation: price-compare-column 860ms cubic-bezier(0.22, 1, 0.36, 1) 180ms both;
+  animation: price-compare-column 1200ms cubic-bezier(0.22, 1, 0.36, 1) 200ms both;
 }
 
 .price-compare[data-phase="in"] .price-compare-cell {
-  animation: price-compare-rise 560ms cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0ms) both;
+  animation: price-compare-rise 900ms cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0ms) both;
 }
 
 @keyframes price-compare-rise {
   from {
     opacity: 0;
-    transform: translateY(18px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
@@ -302,7 +333,7 @@ h3.font-sans,
 @keyframes price-compare-column {
   from {
     opacity: 0;
-    transform: translateY(28px) scaleY(0.84);
+    transform: translateY(16px) scaleY(0.96);
   }
   to {
     opacity: 1;
@@ -310,14 +341,382 @@ h3.font-sans,
   }
 }
 
+@keyframes price-compare-swap {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.price-compare-swap {
+  animation: price-compare-swap 320ms ease;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .price-compare-title,
   .price-compare-card,
   .price-compare-leader,
-  .price-compare-cell {
+  .price-compare-mobile-leader,
+  .price-compare-cell,
+  .price-compare-swap {
     opacity: 1;
     transform: none;
     animation: none;
+  }
+}
+
+.reviewer-card[data-phase="waiting"] {
+  opacity: 0;
+  transform: translateY(16px);
+}
+
+.reviewer-card[data-phase="waiting"] .reviewer-card-photo {
+  transform: scale(1.04);
+}
+
+.reviewer-card[data-phase="in"] {
+  animation: reviewer-card-rise 1200ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.reviewer-card[data-phase="in"] .reviewer-card-photo {
+  animation: reviewer-card-photo 1600ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes reviewer-card-rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes reviewer-card-photo {
+  from {
+    transform: scale(1.04);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reviewer-card,
+  .reviewer-card-photo {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+}
+
+.show-up-scene[data-phase="waiting"] .show-up-bg {
+  transform: scale(1.03);
+}
+
+.show-up-scene[data-phase="in"] .show-up-bg {
+  animation: show-up-bg 1800ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.show-up-card[data-phase="waiting"] {
+  opacity: 0;
+  transform: translateY(16px);
+}
+
+.show-up-card[data-phase="waiting"] .show-up-photo {
+  transform: scale(1.04);
+}
+
+.show-up-card[data-phase="waiting"] .show-up-vial {
+  opacity: 0;
+  transform: translateY(18px) scale(0.97);
+}
+
+.show-up-card[data-phase="in"] {
+  animation: show-up-card 1200ms cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0ms) both;
+}
+
+.show-up-card[data-phase="in"] .show-up-photo {
+  animation: show-up-photo 1600ms cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0ms) both;
+}
+
+.show-up-card[data-phase="in"] .show-up-vial {
+  animation: show-up-vial 1400ms cubic-bezier(0.22, 1, 0.36, 1) calc(var(--d, 0ms) + 120ms) both;
+}
+
+@keyframes show-up-bg {
+  from {
+    transform: scale(1.03);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes show-up-card {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes show-up-photo {
+  from {
+    transform: scale(1.04);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes show-up-vial {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .show-up-scene[data-phase="waiting"] .show-up-bg,
+  .show-up-scene[data-phase="in"] .show-up-bg,
+  .show-up-card[data-phase="waiting"],
+  .show-up-card[data-phase="in"],
+  .show-up-card[data-phase="waiting"] .show-up-photo,
+  .show-up-card[data-phase="in"] .show-up-photo,
+  .show-up-card[data-phase="waiting"] .show-up-vial,
+  .show-up-card[data-phase="in"] .show-up-vial {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+}
+
+.live-scene[data-phase="waiting"] .live-bg {
+  transform: scale(1.03);
+}
+
+.live-scene[data-phase="in"] .live-bg {
+  animation: live-bg 1800ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.live-copy[data-phase="waiting"],
+.live-card[data-phase="waiting"] {
+  opacity: 0;
+  transform: translateY(16px);
+}
+
+.live-card[data-phase="waiting"] .live-check {
+  opacity: 0;
+  transform: scale(0.94);
+}
+
+.live-vial[data-phase="waiting"] {
+  opacity: 0;
+  transform: translateY(18px) scale(0.97);
+}
+
+.live-copy[data-phase="in"],
+.live-card[data-phase="in"] {
+  animation: live-rise 1200ms cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0ms) both;
+}
+
+.live-card[data-phase="in"] .live-check {
+  animation: live-check 900ms cubic-bezier(0.22, 1, 0.36, 1) calc(var(--d, 0ms) + 160ms) both;
+}
+
+.live-vial[data-phase="in"] {
+  animation: live-vial 1400ms cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0ms) both;
+}
+
+@keyframes live-bg {
+  from {
+    transform: scale(1.03);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes live-rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes live-check {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes live-vial {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-scene[data-phase="waiting"] .live-bg,
+  .live-scene[data-phase="in"] .live-bg,
+  .live-copy[data-phase="waiting"],
+  .live-copy[data-phase="in"],
+  .live-card[data-phase="waiting"],
+  .live-card[data-phase="in"],
+  .live-card[data-phase="waiting"] .live-check,
+  .live-card[data-phase="in"] .live-check,
+  .live-vial[data-phase="waiting"],
+  .live-vial[data-phase="in"] {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .marquee-track,
+  .article-ticker-track,
+  .sermorelin-vial-float,
+  .sermorelin-vial,
+  .lh-page-fade,
+  .lh-popup-backdrop,
+  .lh-popup-panel,
+  .reviewer-card,
+  .reviewer-card-photo {
+    animation: none !important;
+  }
+}
+
+/* Tablet navbar (765–1199). Unlayered so these beat Tailwind md: utilities
+   without changing the desktop bar at 1200px and up. 765px matches the
+   layout width just under the 768px utility breakpoint. */
+.lh-tablet-clip {
+  display: none;
+}
+
+@media (min-width: 765px) and (max-width: 1199px) {
+  .lh-tablet-header {
+    top: 12px;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .lh-tablet-shell {
+    max-width: none;
+    gap: 0;
+    padding: 0;
+    flex-direction: column;
+    align-items: stretch;
+    overflow: hidden;
+    border-radius: 44px;
+    transition-property: border-radius;
+    transition-duration: 0.5s;
+    transition-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+
+  .lh-tablet-shell.lh-tablet-open {
+    max-height: calc(100dvh - 1.5rem);
+    border-radius: 21px;
+  }
+
+  .lh-tablet-clip {
+    display: block;
+  }
+
+  .lh-tablet-row {
+    display: flex;
+    height: auto;
+    width: 100%;
+    min-width: 0;
+    align-items: center;
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+
+  .lh-desktop-nav {
+    display: none;
+  }
+
+  .lh-tablet-logo {
+    position: static;
+    left: auto;
+    width: auto;
+    flex: none;
+    transform: none;
+    justify-content: flex-start;
+    padding-left: 20px;
+    transition: opacity 200ms ease;
+  }
+
+  .lh-tablet-logo:hover {
+    opacity: 0.82;
+  }
+
+  .lh-tablet-logo:active {
+    opacity: 0.68;
+  }
+
+  .lh-tablet-logo img {
+    width: 163px;
+  }
+
+  .lh-tablet-bar {
+    display: flex;
+  }
+
+  .lh-tablet-panel {
+    display: block;
+  }
+
+  /* Keep every menu control on screen. Card art shrinks only when the
+     viewport is too short for the full set of links and actions. */
+  .lh-tablet-card-media {
+    height: min(123px, max(56px, calc((100dvh - 534px) / 2)));
+    aspect-ratio: auto;
+  }
+}
+
+@media (min-width: 1200px) {
+  .lh-tablet-logo {
+    translate: -50% 0;
   }
 }
 

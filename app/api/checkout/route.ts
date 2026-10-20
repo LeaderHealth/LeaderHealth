@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { affiliateCodeFromCookies, recordAffiliateConversion } from "@/lib/affiliate/store";
 import { CheckoutHttpError, parseCheckoutPaymentInput, settleCheckout } from "@/lib/checkout/complete";
 import { genHealthConfigured } from "@/lib/genhealth/client";
 
@@ -25,7 +26,21 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await settleCheckout(parsed.value);
+    const code = await affiliateCodeFromCookies();
+    const result = await settleCheckout(parsed.value, code);
+    try {
+      if (code) {
+        await recordAffiliateConversion({
+          code,
+          orderId: result.orderId,
+          amount: result.amount,
+          productName: result.productName,
+          dryRun: result.dryRun,
+        });
+      }
+    } catch (error) {
+      console.error("[affiliate] conversion log failed", error instanceof Error ? error.message : "unknown");
+    }
     return NextResponse.json({ success: true, ...result });
   } catch (error) {
     if (error instanceof CheckoutHttpError) {

@@ -7,6 +7,7 @@ export type FeatureCard = {
   heading: string;
   subline: string;
   price: string;
+  imagePosition?: string;
 };
 
 export type MegaItem = {
@@ -101,8 +102,16 @@ export const longevityCategory: MegaCategory = {
   card: productCard("longevity-nad"),
 };
 
-export const menDefaultCard = productCard("weight-loss-semaglutide");
-export const womenDefaultCard = productCard("women-hormone-therapy");
+export const menDefaultCard: FeatureCard = {
+  ...productCard("weight-loss-semaglutide"),
+  image: "/images/featured/semaglutide-vial.jpg",
+  imagePosition: "center 46%",
+};
+export const womenDefaultCard: FeatureCard = {
+  ...productCard("women-hormone-therapy"),
+  image: "/images/featured/womens-hormone-therapy.jpg",
+  imagePosition: "center 68%",
+};
 
 export const menMegaCategories: MegaCategory[] = [
   {
@@ -125,6 +134,7 @@ export const menMegaCategories: MegaCategory[] = [
       { label: "Tadalafil", href: "/products/men-sexual-health-tadalafil", card: productCard("men-sexual-health-tadalafil") },
       { label: "PT-141", href: "/products/sexual-health-pt-141-nasal", card: productCard("sexual-health-pt-141-nasal") },
       { label: "Combo Troches", href: "/products/men-sexual-health-combo-troches", card: productCard("men-sexual-health-combo-troches") },
+      { label: "Oxytocin Nasal Spray", href: "/products/oxytocin-nasal-spray", card: productCard("oxytocin-nasal-spray") },
     ],
   },
   {
@@ -154,7 +164,7 @@ export const womenMegaCategories: MegaCategory[] = [
     label: "Hormone Therapy",
     kind: "link",
     href: "/products/women-hormone-therapy",
-    card: womenDefaultCard,
+    card: productCard("women-hormone-therapy"),
   },
   {
     id: "sexual",
@@ -164,6 +174,7 @@ export const womenMegaCategories: MegaCategory[] = [
     items: [
       { label: "PT-141", href: "/products/sexual-health-pt-141-nasal", card: productCard("sexual-health-pt-141-nasal") },
       { label: "Combo Troches", href: "/products/women-sexual-health-combo-troches", card: productCard("women-sexual-health-combo-troches") },
+      { label: "Oxytocin Nasal Spray", href: "/products/oxytocin-nasal-spray", card: productCard("oxytocin-nasal-spray") },
     ],
   },
   {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type RefObject } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { assets, careSteps, designedFor, GET_STARTED_URL } from "@/lib/content/site";
@@ -27,7 +27,12 @@ const campaign = [
     href: "/products/men-trt-testosterone-cypionate",
     title: "Reclaim Your Energy",
     sub: "with Compounded Testosterone",
-    img: "https://framerusercontent.com/images/v18TtF6idRTxtVpZ4ELVTqQf8Q.png?width=1080&height=1350",
+    img: "/images/products/testosterone-cypionate.png",
+    // The source file has more empty space around the vial than the other cards,
+    // and the bottle sits higher in that frame. Scale matches the height; the
+    // offset drops it onto the same line as the other two tiles.
+    imageScale: 1.6,
+    imageOffset: "4.06%",
   },
 ];
 
@@ -37,10 +42,11 @@ const featured = [
     category: "LONGEVITY",
     name: "Sermorelin",
     price: "Starting From $149/mo",
-    image: "https://framerusercontent.com/images/Nxmvv0V7wJmcL1463SseCeRgh8.png?width=1080&height=1350",
-    imageWidth: 1080,
-    imageHeight: 1350,
-    assetSlot: "h-[301px]",
+    image: "/images/products/sermorelin.png",
+    imageWidth: 587,
+    imageHeight: 1041,
+    // Fitted in the shared frame, then scaled so the bottle's longest side matches the other products.
+    imageScale: 1.29,
   },
   {
     href: "/products/weight-loss-semaglutide#find-what-fits",
@@ -50,17 +56,17 @@ const featured = [
     image: "https://framerusercontent.com/images/b3PWiNtSYn3mtcfXtpoTxo38Zo.png?width=1024&height=1024",
     imageWidth: 1024,
     imageHeight: 1024,
-    assetSlot: "h-[241px]",
+    imageScale: 1.04,
   },
   {
     href: "/products/men-sexual-health-tadalafil",
     category: "SEXUAL HEALTH",
     name: "Tadalafil",
     price: "$79/mo",
-    image: "https://framerusercontent.com/images/pa9pIi4me0ue0YEMZpLwghozic.png?width=1024&height=587",
-    imageWidth: 1024,
-    imageHeight: 587,
-    assetSlot: "h-[138px]",
+    image: "/images/products/tadalafil.png",
+    imageWidth: 1890,
+    imageHeight: 2363,
+    imageScale: 2,
   },
 ];
 
@@ -72,7 +78,7 @@ function FeaturedCareTile({ item }: { item: (typeof featured)[number] }) {
     if (!asset || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     asset.style.transition = "none";
     asset.style.transform = "";
-    asset.style.animation = "featuredTileFloat 2.5s ease-in-out infinite";
+    asset.style.animation = "featuredTileFloat 2.2s ease-in-out infinite";
   }
 
   function stopFloat() {
@@ -102,14 +108,15 @@ function FeaturedCareTile({ item }: { item: (typeof featured)[number] }) {
       <p className="relative z-10 font-sans text-[25px] font-bold leading-[30px] tracking-normal text-ink">
         {item.category}
       </p>
-      <div className={`relative z-10 flex w-full max-w-[241px] items-center justify-center ${item.assetSlot}`}>
-        <div ref={assetRef} className="flex h-[88%] w-[88%] items-center justify-center">
+      <div className="relative z-10 flex size-[200px] items-center justify-center">
+        <div ref={assetRef} className="flex h-full w-full items-center justify-center">
           <Image
             src={item.image}
             alt={item.name}
             width={item.imageWidth}
             height={item.imageHeight}
-            className="h-auto max-h-full w-auto max-w-full object-contain"
+            style={{ scale: item.imageScale }}
+            className="h-auto max-h-full w-auto max-w-full origin-center object-contain"
           />
         </div>
       </div>
@@ -125,11 +132,6 @@ function FeaturedCareTile({ item }: { item: (typeof featured)[number] }) {
   );
 }
 
-const designedForCards = [
-  ...designedFor,
-  designedFor[designedFor.length - 1],
-];
-
 const intakeUrl = "https://products.leaderhealth.clinic/?quizOpen=true";
 
 const careOptions = [
@@ -138,40 +140,40 @@ const careOptions = [
     name: "Testosterone Cypionate",
     category: "Hormone Therapy",
     price: "Starting at $109 per month",
-    image: "https://framerusercontent.com/images/v18TtF6idRTxtVpZ4ELVTqQf8Q.png?width=1080&height=1350",
-    width: 1080,
-    height: 1350,
-    imageClass: "max-h-[73.07%]",
+    image: "/images/products/testosterone-cypionate.png",
+    width: 461,
+    height: 984,
+    imageScale: 1.12,
   },
   {
     href: "/products/men-sexual-health-combo-troches",
     name: "Combo Troches",
     category: "Sexual Health",
     price: "Starting at $99 per month",
-    image: "https://framerusercontent.com/images/xiLmspoD4quCotY2Ro6T9VdAuU.png?width=1890&height=2363",
-    width: 1890,
-    height: 2363,
-    imageClass: "max-h-full",
+    image: "/images/products/combo-troches.png",
+    width: 1080,
+    height: 1350,
+    imageScale: 1.28,
   },
   {
     href: "/products/longevity-nad",
     name: "NAD+",
     category: "Longevity",
     price: "Starting at $139 per month",
-    image: "https://framerusercontent.com/images/au9n9RNuyjpJnXD4hpJpuUARaE.png?width=2286&height=1287",
-    width: 2286,
-    height: 1287,
-    imageClass: "max-h-full",
+    image: "/images/products/nad-overview.png",
+    width: 1122,
+    height: 1402,
+    imageScale: 0.68,
   },
   {
     href: "/products/weight-loss-semaglutide",
     name: "Semaglutide",
     category: "Weight",
     price: "Starting at $159 per month",
-    image: "https://framerusercontent.com/images/qjehMU3idCiDUkHLomxHWBSbnkk.png?width=626&height=888",
-    width: 626,
-    height: 888,
-    imageClass: "max-h-full",
+    image: "/images/products/semaglutide.png",
+    width: 1312,
+    height: 996,
+    imageScale: 1.55,
   },
 ];
 
@@ -225,6 +227,106 @@ const careButtonLabelClass =
 const careButtonArrowClass =
   "pointer-events-none absolute top-1/2 right-0 z-10 -translate-y-1/2 translate-x-full transition-transform duration-[400ms] ease-out group-hover:translate-x-[calc(100%-35px)] group-focus-visible:translate-x-[calc(100%-35px)] motion-reduce:translate-x-full! motion-reduce:transition-none";
 
+const careButtonFillClass =
+  "pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#32120E] transition-transform duration-[400ms] ease-out group-hover:scale-[56] group-focus-visible:scale-[56] motion-reduce:scale-100! motion-reduce:transition-none";
+
+type ScrollPhase = "pending" | "waiting" | "in";
+
+function useScrollPhase(ref: RefObject<HTMLElement | null>) {
+  const [phase, setPhase] = useState<ScrollPhase>("pending");
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const rect = node.getBoundingClientRect();
+    const visible = rect.top < window.innerHeight * 0.86 && rect.bottom > 64;
+    if (reduce || visible) {
+      setPhase("in");
+      return;
+    }
+
+    setPhase("waiting");
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting) return;
+        setPhase("in");
+        observer.disconnect();
+      },
+      { rootMargin: "0px 0px -10% 0px", threshold: 0 },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [ref]);
+
+  return phase;
+}
+
+function usePrefersReducedMotion() {
+  return useSyncExternalStore(
+    (onStoreChange) => {
+      const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+      media.addEventListener("change", onStoreChange);
+      return () => media.removeEventListener("change", onStoreChange);
+    },
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    () => false,
+  );
+}
+
+function useInViewPhases(count: number) {
+  const nodes = useRef<(HTMLElement | null)[]>([]);
+  const reduce = usePrefersReducedMotion();
+  const [phases, setPhases] = useState<ScrollPhase[]>(() => Array.from({ length: count }, () => "pending"));
+
+  useEffect(() => {
+    if (reduce) return;
+
+    const list = nodes.current.slice(0, count);
+    const initial: ScrollPhase[] = list.map((node) => {
+      if (!node) return "in";
+      const rect = node.getBoundingClientRect();
+      const visible = rect.top < window.innerHeight * 0.88 && rect.bottom > 64;
+      return visible ? "in" : "waiting";
+    });
+    setPhases(initial);
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        setPhases((current) => {
+          const next = [...current];
+          let changed = false;
+          for (const entry of entries) {
+            if (!entry.isIntersecting) continue;
+            const index = list.indexOf(entry.target as HTMLElement);
+            if (index < 0 || next[index] === "in") continue;
+            next[index] = "in";
+            changed = true;
+            observer.unobserve(entry.target);
+          }
+          return changed ? next : current;
+        });
+      },
+      { rootMargin: "0px 0px -8% 0px", threshold: 0 },
+    );
+
+    list.forEach((node, index) => {
+      if (node && initial[index] === "waiting") observer.observe(node);
+    });
+
+    return () => observer.disconnect();
+  }, [count, reduce]);
+
+  const setNode = (index: number) => (node: HTMLElement | null) => {
+    nodes.current[index] = node;
+  };
+
+  const visiblePhases = reduce ? phases.map(() => "in" as const) : phases;
+
+  return { phases: visiblePhases, setNode };
+}
+
 export function HomePage() {
   const [activeStep, setActiveStep] = useState(careSteps[0].step);
   const [trackReady, setTrackReady] = useState(false);
@@ -232,6 +334,12 @@ export function HomePage() {
   const viewportRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLElement | null)[]>([]);
+  const showUpRef = useRef<HTMLElement>(null);
+  const showUpPhase = useScrollPhase(showUpRef);
+  const showUpAssets = useInViewPhases(5);
+  const liveRef = useRef<HTMLElement>(null);
+  const livePhase = useScrollPhase(liveRef);
+  const livePieces = useInViewPhases(6);
 
   useLayoutEffect(() => {
     const container = scrollRef.current;
@@ -447,10 +555,7 @@ export function HomePage() {
             href={GET_STARTED_URL}
             className="group relative mt-6 inline-flex h-[47px] min-w-[188px] items-center justify-center self-start overflow-hidden rounded-[39px] bg-[#DF4452] px-[26px] py-[14px] font-sans text-[16px] leading-none font-semibold tracking-[-0.02em] text-[#F7F3F5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
           >
-            <span
-              aria-hidden="true"
-              className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#E33D4E] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
-            />
+            <span aria-hidden="true" className={careButtonFillClass} />
             <span className="relative z-10 whitespace-nowrap transition-transform duration-[400ms] ease-out group-hover:-translate-x-[15px] motion-reduce:translate-x-0! motion-reduce:transition-none">
               Get Started
             </span>
@@ -465,10 +570,10 @@ export function HomePage() {
       </section>
       <Marquee />
 
-      <section className="relative overflow-hidden bg-white px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
+      <section className="relative z-10 bg-white px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_8%_40%,rgba(246,198,206,0.85),transparent_42%),radial-gradient(ellipse_at_92%_70%,rgba(244,190,200,0.7),transparent_40%),radial-gradient(ellipse_at_50%_100%,rgba(248,214,220,0.55),transparent_46%)]"
+          className="pointer-events-none absolute inset-x-0 top-0 -bottom-48 bg-[radial-gradient(ellipse_at_8%_40%,rgba(246,198,206,0.85),transparent_42%),radial-gradient(ellipse_at_92%_70%,rgba(244,190,200,0.7),transparent_40%),radial-gradient(ellipse_at_50%_100%,rgba(248,214,220,0.55),transparent_46%)] [mask-image:linear-gradient(to_bottom,#000_68%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,#000_68%,transparent_100%)]"
         />
         <div className="relative mx-auto w-full max-w-[1200px]">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
@@ -483,8 +588,9 @@ export function HomePage() {
               </p>
               <Link
                 href="/shop-all-products"
-                className="group relative inline-flex w-fit shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#3a221e] px-9 py-2.5 font-sans text-[13px] font-medium text-white transition-colors duration-200 hover:bg-[#2c1614]"
+                className="group relative inline-flex w-fit shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#3a221e] px-9 py-2.5 font-sans text-[13px] font-medium text-white"
               >
+                <span aria-hidden className={careButtonFillClass} />
                 <span className={careButtonLabelClass}>Shop all</span>
                 <span aria-hidden className={careButtonArrowClass}>
                   →
@@ -499,7 +605,7 @@ export function HomePage() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="group relative flex h-full flex-col rounded-[20px] border border-transparent bg-white px-3.5 pt-3.5 pb-4 transition-colors duration-300 ease-out hover:border-[#e33d4d] sm:px-4 sm:pt-4 sm:pb-5"
+                  className="group relative flex h-full flex-col overflow-hidden rounded-[20px] border border-transparent bg-white px-3.5 pt-3.5 pb-4 transition-colors duration-300 ease-out hover:border-[#e33d4d] sm:px-4 sm:pt-4 sm:pb-5"
                 >
                   <span
                     aria-hidden
@@ -526,7 +632,8 @@ export function HomePage() {
                       alt=""
                       width={item.width}
                       height={item.height}
-                      className={`h-auto w-auto max-w-full object-contain ${item.imageClass}`}
+                      style={{ scale: item.imageScale }}
+                      className="h-auto max-h-[240px] w-auto max-w-[88%] origin-center object-contain"
                     />
                   </div>
                   <p className="mt-1 text-center font-sans text-[12px] leading-snug text-[#8a817e] sm:text-[13px]">
@@ -545,8 +652,9 @@ export function HomePage() {
                   scrollToOurTop3();
                   window.history.pushState(null, "", "#our-top-3");
                 }}
-                className="group relative inline-flex w-fit items-center justify-center overflow-hidden rounded-full border border-[#3a221e] px-9 py-1.5 font-sans text-[13px] font-medium text-[#3a221e]"
+                className="group relative inline-flex w-fit items-center justify-center overflow-hidden rounded-full border border-[#3a221e] px-9 py-1.5 font-sans text-[13px] font-medium text-[#3a221e] transition-colors duration-[400ms] ease-out hover:text-[#F7F3F5] focus-visible:text-[#F7F3F5]"
               >
+                <span aria-hidden className={careButtonFillClass} />
                 <span className={careButtonLabelClass}>Our top 3</span>
                 <span aria-hidden className={careButtonArrowClass}>
                   →
@@ -556,6 +664,7 @@ export function HomePage() {
                 href={intakeUrl}
                 className="group relative inline-flex w-fit items-center justify-center overflow-hidden rounded-full bg-[#e33d4d] px-9 py-1.5 font-sans text-[13px] font-medium text-white"
               >
+                <span aria-hidden className={careButtonFillClass} />
                 <span className={careButtonLabelClass}>Take our General Form</span>
                 <span aria-hidden className={careButtonArrowClass}>
                   →
@@ -605,10 +714,18 @@ export function HomePage() {
             </div>
             <a
               href={intakeUrl}
-              className="mt-5 inline-flex shrink-0 items-center gap-2.5 self-center rounded-[39px] bg-[#DF4452] px-[26px] py-[14px] font-sans text-[16px] leading-none font-semibold tracking-[-0.02em] text-[#F7F3F5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink [@media(max-height:740px)]:mt-4"
+              className="group relative mt-5 inline-flex h-[47px] min-w-[188px] shrink-0 items-center justify-center self-center overflow-hidden rounded-[39px] bg-[#DF4452] px-[26px] py-[14px] font-sans text-[16px] leading-none font-semibold tracking-[-0.02em] text-[#F7F3F5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink [@media(max-height:740px)]:mt-4"
             >
-              Begin your intake
-              <span aria-hidden="true">→</span>
+              <span aria-hidden="true" className={careButtonFillClass} />
+              <span className="relative z-10 whitespace-nowrap transition-transform duration-[400ms] ease-out group-hover:-translate-x-[15px] motion-reduce:translate-x-0! motion-reduce:transition-none">
+                Begin your intake
+              </span>
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute top-1/2 right-0 z-10 -translate-y-1/2 translate-x-full transition-transform duration-[400ms] ease-out group-hover:translate-x-[calc(100%-35px)] motion-reduce:translate-x-full! motion-reduce:transition-none"
+              >
+                →
+              </span>
             </a>
           </div>
         </div>
@@ -654,7 +771,7 @@ export function HomePage() {
                     event.preventDefault();
                     setActiveStep(step.step);
                   }}
-                  className={`relative h-[520px] min-w-0 shrink basis-0 cursor-pointer overflow-hidden rounded-[28px] transition-[flex-grow] duration-[400ms] ease-out motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink ${
+                  className={`relative h-[520px] min-w-0 shrink basis-0 cursor-pointer overflow-hidden rounded-[28px] transition-[flex-grow] duration-[700ms] ease-out motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink ${
                     active ? "grow-[2]" : "grow"
                   }`}
                 >
@@ -666,7 +783,7 @@ export function HomePage() {
                     <p
                       aria-hidden={!active}
                       inert={!active}
-                      className={`w-[508px] max-w-[calc((min(72rem,100vw-4rem)-2.5rem)/2-3rem)] whitespace-normal break-words text-base text-white/90 transition-[opacity,translate] duration-[400ms] ease-out motion-reduce:transition-none ${
+                      className={`w-[508px] max-w-[calc((min(72rem,100vw-4rem)-2.5rem)/2-3rem)] whitespace-normal break-words text-base text-white/90 transition-[opacity,translate] duration-[700ms] ease-out motion-reduce:transition-none ${
                         active ? "relative mt-2 translate-y-0 opacity-100 delay-[250ms]" : "absolute opacity-0 delay-0"
                       }`}
                     >
@@ -681,10 +798,7 @@ export function HomePage() {
             href={intakeUrl}
             className="group relative mt-10 inline-flex h-[47px] min-w-[188px] items-center justify-center overflow-hidden rounded-[39px] bg-[#DF4452] px-[26px] py-[14px] font-sans text-[16px] leading-none font-semibold tracking-[-0.02em] text-[#F7F3F5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
           >
-            <span
-              aria-hidden="true"
-              className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#E33D4E] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
-            />
+            <span aria-hidden="true" className={careButtonFillClass} />
             <span className="relative z-10 whitespace-nowrap transition-transform duration-[400ms] ease-out group-hover:-translate-x-[15px] motion-reduce:translate-x-0! motion-reduce:transition-none">
               Begin your intake
             </span>
@@ -698,13 +812,13 @@ export function HomePage() {
         </div>
       </section>
 
-      <section className="relative overflow-hidden rounded-t-[25px]">
+      <section ref={showUpRef} data-phase={showUpPhase} className="show-up-scene relative overflow-hidden rounded-t-[25px]">
         <Image
           src={assets.showUp}
           alt="A man standing beside an oversized LeaderHealth tablet embossed with the LH monogram."
           width={2720}
           height={1536}
-          className="absolute inset-0 h-full w-full object-cover"
+          className="show-up-bg absolute inset-0 h-full w-full object-cover"
         />
         <div className="relative mx-auto w-[min(1174px,calc(100%-2rem))] pb-16 pt-[72px]">
           <h2 className="text-center font-sans text-[40px] font-medium leading-[1.1] tracking-normal text-[#331110] md:text-[56px] md:leading-[61.6px]">
@@ -715,10 +829,7 @@ export function HomePage() {
               href="/shop-all-products"
               className="group relative inline-flex items-center justify-center overflow-hidden rounded-[39px] bg-[#df4452] px-[26px] py-[14px] font-sans text-base font-semibold leading-[19.2px] text-[#f7f3f5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
             >
-              <span
-                aria-hidden="true"
-                className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#E33D4E] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
-              />
+              <span aria-hidden="true" className={careButtonFillClass} />
               <span className="relative z-10 whitespace-nowrap transition-transform duration-[400ms] ease-out group-hover:-translate-x-[15px] motion-reduce:translate-x-0! motion-reduce:transition-none">
                 Explore All Treatments
               </span>
@@ -732,15 +843,28 @@ export function HomePage() {
           </div>
 
           <div className="mt-5 grid gap-2.5 md:grid-cols-2">
-            <article className="relative h-[280px] overflow-hidden rounded-[23px] md:h-[335px]">
+            <article
+              ref={showUpAssets.setNode(0)}
+              data-phase={showUpAssets.phases[0]}
+              className="show-up-card relative h-[280px] overflow-hidden rounded-[23px] md:h-[335px]"
+              style={{ "--d": "0ms" } as CSSProperties}
+            >
               <Image
                 src={assets.pills}
                 alt="Two round tablets and a capsule on a blush gradient background"
                 fill
-                className="object-cover"
+                className="show-up-photo object-cover"
                 sizes="(min-width: 768px) 582px, 92vw"
               />
-              <div className="relative flex h-full flex-col justify-between px-[22px] pb-[22px] pt-10">
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  background:
+                    "linear-gradient(160deg, rgba(26, 8, 8, 0.74) 0%, rgba(26, 8, 8, 0.44) 45%, rgba(26, 8, 8, 0.1) 70%)",
+                }}
+              />
+              <div className="relative z-10 flex h-full flex-col justify-between px-[22px] pb-[22px] pt-10">
                 <div>
                   <h3 className="max-w-[538px] font-sans text-[28px] font-medium leading-[1.2] tracking-normal text-[#f7f3f4] md:text-[34px] md:leading-[40.8px]">
                     Provider-Guided Weight Loss
@@ -751,11 +875,11 @@ export function HomePage() {
                 </div>
                 <a
                   href={GET_STARTED_URL}
-                  className="group relative inline-flex items-center justify-center self-end overflow-hidden rounded-[39px] bg-[#f9f9f9] px-[18px] py-[5px] text-[15px] font-medium text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
+                  className="group relative inline-flex items-center justify-center self-end overflow-hidden rounded-[39px] bg-[#f9f9f9] px-9 py-[5px] text-[15px] font-medium text-ink transition-[background-color,color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[#331110] hover:text-[#F7F3F5] focus-visible:bg-[#331110] focus-visible:text-[#F7F3F5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink motion-reduce:transition-none"
                 >
                   <span
                     aria-hidden="true"
-                    className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#e4d0ce] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
+                    className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#331110] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
                   />
                   <span className="relative z-10 whitespace-nowrap transition-transform duration-[400ms] ease-out group-hover:-translate-x-[15px] motion-reduce:translate-x-0! motion-reduce:transition-none">
                     Get Started
@@ -770,15 +894,28 @@ export function HomePage() {
               </div>
             </article>
 
-            <article className="relative h-[280px] overflow-hidden rounded-[23px] md:h-[335px]">
+            <article
+              ref={showUpAssets.setNode(1)}
+              data-phase={showUpAssets.phases[1]}
+              className="show-up-card relative h-[280px] overflow-hidden rounded-[23px] md:h-[335px]"
+              style={{ "--d": "160ms" } as CSSProperties}
+            >
               <Image
                 src={assets.stretching}
                 alt="LEADER HEALTH logo over a photo of a man stretching his shoulder"
                 fill
-                className="object-cover"
+                className="show-up-photo object-cover"
                 sizes="(min-width: 768px) 582px, 92vw"
               />
-              <div className="relative flex h-full flex-col justify-end px-[22px] pb-[22px] pt-10">
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  background:
+                    "linear-gradient(0deg, rgba(26, 8, 8, 0.7) 0%, rgba(26, 8, 8, 0.3) 40%, rgba(26, 8, 8, 0) 65%)",
+                }}
+              />
+              <div className="relative z-10 flex h-full flex-col justify-end px-[22px] pb-[22px] pt-10">
                 <h3 className="max-w-[345px] font-sans text-[28px] font-medium leading-[40.8px] tracking-normal text-[#f7f3f4] md:text-[34px]">
                   Care Built Around You
                 </h3>
@@ -788,9 +925,21 @@ export function HomePage() {
                   </p>
                   <Link
                     href="/aboutus"
-                    className="shrink-0 rounded-[39px] bg-[#f9f9f9] px-[18px] py-[5px] text-[15px] font-medium text-ink"
+                    className="group relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-[39px] bg-[#f9f9f9] px-9 py-[5px] text-[15px] font-medium text-ink transition-[background-color,color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[#331110] hover:text-[#F7F3F5] focus-visible:bg-[#331110] focus-visible:text-[#F7F3F5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink motion-reduce:transition-none"
                   >
-                    About Us
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#331110] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
+                    />
+                    <span className="relative z-10 whitespace-nowrap transition-transform duration-[400ms] ease-out group-hover:-translate-x-[15px] motion-reduce:translate-x-0! motion-reduce:transition-none">
+                      About Us
+                    </span>
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute top-1/2 right-0 z-10 -translate-y-1/2 translate-x-full transition-transform duration-[400ms] ease-out group-hover:translate-x-[calc(100%-28px)] motion-reduce:translate-x-full! motion-reduce:transition-none"
+                    >
+                      →
+                    </span>
                   </Link>
                 </div>
               </div>
@@ -798,9 +947,15 @@ export function HomePage() {
           </div>
 
           <div id="our-top-3" className="relative z-10 mt-2.5 scroll-mt-24 grid items-stretch gap-2.5 md:grid-cols-3">
-            {campaign.map((card) => (
-              <Link
+            {campaign.map((card, index) => (
+              <div
                 key={card.href}
+                ref={showUpAssets.setNode(index + 2)}
+                data-phase={showUpAssets.phases[index + 2]}
+                className="show-up-card min-w-0"
+                style={{ "--d": `${index * 150}ms` } as CSSProperties}
+              >
+              <Link
                 href={card.href}
                 className="group relative flex h-[660px] w-full flex-col overflow-hidden rounded-[22px] bg-[#442928] px-6 pt-8 pb-7 transition-colors duration-300 ease-out hover:bg-[#e6d8c6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e33d4d] motion-reduce:transition-none md:h-[860px] md:px-8 md:pt-10 md:pb-10"
               >
@@ -812,14 +967,19 @@ export function HomePage() {
                     <path d="M5.5 14.5 14.5 5.5M8 5.5h6.5V12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </span>
-                <div className="flex min-h-0 flex-1 items-center justify-center">
-                  <Image
-                    src={card.img}
-                    alt=""
-                    width={1080}
-                    height={1350}
-                    className="h-[420px] w-auto max-w-none shrink-0 origin-center object-contain transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.045] group-hover:-translate-y-2 motion-reduce:transition-none motion-reduce:group-hover:translate-y-0 motion-reduce:group-hover:scale-100 md:h-[560px]"
-                  />
+                <div className="show-up-vial flex min-h-0 flex-1 items-center justify-center">
+                  <div
+                    className="w-fit"
+                    style={card.imageOffset ? { transform: `translateY(${card.imageOffset})` } : undefined}
+                  >
+                    <Image
+                      src={card.img}
+                      alt=""
+                      width={1080}
+                      height={1350}
+                      className={`h-[420px] w-auto max-w-none shrink-0 origin-center object-contain transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:-translate-y-2 motion-reduce:transition-none motion-reduce:group-hover:translate-y-0 md:h-[560px] ${card.imageScale ? "scale-[1.6] group-hover:scale-[1.67] motion-reduce:scale-[1.6] motion-reduce:group-hover:scale-[1.6]" : "group-hover:scale-[1.045] motion-reduce:group-hover:scale-100"}`}
+                    />
+                  </div>
                 </div>
                 <div className="mt-4 w-full shrink-0">
                   <h3 className="font-sans text-[26px] leading-[1.15] font-semibold tracking-normal text-[#e86a6e] transition-colors duration-300 ease-out group-hover:text-[#e33d4d] motion-reduce:transition-none md:min-h-[2.4em] md:text-[34px]">
@@ -830,18 +990,19 @@ export function HomePage() {
                   </p>
                 </div>
               </Link>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="relative overflow-hidden bg-white">
+      <section ref={liveRef} data-phase={livePhase} className="live-scene relative overflow-hidden bg-white">
         <Image
           src={assets.weightlifting}
           alt="A man in a white tank top lifting weights in a shaft of light."
           width={2496}
           height={1664}
-          className="absolute inset-0 h-full w-full object-cover"
+          className="live-bg absolute inset-0 h-full w-full object-cover"
         />
         <div className="px-4 py-12 sm:px-6 sm:py-16 md:px-8 md:py-20 lg:px-10 lg:py-24">
         <div
@@ -858,37 +1019,52 @@ export function HomePage() {
         >
           <div className="grid items-start gap-8 lg:grid-cols-2">
             <div>
-              <h2 className="font-sans text-[36px] font-medium leading-tight tracking-normal text-[#f7f3f4] md:text-[47px] md:leading-[56.4px]">
-                Designed for the way
-              </h2>
-              <p className="font-serif-italic text-[36px] leading-tight text-[#f7f3f4] md:text-[47px] md:leading-[37.6px]">
-                you want to live.
-              </p>
-              <p className="mt-6 max-w-[478px] font-sans text-lg font-light leading-snug tracking-normal text-white md:text-[24px] md:leading-[28.8px]">
-                Most wellness products are built for the average. Yours is built for you — engineered to move the metrics that matter, and refined as your body changes.
-              </p>
+              <div
+                ref={livePieces.setNode(0)}
+                data-phase={livePieces.phases[0]}
+                className="live-copy"
+                style={{ "--d": "0ms" } as CSSProperties}
+              >
+                <h2 className="font-sans text-[36px] font-medium leading-tight tracking-normal text-[#f7f3f4] md:text-[47px] md:leading-[56.4px]">
+                  Designed for the way
+                </h2>
+                <p className="font-serif-italic text-[36px] leading-tight text-[#f7f3f4] md:text-[47px] md:leading-[37.6px]">
+                  you want to live.
+                </p>
+                <p className="mt-6 max-w-[478px] font-sans text-lg font-light leading-snug tracking-normal text-white md:text-[24px] md:leading-[28.8px]">
+                  Most wellness products are built for the average. Yours is built for you — engineered to move the metrics that matter, and refined as your body changes.
+                </p>
+              </div>
               <div className="mt-8 grid grid-cols-2 gap-2.5">
-                {designedForCards.map((item, i) => (
+                {designedFor.map((item, i) => (
                   <div
-                    key={`${item}-${i}`}
-                    className="flex items-start gap-[11px] rounded-[13px] border border-white/55 bg-white/20 p-4 md:p-5"
+                    key={item}
+                    ref={livePieces.setNode(i + 1)}
+                    data-phase={livePieces.phases[i + 1]}
+                    className="live-card flex items-start gap-[11px] rounded-[13px] border border-white/55 bg-white/20 p-4 md:p-5"
+                    style={{ "--d": `${120 + i * 110}ms` } as CSSProperties}
                   >
-                    <Image src={assets.check} alt="" width={28} height={28} className="mt-0.5 h-7 w-7 shrink-0" />
+                    <Image src={assets.check} alt="" width={28} height={28} className="live-check mt-0.5 h-7 w-7 shrink-0" />
                     <p className="font-sans text-[14px] leading-[16.8px] tracking-normal text-[#f7f3f4]">{item}</p>
                   </div>
                 ))}
               </div>
             </div>
-            <div className="relative mx-auto hidden min-h-[520px] w-full max-w-[579px] lg:block">
+            <div
+              ref={livePieces.setNode(5)}
+              data-phase={livePieces.phases[5]}
+              className="live-vial relative mx-auto w-full max-w-[340px] lg:min-h-[520px] lg:max-w-[579px]"
+              style={{ "--d": "180ms" } as CSSProperties}
+            >
               <div className="sermorelin-vial-float relative">
                 <Image
-                  src="https://framerusercontent.com/images/Nxmvv0V7wJmcL1463SseCeRgh8.png?width=1080&height=1350"
+                  src="/images/products/sermorelin.png"
                   alt="Sermorelin injection vial"
-                  width={579}
-                  height={677}
+                  width={587}
+                  height={1041}
                   className="sermorelin-vial h-auto w-full object-contain"
                 />
-                <p className="absolute bottom-16 right-4 flex h-16 items-center justify-center rounded-[13px] bg-black/50 px-6 font-serif-italic text-[28px] leading-[33.6px] text-[#f7f3f4] md:right-8">
+                <p className="absolute top-[62%] left-[66%] z-10 flex h-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center whitespace-nowrap rounded-[13px] bg-black/50 px-4 font-serif-italic text-[18px] leading-none text-[#f7f3f4] md:h-16 md:px-6 md:text-[28px] md:leading-[33.6px]">
                   More by design.
                 </p>
               </div>

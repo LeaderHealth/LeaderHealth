@@ -27,7 +27,7 @@ export const INCLUDED_ITEMS = [
   "Patient portal access for refills and messaging",
 ];
 
-export const TRUST_POINTS = ["HSA / FSA accepted", "Licensed pharmacy partners", "Ships in discreet packaging"];
+export const TRUST_POINTS = ["HSA/FSA accepted", "Licensed pharmacy partners", "Ships in discreet packaging"];
 
 export const CONSENTS = [
   {

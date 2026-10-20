@@ -1,3 +1,4 @@
+import { normalizeAffiliateCode } from "@/lib/affiliate/code";
 import { listCatalog } from "./catalog";
 import { matchCatalogItem } from "./match";
 import type { CatalogItem } from "./types";
@@ -169,12 +170,14 @@ async function resolvePatient(input: CheckoutInput) {
   return { patientId, patientStatus: "new", magicLink: magicLinkFrom(created.data) };
 }
 
-async function createOrder(item: CatalogItem, patientId: string) {
+async function createOrder(item: CatalogItem, patientId: string, affiliateCode?: string | null) {
   const order: Record<string, unknown> = {
     clientProductId: item.clientProductId,
     payment_status: "unpaid",
     tracking: { source: "leaderhealth_web" },
   };
+  const code = normalizeAffiliateCode(affiliateCode);
+  if (code) order.customFields = { utm_source: code };
   if (item.amount != null) order.amount = item.amount;
 
   const path =
@@ -208,7 +211,7 @@ async function createOrder(item: CatalogItem, patientId: string) {
   };
 }
 
-export async function placeCheckoutOrder(input: CheckoutInput): Promise<CheckoutResult> {
+export async function placeCheckoutOrder(input: CheckoutInput, affiliateCode?: string | null): Promise<CheckoutResult> {
   const catalog = await listCatalog();
   const item =
     catalog.find((entry) => entry.clientProductId === input.clientProductId) ??
@@ -239,7 +242,7 @@ export async function placeCheckoutOrder(input: CheckoutInput): Promise<Checkout
   }
 
   const patient = await resolvePatient(input);
-  const order = await createOrder(item, patient.patientId);
+  const order = await createOrder(item, patient.patientId, affiliateCode);
 
   return {
     dryRun: false,

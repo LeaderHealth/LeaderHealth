@@ -4,33 +4,33 @@ import Image from "next/image";
 import { useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
-const stepTransition = { type: "spring" as const, duration: 0.5, bounce: 0.2, delay: 0 };
-const listTransition = { type: "spring" as const, duration: 0.7, bounce: 0, delay: 0 };
+const stepTransition = { duration: 0.7, ease: [0.22, 1, 0.36, 1] as const };
+const listTransition = { duration: 0.75, ease: [0.22, 1, 0.36, 1] as const };
 
 const steps = [
   {
     label: "01",
     title: "Online Order",
     src: "/images/labs-step-order.png",
-    alt: "Phone showing a red Order button and shopping cart",
-    width: 327,
-    height: 555,
+    alt: "Phone showing Complete and Advanced lab panels and an Add to Cart button",
+    width: 632,
+    height: 773,
   },
   {
     label: "02",
     title: "Choose a Partner Draw Site",
     src: "/images/labs-step-site.png",
     alt: "Phone showing a map for choosing a partner draw site",
-    width: 420,
-    height: 573,
+    width: 536,
+    height: 684,
   },
   {
     label: "03",
-    title: "Fast as Instructed and complete your draw",
+    title: "Get your labs done quickly and easily",
     src: "/images/labs-step-draw.png",
-    alt: "Stopwatch, blood draw, and sample vial",
-    width: 620,
-    height: 396,
+    alt: "Clipboard checklist, blood vial, and a clock",
+    width: 790,
+    height: 703,
   },
   {
     label: "04",
@@ -61,7 +61,7 @@ function StepImage({ step }: { step: (typeof steps)[number] }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.35, ease: [0.44, 0, 0.56, 1] }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
           className="absolute inset-8 flex items-center justify-center"
         >
           <Image

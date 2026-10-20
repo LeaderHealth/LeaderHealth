@@ -3,6 +3,9 @@ import { TestimonialsVideoSection } from "@/components/TestimonialsVideoSection"
 import { FaqBrowse } from "@/components/FaqBrowse";
 import { FaqHero } from "@/components/FaqHero";
 import { assets, testimonials } from "@/lib/content/site";
+import { faqCategories } from "@/lib/content/faqs";
+import { JsonLd } from "@/components/JsonLd";
+import { buildFaqSchema } from "@/lib/seo/schema";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "FAQs" };
@@ -10,6 +13,7 @@ export const metadata: Metadata = { title: "FAQs" };
 export default function FaqPage() {
   return (
     <div>
+      <JsonLd data={buildFaqSchema(faqCategories.flatMap((category) => category.items))} />
       <FaqHero />
       <FaqBrowse />
       <section className="bg-[#f7f3f5] py-14 md:py-20">

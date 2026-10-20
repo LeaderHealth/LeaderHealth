@@ -2,10 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { assets, GET_STARTED_URL, PORTAL_URL, site } from "@/lib/content/site";
-import { products } from "@/lib/content/products";
+import { searchHref, searchSuggestions } from "@/lib/search";
 import {
   type FeatureCard,
   type MegaCategory,
@@ -14,29 +14,11 @@ import {
   womenDefaultCard,
   womenMegaCategories,
 } from "@/lib/content/nav";
+import { cartItemFromSlug } from "@/lib/cart/items";
 import { CartButton } from "./cart/CartButton";
+import { useCart } from "./cart/CartProvider";
 import { MobileNav } from "./MobileNav";
-
-const GENERAL_FORM_URL = "https://products.leaderhealth.clinic/";
-
-const menLinks = [
-  { href: "/shop-men-products", label: "Shop All Men" },
-  { href: "/products/men-trt-testosterone-cypionate", label: "Testosterone Cypionate" },
-  { href: "/products/men-trt-enclomiphene", label: "Enclomiphene" },
-  { href: "/products/men-trt-testosterone-cream", label: "Testosterone Cream" },
-  { href: "/products/men-sexual-health-tadalafil", label: "Tadalafil" },
-  { href: "/products/weight-loss-semaglutide", label: "Semaglutide" },
-];
-
-const womenLinks = [
-  { href: "/shop-women-products", label: "Shop All Women" },
-  { href: "/products/women-hormone-therapy", label: "Women's Hormone Therapy" },
-  { href: "/products/women-hrt-testosterone-cream", label: "Testosterone Cream" },
-  { href: "/products/women-hormone-therapy-estradiol-patch", label: "Estradiol Patch" },
-  { href: "/products/sexual-health-pt-141-nasal", label: "PT-141" },
-  { href: "/products/intimacy-blend-(pt-141-oxytocin-tadalafil)", label: "Intimacy Blend" },
-  { href: "/products/weight-loss-semaglutide", label: "Semaglutide" },
-];
+import { TabletNavBar, TabletNavDisclosure, type TabletPanel } from "./TabletNav";
 
 const whoLinks = [
   { href: "/aboutus", label: "About Us" },
@@ -68,11 +50,28 @@ function DocumentIcon() {
 const megaLinkClass =
   "text-left text-[15px] font-semibold text-white transition-opacity duration-150 hover:opacity-80";
 const megaHoverBridgeClass = "absolute top-full z-50 pt-[24px]";
+const MEGA_MOTION_MS = 700;
+const CATEGORY_MOTION_MS = 450;
+
 const megaPanelSurfaceClass =
-  "overflow-hidden rounded-[16px] bg-[linear-gradient(to_bottom_right,rgba(22,6,8,0.94),rgba(145,16,16,0.86))] shadow-xl backdrop-blur-md transition-[opacity,transform] duration-[380ms] ease-[cubic-bezier(0.22,1,0.36,1)] [@starting-style]:translate-y-2 [@starting-style]:opacity-0";
+  "overflow-hidden rounded-[16px] bg-[linear-gradient(to_bottom_right,#160608,#911010)] shadow-xl transition-[opacity,translate] duration-[700ms] ease-[cubic-bezier(0.42,0,0.58,1)] [@starting-style]:translate-y-2 [@starting-style]:opacity-0";
 
 function megaPanelMotionClass(fading: boolean) {
   return fading ? "translate-y-2 opacity-0" : "translate-y-0 opacity-100";
+}
+
+function usePrefersReducedMotion() {
+  const [reduce, setReduce] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReduce(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  return reduce;
 }
 
 function FeatureCardLink({
@@ -82,7 +81,30 @@ function FeatureCardLink({
   card: FeatureCard;
   className?: string;
 }) {
+  const { addItem } = useCart();
   const amount = card.price.match(/\$[\d,]+(?:\.\d+)?/)?.[0] ?? card.price;
+  const slug = card.href.split("/").filter(Boolean).pop() ?? "";
+  const cartItem = cartItemFromSlug(slug);
+  const learnMore = slug === "women-hormone-therapy" || slug === "weight-loss-semaglutide";
+  const actionClass =
+    "group relative inline-flex h-10 min-h-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#331110] px-6 text-[13px] font-semibold text-[#F7F3F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#331110]";
+  const actionLabel = (
+    <>
+      <span
+        aria-hidden
+        className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#5A3431] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
+      />
+      <span className="relative z-10 whitespace-nowrap transition-transform duration-[400ms] ease-out group-hover:-translate-x-[15px] motion-reduce:translate-x-0! motion-reduce:transition-none">
+        {learnMore ? "Find out more" : cartItem ? "Add to cart" : "Get started"}
+      </span>
+      <span
+        aria-hidden
+        className="pointer-events-none absolute top-1/2 right-0 z-10 -translate-y-1/2 translate-x-full transition-transform duration-[400ms] ease-out group-hover:translate-x-[calc(100%-28px)] motion-reduce:translate-x-full! motion-reduce:transition-none"
+      >
+        →
+      </span>
+    </>
+  );
 
   return (
     <div
@@ -94,7 +116,8 @@ function FeatureCardLink({
             src={card.image}
             alt={card.heading}
             fill
-            className="object-contain object-center"
+            className="object-cover"
+            style={{ objectPosition: card.imagePosition ?? "center" }}
             sizes="320px"
           />
         ) : null}
@@ -124,24 +147,19 @@ function FeatureCardLink({
             <span className="text-[13px] font-medium text-[#6B4A48]">/mo</span>
           </span>
         </p>
-        <a
-          href={GET_STARTED_URL}
-          className="group relative inline-flex h-10 min-h-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#331110] px-3.5 text-[13px] font-semibold text-[#F7F3F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#331110]"
-        >
-          <span
-            aria-hidden
-            className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#5A3431] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
-          />
-          <span className="relative z-10 whitespace-nowrap transition-transform duration-[400ms] ease-out group-hover:-translate-x-[15px] motion-reduce:translate-x-0! motion-reduce:transition-none">
-            Get started
-          </span>
-          <span
-            aria-hidden
-            className="pointer-events-none absolute top-1/2 right-0 z-10 -translate-y-1/2 translate-x-full transition-transform duration-[400ms] ease-out group-hover:translate-x-[calc(100%-28px)] motion-reduce:translate-x-full! motion-reduce:transition-none"
-          >
-            →
-          </span>
-        </a>
+        {learnMore ? (
+          <Link href={card.href} className={actionClass}>
+            {actionLabel}
+          </Link>
+        ) : cartItem ? (
+          <button type="button" onClick={() => addItem(cartItem)} className={actionClass}>
+            {actionLabel}
+          </button>
+        ) : (
+          <a href={GET_STARTED_URL} className={actionClass}>
+            {actionLabel}
+          </a>
+        )}
       </div>
     </div>
   );
@@ -195,9 +213,111 @@ function FeatureCardView({ label, card }: { label: string; card: FeatureCard }) 
   );
 }
 
+function MegaCategoryPane({
+  viewId,
+  categories,
+  longevityOpen,
+  fading,
+  entering,
+  onOpenDrill,
+  onToggleLongevity,
+  onBack,
+}: {
+  viewId: string;
+  categories: MegaCategory[];
+  longevityOpen: boolean;
+  fading: boolean;
+  entering: boolean;
+  onOpenDrill: (id: string) => void;
+  onToggleLongevity: () => void;
+  onBack: () => void;
+}) {
+  const activeCategory = categories.find((category) => category.id === viewId);
+  const drilled = viewId !== "root" && activeCategory && activeCategory.kind !== "link" ? activeCategory : null;
+
+  return (
+    <div
+      data-category-view={viewId}
+      className={`absolute inset-0 flex flex-col transition-opacity duration-[450ms] ease-[cubic-bezier(0.45,0,0.55,1)] ${
+        fading ? "pointer-events-none opacity-0" : "opacity-100"
+      } ${entering ? "[@starting-style]:opacity-0" : ""}`}
+      aria-hidden={fading || undefined}
+      inert={fading || undefined}
+    >
+      {drilled ? (
+        <button
+          type="button"
+          className="text-left text-[13px] font-medium text-white/70"
+          onClick={onBack}
+        >
+          ‹ {drilled.label}
+        </button>
+      ) : (
+        <p className="text-[13px] font-medium text-white/70">Categories</p>
+      )}
+      <div className="mt-4 flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto">
+        {drilled
+          ? drilled.items.map((item) => (
+              <Link key={item.href + item.label} href={item.href} className={megaLinkClass}>
+                {item.label}
+              </Link>
+            ))
+          : categories.map((category) => {
+              if (category.kind === "link") {
+                return (
+                  <Link key={category.id} href={category.href} className={megaLinkClass}>
+                    {category.label}
+                  </Link>
+                );
+              }
+
+              if (category.kind === "expand-drill") {
+                return (
+                  <div key={category.id}>
+                    <button type="button" className={megaLinkClass} onClick={onToggleLongevity}>
+                      {category.label}
+                    </button>
+                    <div
+                      className={`grid transition-[grid-template-rows,opacity] duration-[450ms] ease-[cubic-bezier(0.45,0,0.55,1)] motion-reduce:transition-none ${
+                        longevityOpen ? "grid-rows-[1fr] opacity-100" : "pointer-events-none grid-rows-[0fr] opacity-0"
+                      }`}
+                    >
+                      <div className="overflow-hidden">
+                        <p className="mt-2 whitespace-nowrap text-[13px] tracking-[-0.01em] text-white/80">
+                          <Link href={category.coverHref} className="hover:opacity-80">
+                            What Longevity Covers
+                          </Link>
+                          <span aria-hidden> • </span>
+                          <button type="button" className="hover:opacity-80" onClick={() => onOpenDrill(category.id)}>
+                            Browse Longevity
+                          </button>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <button
+                  key={category.id}
+                  type="button"
+                  className={megaLinkClass}
+                  onClick={() => onOpenDrill(category.id)}
+                >
+                  {category.label}
+                </button>
+              );
+            })}
+      </div>
+    </div>
+  );
+}
+
 function MegaMenu({
   label,
   open,
+  selected,
   fading,
   onOpen,
   onClose,
@@ -209,6 +329,7 @@ function MegaMenu({
 }: {
   label: string;
   open: boolean;
+  selected: boolean;
   fading: boolean;
   onOpen: () => void;
   onClose: () => void;
@@ -222,13 +343,13 @@ function MegaMenu({
     <div className="relative" onMouseEnter={onOpen} onMouseLeave={onClose}>
       <button
         className="flex items-center gap-1 text-[13px] text-white transition-transform duration-200 ease-out hover:scale-[1.05] active:scale-[0.96]"
-        onClick={() => (open ? onClose() : onOpen())}
+        onClick={() => (selected ? onClose() : onOpen())}
         type="button"
       >
         {label}
         <svg
           viewBox="0 0 12 8"
-          className={`h-2 w-2.5 opacity-80 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+          className={`h-2 w-2.5 opacity-80 transition-transform duration-200 ${selected ? "rotate-180" : ""}`}
           fill="none"
           aria-hidden
         >
@@ -265,126 +386,82 @@ function MegaMenuPanel({
   featureLabel: string;
 }) {
   const [view, setView] = useState("root");
+  const [shownView, setShownView] = useState("root");
+  const [leavingView, setLeavingView] = useState<string | null>(null);
   const [longevityOpen, setLongevityOpen] = useState(false);
-  const [hovered, setHovered] = useState<FeatureCard | null>(null);
-  const activeCategory = categories.find((category) => category.id === view);
-  const lockedCard =
-    view === "root" || !activeCategory ? defaultCard : activeCategory.card;
-  const card = hovered ?? lockedCard;
+  const [leavingLongevity, setLeavingLongevity] = useState(false);
+  const reduceMotion = usePrefersReducedMotion();
+
+  if (view !== shownView) {
+    if (reduceMotion) {
+      setLeavingView(null);
+      setShownView(view);
+    } else {
+      setLeavingView(shownView);
+      setShownView(view);
+    }
+  }
+
+  useEffect(() => {
+    if (!leavingView) return;
+    const timer = window.setTimeout(() => setLeavingView(null), CATEGORY_MOTION_MS);
+    return () => window.clearTimeout(timer);
+  }, [leavingView]);
 
   function openDrill(id: string) {
+    setLeavingLongevity(longevityOpen);
     setView(id);
     setLongevityOpen(false);
-    setHovered(null);
+  }
+
+  function backToCategories() {
+    setLeavingLongevity(false);
+    setView("root");
+    setLongevityOpen(false);
   }
 
   return (
-        <div className={`${megaHoverBridgeClass} ${shift ? "left-0 translate-x-6" : "left-0"}`}>
+        <div data-mega-panel="" className={`${megaHoverBridgeClass} ${shift ? "left-0 translate-x-6" : "left-0"}`}>
           <div
             className={`flex h-[460px] w-[660px] ${megaPanelSurfaceClass} ${megaPanelMotionClass(fading)}`}
           >
             <div className="flex w-[45%] flex-col px-6 py-6">
-              {view === "root" || !activeCategory ? (
-                <p className="text-[13px] font-medium text-white/70">Categories</p>
-              ) : (
-                <button
-                  type="button"
-                  className="text-left text-[13px] font-medium text-white/70"
-                  onClick={() => {
-                    setView("root");
-                    setLongevityOpen(false);
-                    setHovered(null);
-                  }}
-                >
-                  ‹ {activeCategory.label}
-                </button>
-              )}
-              <nav className="mt-4 flex min-h-0 flex-1 flex-col">
-                <div
-                  className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto"
-                  onMouseLeave={() => setHovered(null)}
-                >
-                  {view === "root"
-                    ? categories.map((category) => {
-                        if (category.kind === "link") {
-                          return (
-                            <Link
-                              key={category.id}
-                              href={category.href}
-                              className={megaLinkClass}
-                              onMouseEnter={() => setHovered(category.card)}
-                            >
-                              {category.label}
-                            </Link>
-                          );
-                        }
-
-                        if (category.kind === "expand-drill") {
-                          return (
-                            <div key={category.id}>
-                              <button
-                                type="button"
-                                className={megaLinkClass}
-                                onMouseEnter={() => setHovered(category.card)}
-                                onClick={() => setLongevityOpen((value) => !value)}
-                              >
-                                {category.label}
-                              </button>
-                              {longevityOpen ? (
-                                <p className="mt-2 text-[13px] text-white/80">
-                                  <Link href={category.coverHref} className="hover:opacity-80">
-                                    What Longevity Covers
-                                  </Link>
-                                  <span aria-hidden> • </span>
-                                  <button
-                                    type="button"
-                                    className="hover:opacity-80"
-                                    onClick={() => openDrill(category.id)}
-                                  >
-                                    Browse Longevity
-                                  </button>
-                                </p>
-                              ) : null}
-                            </div>
-                          );
-                        }
-
-                        return (
-                          <button
-                            key={category.id}
-                            type="button"
-                            className={megaLinkClass}
-                            onMouseEnter={() => setHovered(category.card)}
-                            onClick={() => openDrill(category.id)}
-                          >
-                            {category.label}
-                          </button>
-                        );
-                      })
-                    : activeCategory && activeCategory.kind !== "link"
-                      ? activeCategory.items.map((item) => (
-                          <Link
-                            key={item.href + item.label}
-                            href={item.href}
-                            className={megaLinkClass}
-                            onMouseEnter={() => setHovered(item.card)}
-                          >
-                            {item.label}
-                          </Link>
-                        ))
-                      : null}
-                </div>
-                <Link href={shopAll.href} className={`mt-3.5 ${megaLinkClass}`}>
-                  {shopAll.label}
-                </Link>
-              </nav>
+              <div className="relative min-h-0 flex-1 overflow-hidden">
+                {leavingView ? (
+                  <MegaCategoryPane
+                    key={leavingView}
+                    viewId={leavingView}
+                    categories={categories}
+                    longevityOpen={leavingLongevity}
+                    fading
+                    entering={false}
+                    onOpenDrill={openDrill}
+                    onToggleLongevity={() => setLongevityOpen((value) => !value)}
+                    onBack={backToCategories}
+                  />
+                ) : null}
+                <MegaCategoryPane
+                  key={shownView}
+                  viewId={shownView}
+                  categories={categories}
+                  longevityOpen={longevityOpen}
+                  fading={false}
+                  entering={leavingView !== null && !reduceMotion}
+                  onOpenDrill={openDrill}
+                  onToggleLongevity={() => setLongevityOpen((value) => !value)}
+                  onBack={backToCategories}
+                />
+              </div>
+              <Link href={shopAll.href} className={`mt-3.5 ${megaLinkClass}`}>
+                {shopAll.label}
+              </Link>
               <a
-                href={GENERAL_FORM_URL}
-                className="group relative mt-4 flex h-12 w-[285px] max-w-full items-center gap-3 overflow-hidden rounded-full bg-white px-3 text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                href={GET_STARTED_URL}
+                className="group relative mt-4 flex h-12 w-[285px] max-w-full items-center gap-3 overflow-hidden rounded-full bg-white px-3 text-ink transition-[background-color,color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[#331110] hover:text-[#F7F3F5] focus-visible:bg-[#331110] focus-visible:text-[#F7F3F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none"
               >
                 <span
                   aria-hidden
-                  className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#e4d0ce] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
+                  className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#331110] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
                 />
                 <span className="relative z-10 shrink-0">
                   <DocumentIcon />
@@ -399,7 +476,7 @@ function MegaMenuPanel({
               </a>
             </div>
             <div className="flex w-[55%] flex-col px-5 py-6 pr-6">
-              <FeatureCardView label={featureLabel} card={card} />
+              <FeatureCardView label={featureLabel} card={defaultCard} />
             </div>
           </div>
         </div>
@@ -408,11 +485,13 @@ function MegaMenuPanel({
 
 function WhoWeAreMenu({
   open,
+  selected,
   fading,
   onOpen,
   onClose,
 }: {
   open: boolean;
+  selected: boolean;
   fading: boolean;
   onOpen: () => void;
   onClose: () => void;
@@ -421,13 +500,13 @@ function WhoWeAreMenu({
     <div className="relative" onMouseEnter={onOpen} onMouseLeave={onClose}>
       <button
         className="flex items-center gap-1 text-[13px] text-white transition-transform duration-200 ease-out hover:scale-[1.05] active:scale-[0.96]"
-        onClick={() => (open ? onClose() : onOpen())}
+        onClick={() => (selected ? onClose() : onOpen())}
         type="button"
       >
         Who We Are
         <svg
           viewBox="0 0 12 8"
-          className={`h-2 w-2.5 opacity-80 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+          className={`h-2 w-2.5 opacity-80 transition-transform duration-200 ${selected ? "rotate-180" : ""}`}
           fill="none"
           aria-hidden
         >
@@ -435,7 +514,7 @@ function WhoWeAreMenu({
         </svg>
       </button>
       {open ? (
-        <div className={`${megaHoverBridgeClass} left-0`}>
+        <div data-mega-panel="" className={`${megaHoverBridgeClass} left-0`}>
           <div className={`w-[260px] px-6 py-6 ${megaPanelSurfaceClass} ${megaPanelMotionClass(fading)}`}>
             <nav className="flex flex-col gap-3.5">
               {whoLinks.map((item) => (
@@ -460,6 +539,14 @@ function SearchIcon() {
   );
 }
 
+function SearchSubmitArrow() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden>
+      <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function UserIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden>
@@ -476,6 +563,7 @@ function UserIcon() {
 
 export function Header() {
   const pathname = usePathname();
+  const router = useRouter();
 
   const onCheckout = pathname.startsWith("/checkout");
   const isProductPage = pathname.startsWith("/products/");
@@ -485,7 +573,10 @@ export function Header() {
   const [query, setQuery] = useState("");
   const [navVisible, setNavVisible] = useState(true);
   const [mega, setMega] = useState<MegaId | null>(null);
+  const [tabletPanel, setTabletPanel] = useState<TabletPanel | null>(null);
+  const headerRef = useRef<HTMLElement>(null);
   const [shownMega, setShownMega] = useState<MegaId | null>(null);
+  const [leavingMega, setLeavingMega] = useState<MegaId | null>(null);
   const [navPath, setNavPath] = useState(pathname);
   const lastScrollY = useRef(0);
   const megaCloseTimer = useRef(0);
@@ -494,28 +585,41 @@ export function Header() {
     setNavPath(pathname);
     setMega(null);
     setShownMega(null);
+    setLeavingMega(null);
     setMobile(false);
     setSearch(false);
+    setTabletPanel(null);
   }
 
-  if (shownMega === null && mega !== null) {
+  if (mega !== null && leavingMega !== null && mega === leavingMega) {
+    setLeavingMega(null);
+    setShownMega(mega);
+  } else if (mega !== null && shownMega !== null && mega !== shownMega && leavingMega !== shownMega) {
+    setLeavingMega(shownMega);
+    setShownMega(mega);
+  } else if (shownMega === null && mega !== null) {
     setShownMega(mega);
   }
 
-  const megaFading = shownMega !== null && mega !== shownMega;
+  const closingMega = mega === null && shownMega !== null;
 
   useEffect(() => {
     window.clearTimeout(megaCloseTimer.current);
   }, [pathname]);
 
   useEffect(() => {
-    if (!megaFading) return;
-    const next = mega;
-    const timer = window.setTimeout(() => {
-      setShownMega(next);
-    }, 380);
+    if (leavingMega === null) return;
+    const timer = window.setTimeout(() => setLeavingMega(null), MEGA_MOTION_MS);
     return () => window.clearTimeout(timer);
-  }, [mega, megaFading]);
+  }, [leavingMega]);
+
+  useEffect(() => {
+    if (!closingMega) return;
+    const timer = window.setTimeout(() => {
+      setShownMega((current) => (mega === null ? null : current));
+    }, MEGA_MOTION_MS);
+    return () => window.clearTimeout(timer);
+  }, [closingMega, mega]);
 
   function openMega(id: MegaId) {
     window.clearTimeout(megaCloseTimer.current);
@@ -536,7 +640,7 @@ export function Header() {
       const y = window.scrollY;
       const delta = y - lastScrollY.current;
 
-      if (mobile || search || y <= 10) {
+      if (mobile || search || tabletPanel || y <= 10) {
         setNavVisible(true);
         lastScrollY.current = y;
         return;
@@ -552,15 +656,174 @@ export function Header() {
 
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-  }, [mobile, search]);
+  }, [mobile, search, tabletPanel]);
 
-  const results = query.trim()
-    ? products.filter(
-        (p) =>
-          p.listed !== false &&
-          p.name.toLowerCase().includes(query.trim().toLowerCase()),
-      )
-    : [];
+  useEffect(() => {
+    const mobileQuery = window.matchMedia("(max-width: 764px)");
+    const tabletQuery = window.matchMedia("(min-width: 765px) and (max-width: 1199px)");
+    const desktopQuery = window.matchMedia("(min-width: 1200px)");
+
+    const sync = () => {
+      if (!mobileQuery.matches) setMobile(false);
+      if (!tabletQuery.matches) setTabletPanel(null);
+      if (!desktopQuery.matches) {
+        setMega(null);
+        setSearch(false);
+      }
+    };
+
+    mobileQuery.addEventListener("change", sync);
+    tabletQuery.addEventListener("change", sync);
+    desktopQuery.addEventListener("change", sync);
+    return () => {
+      mobileQuery.removeEventListener("change", sync);
+      tabletQuery.removeEventListener("change", sync);
+      desktopQuery.removeEventListener("change", sync);
+    };
+  }, []);
+
+  useEffect(() => {
+    const canScrollWithin = (panel: Element, target: EventTarget | null, deltaY: number) => {
+      if (!(target instanceof Element)) return false;
+      let node: Element | null = target;
+      while (node && panel.contains(node)) {
+        const style = getComputedStyle(node);
+        const scrollable = /(auto|scroll)/.test(style.overflowY) && node.scrollHeight > node.clientHeight + 1;
+        if (scrollable) {
+          const atTop = node.scrollTop <= 0;
+          const atBottom = node.scrollTop + node.clientHeight >= node.scrollHeight - 1;
+          if ((deltaY < 0 && !atTop) || (deltaY > 0 && !atBottom)) return true;
+        }
+        if (node === panel) break;
+        node = node.parentElement;
+      }
+      return false;
+    };
+
+    const blockWheel = (event: WheelEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const panel = target.closest("[data-mega-panel]");
+      if (!panel) return;
+      if (canScrollWithin(panel, target, event.deltaY)) return;
+      event.preventDefault();
+    };
+
+    window.addEventListener("wheel", blockWheel, { passive: false });
+    return () => window.removeEventListener("wheel", blockWheel);
+  }, []);
+
+  useEffect(() => {
+    if (!tabletPanel) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!headerRef.current?.contains(event.target as Node)) {
+        setTabletPanel(null);
+      }
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [tabletPanel]);
+
+  useEffect(() => {
+    if (!tabletPanel) return;
+
+    const html = document.documentElement;
+    const body = document.body;
+    const scrollY = window.scrollY;
+    const previousHtmlOverflow = html.style.overflow;
+    const previousOverscroll = html.style.overscrollBehavior;
+    const previousScrollBehavior = html.style.scrollBehavior;
+    const previousBodyOverflow = body.style.overflow;
+    const previousBodyPosition = body.style.position;
+    const previousBodyTop = body.style.top;
+    const previousBodyLeft = body.style.left;
+    const previousBodyRight = body.style.right;
+    const previousBodyWidth = body.style.width;
+    const previousBodyPaddingRight = body.style.paddingRight;
+    const scrollbar = window.innerWidth - html.clientWidth;
+
+    html.style.overflow = "hidden";
+    html.style.overscrollBehavior = "none";
+    body.style.overflow = "hidden";
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.left = "0";
+    body.style.right = "0";
+    body.style.width = "100%";
+    if (scrollbar > 0) body.style.paddingRight = `${scrollbar}px`;
+
+    const scrollableMenu = (target: EventTarget | null, deltaY = 1) => {
+      if (!(target instanceof Element)) return false;
+      let node: Element | null = target;
+      const header = headerRef.current;
+      while (node && header?.contains(node)) {
+        const style = getComputedStyle(node);
+        const canScroll = /(auto|scroll)/.test(style.overflowY) && node.scrollHeight > node.clientHeight + 1;
+        if (canScroll) {
+          const atTop = node.scrollTop <= 0;
+          const atBottom = node.scrollTop + node.clientHeight >= node.scrollHeight - 1;
+          if ((deltaY < 0 && !atTop) || (deltaY > 0 && !atBottom)) return true;
+        }
+        node = node.parentElement;
+      }
+      return false;
+    };
+
+    const blockWheel = (event: WheelEvent) => {
+      if (scrollableMenu(event.target, event.deltaY)) return;
+      event.preventDefault();
+    };
+    const blockTouch = (event: TouchEvent) => {
+      if (scrollableMenu(event.target)) return;
+      event.preventDefault();
+    };
+    const blockKeys = (event: KeyboardEvent) => {
+      if (![" ", "PageUp", "PageDown", "Home", "End", "ArrowUp", "ArrowDown"].includes(event.key)) return;
+      const target = event.target;
+      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return;
+      event.preventDefault();
+    };
+
+    window.addEventListener("wheel", blockWheel, { passive: false });
+    window.addEventListener("touchmove", blockTouch, { passive: false });
+    window.addEventListener("keydown", blockKeys);
+
+    return () => {
+      window.removeEventListener("wheel", blockWheel);
+      window.removeEventListener("touchmove", blockTouch);
+      window.removeEventListener("keydown", blockKeys);
+      html.style.overflow = previousHtmlOverflow;
+      html.style.overscrollBehavior = previousOverscroll;
+      html.style.scrollBehavior = "auto";
+      body.style.overflow = previousBodyOverflow;
+      body.style.position = previousBodyPosition;
+      body.style.top = previousBodyTop;
+      body.style.left = previousBodyLeft;
+      body.style.right = previousBodyRight;
+      body.style.width = previousBodyWidth;
+      body.style.paddingRight = previousBodyPaddingRight;
+      window.scrollTo(0, scrollY);
+      html.style.scrollBehavior = previousScrollBehavior;
+    };
+  }, [tabletPanel]);
+
+  function toggleTablet(next: TabletPanel) {
+    setMega(null);
+    setSearch(false);
+    setTabletPanel((current) => (current === next ? null : next));
+    if (next === "search") setQuery("");
+  }
+
+  const results = searchSuggestions(query);
+
+  function submitSearch(value = query) {
+    const term = value.trim();
+    if (!term) return;
+    setQuery(term);
+    setSearch(false);
+    setTabletPanel(null);
+    router.push(searchHref(term));
+  }
 
   const shell = isProductPage
     ? "bg-[linear-gradient(rgba(183,47,61,0.80),rgba(150,39,50,0.84))] backdrop-blur-[23px]"
@@ -581,21 +844,26 @@ export function Header() {
       />
 
       <header
-        className={`pointer-events-none fixed inset-x-0 top-2 z-50 hidden justify-center px-2 transition-transform duration-300 ease-out min-[441px]:flex sm:top-3 sm:px-3 md:top-4 ${
-          navVisible || mobile || search
+        ref={headerRef}
+        className={`lh-tablet-header pointer-events-none fixed inset-x-0 top-2 z-50 hidden justify-center px-2 transition-transform duration-300 ease-out min-[765px]:flex sm:top-3 sm:px-3 md:top-4 ${
+          navVisible || mobile || search || tabletPanel
             ? "translate-y-0"
             : "-translate-y-[calc(100%+1rem)]"
         }`}
       >
         <div
-          className={`pointer-events-auto relative flex w-full max-w-[1120px] min-w-0 items-center gap-1.5 rounded-full px-2 py-1.5 text-white shadow-lg shadow-ink/10 transition-colors duration-300 sm:gap-3 sm:px-5 sm:py-2 ${shell}`}
+          className={`lh-tablet-shell pointer-events-auto relative flex w-full max-w-[1152px] min-w-0 items-center gap-1.5 rounded-full px-2 py-1.5 text-white shadow-lg shadow-ink/10 transition-colors duration-300 sm:gap-3 sm:px-5 sm:py-2 ${
+            tabletPanel ? "lh-tablet-open" : ""
+          } ${shell}`}
         >
+          <div className="contents lh-tablet-row">
           {/* LEFT NAV */}
-          <div className="hidden items-center gap-5 md:flex">
+          <div className="lh-desktop-nav hidden items-center gap-5 md:flex">
             <MegaMenu
               label="Men"
-              open={shownMega === "men"}
-              fading={shownMega === "men" && megaFading}
+              open={shownMega === "men" || leavingMega === "men"}
+              selected={mega === "men"}
+              fading={leavingMega === "men" || (closingMega && shownMega === "men")}
               onOpen={() => openMega("men")}
               onClose={() => closeMega("men")}
               categories={menMegaCategories}
@@ -606,8 +874,9 @@ export function Header() {
 
             <MegaMenu
               label="Women"
-              open={shownMega === "women"}
-              fading={shownMega === "women" && megaFading}
+              open={shownMega === "women" || leavingMega === "women"}
+              selected={mega === "women"}
+              fading={leavingMega === "women" || (closingMega && shownMega === "women")}
               onOpen={() => openMega("women")}
               onClose={() => closeMega("women")}
               shift
@@ -637,34 +906,11 @@ export function Header() {
             </button>
           </div>
 
-          {/* MOBILE MENU */}
-          <button
-            className="shrink-0 px-1.5 text-xs transition-transform duration-200 ease-out hover:scale-[1.05] active:scale-[0.96] sm:px-2 sm:text-sm md:hidden"
-            onClick={() => {
-              setMega(null);
-              setMobile((v) => !v);
-            }}
-            type="button"
-            aria-label="Menu"
-          >
-            Menu
-          </button>
-
           {/* CENTER LOGO */}
           <Link
             href="/"
-            className="
-              flex
-              min-w-0
-              flex-1
-              items-center
-              justify-center
-              md:absolute
-              md:left-1/2
-              md:w-[180px]
-              md:flex-none
-              md:-translate-x-1/2
-            "
+            onClick={() => setTabletPanel(null)}
+            className="lh-tablet-logo flex min-w-0 flex-1 items-center justify-center md:absolute md:left-1/2 md:w-[180px] md:flex-none"
           >
             <Image
               src={assets.logo}
@@ -687,21 +933,28 @@ export function Header() {
             />
           </Link>
 
+          <TabletNavBar
+            panel={tabletPanel}
+            onToggle={toggleTablet}
+            onShop={() => setTabletPanel(null)}
+          />
+
           {/* RIGHT NAV */}
-          <div className="ml-auto hidden items-center gap-3 md:flex">
+          <div className="lh-desktop-nav ml-auto hidden items-center gap-3 md:flex">
             <WhoWeAreMenu
-              open={shownMega === "who"}
-              fading={shownMega === "who" && megaFading}
+              open={shownMega === "who" || leavingMega === "who"}
+              selected={mega === "who"}
+              fading={leavingMega === "who" || (closingMega && shownMega === "who")}
               onOpen={() => openMega("who")}
               onClose={() => closeMega("who")}
             />
 
             <a
               href={PORTAL_URL}
-              aria-label="Patient portal"
+              aria-label="Patient Portal"
               className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-white/35 bg-white/10 px-3 text-[13px] text-white transition-[transform,background-color] duration-200 ease-out hover:scale-[1.04] hover:bg-white/20 active:scale-[0.96]"
             >
-              Log In / Sign Up
+              Patient Portal
               <UserIcon />
             </a>
 
@@ -710,11 +963,11 @@ export function Header() {
             {!onCheckout ? (
               <a
                 href={GET_STARTED_URL}
-                className="group relative inline-flex items-center justify-center overflow-hidden rounded-full bg-white px-4 py-1.5 text-[13px] font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                className="group relative inline-flex items-center justify-center overflow-hidden rounded-full bg-white px-6 py-1.5 text-[13px] font-medium text-ink transition-[background-color,color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[#331110] hover:text-[#F7F3F5] focus-visible:bg-[#331110] focus-visible:text-[#F7F3F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none"
               >
                 <span
                   aria-hidden
-                  className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#e4d0ce] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
+                  className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#331110] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
                 />
                 <span className="relative z-10 whitespace-nowrap transition-transform duration-[400ms] ease-out group-hover:-translate-x-[15px] motion-reduce:translate-x-0! motion-reduce:transition-none">
                   Get Started
@@ -729,63 +982,17 @@ export function Header() {
             ) : null}
           </div>
 
-          {/* MOBILE RIGHT */}
-          <div className="ml-auto flex shrink-0 items-center gap-1.5 md:hidden">
-            <CartButton compact />
-
-            {!onCheckout ? (
-              <a
-                href={GET_STARTED_URL}
-                className="group relative inline-flex items-center justify-center overflow-hidden rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:px-3 sm:py-1.5 sm:text-xs"
-              >
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#e4d0ce] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
-                />
-                <span className="relative z-10 whitespace-nowrap transition-transform duration-[400ms] ease-out group-hover:-translate-x-[10px] motion-reduce:translate-x-0! motion-reduce:transition-none">
-                  Start
-                </span>
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute top-1/2 right-0 z-10 -translate-y-1/2 translate-x-full transition-transform duration-[400ms] ease-out group-hover:translate-x-[calc(100%-18px)] motion-reduce:translate-x-full! motion-reduce:transition-none"
-                >
-                  →
-                </span>
-              </a>
-            ) : null}
           </div>
+          <TabletNavDisclosure
+            panel={tabletPanel}
+            query={query}
+            onQuery={setQuery}
+            results={results}
+            onSubmit={submitSearch}
+            onNavigate={() => setTabletPanel(null)}
+          />
         </div>
       </header>
-
-      {/* MOBILE NAV */}
-      {mobile && (
-        <div className="lh-popup-backdrop fixed inset-0 z-40 hidden bg-ink/80 pt-24 max-[440px]:hidden min-[441px]:block md:hidden">
-          <nav className="lh-popup-panel mx-4 space-y-3 rounded-3xl bg-white p-6 text-ink">
-            {[
-              ...menLinks.slice(0, 1),
-              ...womenLinks.slice(0, 1),
-              {
-                href: "/shop-all-products",
-                label: "Shop All",
-              },
-              ...whoLinks,
-            ].map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="block text-lg"
-                onClick={() => setMobile(false)}
-              >
-                {item.label}
-              </Link>
-            ))}
-
-            <a href={GET_STARTED_URL} className="block text-lg text-accent">
-              Get Started
-            </a>
-          </nav>
-        </div>
-      )}
 
       {/* SEARCH MODAL */}
       {search && (
@@ -797,23 +1004,46 @@ export function Header() {
             className="lh-popup-panel mx-auto max-w-lg rounded-3xl bg-white p-5 text-ink shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <input
-              autoFocus
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search…"
-              className="w-full rounded-full border border-ink/10 bg-background px-4 py-3 outline-none"
-            />
+            <h2 id="navbar-search-title" className="mb-3 text-2xl leading-none">
+              Search
+            </h2>
+            <form
+              className="relative"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const field = event.currentTarget.elements.namedItem("q");
+                submitSearch(field instanceof HTMLInputElement ? field.value : query);
+              }}
+            >
+              <input
+                name="q"
+                autoFocus
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search…"
+                aria-labelledby="navbar-search-title"
+                enterKeyHint="search"
+                className="w-full rounded-full border border-ink/10 bg-background py-3 pr-12 pl-4 outline-none"
+              />
+              <button
+                type="submit"
+                aria-label="Submit search"
+                className="absolute top-1/2 right-1.5 grid size-8 -translate-y-1/2 place-items-center rounded-full bg-ink text-white transition-[transform,background-color] duration-200 ease-out hover:scale-[1.06] hover:bg-accent active:scale-95 motion-reduce:transform-none"
+              >
+                <SearchSubmitArrow />
+              </button>
+            </form>
 
             <div className="mt-3 space-y-1">
-              {results.map((p) => (
+              {results.map((hit) => (
                 <Link
-                  key={p.slug}
-                  href={`/products/${p.slug}`}
+                  key={hit.href}
+                  href={hit.href}
                   className="block rounded-xl px-3 py-2 hover:bg-background"
                   onClick={() => setSearch(false)}
                 >
-                  {p.name}
+                  <span className="block">{hit.title}</span>
+                  <span className="block text-xs text-taupe">{hit.category}</span>
                 </Link>
               ))}
 

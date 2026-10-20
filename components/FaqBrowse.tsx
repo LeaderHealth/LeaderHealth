@@ -1,16 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { faqCategories } from "@/lib/content/faqs";
 
 const accordionEase = [0.12, 0.23, 0.5, 1] as const;
 
 const entrance = {
-  type: "spring" as const,
-  duration: 1,
-  bounce: 0.2,
-  delay: 0.8,
+  duration: 0.9,
+  ease: [0.22, 1, 0.36, 1] as const,
+  delay: 0.05,
 };
 
 function CategoryIcon({ id }: { id: string }) {
@@ -94,10 +93,44 @@ function CategoryIcon({ id }: { id: string }) {
   }
 }
 
+function useLocationHash() {
+  return useSyncExternalStore(
+    (onStoreChange) => {
+      window.addEventListener("hashchange", onStoreChange);
+      return () => window.removeEventListener("hashchange", onStoreChange);
+    },
+    () => window.location.hash,
+    () => "",
+  );
+}
+
+function categoryForQuestion(hash: string) {
+  const id = hash.replace(/^#/, "");
+  if (!id) return null;
+  return faqCategories.find((category) => category.items.some((item) => item.id === id)) ?? null;
+}
+
 export function FaqBrowse() {
   const reduceMotion = useReducedMotion();
-  const [activeCategory, setActiveCategory] = useState(faqCategories[0].id);
-  const [openQuestionId, setOpenQuestionId] = useState<string | null>(null);
+  const hash = useLocationHash();
+  const hashed = categoryForQuestion(hash);
+  const questionId = hash.replace(/^#/, "");
+  const [trackedHash, setTrackedHash] = useState(hash);
+  const [activeCategory, setActiveCategory] = useState(hashed?.id ?? faqCategories[0].id);
+  const [openQuestionId, setOpenQuestionId] = useState<string | null>(hashed ? questionId : null);
+
+  if (hash !== trackedHash) {
+    setTrackedHash(hash);
+    if (hashed) {
+      setActiveCategory(hashed.id);
+      setOpenQuestionId(questionId);
+    }
+  }
+
+  useEffect(() => {
+    if (!hashed || !questionId) return;
+    document.getElementById(questionId)?.scrollIntoView({ block: "center" });
+  }, [hashed, questionId]);
   const category = faqCategories.find((item) => item.id === activeCategory) ?? faqCategories[0];
 
   return (
@@ -110,7 +143,7 @@ export function FaqBrowse() {
     >
       <motion.div
         className="mx-auto w-full max-w-[980px]"
-        initial={reduceMotion ? false : { opacity: 0, y: 150 }}
+        initial={reduceMotion ? false : { opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={reduceMotion ? { duration: 0 } : entrance}
       >
@@ -159,7 +192,7 @@ export function FaqBrowse() {
                     className={`hidden h-11 w-11 shrink-0 place-items-center rounded-[12px] xl:grid ${
                       active
                         ? "bg-white/15 text-white"
-                        : "bg-white/35 text-[#C44751] transition-[background-color,color] duration-[400ms] ease-[cubic-bezier(0.44,0,0.56,1)] delay-100 group-hover:bg-[#331110] group-hover:text-white"
+                        : "bg-white/35 text-[#C44751] transition-[background-color,color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] delay-100 group-hover:bg-[#331110] group-hover:text-[#F7F3F5]"
                     }`}
                   >
                     <CategoryIcon id={item.id} />
@@ -185,14 +218,15 @@ export function FaqBrowse() {
             role="tabpanel"
             id="faq-category-panel"
             aria-labelledby={`faq-tab-${category.id}`}
-            className="flex w-full max-w-[638px] flex-col gap-[17px]"
+            className="mx-auto flex w-full max-w-[638px] flex-col gap-[17px]"
           >
             {category.items.map((item) => {
               const open = openQuestionId === item.id;
               return (
                 <div
                   key={item.id}
-                  className="overflow-hidden rounded-[18px] border-[0.5px] border-[#DCD4BD] bg-[rgba(247,232,228,0.92)] shadow-[0px_6px_8px_rgba(0,0,0,0.16)]"
+                  id={item.id}
+                  className="scroll-mt-32 overflow-hidden rounded-[18px] border-[0.5px] border-[#DCD4BD] bg-[rgba(247,232,228,0.92)] shadow-[0px_6px_8px_rgba(0,0,0,0.16)]"
                 >
                   <button
                     type="button"

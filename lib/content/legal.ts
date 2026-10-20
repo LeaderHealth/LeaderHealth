@@ -1,257 +1,220 @@
+import { privacyPolicy } from "@/lib/content/privacy-policy";
+import { cookiesPolicy } from "@/lib/content/cookies-policy";
+import { consumerHealthDataPrivacy } from "@/lib/content/consumer-health-data-privacy";
+import {
+  doNotSell,
+  hipaaNotice,
+  refundsCancellations,
+  shippingPolicy,
+  stateRestrictions,
+  subscriptionTerms,
+  telehealthConsent,
+  termsOfService,
+  compoundingDisclosure,
+  accessibilityStatement,
+} from "@/lib/content/published-legal";
+
+export type LegalRun = {
+  text: string;
+  bold?: boolean;
+  href?: string;
+};
+
+export type LegalBlock =
+  | { kind: "p"; text: string; runs?: LegalRun[] }
+  | { kind: "h3"; text: string; runs?: LegalRun[] }
+  | { kind: "list"; items: string[]; runs?: (LegalRun[] | null)[]; ordered?: boolean }
+  | { kind: "table"; headers: string[]; rows: string[][]; cellRuns?: (LegalRun[] | null)[][] };
+
+export type LegalSection = {
+  heading: string;
+  paragraphs: string[];
+  blocks?: LegalBlock[];
+};
+
 export type LegalPage = {
   slug: string;
   title: string;
   effective?: string;
-  sections: { heading: string; paragraphs: string[] }[];
+  intro?: LegalBlock[];
+  sections: LegalSection[];
 };
 
 export const legalPages: LegalPage[] = [
+  privacyPolicy,
+  cookiesPolicy,
+  consumerHealthDataPrivacy,
+  termsOfService,
+  telehealthConsent,
   {
-    slug: "privacy-policy",
-    title: "Privacy Policy",
-    effective: "July 1, 2026",
-    sections: [
+    slug: "important-safety-information",
+    title: "Important Safety Information",
+    effective: "August 30, 2026",
+    intro: [
       {
-        heading: "Plain-English summary",
-        paragraphs: [
-          "Leader Health is a healthtech platform operated by LH Ventures LLC as the technology and administrative-services company. Clinical care is delivered by independent licensed clinicians who practice through an Independent Provider Network. The Independent Provider Network is the HIPAA Covered Entity for your medical record; Leader Health is its Business Associate. We do not sell your Protected Health Information, and we do not use your PHI for cross-context behavioral advertising. Questions: privacy@myleaderhealth.com.",
-        ],
-      },
-      {
-        heading: "Who we are",
-        paragraphs: [
-          "\"Leader Health,\" \"we,\" \"our,\" or \"us\" means Leader Health, the trade name of LH Ventures LLC, a Delaware limited liability company foreign-qualified in Texas, together with its affiliates. Leader Health is a technology and administrative-services company. Leader Health does not practice medicine.",
-          "Clinical services are provided by independent licensed clinicians. Pharmacy services are provided by independently owned licensed pharmacies. Laboratory services are provided by independent reference laboratories.",
-          "Protected Health Information created and held by the Independent Provider Network is governed by the HIPAA Notice of Privacy Practices, which controls in case of conflict with respect to PHI.",
-        ],
-      },
-      {
-        heading: "Information we collect",
-        paragraphs: [
-          "Account information (name, email, password, phone, date of birth, address); intake and health-history information; identity verification documents where required; payment information processed through our payment processor (we do not store full card numbers); and communications with support or clinicians.",
-          "We also collect device and connection data, usage data, and cookies as described in our tracking practices, plus lab results, pharmacy data, and clinical notes from partners involved in your care.",
-        ],
-      },
-      {
-        heading: "How we use and share information",
-        paragraphs: [
-          "We use personal information to administer your account, coordinate care with the Affiliated Provider Network, Pharmacies, and Labs, process payments, communicate with you, secure the platform, prevent fraud, and comply with law.",
-          "We do not use AI or automated decision-making to make material clinical decisions about your care. Providers make all prescribing decisions. We do not sell personal information.",
-        ],
-      },
-      {
-        heading: "Your rights",
-        paragraphs: [
-          "California and other state-law rights, including access, deletion, and correction, can be exercised at privacy@myleaderhealth.com or via the Do Not Sell or Share My Info page. We are implementing support for Global Privacy Control (GPC) opt-out preference signals.",
-        ],
+        kind: "p",
+        text: "This page is a general safety summary. It is not a substitute for the full prescribing information, the advice of your Provider, or the counseling you receive from the pharmacy. Read the medication guide that accompanies your prescription. Telehealth is not for emergencies — if you think you are having a medical emergency, call 911 or go to the nearest emergency room.",
       },
     ],
-  },
-  {
-    slug: "terms-of-service",
-    title: "Terms of Service",
-    effective: "July 1, 2026",
     sections: [
       {
-        heading: "Agreement",
+        heading: "Not for emergencies",
         paragraphs: [
-          "These Terms govern your use of Leader Health websites and related services operated by LH Ventures LLC. By using the site, you agree to these Terms. If you do not agree, do not use the platform.",
+          "Leader Health is for non-urgent care. Do not use the Platform for emergencies, severe symptoms, thoughts of self-harm, chest pain, difficulty breathing, signs of stroke, severe allergic reaction, or any life-threatening condition. Call 911.",
         ],
       },
       {
-        heading: "Not medical advice on this website",
+        heading: "Who should not use certain therapies",
         paragraphs: [
-          "Content on this marketing site is educational and is not a diagnosis, prescription, or provider-patient relationship. Clinical care begins only after you complete intake and a licensed clinician evaluates you.",
-        ],
-      },
-      {
-        heading: "Eligibility and accounts",
-        paragraphs: [
-          "You must be 18 or older to create an account. You are responsible for the accuracy of information you submit and for keeping portal credentials confidential.",
+          "Some therapies are not appropriate for everyone. Depending on the therapy, you should not start — and must tell your Provider — if you are pregnant, planning pregnancy, or breastfeeding; if you have a personal or family history of certain cancers (including, for some therapies, medullary thyroid carcinoma or Multiple Endocrine Neoplasia syndrome type 2); if you have significant heart, liver, kidney, or psychiatric disease; a history of pancreatitis or gallbladder disease; an eating disorder; or if you take medications that may interact. Your Provider determines whether a therapy is medically appropriate for you based on your history and labs.",
         ],
       },
       {
         heading: "Compounded medications",
         paragraphs: [
-          "Compounded medications are prepared by licensed pharmacies and are not FDA-approved. Leader Health is not a pharmacy and does not manufacture or dispense medications. Availability may vary by state.",
+          "Some products offered through the Platform are compounded medications prepared by a licensed compounding pharmacy for an individual patient. Compounded drugs are not FDA-approved, and the FDA does not review them for safety, effectiveness, or quality before they are marketed. Compounded medications are permitted for specific patient needs when clinically appropriate. Your Provider and pharmacist will discuss whether a compounded option is appropriate for you.",
         ],
-      },
-    ],
-  },
-  {
-    slug: "telehealth-consent",
-    title: "Telehealth Consent",
-    sections: [
-      {
-        heading: "Consent to telehealth",
-        paragraphs: [
-          "By starting care, you consent to evaluation and treatment via telehealth. You understand that telehealth has benefits and limitations, including the possibility that your clinician may determine you need in-person care.",
-        ],
-      },
-      {
-        heading: "Independent clinicians",
-        paragraphs: [
-          "Care is delivered by independent licensed clinicians in the state where you are located. Leader Health does not practice medicine. Your treating clinician exercises independent clinical judgment.",
+        blocks: [
+          {
+            kind: "p",
+            text: "Some products offered through the Platform are compounded medications prepared by a licensed compounding pharmacy for an individual patient. Compounded drugs are not FDA-approved, and the FDA does not review them for safety, effectiveness, or quality before they are marketed. Compounded medications are permitted for specific patient needs when clinically appropriate. Your Provider and pharmacist will discuss whether a compounded option is appropriate for you.",
+            runs: [
+              { text: "Some products offered through the Platform are compounded medications prepared by a licensed compounding pharmacy for an individual patient. " },
+              { text: "Compounded drugs are not FDA-approved", bold: true },
+              { text: ", and the FDA does not review them for safety, effectiveness, or quality before they are marketed. Compounded medications are permitted for specific patient needs when clinically appropriate. Your Provider and pharmacist will discuss whether a compounded option is appropriate for you." },
+            ],
+          },
         ],
       },
       {
-        heading: "Privacy",
+        heading: "Category-specific safety",
         paragraphs: [
-          "Video, messages, and records are handled under the HIPAA Notice and Privacy Policy. Do not join visits from a setting where others can overhear sensitive information if you can avoid it.",
+          "The therapies below carry distinct risks. This is a summary only; your Provider will review the risks that apply to you.",
+          "GLP-1 / weight-management therapies (e.g., semaglutide, tirzepatide). Common side effects include nausea, vomiting, diarrhea, constipation, and abdominal pain. Serious risks may include pancreatitis, gallbladder disease, kidney injury from dehydration, low blood sugar (especially with insulin or sulfonylureas), and, in animal studies, thyroid C-cell tumors — do not use if you or a family member has had medullary thyroid carcinoma or MEN 2. Seek care for severe or persistent abdominal pain, signs of an allergic reaction, or a neck mass.",
+          "Hormone therapies (including testosterone / TRT and other hormone therapies). Risks may include changes in blood counts (elevated hematocrit), blood clots, cardiovascular effects, mood changes, acne, fluid retention, effects on fertility, and — for some hormone therapies — effects on the prostate or breast tissue. Ongoing lab monitoring is required. Testosterone is a controlled substance and is subject to the additional rules below.",
+          "Sexual-health medications. Risks may include headache, flushing, low blood pressure, vision or hearing changes, and priapism (a prolonged, painful erection lasting more than 4 hours — seek emergency care). Do not combine with nitrates. Tell your Provider about heart disease and all medications.",
+          "Peptides and other therapies. Evidence and regulatory status vary by product; some are not FDA-approved. Risks may include injection-site reactions, changes in blood sugar, water retention, and other effects your Provider will review. Do not use any therapy for performance-enhancement or in a manner inconsistent with your Provider's instructions.",
         ],
-      },
-    ],
-  },
-  {
-    slug: "important-safety-information",
-    title: "Important Safety Information",
-    sections: [
-      {
-        heading: "Read before you start",
-        paragraphs: [
-          "Prescription treatments offered through Leader Health can cause serious side effects. Your clinician will review your history and, when required, labs before prescribing. This page is not a complete list of risks.",
-        ],
-      },
-      {
-        heading: "GLP-1 medications (semaglutide, tirzepatide)",
-        paragraphs: [
-          "Risk of thyroid C-cell tumors. Do not use if you or a family member has had medullary thyroid cancer, or if you have MEN 2. Compounded. Not FDA approved. Not a generic of Wegovy or Ozempic. Gastrointestinal side effects, pancreatitis, gallbladder disease, and dehydration can occur. These medications are not used in pregnancy.",
-        ],
-      },
-      {
-        heading: "Hormone therapies and peptides",
-        paragraphs: [
-          "Testosterone, women's hormone therapy, sermorelin, and related treatments require monitoring. Report chest pain, severe headache, shortness of breath, allergic reaction, or other urgent symptoms to emergency services. Discuss fertility goals before starting testosterone.",
-        ],
-      },
-    ],
-  },
-  {
-    slug: "hipaa-notice",
-    title: "HIPAA Notice of Privacy Practices",
-    sections: [
-      {
-        heading: "Covered Entity",
-        paragraphs: [
-          "The Independent Provider Network is the HIPAA Covered Entity for your medical record. Leader Health acts as a Business Associate under a written Business Associate Agreement.",
-        ],
-      },
-      {
-        heading: "How PHI is used",
-        paragraphs: [
-          "Protected Health Information is used and disclosed for treatment, payment, and health-care operations as permitted by HIPAA, and as described in the full Notice provided at registration and in your patient dashboard.",
-        ],
-      },
-      {
-        heading: "Your rights",
-        paragraphs: [
-          "You have rights to access, amend, and receive an accounting of certain disclosures of your PHI, and to request restrictions and confidential communications. Contact privacy@myleaderhealth.com or your dashboard support channel to exercise these rights.",
-        ],
-      },
-    ],
-  },
-  {
-    slug: "consumer-health-data-privacy",
-    title: "Consumer Health Data Privacy",
-    sections: [
-      {
-        heading: "Additional health-data notice",
-        paragraphs: [
-          "Certain states, including Washington and Nevada, require extra disclosures about consumer health data. We collect health information to coordinate care, verify identity, and operate the platform. We do not sell consumer health data.",
+        blocks: [
+          {
+            kind: "p",
+            text: "The therapies below carry distinct risks. This is a summary only; your Provider will review the risks that apply to you.",
+          },
+          {
+            kind: "p",
+            text: "GLP-1 / weight-management therapies (e.g., semaglutide, tirzepatide). Common side effects include nausea, vomiting, diarrhea, constipation, and abdominal pain. Serious risks may include pancreatitis, gallbladder disease, kidney injury from dehydration, low blood sugar (especially with insulin or sulfonylureas), and, in animal studies, thyroid C-cell tumors — do not use if you or a family member has had medullary thyroid carcinoma or MEN 2. Seek care for severe or persistent abdominal pain, signs of an allergic reaction, or a neck mass.",
+            runs: [
+              { text: "GLP-1 / weight-management therapies (e.g., semaglutide, tirzepatide).", bold: true },
+              { text: " Common side effects include nausea, vomiting, diarrhea, constipation, and abdominal pain. Serious risks may include pancreatitis, gallbladder disease, kidney injury from dehydration, low blood sugar (especially with insulin or sulfonylureas), and, in animal studies, thyroid C-cell tumors — do not use if you or a family member has had medullary thyroid carcinoma or MEN 2. Seek care for severe or persistent abdominal pain, signs of an allergic reaction, or a neck mass." },
+            ],
+          },
+          {
+            kind: "p",
+            text: "Hormone therapies (including testosterone / TRT and other hormone therapies). Risks may include changes in blood counts (elevated hematocrit), blood clots, cardiovascular effects, mood changes, acne, fluid retention, effects on fertility, and — for some hormone therapies — effects on the prostate or breast tissue. Ongoing lab monitoring is required. Testosterone is a controlled substance and is subject to the additional rules below.",
+            runs: [
+              { text: "Hormone therapies (including testosterone / TRT and other hormone therapies).", bold: true },
+              { text: " Risks may include changes in blood counts (elevated hematocrit), blood clots, cardiovascular effects, mood changes, acne, fluid retention, effects on fertility, and — for some hormone therapies — effects on the prostate or breast tissue. Ongoing lab monitoring is required. Testosterone is a controlled substance and is subject to the additional rules below." },
+            ],
+          },
+          {
+            kind: "p",
+            text: "Sexual-health medications. Risks may include headache, flushing, low blood pressure, vision or hearing changes, and priapism (a prolonged, painful erection lasting more than 4 hours — seek emergency care). Do not combine with nitrates. Tell your Provider about heart disease and all medications.",
+            runs: [
+              { text: "Sexual-health medications.", bold: true },
+              { text: " Risks may include headache, flushing, low blood pressure, vision or hearing changes, and priapism (a prolonged, painful erection lasting more than 4 hours — seek emergency care). Do not combine with nitrates. Tell your Provider about heart disease and all medications." },
+            ],
+          },
+          {
+            kind: "p",
+            text: "Peptides and other therapies. Evidence and regulatory status vary by product; some are not FDA-approved. Risks may include injection-site reactions, changes in blood sugar, water retention, and other effects your Provider will review. Do not use any therapy for performance-enhancement or in a manner inconsistent with your Provider's instructions.",
+            runs: [
+              { text: "Peptides and other therapies.", bold: true },
+              { text: " Evidence and regulatory status vary by product; some are not FDA-approved. Risks may include injection-site reactions, changes in blood sugar, water retention, and other effects your Provider will review. Do not use any therapy for performance-enhancement or in a manner inconsistent with your Provider's instructions." },
+            ],
+          },
         ],
       },
       {
-        heading: "Requests",
+        heading: "Controlled substances",
         paragraphs: [
-          "To request access, deletion, or to appeal a decision, email privacy@myleaderhealth.com with \"Consumer Health Data\" in the subject line.",
+          "Certain medications are controlled substances. They are prescribed only when clinically appropriate, are subject to state and federal telemedicine-prescribing rules, and may require identity verification and additional monitoring. Do not share, sell, transfer, or divert any prescribed medication. Misuse can cause serious harm and is unlawful.",
         ],
-      },
-    ],
-  },
-  {
-    slug: "do-not-sell",
-    title: "Do Not Sell or Share My Info",
-    sections: [
-      {
-        heading: "We do not sell your information",
-        paragraphs: [
-          "Leader Health does not sell personal information and does not share it for cross-context behavioral advertising. If you still wish to record an opt-out preference, email privacy@myleaderhealth.com or use a Global Privacy Control signal when available.",
-        ],
-      },
-    ],
-  },
-  {
-    slug: "refunds-cancellations",
-    title: "Refunds & Cancellations",
-    sections: [
-      {
-        heading: "Cancellations",
-        paragraphs: [
-          "You may cancel a subscription according to the timing in the Subscription Terms. Cancel before the next billing date to avoid the following cycle's charge. Portal cancellation or written request to help@myleaderhealth.com is required.",
+        blocks: [
+          {
+            kind: "p",
+            text: "Certain medications are controlled substances. They are prescribed only when clinically appropriate, are subject to state and federal telemedicine-prescribing rules, and may require identity verification and additional monitoring. Do not share, sell, transfer, or divert any prescribed medication. Misuse can cause serious harm and is unlawful.",
+            runs: [
+              { text: "Certain medications are controlled substances. They are prescribed only when clinically appropriate, are subject to state and federal telemedicine-prescribing rules, and may require identity verification and additional monitoring. " },
+              { text: "Do not share, sell, transfer, or divert", bold: true },
+              { text: " any prescribed medication. Misuse can cause serious harm and is unlawful." },
+            ],
+          },
         ],
       },
       {
-        heading: "Refunds",
+        heading: "Drug and condition interactions",
         paragraphs: [
-          "Because compounded medications are prepared for you, opened or shipped prescriptions are generally not returnable. If a shipment is lost, damaged, or filled in error, contact support so we can coordinate with the pharmacy. Lab panels that have already been drawn are not refundable.",
-        ],
-      },
-    ],
-  },
-  {
-    slug: "subscription-terms",
-    title: "Subscription Terms",
-    sections: [
-      {
-        heading: "Billing",
-        paragraphs: [
-          "Many protocols are billed monthly until canceled. Prices shown are starting prices and may change with dose, format, or clinically required labs. You authorize recurring charges to the payment method on file.",
+          "Tell your Provider about all prescription and over-the-counter medications, supplements, and herbal products you take, and about all of your medical conditions and allergies. Do not start, stop, or change how you take any medication without talking to your Provider.",
         ],
       },
       {
-        heading: "Clinical gate",
+        heading: "Side effects and when to seek care",
         paragraphs: [
-          "Payment does not guarantee a prescription. A licensed clinician must determine that treatment is appropriate. If you are not a candidate, you will be told and charged only for services already performed (such as labs).",
+          "Any medication can cause side effects, including serious or, rarely, life-threatening reactions. Stop the medication and seek emergency care for signs of a severe allergic reaction (swelling of the face, lips, tongue, or throat; trouble breathing; hives), severe or persistent abdominal pain, fainting, chest pain, or any symptom that feels severe or rapidly worsening. Report side effects to your care team through the Platform. You may also report side effects of an FDA-regulated product to the FDA at 1-800-FDA-1088 or www.fda.gov/medwatch.",
+        ],
+        blocks: [
+          {
+            kind: "p",
+            text: "Any medication can cause side effects, including serious or, rarely, life-threatening reactions. Stop the medication and seek emergency care for signs of a severe allergic reaction (swelling of the face, lips, tongue, or throat; trouble breathing; hives), severe or persistent abdominal pain, fainting, chest pain, or any symptom that feels severe or rapidly worsening. Report side effects to your care team through the Platform. You may also report side effects of an FDA-regulated product to the FDA at 1-800-FDA-1088 or www.fda.gov/medwatch.",
+            runs: [
+              { text: "Any medication can cause side effects, including serious or, rarely, life-threatening reactions. Stop the medication and seek emergency care for signs of a severe allergic reaction (swelling of the face, lips, tongue, or throat; trouble breathing; hives), severe or persistent abdominal pain, fainting, chest pain, or any symptom that feels severe or rapidly worsening. Report side effects to your care team through the Platform. You may also report side effects of an FDA-regulated product to the " },
+              { text: "FDA at 1-800-FDA-1088", bold: true },
+              { text: " or " },
+              { text: "www.fda.gov/medwatch", href: "https://www.fda.gov/medwatch" },
+              { text: "." },
+            ],
+          },
         ],
       },
-    ],
-  },
-  {
-    slug: "shipping-policy",
-    title: "Shipping Policy",
-    sections: [
       {
-        heading: "How shipping works",
+        heading: "No guarantee of results",
         paragraphs: [
-          "After a clinician approves a prescription, a licensed pharmacy ships medication to the address on file. Temperature-sensitive products may use expedited or cold-chain shipping. Delivery windows vary by pharmacy and destination.",
+          "Individual results vary. No specific outcome is promised. Therapy works best alongside appropriate diet, activity, monitoring, and follow-up as directed by your Provider.",
         ],
       },
       {
-        heading: "Your responsibilities",
+        heading: "Storage and handling",
         paragraphs: [
-          "Keep your address and phone number current. Someone should be available to receive packages that require a signature or refrigeration. Report damaged or missing packages promptly to help@myleaderhealth.com.",
-        ],
-      },
-    ],
-  },
-  {
-    slug: "state-restrictions",
-    title: "State Restrictions",
-    sections: [
-      {
-        heading: "Availability varies",
-        paragraphs: [
-          "Not every therapy is available in every state. Controlled substances, compounding rules, and clinician licensure limit what can be prescribed or shipped to your location. Your intake will show options available where you are.",
+          "Store medications as directed on the label and by the pharmacy (some require refrigeration). Keep all medications out of the reach of children and pets. Do not use a medication after its expiration date. Dispose of unused medication safely.",
         ],
       },
       {
         heading: "Questions",
         paragraphs: [
-          "If you are unsure whether a treatment can be offered in your state, contact help@myleaderhealth.com before completing labs.",
+          "Contact your care team at care@myleaderhealth.com. For questions about a specific prescription, your pharmacy's counseling line is the best resource.",
+        ],
+        blocks: [
+          {
+            kind: "p",
+            text: "Contact your care team at care@myleaderhealth.com. For questions about a specific prescription, your pharmacy's counseling line is the best resource.",
+            runs: [
+              { text: "Contact your care team at " },
+              { text: "care@myleaderhealth.com", href: "mailto:care@myleaderhealth.com" },
+              { text: ". For questions about a specific prescription, your pharmacy's counseling line is the best resource." },
+            ],
+          },
         ],
       },
     ],
   },
+  hipaaNotice,
+  doNotSell,
+  refundsCancellations,
+  subscriptionTerms,
+  shippingPolicy,
+  stateRestrictions,
+  compoundingDisclosure,
+  accessibilityStatement,
   {
     slug: "consent-notices",
     title: "Consent & Notices",

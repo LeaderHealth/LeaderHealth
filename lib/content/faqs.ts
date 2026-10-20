@@ -88,6 +88,57 @@ export const productFaqs = [
   },
 ];
 
+export const womenHrtFaqs = [
+  {
+    q: "Am I a candidate for HRT?",
+    a: "Candidacy depends on symptoms, age, time since menopause, anatomy, personal and family history, medications, and risk factors. Systemic hormone therapy is generally avoided with unexplained vaginal bleeding, an estrogen-sensitive cancer history, prior heart attack, stroke, or blood clot, liver disease, or high clot risk. A licensed provider reviews your panel and history before prescribing. Combined estrogen-progestogen therapy is associated with a small increased risk of breast cancer that rises with duration of use; estrogen-only therapy in women without a uterus has not shown the same signal.",
+  },
+  {
+    q: "How are labs used in menopause care?",
+    a: "Menopause is often diagnosed clinically from symptoms and age. Labs help establish baselines, check for overlapping causes, and guide safety monitoring for selected therapies. A prescription is never based on a lab value alone.",
+  },
+  {
+    q: "How does the labs-first process work?",
+    a: "Start with the $49 intake, which includes the Complete Panel and clearance visit. Once results return, your provider reviews them with your history and recommends a regimen, additional evaluation, or no prescription when appropriate.",
+  },
+  {
+    q: "If I have a uterus, do I need progesterone?",
+    a: "Yes, in most cases. If you have an intact uterus and use systemic estrogen, you generally need adequate progesterone or another endometrial-protective strategy, because unopposed systemic estrogen can raise the risk of endometrial hyperplasia or cancer. Your provider confirms what applies to your anatomy and history.",
+  },
+  {
+    q: "What is included in the monthly subscription?",
+    a: "Your prescribed medication, provider access for questions or adjustments, and monitoring labs on the cadence your clinician sets are included.",
+  },
+  {
+    q: "Is testosterone for women off-label?",
+    a: "Yes. Testosterone for women is prescribed off-label in the US and only when the provider determines the potential benefit and safety profile fit the patient.",
+  },
+  {
+    q: "Can I use vaginal estrogen without systemic HRT?",
+    a: "Some patients use vaginal estrogen without systemic hormone therapy. It is designed for local use, but your provider will confirm whether it fits your history and goals.",
+  },
+  {
+    q: "How long until I notice changes?",
+    a: "Some patients notice changes in sleep or temperature comfort within weeks, while libido, mood, and energy may take longer. Follow-up labs and visits help your provider fine-tune the plan.",
+  },
+  {
+    q: "Is there a commitment?",
+    a: "Therapy has a three-month minimum so your provider can evaluate response and adjust safely. After month three, you can cancel anytime.",
+  },
+  {
+    q: "Do you accept insurance?",
+    a: "Leader Health is a cash-pay service; we don't bill insurance. This keeps pricing transparent and care free of coverage restrictions. We'll provide itemized receipts you can submit to your insurer or HSA/FSA administrator for possible reimbursement, though coverage isn't guaranteed.",
+  },
+  {
+    q: "Can I use my HSA or FSA?",
+    a: "Yes — most members can use HSA or FSA funds, and we provide itemized receipts on request. Because plan rules vary, confirm eligibility with your administrator.",
+  },
+  {
+    q: "What if I have another questions?",
+    a: "Email help@myleaderhealth.com or call (254) 244-0104. Existing patients can also message through the patient portal.",
+  },
+];
+
 export const tirzepatideFaqs = [
   {
     q: "How is tirzepatide different from semaglutide?",
@@ -142,43 +193,47 @@ export const tirzepatideFaqs = [
 export const tadalafilFaqs = [
   {
     q: "Daily vs. on-demand - which is right for me?",
-    a: "Daily low-dose tadalafil is built for spontaneity so you are not timing a pill. On-demand dosing may still be discussed if that better fits your routine. Your clinician helps choose.",
+    a: "Daily low-dose tadalafil keeps a steady level in the body, which some patients prefer for spontaneity. On-demand dosing is taken before activity. Your provider will help decide based on your routine, medications, and goals.",
   },
   {
     q: "How long does it take to work?",
-    a: "Daily tadalafil builds to a steady level over several days. Your provider will tell you what to expect for your dose and when to follow up if it is not working as planned.",
+    a: "With daily dosing, many patients reach a steady level after several days. Erectile response still depends on sexual stimulation. Your provider will set expectations during your visit.",
   },
   {
     q: "Can I drink alcohol on tadalafil?",
-    a: "Light alcohol may be tolerated, but drinking can worsen dizziness and blood-pressure drops. Ask your clinician what is safe for you.",
+    a: "Moderate alcohol may be compatible for some patients, but heavy alcohol can worsen side effects and reduce response. Discuss your drinking pattern with your provider.",
   },
   {
     q: "What side effects should I know about?",
-    a: "Headache, flushing, indigestion, back pain, and nasal congestion can occur. Seek care immediately for chest pain, an erection lasting more than four hours, or sudden vision or hearing changes.",
+    a: "Reported effects include headache, flushing, indigestion, back discomfort, and nasal congestion. A prolonged painful erection is rare but requires urgent medical care. Your provider will review warning signs.",
   },
   {
     q: "What interactions and warnings are most important?",
-    a: "Do not use tadalafil with any nitrate medicine, including nitroglycerin and poppers. Your provider also reviews blood pressure, heart history, and other medications before prescribing.",
+    a: "Tadalafil is contraindicated with nitrate medications and recreational nitrates ('poppers'); the combination can cause severe, even fatal, low blood pressure. Alpha-blockers, other blood-pressure medications, heavy alcohol, and strong CYP3A4 inhibitors also need review. Class warnings include sudden vision loss (NAION) and sudden hearing loss. Seek urgent care for an erection lasting more than four hours.",
   },
   {
     q: "What is included in the monthly subscription?",
-    a: "Typically the prescribed tablets and clinician follow-up as defined for that protocol. Exact inclusions are shown at checkout.",
+    a: "Your medication and provider access for questions or dose adjustments are included. Labs may be used to evaluate contributing hormone or metabolic factors.",
   },
   {
     q: "How does the labs-first process work?",
-    a: "Your clinician reviews intake and, when needed, labs or vitals before prescribing. Tadalafil is only issued if it is a safe fit.",
+    a: "Start with the $49 intake if you are entering the broader Leader Health clinical pathway. Lab markers like testosterone, lipids, glucose, and PSA when appropriate help your provider understand contributing factors.",
   },
   {
     q: "Where is it compounded?",
-    a: "Tadalafil on this page is an FDA-approved, commercially manufactured product dispensed by a licensed U.S. pharmacy. It is not compounded.",
+    a: "Your prescription is prepared by a licensed compounding pharmacy. Compounded medications are not FDA-approved and are not reviewed by the FDA for safety or efficacy.",
   },
   {
     q: "Is there a commitment?",
-    a: "Plans are typically a three-month start, then cancel anytime, billed monthly according to the Subscription Terms.",
+    a: "Therapy has a three-month minimum so your provider can adjust if needed. After month three, you can cancel anytime.",
   },
   {
     q: "Do you accept insurance?",
-    a: "No insurance is required. Care is cash-pay with transparent monthly pricing.",
+    a: "Leader Health is a cash-pay service; we don't bill insurance. This keeps pricing transparent and care free of coverage restrictions. We'll provide itemized receipts you can submit to your insurer or HSA/FSA administrator for possible reimbursement, though coverage isn't guaranteed.",
+  },
+  {
+    q: "Can I use my HSA or FSA?",
+    a: "Yes — most members can use HSA or FSA funds, and we provide itemized receipts on request. Because plan rules vary, confirm eligibility with your administrator.",
   },
   {
     q: "What if I have another questions?",
@@ -209,7 +264,7 @@ export const peptideFaqs = [
   },
   {
     q: "Which medications can I learn about on the site?",
-    a: "The following are available to explore and purchase directly:\n\nSermorelin — $149/month\n\nNAD+ (injectable) — $149/month\n\nNAD+ nasal spray — $119/month\n\nGlutathione — $129/month\n\nAdditional advanced peptide therapies are available through the patient portal after a consultation with a licensed provider determines they are clinically appropriate for you. These are not advertised publicly because the evidence does not support advertising them to strangers — but they may be part of your treatment plan after a clinical evaluation.",
+    a: "The following are available to explore and purchase directly:\n\nSermorelin — $149/month\n\nNAD+ (injectable) — $149/month\n\nGlutathione — $129/month\n\nAdditional advanced peptide therapies are available through the patient portal after a consultation with a licensed provider determines they are clinically appropriate for you. These are not advertised publicly because the evidence does not support advertising them to strangers — but they may be part of your treatment plan after a clinical evaluation.",
   },
   {
     q: "Who should not use these?",
@@ -492,3 +547,553 @@ export const energyLongevityFaqs = [
     a: "Your plan is based on a clinical evaluation of your health history, symptoms, goals, and any relevant lab work. A licensed provider determines whether treatment is medically appropriate and which options fit your individual needs.",
   },
 ];
+
+const comboTrochesFaqs = [
+  {
+    q: "Why combine ingredients in one troche?",
+    a: "Sexual response can involve both vascular and central pathways. A tailored combination may address both in a single on-demand dose. Whether that is right for you depends on labs, history, and medications.",
+  },
+  {
+    q: "Who is this not a fit for?",
+    a: "Patients with uncontrolled hypertension, certain cardiovascular histories, or nitrate use are generally not candidates. A full medication list and clearance visit are required before prescribing.",
+  },
+  {
+    q: "How long until it works?",
+    a: "Most patients use the troche before anticipated activity on the timing their provider sets. Onset varies by person and formulation.",
+  },
+  {
+    q: "Can I take it daily?",
+    a: "No. Combo troches are intended for on-demand use only. Do not exceed the frequency your prescription specifies.",
+  },
+  {
+    q: "What side effects should I know about?",
+    a: "Reported effects can include headache, flushing, nausea, and blood-pressure changes. A prolonged painful erection is rare but requires urgent medical care. Your provider reviews warning signs.",
+  },
+  {
+    q: "Are combo troches available for women?",
+    a: "They may be considered for eligible women after the same labs-first review and safety screen. Your provider determines whether a formulation fits your history and goals.",
+  },
+  {
+    q: "What is included in the monthly subscription?",
+    a: "Medication and provider access for questions or adjustments are included. Follow-up visits are scheduled when your provider needs to reassess fit or safety.",
+  },
+  {
+    q: "How does the labs-first process work?",
+    a: "Start with the $49 intake, which includes the Complete Panel and a clearance visit. Cardiovascular, blood-pressure, and medication review are part of the screen.",
+  },
+  {
+    q: "Is there a commitment?",
+    a: "Therapy has a three-month minimum so your provider can adjust if needed. After month three, you can cancel anytime.",
+  },
+  {
+    q: "Do you accept insurance?",
+    a: "Leader Health does not accept insurance. Our membership model is designed to keep care simple, transparent, and accessible — with clear pricing and no surprise bills.",
+  },
+  {
+    q: "Can I use my HSA or FSA?",
+    a: "Yes — FSA and HSA cards are accepted. It's a great way to put your pre-tax health dollars to work on care that's actually built around you.",
+  },
+  {
+    q: "What if I have another questions?",
+    a: "Email us at help@leaderhealth.com with more questions.",
+  },
+];
+
+export const menComboTrochesFaqs = comboTrochesFaqs;
+export const womenComboTrochesFaqs = comboTrochesFaqs;
+
+export type FaqItem = { q: string; a: string };
+
+export const productFaqsBySlug: Record<string, FaqItem[]> = {
+  "men-sexual-health-tadalafil": tadalafilFaqs,
+  "women-hormone-therapy": womenHrtFaqs,
+  "men-sexual-health-combo-troches": menComboTrochesFaqs,
+  "women-sexual-health-combo-troches": womenComboTrochesFaqs,
+  "intimacy-blend-(pt-141-oxytocin-tadalafil)": menComboTrochesFaqs,
+  "men-trt-testosterone-cypionate": [
+    {
+      "q": "Am I a candidate, and who should not start?",
+      "a": "Candidacy is decided by a licensed provider after symptoms, history, and a 64-marker panel with safety labs. Testosterone is generally not appropriate with elevated hematocrit, a prostate nodule or PSA above guideline thresholds without urology review, untreated severe sleep apnea, uncontrolled heart failure, a heart attack or stroke within 6 months, thrombophilia, or near-term plans to conceive."
+    },
+    {
+      "q": "How does the labs-first process work?",
+      "a": "You start with the $49 intake, which includes the Complete Panel and a clearance visit. Once results are back, your provider reviews them and recommends whether testosterone therapy, another option, or no prescription is appropriate. If you already have recent labs, the transfer-in visit is $39."
+    },
+    {
+      "q": "What is included in the monthly subscription?",
+      "a": "Your prescription medication, injection supplies when needed, provider access for questions and dose adjustments, and routine monitoring labs are included. Your clinician sets the monitoring cadence based on your protocol and safety needs."
+    },
+    {
+      "q": "Is there a commitment?",
+      "a": "Therapy has a three-month minimum so your provider can evaluate response and adjust safely. After month three, you can cancel anytime."
+    },
+    {
+      "q": "What side effects and risks should I know about?",
+      "a": "Reported effects include acne, fluid retention, mood or sleep changes, and erythrocytosis (elevated red blood cell count). Hematocrit is monitored at baseline, 3-6 months, then annually; therapy is generally not started above 50% and is paused or adjusted above 54%. Testosterone can also reduce sperm production. Your provider reviews prostate and cardiovascular history before and during therapy."
+    },
+    {
+      "q": "Will this affect fertility?",
+      "a": "Testosterone therapy suppresses the body's own testosterone and sperm production, and guidelines recommend against starting it in men who are trying to conceive in the near term. If fertility matters to you, tell your provider at intake so they can discuss alternatives such as enclomiphene."
+    },
+    {
+      "q": "Where is the medication compounded?",
+      "a": "Your prescription is prepared by a licensed compounding pharmacy. Compounded medications are not FDA-approved and are not reviewed by the FDA for safety or efficacy."
+    },
+    {
+      "q": "Do you ship to my state?",
+      "a": "Testosterone is a controlled substance and shipping availability varies by state. State eligibility is confirmed during intake before prescribing or billing for therapy."
+    },
+    {
+      "q": "What does the cardiovascular evidence show?",
+      "a": "A large randomized trial (TRAVERSE, 2023) supported cardiovascular safety when testosterone is used as indicated in men with hypogonadism, while identifying a small increase in events such as blood clots and atrial fibrillation. FDA updated class labeling in 2025 to reflect this. Your provider reviews your heart and clot history before prescribing."
+    }
+  ],
+  "men-trt-testosterone-cream": [
+    {
+      "q": "How does cream compare with injections?",
+      "a": "Cream is applied daily and delivers testosterone through the skin, while injection is given at longer intervals. Absorption varies between individuals, so labs are how your provider confirms response. Your clinician will help you choose based on labs, lifestyle, and preference."
+    },
+    {
+      "q": "What is the transfer risk?",
+      "a": "Skin-to-skin contact at the application site can transfer testosterone to another person. Apply to areas covered by clothing, wash hands thoroughly, and avoid contact at the site until fully absorbed. Your provider will review specific precautions."
+    },
+    {
+      "q": "How does the labs-first process work?",
+      "a": "Start with the $49 intake, which includes the Complete Panel and a clearance visit. After your provider reviews results, they recommend whether cream, injection, enclomiphene, or no prescription is appropriate."
+    },
+    {
+      "q": "What is included in the monthly subscription?",
+      "a": "Your cream prescription, provider access for questions and dose adjustments, and monitoring labs on the cadence your clinician sets are included."
+    },
+    {
+      "q": "When should I draw follow-up labs?",
+      "a": "Lab timing for topical testosterone depends on the protocol and application schedule. Your provider will tell you exactly when to draw so results are interpretable."
+    },
+    {
+      "q": "What side effects and risks should I know about?",
+      "a": "Topical testosterone shares testosterone risks: acne, fluid retention, mood changes, erythrocytosis (monitored at baseline, 3-6 months, then annually; paused or adjusted if hematocrit exceeds ~54%), reduced sperm production, and prostate and cardiovascular considerations. Skin transfer to women or children is a specific risk and is why application and covering instructions matter."
+    },
+    {
+      "q": "Where is it compounded?",
+      "a": "Your prescription is prepared by a licensed compounding pharmacy. Compounded medications are not FDA-approved and are not reviewed by the FDA for safety or efficacy."
+    },
+    {
+      "q": "Do you ship to my state?",
+      "a": "Testosterone is a controlled substance and shipping availability varies by state. State eligibility is confirmed during intake before therapy is prescribed."
+    },
+    {
+      "q": "Is there a commitment?",
+      "a": "Therapy has a three-month minimum so your provider can evaluate response and adjust safely. After month three, you can cancel anytime."
+    }
+  ],
+  "men-trt-enclomiphene": [
+    {
+      "q": "How is enclomiphene different from testosterone injections?",
+      "a": "Injectable testosterone replaces hormone from outside the body and often suppresses natural production. Enclomiphene works upstream at the pituitary and is designed to encourage the body to make more of its own testosterone. Your provider will match the approach to your labs, symptoms, goals, and fertility plans."
+    },
+    {
+      "q": "Who is enclomiphene a good fit for?",
+      "a": "It may be considered for men whose labs suggest a signaling issue, men who prefer an oral option, or men who want to preserve fertility options. The decision is made by a licensed provider after labs and clinical review."
+    },
+    {
+      "q": "How does the labs-first process work?",
+      "a": "Start with the $49 intake, which includes the Complete Panel and a clearance visit. Once results are in, your provider recommends a path. If enclomiphene is appropriate, the prescription is shipped after approval."
+    },
+    {
+      "q": "What is included in the monthly subscription?",
+      "a": "Your prescription, provider access for questions or dose changes, and monitoring labs on the cadence your clinician sets are included."
+    },
+    {
+      "q": "What side effects should I know about?",
+      "a": "Reported effects can include mood changes, headache, visual symptoms, gastrointestinal upset, and changes in libido. Tell your provider about any new visual changes, severe headaches, or mood changes promptly."
+    },
+    {
+      "q": "How long until I notice changes?",
+      "a": "Lab values may shift within weeks, but subjective changes vary by person and may take several months. Follow-up labs are the most reliable way to confirm response."
+    },
+    {
+      "q": "Is enclomiphene FDA-approved for low testosterone?",
+      "a": "No. Enclomiphene is not FDA-approved for low testosterone and is prescribed off-label when your provider determines it is appropriate, with a more limited evidence base than standard testosterone therapy. Stop and contact your provider for new visual symptoms such as blurring or flashing lights. Your prescription, if approved, is prepared by a licensed compounding pharmacy."
+    },
+    {
+      "q": "Is there a commitment?",
+      "a": "Therapy has a three-month minimum so your provider can evaluate response and adjust safely. After month three, you can cancel anytime."
+    },
+    {
+      "q": "Can this affect athletic testing?",
+      "a": "Enclomiphene may be relevant for athletic, military, or occupational testing programs. If you are subject to testing, disclose that before starting."
+    }
+  ],
+  "women-hormone-therapy-estradiol-pill": [
+    {
+      "q": "Do I choose estradiol myself?",
+      "a": "No. Your provider decides whether estradiol is appropriate after reviewing labs, symptoms, history, and risk factors."
+    },
+    {
+      "q": "What should I know about systemic estrogen risk?",
+      "a": "If you have an intact uterus, systemic estradiol usually needs adequate progesterone to protect the uterine lining. Oral estrogen also requires review of clot, stroke, heart, liver, cancer, and unexplained-bleeding history. Your provider weighs these before prescribing."
+    }
+  ],
+  "women-hormone-therapy-progesterone-(oral)": [
+    {
+      "q": "Why might progesterone be included?",
+      "a": "Progesterone may be used for endometrial protection when systemic estrogen is prescribed to a patient with a uterus. It may also support sleep in some patients."
+    },
+    {
+      "q": "Is it taken every day?",
+      "a": "It depends on your protocol. Your provider may prescribe continuous or cyclic dosing based on your history and goals."
+    }
+  ],
+  "women-hrt-testosterone-cream": [
+    {
+      "q": "Is testosterone for women off-label?",
+      "a": "Yes. In the US, testosterone for women is commonly prescribed off-label when a clinician determines the benefits and risks fit the patient."
+    },
+    {
+      "q": "How do you monitor dose?",
+      "a": "Your provider uses symptoms, side-effect checks, and follow-up labs to keep dosing in an appropriate range."
+    }
+  ],
+  "women-hrt-testosterone-injection-low-dose": [
+    {
+      "q": "Is this the same dose used for men?",
+      "a": "No. Women's testosterone protocols use substantially lower dosing and require careful monitoring."
+    },
+    {
+      "q": "How is safety monitored?",
+      "a": "Your provider reviews symptoms, side effects, and follow-up labs to keep levels in an appropriate range."
+    }
+  ],
+  "women-hormone-therapy-vaginal-estrogen-cream": [
+    {
+      "q": "How is vaginal estrogen different from systemic HRT?",
+      "a": "Low-dose vaginal estrogen is designed for local use and generally has lower systemic exposure than systemic estrogen, and in most cases it does not require systemic progesterone for endometrial protection. It does not treat whole-body symptoms such as hot flashes. Any postmenopausal bleeding or spotting should be reported and evaluated."
+    },
+    {
+      "q": "Can it be used with other HRT?",
+      "a": "Some patients use vaginal estrogen with systemic HRT, while others use it alone. Your provider will decide based on symptoms, risks, and goals."
+    }
+  ],
+  "women-hrt-vaginal-estrogen-suppository": [
+    {
+      "q": "How is vaginal estrogen different from systemic HRT?",
+      "a": "Low-dose vaginal estrogen is designed for local use and generally has lower systemic exposure than systemic estrogen, and in most cases it does not require systemic progesterone for endometrial protection. It does not treat whole-body symptoms such as hot flashes. Any postmenopausal bleeding or spotting should be reported and evaluated."
+    },
+    {
+      "q": "Can it be used with other HRT?",
+      "a": "Some patients use vaginal estrogen with systemic HRT, while others use it alone. Your provider will decide based on symptoms, risks, and goals."
+    }
+  ],
+  "longevity-sermorelin": [
+    {
+      q: "How is sermorelin different from growth hormone (HGH)?",
+      a: "Sermorelin is a growth hormone-releasing hormone analog designed to support your body's own signaling; it is not HGH and is not prescribed for the same indications. Prescribing HGH off-label for anti-aging or athletic use is illegal under federal law, which is one reason GHRH-analog peptides are handled differently. Your provider will be clear about what is known and what is uncertain.",
+    },
+    {
+      q: "Who is sermorelin a fit for?",
+      a: "It may be considered for adults whose labs, history, and goals support a monitored trial. Pregnancy, active cancer, and certain pituitary conditions may make it inappropriate. Your provider decides after review.",
+    },
+    {
+      q: "What does the evidence show?",
+      a: "Sermorelin has been studied primarily in growth-hormone deficiency contexts. Evidence for sleep, recovery, and body-composition outcomes in otherwise healthy adults is limited. Your provider will be direct about what is known and what is uncertain.",
+    },
+    {
+      q: "What side effects should I know about?",
+      a: "Reported effects include injection-site reactions, headache, flushing, and changes in IGF-1 that may warrant lab monitoring. Your provider reviews specific warning signs.",
+    },
+    {
+      q: "Can this affect athletic testing?",
+      a: "Growth-hormone signaling peptides may be relevant for athletic, military, or occupational testing. If you are subject to testing, disclose that before starting.",
+    },
+    {
+      q: "What is included in the monthly subscription?",
+      a: "Medication, injection supplies, provider access, and monitoring labs on the cadence your clinician sets are included.",
+    },
+    {
+      q: "How long until I notice changes?",
+      a: "Some patients notice sleep changes within weeks. Recovery or body-composition changes are more variable and typically require months plus training and nutrition consistency.",
+    },
+    {
+      q: "Where is it compounded?",
+      a: "Your prescription is prepared by a licensed compounding pharmacy. Compounded medications are not FDA-approved and are not reviewed by the FDA for safety or efficacy.",
+    },
+    {
+      q: "Is there a commitment?",
+      a: "Therapy has a three-month minimum so your provider can evaluate response and adjust safely. After month three, you can cancel anytime.",
+    },
+  ],
+  "longevity-nad": [
+    {
+      q: "What does NAD+ do?",
+      a: "NAD+ is a coenzyme involved in energy metabolism, DNA repair, and several signaling pathways. Whether injection produces durable clinical benefit in healthy adults is still being studied. Your provider will discuss the uncertainty clearly.",
+    },
+    {
+      q: "Injection vs. IV vs. oral - what is different?",
+      a: "IV NAD+ delivers a larger dose in a clinical setting. Subcutaneous injection allows lower-dose home administration. Oral precursors follow different absorption and conversion pathways.",
+    },
+    {
+      q: "What is the flushing reaction?",
+      a: "Some patients experience warmth, flushing, or chest tightness during or after dosing. It usually resolves quickly and may improve with slower titration. Tell your provider if symptoms are intense or persistent.",
+    },
+    {
+      q: "Who is NAD+ not a fit for?",
+      a: "Pregnancy, active cancer, and certain medical conditions may be reasons to wait or avoid use. A 64-marker panel and clearance visit are required before prescribing.",
+    },
+    {
+      q: "What side effects should I know about?",
+      a: "Reported effects include injection-site reactions, flushing, headache, and nausea, especially at higher doses. Your provider reviews specific warning signs.",
+    },
+    {
+      q: "What is included in the monthly subscription?",
+      a: "Medication, injection supplies, provider access, and monitoring labs when your clinician determines they are needed are included.",
+    },
+    {
+      q: "How long until I notice changes?",
+      a: "Some patients describe changes in energy or sleep within weeks, while others notice subtle or no changes. It is best evaluated alongside labs and how you feel over several months.",
+    },
+    {
+      q: "Where is it compounded?",
+      a: "Your prescription is prepared by a licensed compounding pharmacy. Compounded medications are not FDA-approved and are not reviewed by the FDA for safety or efficacy.",
+    },
+    {
+      q: "Is there a commitment?",
+      a: "Therapy has a three-month minimum so your provider can evaluate fit and tolerance. After month three, you can cancel anytime.",
+    },
+  ],
+  "oxytocin-nasal-spray": [
+    {
+      q: "What is Oxytocin Nasal Spray?",
+      a: "Oxytocin Nasal Spray is a provider-guided treatment designed to support aspects of intimacy, connection, and sexual wellness.",
+    },
+    {
+      q: "What is Oxytocin Nasal Spray used for?",
+      a: "Depending on the individual treatment plan, a provider may consider oxytocin as part of an approach to intimacy, connection, and sexual wellness. Research into intranasal oxytocin continues, and individual responses may vary.",
+    },
+    {
+      q: "How do I use Oxytocin Nasal Spray?",
+      a: "It is administered through the nose according to your provider's instructions. Your prescribed dose, frequency, and timing will depend on your individual treatment plan.",
+    },
+    {
+      q: "How often is Oxytocin Nasal Spray used?",
+      a: "Frequency varies depending on your prescription and treatment goals. Follow the dosing schedule provided by your clinician rather than adjusting how often you use it on your own.",
+    },
+    {
+      q: "How quickly will I notice a difference?",
+      a: "Responses to intranasal oxytocin vary between individuals, and a specific response or timeline cannot be guaranteed. Your provider can help assess how you are responding and whether your treatment plan should be adjusted.",
+    },
+    {
+      q: "What should I do if I miss a dose?",
+      a: "Follow your prescription instructions. Do not use extra Oxytocin Nasal Spray to make up for a missed dose unless your healthcare provider specifically instructs you to do so.",
+    },
+    {
+      q: "Can I use Oxytocin Nasal Spray during pregnancy or breastfeeding?",
+      a: "Discuss pregnancy, plans to become pregnant, and breastfeeding with your healthcare provider before using Oxytocin Nasal Spray. Your provider can help determine whether it is appropriate for your situation.",
+    },
+    {
+      q: "How should I clean or use the nasal spray device?",
+      a: "Use the nasal spray according to the instructions provided with your prescription. Do not alter the device or share it with anyone, and contact your dispensing pharmacy if you have questions about its use.",
+    },
+    {
+      q: "When should I contact my healthcare provider?",
+      a: "Contact your healthcare provider if you have questions about your treatment, notice unexpected symptoms, or are concerned about how you are responding to Oxytocin Nasal Spray. Seek urgent medical attention for severe or rapidly worsening symptoms.",
+    },
+  ],
+  "weight-loss-semaglutide": [
+    {
+      "q": "Am I a candidate, and who should not take it?",
+      "a": "A licensed provider decides after labs, weight and medication history, and a clearance visit. It carries a boxed warning: people with a personal or family history of medullary thyroid carcinoma or MEN-2 should not use it. Pregnancy or planned pregnancy (stop at least 2 months before trying to conceive), a history of pancreatitis, severe gastroparesis, gallbladder disease, kidney risk from dehydration, and use with insulin or sulfonylureas all require careful review. Tell your provider about upcoming procedures, since GLP-1s slow gastric emptying."
+    },
+    {
+      "q": "How does the labs-first process work?",
+      "a": "Start with the $49 intake, which includes the Complete Panel and a clearance visit. Your provider reviews results before any prescription. If you already have recent labs, the transfer-in visit is $39."
+    },
+    {
+      "q": "What is included in the monthly subscription?",
+      "a": "Your prescribed medication, supplies when needed, provider access for titration questions, and monitoring labs on the cadence your clinician sets are included."
+    },
+    {
+      "q": "What side effects should I know about?",
+      "a": "Common effects are gastrointestinal, including nausea, fullness, constipation, or diarrhea, especially around dose changes. Rare but important risks include pancreatitis and gallbladder issues. Your provider reviews warning signs and how to reach the clinical team."
+    },
+    {
+      "q": "Will weight return if I stop, and what about muscle?",
+      "a": "Weight regain can occur after stopping GLP-1 therapy, and a meaningful share of weight lost can be fat-free (muscle) mass. Your provider emphasizes adequate protein and resistance training during treatment and will discuss maintenance and off-ramp planning to support durable results."
+    },
+    {
+      "q": "Is this a generic version of a branded medication?",
+      "a": "No. FDA declared the semaglutide and tirzepatide shortages resolved in 2024-2025, so routine compounding is no longer a default pathway; a compounded GLP-1 is lawful only for a documented, patient-specific clinical need and is not FDA-approved or a generic version of any approved product."
+    },
+    {
+      "q": "How is it shipped?",
+      "a": "Medication is shipped with appropriate temperature-controlled packaging when required. You will receive tracking and storage instructions, and injection supplies when the injectable route is prescribed."
+    },
+    {
+      "q": "Do I need a specific diet or exercise plan?",
+      "a": "GLP-1 therapy works best with adequate protein, resistance training, hydration, and a sustainable eating pattern. Provider visits include practical guidance around those habits."
+    },
+    {
+      "q": "Is there a commitment?",
+      "a": "Therapy has a three-month minimum so your provider can titrate and assess response. After month three, you can cancel anytime."
+    }
+  ],
+  "weight-loss-tirzepatide": [
+    {
+      "q": "How is tirzepatide different from semaglutide?",
+      "a": "Tirzepatide acts on two receptor pathways, while semaglutide acts on one. Your provider will help compare fit based on labs, history, tolerance, and cost. Both require clinical screening and careful titration."
+    },
+    {
+      "q": "Am I a candidate, and who should not take it?",
+      "a": "A licensed provider decides after labs, weight and medication history, and a clearance visit. It carries a boxed warning: people with a personal or family history of medullary thyroid carcinoma or MEN-2 should not use it. Pregnancy or planned pregnancy, a history of pancreatitis, severe gastroparesis, gallbladder disease, kidney risk from dehydration, and use with insulin or sulfonylureas all require careful review."
+    },
+    {
+      "q": "How does the labs-first process work?",
+      "a": "Start with the $49 intake, which includes the Complete Panel and a clearance visit. Your provider reviews results before any prescription and recommends the appropriate path."
+    },
+    {
+      "q": "What is included in the monthly subscription?",
+      "a": "Your prescribed medication, supplies when needed, provider access for titration questions, and monitoring labs on the cadence your clinician sets are included."
+    },
+    {
+      "q": "What side effects and warnings should I know about?",
+      "a": "Common effects are gastrointestinal: nausea, fullness, diarrhea, constipation, vomiting, and reflux, especially around dose changes. It carries a boxed warning - not for people with a personal or family history of medullary thyroid carcinoma or MEN-2 - and important risks include pancreatitis, gallbladder disease, dehydration-related kidney injury, and low blood sugar when combined with insulin or sulfonylureas. Tirzepatide may reduce oral-contraceptive absorption after starting or dose increases, so your provider will review backup contraception. Mention upcoming procedures because of delayed gastric emptying."
+    },
+    {
+      "q": "Is this a generic or the brand product?",
+      "a": "No. FDA declared the semaglutide and tirzepatide shortages resolved in 2024-2025, so routine compounding is no longer a default pathway; a compounded GLP-1 is lawful only for a documented, patient-specific clinical need and is not FDA-approved or a generic version of any approved product."
+    },
+    {
+      "q": "Why is tirzepatide priced higher?",
+      "a": "Tirzepatide generally has higher acquisition costs across the supply chain. Leader Health's monthly price reflects medication, provider access, supplies when needed, and monitoring labs."
+    },
+    {
+      "q": "How is it shipped?",
+      "a": "Medication is shipped with appropriate temperature-controlled packaging when required. You will receive tracking and storage instructions, and injection supplies when the injectable route is prescribed."
+    },
+    {
+      "q": "Is there a commitment?",
+      "a": "Therapy has a three-month minimum so your provider can titrate and assess response. After month three, you can cancel anytime."
+    }
+  ],
+  "sexual-health-pt-141-nasal": [
+    {
+      "q": "How is PT-141 different from oral medications?",
+      "a": "Oral sexual-health medications primarily act on vascular pathways. PT-141 is designed to act centrally on melanocortin receptors and is more focused on desire and arousal. Your provider will help decide whether it fits your concern."
+    },
+    {
+      "q": "Who is PT-141 a fit for?",
+      "a": "It may be considered for eligible adults whose primary concern is reduced sexual desire and who do not have uncontrolled blood pressure or certain cardiovascular risks. A 64-marker panel and clearance visit are required first."
+    },
+    {
+      "q": "Is the nasal spray FDA-approved?",
+      "a": "No. Leader Health prescribes a compounded intranasal formulation when clinically appropriate. Compounded medications are not FDA-approved and are not reviewed by the FDA for safety or efficacy."
+    },
+    {
+      "q": "What safety issues should I know about?",
+      "a": "Bremelanotide can transiently raise blood pressure and lower heart rate, so it is avoided with uncontrolled hypertension or known cardiovascular disease. Nausea is common, and some patients notice skin or gum darkening (hyperpigmentation) with repeated use. Tell your provider all medications, including naltrexone."
+    },
+    {
+      "q": "When do I use it?",
+      "a": "Use it before anticipated activity on the timing your provider sets. Do not use more often than your prescription allows."
+    },
+    {
+      "q": "Can I combine it with other medications?",
+      "a": "Some combinations may be considered only under provider guidance. Disclose every medication and supplement during intake so your provider can screen for safety."
+    },
+    {
+      "q": "What is the evidence behind PT-141?",
+      "a": "FDA-reviewed evidence for bremelanotide is in premenopausal women with acquired generalized hypoactive sexual desire disorder using a subcutaneous product. Evidence for compounded nasal formulations and for use in men or postmenopausal women is limited, and your provider will discuss that uncertainty before prescribing."
+    },
+    {
+      "q": "What is included in the monthly subscription?",
+      "a": "Medication and provider access for questions or reassessment are included. Follow-up visits are scheduled when your provider needs to review fit or safety."
+    },
+    {
+      "q": "Is there a commitment?",
+      "a": "Therapy has a three-month minimum so your provider can reassess fit and adjust if needed. After month three, you can cancel anytime."
+    }
+  ],
+  "longevity-glutathione": [
+    {
+      q: "What is glutathione?",
+      a: "Glutathione is an antioxidant involved in cellular protection, oxidative stress management, and normal detoxification processes. It plays an important role in maintaining healthy cellular function throughout the body.",
+    },
+    {
+      q: "What is glutathione therapy used for?",
+      a: "Glutathione therapy may be used as part of a provider-guided wellness or longevity plan to support antioxidant status, cellular health, and the body’s normal detoxification processes. Your provider will determine whether it is appropriate for your individual needs.",
+    },
+    {
+      q: "Who may be a fit for glutathione therapy?",
+      a: "Glutathione may be considered for adults looking for additional antioxidant and cellular support as part of their overall wellness plan. A licensed provider reviews your health history, medications, and individual goals before determining whether treatment is appropriate.",
+    },
+    {
+      q: "How is glutathione administered?",
+      a: "Glutathione can be provided in different forms depending on the treatment and prescription. Your provider will determine the appropriate route, dose, and treatment plan based on your individual needs.",
+    },
+    {
+      q: "Can glutathione be taken with other medications or supplements?",
+      a: "Glutathione may not be appropriate with every medication, supplement, or medical condition. Be sure to provide your complete medication and supplement list so your provider can screen for potential interactions before treatment.",
+    },
+    {
+      q: "How long until I notice changes?",
+      a: "Response to glutathione therapy varies by person, treatment goals, dosage, and route of administration. Your provider can help evaluate your response over time and determine whether adjustments to your treatment plan are appropriate.",
+    },
+    {
+      q: "How often is glutathione taken?",
+      a: "How often glutathione is taken depends on the formulation, route of administration, and your individual treatment plan. Your provider will determine an appropriate schedule based on your health history and treatment goals.",
+    },
+    {
+      q: "How long can I stay on glutathione therapy?",
+      a: "The length of treatment varies by individual. Your provider will periodically evaluate your treatment plan and determine whether continued use is appropriate based on your response and overall health.",
+    },
+    {
+      q: "Do I need lab work before starting glutathione?",
+      a: "Lab requirements depend on your health history and treatment plan. Your provider will review your medical information and determine whether any testing is needed before or during treatment.",
+    },
+    {
+      q: "Do you accept insurance?",
+      a: "Leader Health is a cash-pay service; we don't bill insurance. This keeps pricing transparent and care free of coverage restrictions. We'll provide itemized receipts you can submit to your insurer or HSA/FSA administrator for possible reimbursement, though coverage isn't guaranteed.",
+    },
+    {
+      q: "Can I use my HSA or FSA?",
+      a: "Yes — most members can use HSA or FSA funds, and we provide itemized receipts on request. Because plan rules vary, confirm eligibility with your administrator.",
+    },
+    {
+      q: "What if I have another questions?",
+      a: "Email help@myleaderhealth.com or call (254) 244-0104. Existing patients can also message through the patient portal.",
+    },
+  ],
+};
+
+const closingProductFaqs: FaqItem[] = [
+  {
+    q: "Do you accept insurance?",
+    a: "Leader Health is a cash-pay service; we don't bill insurance. This keeps pricing transparent and care free of coverage restrictions. We'll provide itemized receipts you can submit to your insurer or HSA/FSA administrator for possible reimbursement, though coverage isn't guaranteed.",
+  },
+  {
+    q: "Can I use my HSA or FSA?",
+    a: "Yes — most members can use HSA or FSA funds, and we provide itemized receipts on request. Because plan rules vary, confirm eligibility with your administrator.",
+  },
+  {
+    q: "What if I have another questions?",
+    a: "Email help@myleaderhealth.com or call (254) 244-0104. Existing patients can also message through the patient portal.",
+  },
+];
+
+const closingFaqSlugs = new Set([
+  "weight-loss-semaglutide",
+  "weight-loss-tirzepatide",
+  "longevity-sermorelin",
+  "longevity-nad",
+  "men-trt-testosterone-cypionate",
+  "men-trt-enclomiphene",
+  "sexual-health-pt-141-nasal",
+  "men-sexual-health-combo-troches",
+  "women-sexual-health-combo-troches",
+  "intimacy-blend-(pt-141-oxytocin-tadalafil)",
+]);
+
+export function faqsForProduct(slug: string): FaqItem[] {
+  const items = productFaqsBySlug[slug] ?? productFaqs;
+  if (!closingFaqSlugs.has(slug) || items.some((item) => item.q === "Do you accept insurance?")) return items;
+  return [...items, ...closingProductFaqs];
+}

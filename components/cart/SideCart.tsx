@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCart } from "./CartProvider";
 import { formatPrice } from "@/lib/genhealth/types";
@@ -11,6 +12,10 @@ export function SideCart() {
   const pathname = usePathname();
   const { items, isOpen, closeCart, removeItem, setQuantity, subtotal, count } = useCart();
   const onCheckout = pathname.startsWith("/checkout");
+  const itemsKey = items.map((item) => `${item.id}:${item.quantity}`).join("|");
+  const [notice, setNotice] = useState<{ text: string; itemsKey: string } | null>(null);
+  const visibleNotice = notice?.itemsKey === itemsKey ? notice.text : null;
+  const [pending, setPending] = useState(false);
 
   function go(href: string) {
     if (href === pathname || (href === "/checkout" && onCheckout)) {
@@ -19,6 +24,45 @@ export function SideCart() {
     }
     router.push(href);
     closeCart();
+  }
+
+  async function continueToCheckout() {
+    if (!items.length || onCheckout) {
+      go("/checkout");
+      return;
+    }
+    setPending(true);
+    setNotice(null);
+    try {
+      const response = await fetch("/api/cart/checkout", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          items: items.map((item) => ({
+            slug: item.slug,
+            name: item.name,
+            variant: item.variant,
+            clientProductId: item.clientProductId,
+          })),
+        }),
+      });
+      const data = (await response.json()) as { ok?: boolean; url?: string; error?: string; item?: string };
+      if (!data.ok || typeof data.url !== "string") {
+        setNotice({
+          text: data.error || `Couldn't match ${data.item || "an item"} to a checkout product.`,
+          itemsKey,
+        });
+        return;
+      }
+      window.location.assign(data.url);
+    } catch {
+      setNotice({
+        text: `Couldn't match ${items[0]?.name || "an item"} to a checkout product.`,
+        itemsKey,
+      });
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
@@ -39,7 +83,7 @@ export function SideCart() {
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
-            transition={{ type: "spring", damping: 28, stiffness: 280 }}
+            transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
           >
             <div className="flex items-center justify-between px-6 pb-4 pt-6">
               <div>
@@ -51,7 +95,7 @@ export function SideCart() {
               <button
                 type="button"
                 onClick={closeCart}
-                className="grid h-9 w-9 place-items-center rounded-full bg-white text-lg"
+                className="grid h-9 w-9 place-items-center rounded-full bg-white text-lg text-ink transition-colors duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[#331110] hover:text-[#F7F3F5] motion-reduce:transition-none"
                 aria-label="Close cart"
               >
                 ×
@@ -84,7 +128,10 @@ export function SideCart() {
                       >
                         {item.name}
                       </button>
-                      <p className="mt-1 text-sm text-taupe">{item.priceLabel}</p>
+                      <p className="mt-1 text-sm text-taupe">
+                        {item.variant ? `${item.variant} · ` : ""}
+                        {item.priceLabel}
+                      </p>
                       <div className="mt-3 flex items-center justify-between">
                         <div className="flex items-center rounded-full bg-background">
                           <button
@@ -124,10 +171,13 @@ export function SideCart() {
                 <p className="text-sm text-taupe">Subtotal</p>
                 <p className="text-2xl">{formatPrice(subtotal)}</p>
               </div>
+              {visibleNotice ? <p className="mt-3 text-sm text-accent">{visibleNotice}</p> : null}
               <button
                 type="button"
-                onClick={() => go("/checkout")}
-                className="mt-4 flex w-full items-center justify-center rounded-[10px] bg-ink py-3.5 text-xs font-medium tracking-[0.08em] text-white"
+                onClick={continueToCheckout}
+                disabled={pending}
+                aria-busy={pending}
+                className="mt-4 flex w-full items-center justify-center rounded-[10px] bg-ink py-3.5 text-xs font-medium tracking-[0.08em] text-white disabled:opacity-60"
               >
                 {onCheckout ? "BACK TO CHECKOUT" : items.length ? "CONTINUE TO CHECKOUT" : "START CHECKOUT"}
               </button>

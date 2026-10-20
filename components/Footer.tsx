@@ -59,6 +59,10 @@ const treatmentAccordions: FooterAccordion[] = [
           { label: "Combo Troches", href: "/products/women-sexual-health-combo-troches" },
         ],
       },
+      {
+        eyebrow: "Both",
+        links: [{ label: "Oxytocin Nasal Spray", href: "/products/oxytocin-nasal-spray" }],
+      },
     ],
   },
   {
@@ -121,8 +125,9 @@ const legalAccordions: FooterAccordion[] = [
     sections: [
       {
         links: [
-          { label: "Terms & Services", href: "/legal/terms-of-service" },
+          { label: "Terms of Service", href: "/legal/terms-of-service" },
           { label: "Telehealth Consent", href: "/legal/telehealth-consent" },
+          { label: "Important Safety Information", href: "/legal/important-safety-information" },
           { label: "HIPAA Notice", href: "/legal/hipaa-notice" },
         ],
       },
@@ -433,7 +438,7 @@ export function Footer() {
                   rel="noreferrer"
                   className="inline-flex h-[37px] items-center gap-2 rounded-[12px] border border-[#F7F3F5]/70 bg-[rgba(227,79,94,0.6)] px-3 font-sans text-[15px] font-medium text-[#F7F3F5] transition-colors duration-200 hover:bg-[rgba(227,79,94,0.8)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
                 >
-                  Patient portal
+                  Patient Portal
                   <UserIcon />
                 </a>
               </li>
@@ -530,7 +535,7 @@ export function Footer() {
       <div className="relative">
         <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[#DBD4BD]/8" />
       <div className="mx-auto flex w-full max-w-[1540px] items-center justify-between gap-4 px-6 py-4 min-[810px]:px-12 min-[1200px]:px-24">
-        <p className="font-sans text-[13px] tracking-[0.06em] text-[#DBD4BD]/62">Leader Health © 2026 — All rights reserved</p>
+        <p className="font-sans text-[13px] tracking-[0.06em] text-[#DBD4BD]/62">© 2026 Leader Health. All rights reserved.</p>
         <a
           href="#top"
           className={`font-sans text-[13px] tracking-[0.09em] text-[#DBD4BD] uppercase ${linkHover} focus-visible:outline-offset-4`}

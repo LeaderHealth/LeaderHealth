@@ -57,14 +57,13 @@ export function ProductVariants({ product }: { product: Product }) {
                 <p className="mt-2 text-sm text-white/75">
                   {v.detail.includes("·") ? v.detail.split("·").slice(1).join("·").trim() : v.detail}
                 </p>
-                <div className="mt-5 flex min-h-[220px] items-center justify-center overflow-hidden rounded-[14px] bg-[#4a201e]">
+                <div className="relative mt-5 h-[250px] overflow-hidden rounded-[14px] bg-[#4a201e]">
                   <Image
                     src={v.image ?? product.image}
                     alt={v.name}
-                    width={640}
-                    height={420}
-                    className="h-[200px] w-auto object-contain"
-                    sizes="400px"
+                    fill
+                    className={`object-contain object-center ${sublingual ? "scale-[2.15]" : "scale-[1.32]"}`}
+                    sizes="(min-width: 768px) 420px, 90vw"
                   />
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
