@@ -6,10 +6,14 @@ import { useEffect, useState, type ReactNode } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { IconHoverButton } from "@/components/IconHoverButton";
 import { GET_STARTED_URL } from "@/lib/content/site";
+import { products as catalogProducts } from "@/lib/content/products";
+import { cartItemFromProduct } from "@/lib/cart/items";
+import { useCart } from "@/components/cart/CartProvider";
 
 export type HormoneRoute = {
   label: string;
-  href: string;
+  slug?: string;
+  href?: string;
 };
 
 export type HormoneProductCard = {
@@ -29,14 +33,8 @@ const defaultProducts: HormoneProductCard[] = [
     image: "https://framerusercontent.com/images/QccXzfEABySUc3i2VF7w6EqClI.png?width=1080&height=1080",
     imageAlt: "Estradiol medication",
     routes: [
-      {
-        label: "Start with pill",
-        href: "/checkout?product=lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_4f6c68b97e6447cf8869b3dc",
-      },
-      {
-        label: "Start with patch",
-        href: "/checkout?product=prod_4f6c68b97e6447cf8869b3dc_1",
-      },
+      { label: "Start with pill", slug: "women-hormone-therapy-estradiol-pill" },
+      { label: "Start with patch", slug: "women-hormone-therapy-estradiol-patch" },
     ],
   },
   {
@@ -45,14 +43,8 @@ const defaultProducts: HormoneProductCard[] = [
     image: "https://framerusercontent.com/images/GG6wBKk214mEUH5k4M0ygcFWD4.png?width=683&height=406",
     imageAlt: "Vaginal estrogen medication",
     routes: [
-      {
-        label: "Start with suppository",
-        href: "/checkout?product=lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_838073b1b57336246da98f60",
-      },
-      {
-        label: "Start with cream",
-        href: "/checkout?product=lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_4c65ccba2e29c45050817b74",
-      },
+      { label: "Start with suppository", slug: "women-hrt-vaginal-estrogen-suppository" },
+      { label: "Start with cream", slug: "women-hormone-therapy-vaginal-estrogen-cream" },
     ],
   },
   {
@@ -61,10 +53,7 @@ const defaultProducts: HormoneProductCard[] = [
     image: "https://framerusercontent.com/images/PxzYFazSndzX1KNPYIo8nHuFy5w.png?width=681&height=465",
     imageAlt: "Oral progesterone capsules",
     routes: [
-      {
-        label: "Start with capsule",
-        href: "/checkout?product=lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_iZT4cfCiDcwOkqT3TCLg",
-      },
+      { label: "Start with capsule", slug: "women-hormone-therapy-progesterone-(oral)" },
     ],
   },
 ];
@@ -338,26 +327,42 @@ function ProductTile({ product }: { product: HormoneProductCard }) {
       <div className="my-4 h-px bg-[#32120E]/15" />
       <div className="mt-auto flex flex-wrap gap-2">
         {product.routes.map((route) => (
-          <RouteLink key={route.href} href={route.href} label={route.label} title={product.title} />
+          <RouteLink key={route.slug ?? route.href ?? route.label} route={route} title={product.title} />
         ))}
       </div>
     </article>
   );
 }
 
-function RouteLink({ href, label, title }: { href: string; label: string; title: string }) {
+function RouteLink({ route, title }: { route: HormoneRoute; title: string }) {
+  const { addItem } = useCart();
   const className =
     "inline-flex h-9 items-center justify-center rounded-[6px] bg-[#F7F3F5] px-3 text-center text-[11px] font-medium tracking-[0.08em] text-[#32120E] uppercase transition-colors duration-200 hover:bg-[#32120E] hover:text-[#F7F3F5] focus-visible:bg-[#32120E] focus-visible:text-[#F7F3F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#32120E] motion-reduce:transition-none";
+  const product = route.slug ? catalogProducts.find((item) => item.slug === route.slug) : undefined;
+  if (product) {
+    return (
+      <button
+        type="button"
+        onClick={() => addItem(cartItemFromProduct(product))}
+        aria-label={`${route.label} — ${title}`}
+        className={className}
+      >
+        {route.label}
+      </button>
+    );
+  }
+  const href = route.href;
+  if (!href) return null;
   if (href.startsWith("http") || href.startsWith("mailto") || href.startsWith("tel")) {
     return (
-      <a href={href} aria-label={`${label} — ${title}`} className={className}>
-        {label}
+      <a href={href} aria-label={`${route.label} — ${title}`} className={className}>
+        {route.label}
       </a>
     );
   }
   return (
-    <Link href={href} aria-label={`${label} — ${title}`} className={className}>
-      {label}
+    <Link href={href} aria-label={`${route.label} — ${title}`} className={className}>
+      {route.label}
     </Link>
   );
 }

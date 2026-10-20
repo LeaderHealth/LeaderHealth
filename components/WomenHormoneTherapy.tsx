@@ -12,6 +12,9 @@ import { IllustrationNote } from "@/components/IllustrationNote";
 import { HsaFsaBadge } from "@/components/HsaFsaBadge";
 import { BundledLabPanel } from "@/components/BundledLabPanel";
 import { ChooseTreatmentButton } from "@/components/ProductHeroCta";
+import { products } from "@/lib/content/products";
+import { cartItemFromProduct } from "@/lib/cart/items";
+import { useCart } from "@/components/cart/CartProvider";
 
 const HERO_IMAGE = "/images/products/womens-hormone-therapy.png";
 const LIFESTYLE_IMAGE =
@@ -23,14 +26,8 @@ const treatments = [
     body: "Oral estrogen to ease hot flashes, night sweats, and mood changes.",
     image: "https://framerusercontent.com/images/QccXzfEABySUc3i2VF7w6EqClI.png?width=1080&height=1080",
     links: [
-      {
-        label: "Start with pill",
-        href: "/checkout?product=lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_4f6c68b97e6447cf8869b3dc",
-      },
-      {
-        label: "Start with patch",
-        href: "/checkout?product=prod_4f6c68b97e6447cf8869b3dc_1",
-      },
+      { label: "Start with pill", slug: "women-hormone-therapy-estradiol-pill" },
+      { label: "Start with patch", slug: "women-hormone-therapy-estradiol-patch" },
     ],
   },
   {
@@ -38,14 +35,8 @@ const treatments = [
     body: "Supports libido, energy, and muscle tone.",
     image: "https://framerusercontent.com/images/KKe4pkm8YcnNTtXupD23fO0xUY.png?width=926&height=854",
     links: [
-      {
-        label: "Start with cream",
-        href: "/checkout?product=lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_6iIhc7giORvkHheSgDLi",
-      },
-      {
-        label: "Start with injection",
-        href: "/checkout?product=lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_bf762c10c31501cffa97b613",
-      },
+      { label: "Start with cream", slug: "women-hrt-testosterone-cream" },
+      { label: "Start with injection", slug: "women-hrt-testosterone-injection-low-dose" },
     ],
   },
   {
@@ -53,14 +44,8 @@ const treatments = [
     body: "Relief for dryness, discomfort, and pain during sex.",
     image: "https://framerusercontent.com/images/GG6wBKk214mEUH5k4M0ygcFWD4.png?width=683&height=406",
     links: [
-      {
-        label: "Start with suppository",
-        href: "/checkout?product=lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_838073b1b57336246da98f60",
-      },
-      {
-        label: "Start with cream",
-        href: "/checkout?product=lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_4c65ccba2e29c45050817b74",
-      },
+      { label: "Start with suppository", slug: "women-hrt-vaginal-estrogen-suppository" },
+      { label: "Start with cream", slug: "women-hormone-therapy-vaginal-estrogen-cream" },
     ],
   },
   {
@@ -68,10 +53,7 @@ const treatments = [
     body: "Balances estrogen and supports better sleep and mood stability.",
     image: "https://framerusercontent.com/images/PxzYFazSndzX1KNPYIo8nHuFy5w.png?width=681&height=465",
     links: [
-      {
-        label: "Start with capsule",
-        href: "/checkout?product=lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_iZT4cfCiDcwOkqT3TCLg",
-      },
+      { label: "Start with capsule", slug: "women-hormone-therapy-progesterone-(oral)" },
     ],
   },
 ] as const;
@@ -138,6 +120,22 @@ function SymptomIcon({ name }: { name: (typeof symptomGroups)[number]["icon"] })
     <svg viewBox="0 0 24 24" className={common} fill="none" aria-hidden>
       <path d="M16.5 13.2A5.2 5.2 0 1 1 12 6.2a4 4 0 0 0 4.5 7Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
     </svg>
+  );
+}
+
+function TreatmentCartButton({ slug, label, title }: { slug: string; label: string; title: string }) {
+  const { addItem } = useCart();
+  const product = products.find((item) => item.slug === slug);
+  if (!product) return null;
+  return (
+    <button
+      type="button"
+      onClick={() => addItem(cartItemFromProduct(product))}
+      aria-label={`${label} — ${title}`}
+      className="inline-flex h-11 w-full items-center justify-center rounded-[6px] bg-[#f7f3f5] px-3 text-center text-[11px] font-medium tracking-[0.06em] text-[#331110] uppercase transition-colors duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[#331110] hover:text-[#F7F3F5] focus-visible:bg-[#331110] focus-visible:text-[#F7F3F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#331110] motion-reduce:transition-none"
+    >
+      {label}
+    </button>
   );
 }
 
@@ -287,16 +285,18 @@ export function WomenHormoneTherapy() {
         <>
           <section className="bg-gradient-to-b from-[#f37477] to-[#e9989f] px-6 pb-16 pt-28 text-white">
             <div className="mx-auto grid max-w-6xl items-center gap-8 md:grid-cols-[1.05fr_minmax(280px,460px)] md:gap-8 lg:gap-10">
-              <div className="flex min-h-[280px] flex-col items-center justify-center sm:min-h-[420px]">
-                <Image
-                  src={HERO_IMAGE}
-                  alt="Women's hormone therapy medications"
-                  width={1000}
-                  height={1119}
-                  priority
-                  className="h-auto w-full max-w-[460px] object-contain drop-shadow-2xl"
-                  sizes="(max-width: 1024px) 80vw, 460px"
-                />
+              <div className="flex min-h-[280px] w-full flex-col items-center justify-center sm:min-h-[420px]">
+                <div className="flex w-full flex-1 items-center justify-center overflow-hidden">
+                  <Image
+                    src={HERO_IMAGE}
+                    alt="Women's hormone therapy medications"
+                    width={1000}
+                    height={1119}
+                    priority
+                    className="h-auto w-full origin-center scale-[1.35] object-contain drop-shadow-2xl"
+                    sizes="(max-width: 1024px) 90vw, 640px"
+                  />
+                </div>
                 <IllustrationNote />
               </div>
               <div className="rounded-[28px] border border-white/30 bg-white/15 p-6 shadow-[0_18px_50px_rgba(51,17,16,0.12)] backdrop-blur-md sm:p-8">
@@ -349,14 +349,7 @@ export function WomenHormoneTherapy() {
                       </div>
                       <div className="mt-auto flex flex-col gap-2">
                         {item.links.map((link) => (
-                          <a
-                            key={link.href}
-                            href={link.href}
-                            aria-label={`${link.label} — ${item.title}`}
-                            className="inline-flex h-11 w-full items-center justify-center rounded-[6px] bg-[#f7f3f5] px-3 text-center text-[11px] font-medium tracking-[0.06em] text-[#331110] uppercase transition-colors duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[#331110] hover:text-[#F7F3F5] focus-visible:bg-[#331110] focus-visible:text-[#F7F3F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#331110] motion-reduce:transition-none"
-                          >
-                            {link.label}
-                          </a>
+                          <TreatmentCartButton key={link.slug} slug={link.slug} label={link.label} title={item.title} />
                         ))}
                       </div>
                     </article>
