@@ -1,7 +1,6 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
-import { site } from "@/lib/content/site";
 
 const fieldClass =
   "mt-2 w-full rounded-2xl border-0 bg-[#f3d4d2] px-4 py-3.5 text-sm text-ink placeholder:text-[#9a6f6c] outline-none disabled:opacity-70";
@@ -37,14 +36,18 @@ export function ContactForm() {
 
     setStatus("loading");
     try {
-      const body = `Name: ${fields.name.trim()}\nEmail: ${fields.email.trim()}\n\n${fields.message.trim()}`;
-      const href = `mailto:${site.email}?subject=${encodeURIComponent(fields.subject.trim())}&body=${encodeURIComponent(body)}`;
-      if (href.length > 1800) {
-        throw new Error("Message is too long to send from this form.");
-      }
-      await wait(800);
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: fields.name.trim(),
+          email: fields.email.trim(),
+          subject: fields.subject.trim(),
+          message: fields.message.trim(),
+        }),
+      });
+      if (!response.ok) throw new Error("Contact form failed.");
       setStatus("success");
-      window.location.assign(href);
     } catch {
       setStatus("error");
     }
@@ -187,10 +190,6 @@ function Spinner() {
       />
     </svg>
   );
-}
-
-function wait(ms: number) {
-  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
 function HeadsetIcon() {
