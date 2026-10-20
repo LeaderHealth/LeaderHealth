@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { CopyTrackingLink } from "@/components/affiliate/CopyTrackingLink";
 import { formatCommissionRate } from "@/lib/affiliate/format";
 import { affiliateTrackingLink } from "@/lib/affiliate/link";
-import { campaignForAffiliateCode } from "@/lib/genhealth/promocodes";
 import { currentAffiliate } from "../../current";
 
 export const metadata: Metadata = {
@@ -18,7 +17,7 @@ const badgeClass = "inline-flex max-w-full items-center rounded-full bg-rose px-
 export default async function TrackingLinkPage() {
   const affiliate = await currentAffiliate();
   if (!affiliate) redirect("/affiliates");
-  const url = affiliateTrackingLink(affiliate.code, await campaignForAffiliateCode(affiliate.code));
+  const url = affiliateTrackingLink(affiliate.code);
   const commission =
     affiliate.commissionMode === "fixed" ? `${formatCommissionRate(affiliate)} per order` : `${formatCommissionRate(affiliate)} commission`;
 
@@ -34,8 +33,9 @@ export default async function TrackingLinkPage() {
       </div>
       <div className="mt-6">
         <p id="referral-link-label" className="text-sm font-medium text-ink">
-          Tracking link
+          Default link
         </p>
+        <p className="mt-1 text-sm text-brown">No promo code. This link uses UTM parameters only.</p>
         <p id="referral-link" aria-labelledby="referral-link-label" className="mt-2 break-all rounded-[24px] bg-background px-4 py-3 text-sm leading-6 text-ink">
           {url}
         </p>
