@@ -37,8 +37,8 @@ const steps = [
     title: "View Results on Portal",
     src: "/images/labs-step-results.png",
     alt: "Phone showing lab results and a download report button",
-    width: 445,
-    height: 637,
+    width: 683,
+    height: 1024,
   },
 ];
 
@@ -50,6 +50,7 @@ function isCompact() {
 }
 
 function StepImage({ step }: { step: (typeof steps)[number] }) {
+  const enlarged = step.src.endsWith("labs-step-results.png");
   return (
     <div
       className="relative mx-auto h-[420px] w-full max-w-[520px] overflow-hidden rounded-[28px] shadow-[0_5px_10px_rgba(0,0,0,0.1)] min-[1200px]:h-[540px]"
@@ -62,7 +63,7 @@ function StepImage({ step }: { step: (typeof steps)[number] }) {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="absolute inset-8 flex items-center justify-center"
+          className={`absolute flex items-center justify-center ${enlarged ? "inset-1" : "inset-8"}`}
         >
           <Image
             src={step.src}

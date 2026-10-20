@@ -3,7 +3,8 @@ import { normalizeAffiliateCode } from "@/lib/affiliate/code";
 import { formatCents, formatCommissionRate } from "@/lib/affiliate/format";
 import { affiliateTrackingLink } from "@/lib/affiliate/link";
 import { AffiliateStoreError, loadAffiliateDashboard, type AffiliateSummary } from "@/lib/affiliate/store";
-import { listPromoCodes, promoCodesForAffiliate, type PromoCodeRow } from "@/lib/genhealth/promocodes";
+import { AffiliatePromoCodes, type AffiliatePromoDetail } from "@/components/affiliate/AffiliatePromoCodes";
+import { listPromoCodes, promoRowsForAffiliate, type PromoCodeRow } from "@/lib/genhealth/promocodes";
 import { AccountActions } from "@/components/affiliate/AccountActions";
 import { ADMIN_ERRORS } from "../../messages";
 
@@ -14,16 +15,9 @@ export const metadata: Metadata = {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function PromoCodes({ codes, unavailable }: { codes: string[]; unavailable: boolean }) {
-  if (unavailable) return <span className="text-brown">Unavailable</span>;
-  if (codes.length === 0) return <span className="text-brown">None</span>;
-  return (
-    <div>
-      {codes.map((code) => (
-        <div key={code}>{code}</div>
-      ))}
-    </div>
-  );
+function discountText(promo: PromoCodeRow) {
+  if (promo.discount.kind === "price") return `Set price ${promo.discount.amount}`;
+  return promo.discount.label;
 }
 
 export default async function AffiliateAccountsPage({
@@ -51,8 +45,17 @@ export default async function AffiliateAccountsPage({
     promoError = "Promo codes are unavailable right now.";
   }
 
-  function codesFor(affiliate: AffiliateSummary) {
-    return catalog ? promoCodesForAffiliate(catalog, affiliate.code) : [];
+  function promosFor(affiliate: AffiliateSummary): AffiliatePromoDetail[] {
+    if (!catalog) return [];
+    return promoRowsForAffiliate(catalog, affiliate.code).map((promo) => ({
+      code: promo.code,
+      mode: promo.mode,
+      discount: discountText(promo),
+      scope: promo.scope,
+      usage: promo.usage,
+      validUntil: promo.validUntil,
+      status: promo.statusLabel,
+    }));
   }
 
   return (
@@ -114,7 +117,12 @@ export default async function AffiliateAccountsPage({
                     <div className="col-span-2">
                       <dt className="text-xs text-brown">Promo code</dt>
                       <dd className="mt-1 break-all">
-                        <PromoCodes codes={codesFor(affiliate)} unavailable={Boolean(promoError)} />
+                        <AffiliatePromoCodes
+                          name={affiliate.name}
+                          code={affiliate.code}
+                          promos={promosFor(affiliate)}
+                          unavailable={Boolean(promoError)}
+                        />
                       </dd>
                     </div>
                   </dl>
@@ -158,7 +166,12 @@ export default async function AffiliateAccountsPage({
                       <div className="mt-1 whitespace-nowrap text-xs leading-5 text-brown">{affiliate.email}</div>
                     </td>
                     <td className="break-words px-3 py-5 align-middle">
-                      <PromoCodes codes={codesFor(affiliate)} unavailable={Boolean(promoError)} />
+                      <AffiliatePromoCodes
+                        name={affiliate.name}
+                        code={affiliate.code}
+                        promos={promosFor(affiliate)}
+                        unavailable={Boolean(promoError)}
+                      />
                     </td>
                     <td className="whitespace-nowrap px-3 py-5 align-middle">{formatCommissionRate(affiliate)}</td>
                     <td className="px-3 py-5 align-middle">{affiliate.clickCount}</td>

@@ -1,4 +1,5 @@
 import type { DocumentData, DocumentReference, Timestamp } from "firebase-admin/firestore";
+import { formatCents } from "./format";
 import { normalizeAffiliateCode } from "./code";
 import { affiliateFirebaseConfigured, affiliateFirestore } from "./firebase";
 
@@ -24,6 +25,7 @@ export type PayoutLine = {
   period: string;
   status: PayoutStatus;
   earnedCents: number;
+  approvedAt: string | null;
   paidCents: number | null;
   paidAt: string | null;
   reference: string;
@@ -85,6 +87,23 @@ export function formatPayoutMonth(period: string) {
   if (!match) return period;
   const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, 1));
   return new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric", timeZone: "UTC" }).format(date);
+}
+
+export function payoutPaidAmount(line: PayoutLine) {
+  if (line.status === "approved") return formatCents(line.earnedCents);
+  if (line.paidCents == null) return "—";
+  return formatCents(line.paidCents);
+}
+
+export function payoutPaidOn(line: PayoutLine) {
+  if (line.status !== "approved") return formatPayoutDate(line.paidAt);
+  const date = formatPayoutDate(line.approvedAt);
+  return date === "—" ? "Approved" : `Approved ${date}`;
+}
+
+export function payoutReferenceText(line: PayoutLine) {
+  if (line.status === "approved") return "Added when marked paid";
+  return line.reference || "—";
 }
 
 export function formatPayoutDate(value: string | null) {
@@ -177,6 +196,7 @@ export function payoutLines(input: {
         period,
         status: "pending",
         earnedCents: pending,
+        approvedAt: null,
         paidCents: null,
         paidAt: null,
         reference: "",
@@ -190,6 +210,7 @@ export function payoutLines(input: {
         period,
         status: "approved",
         earnedCents: approved.earnedCents,
+        approvedAt: approved.approvedAt,
         paidCents: null,
         paidAt: null,
         reference: "",
@@ -203,6 +224,7 @@ export function payoutLines(input: {
         period,
         status: "paid",
         earnedCents: payout.earnedCents,
+        approvedAt: null,
         paidCents: payout.paidCents,
         paidAt: payout.paidAt,
         reference: payout.reference,

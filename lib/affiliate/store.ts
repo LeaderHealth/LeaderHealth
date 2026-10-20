@@ -298,6 +298,47 @@ export async function recordAffiliateConversion(input: {
   });
 }
 
+export async function savePendingAffiliateOrder(input: { code: string; orderId: string }) {
+  if (!affiliateFirebaseConfigured()) return "unavailable" as const;
+  const code = normalizeAffiliateCode(input.code);
+  const orderId = orderDocId(input.orderId);
+  if (!code || !orderId) return "invalid" as const;
+
+  const db = affiliateFirestore();
+  const orderRef = db.collection("pendingOrders").doc(orderId);
+  const affiliateRef = db.collection("affiliates").doc(code);
+  return db.runTransaction(async (tx) => {
+    const existing = await tx.get(orderRef);
+    if (existing.exists) return "exists" as const;
+    const affiliate = await tx.get(affiliateRef);
+    if (!affiliate.exists || affiliate.data()?.active !== true) return "inactive" as const;
+    tx.set(orderRef, { code, orderId, commissioned: false });
+    return "saved" as const;
+  });
+}
+
+export async function loadUncommissionedPendingOrders() {
+  const rows = new Map<string, string>();
+  if (!affiliateFirebaseConfigured()) return rows;
+  const snap = await affiliateFirestore().collection("pendingOrders").where("commissioned", "==", false).get();
+  for (const doc of snap.docs) {
+    const code = normalizeAffiliateCode(doc.data().code);
+    const orderId = orderDocId(doc.id);
+    if (code && orderId) rows.set(orderId, code);
+  }
+  return rows;
+}
+
+export async function markPendingOrderCommissioned(orderId: string) {
+  if (!affiliateFirebaseConfigured()) return;
+  const id = orderDocId(orderId);
+  if (!id) return;
+  const db = affiliateFirestore();
+  const conversion = await db.collection("conversions").doc(id).get();
+  if (!conversion.exists) return;
+  await db.collection("pendingOrders").doc(id).set({ commissioned: true }, { merge: true });
+}
+
 export async function affiliateCodeFromCookies() {
   const jar = await cookies();
   return normalizeAffiliateCode(jar.get(AFFILIATE_COOKIE)?.value);

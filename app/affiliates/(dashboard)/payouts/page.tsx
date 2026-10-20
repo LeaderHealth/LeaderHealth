@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { formatCents } from "@/lib/affiliate/format";
 import {
-  formatPayoutDate,
   formatPayoutMonth,
   loadPayoutRecords,
   payoutLines,
+  payoutPaidAmount,
+  payoutPaidOn,
+  payoutReferenceText,
   type PayoutLine,
   type PayoutStatus,
 } from "@/lib/affiliate/payouts";
@@ -47,15 +49,15 @@ function HistoryRow({ line }: { line: PayoutLine }) {
         </div>
         <div>
           <dt className="text-xs text-brown">Paid</dt>
-          <dd className="mt-1">{line.paidCents == null ? "—" : formatCents(line.paidCents)}</dd>
+          <dd className="mt-1">{payoutPaidAmount(line)}</dd>
         </div>
         <div>
           <dt className="text-xs text-brown">Paid on</dt>
-          <dd className="mt-1">{formatPayoutDate(line.paidAt)}</dd>
+          <dd className="mt-1">{payoutPaidOn(line)}</dd>
         </div>
         <div>
           <dt className="text-xs text-brown">Reference</dt>
-          <dd className="mt-1 break-words">{line.reference || "—"}</dd>
+          <dd className="mt-1 break-words">{payoutReferenceText(line)}</dd>
         </div>
       </dl>
     </>
@@ -130,9 +132,9 @@ export default async function AffiliatePayoutHistoryPage() {
                     {statusLabel(line.status)}
                   </span>
                 </td>
-                <td className="px-4 py-5 align-top">{line.paidCents == null ? "—" : formatCents(line.paidCents)}</td>
-                <td className="px-4 py-5 align-top">{formatPayoutDate(line.paidAt)}</td>
-                <td className="break-words px-4 py-5 align-top">{line.reference || "—"}</td>
+                <td className="px-4 py-5 align-top">{payoutPaidAmount(line)}</td>
+                <td className="px-4 py-5 align-top">{payoutPaidOn(line)}</td>
+                <td className="break-words px-4 py-5 align-top">{payoutReferenceText(line)}</td>
               </tr>
             ))}
           </tbody>
