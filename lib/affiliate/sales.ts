@@ -1,6 +1,6 @@
 import { normalizeAffiliateCode } from "./code";
 import { affiliateFirebaseConfigured, affiliateFirestore } from "./firebase";
-import { loadUncommissionedPendingOrders, markPendingOrderCommissioned, recordAffiliateConversion } from "./store";
+import { loadUncommissionedPendingOrders, markPendingOrderCommissioned, pendingAffiliateCode, recordAffiliateConversion } from "./store";
 import { getPaidOrder, listPaidOrders, type PaidOrder } from "@/lib/genhealth/payment";
 
 async function recordPaidOrder(order: PaidOrder, code: string) {
@@ -22,6 +22,41 @@ async function affiliateIds() {
     if (code) ids.add(code);
   }
   return ids;
+}
+
+export async function attributePaidGenHealthOrder(orderId: string) {
+  if (!affiliateFirebaseConfigured()) return "unavailable" as const;
+  const id = orderId.trim();
+  if (!id) return "ignored" as const;
+  const pending = await pendingAffiliateCode(id);
+  const ids = await affiliateIds();
+  const order = await getPaidOrder(id);
+  if (!order) return "unpaid" as const;
+  const code = pending && ids.has(pending) ? pending : order.source && ids.has(order.source) ? order.source : "";
+  if (!code) return "unmatched" as const;
+  await recordPaidOrder(order, code);
+  if (pending) await markPendingOrderCommissioned(order.orderId);
+  return "recorded" as const;
+}
+
+export async function attributeWebhookPaidOrder(input: { orderId: string; amountCents: number | null; occurredAt?: Date }) {
+  if (!affiliateFirebaseConfigured()) return "unavailable" as const;
+  const id = input.orderId.trim();
+  if (!id) return "ignored" as const;
+  const pending = await pendingAffiliateCode(id);
+  const ids = await affiliateIds();
+  if (!pending || !ids.has(pending)) return "unmatched" as const;
+  const amount = input.amountCents == null ? null : input.amountCents / 100;
+  await recordAffiliateConversion({
+    code: pending,
+    orderId: id,
+    amount,
+    productName: "Order",
+    dryRun: false,
+    createdAt: input.occurredAt,
+  });
+  await markPendingOrderCommissioned(id);
+  return "recorded" as const;
 }
 
 export async function syncAttributedGenHealthSales() {

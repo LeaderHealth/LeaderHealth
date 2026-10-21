@@ -7,15 +7,15 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  if (!affiliateAdminConfigured() || !affiliateFirebaseConfigured()) redirect("/affiliates?error=unconfigured");
+  if (!affiliateAdminConfigured() || !affiliateFirebaseConfigured()) redirect("/affiliates?error=unconfigured&method=link");
   const token = new URL(request.url).searchParams.get("token");
   let code: string | null = null;
   try {
     code = await redeemAffiliateMagicLink(token);
   } catch (error) {
     console.error("[affiliate] sign-in link redeem failed", error instanceof Error ? error.message : "unknown");
-    redirect("/affiliates?error=unavailable");
+    redirect("/affiliates?error=unavailable&method=link");
   }
-  if (!code || !(await setPortalSession(code))) redirect("/affiliates?error=denied");
+  if (!code || !(await setPortalSession(code))) redirect("/affiliates?error=denied&method=link");
   redirect("/affiliates/overview");
 }
