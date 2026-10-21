@@ -204,7 +204,7 @@ export const products: Product[] = [
     labRequired: true,
     image: "/images/products/testosterone-cypionate.png",
     tagline: "Clinician-led TRT after labs, history, and a real plan for follow-up.",
-    highlight: "Medication, provider access, and labs are included for $109/month. Three-month start, then cancel anytime.",
+    highlight: "Medication and provider access for $109/month. Three-month start, then cancel anytime.",
     safety:
       "*Do not use if you have breast cancer or known or suspected prostate cancer, or if you are pregnant. FDA approved medication. Schedule III controlled substance; federal law limits refills to five within six months.",
     description:
