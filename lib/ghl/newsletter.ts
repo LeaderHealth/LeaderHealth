@@ -38,30 +38,44 @@ async function ghlError(response: Response) {
   return message.replace(/pit-[a-z0-9-]+/gi, "[token]");
 }
 
-export async function subscribeNewsletter(email: string) {
-  const token = process.env.GHL_PRIVATE_TOKEN?.trim() ?? "";
-  const locationId = process.env.GHL_LOCATION_ID?.trim() ?? "";
-  if (!token || !locationId) throw new Error("GoHighLevel is not configured.");
-
-  const upsert = await fetch(`${GHL_API}/contacts/upsert`, {
-    method: "POST",
-    headers: ghlHeaders(token),
-    body: JSON.stringify({
-      locationId,
-      email,
-      source: "Website newsletter",
-    }),
-  });
-  if (!upsert.ok) throw new Error(`upsert ${upsert.status}: ${await ghlError(upsert)}`);
-
-  const created = (await upsert.json()) as { contact?: { id?: unknown } };
-  const contactId = typeof created.contact?.id === "string" ? created.contact.id : "";
-  if (!contactId) throw new Error("upsert returned no contact id");
-
+async function addNewsletterTag(token: string, contactId: string) {
   const tagged = await fetch(`${GHL_API}/contacts/${encodeURIComponent(contactId)}/tags`, {
     method: "POST",
     headers: ghlHeaders(token),
     body: JSON.stringify({ tags: [NEWSLETTER_TAG] }),
   });
   if (!tagged.ok) throw new Error(`tag ${tagged.status}: ${await ghlError(tagged)}`);
+}
+
+export async function subscribeNewsletter(email: string) {
+  const token = process.env.GHL_PRIVATE_TOKEN?.trim() ?? "";
+  const locationId = process.env.GHL_LOCATION_ID?.trim() ?? "";
+  if (!token || !locationId) throw new Error("GoHighLevel is not configured.");
+
+  const created = await fetch(`${GHL_API}/contacts/`, {
+    method: "POST",
+    headers: ghlHeaders(token),
+    body: JSON.stringify({
+      locationId,
+      email,
+      source: "Website newsletter",
+      tags: [NEWSLETTER_TAG],
+    }),
+  });
+  if (created.ok) return;
+
+  const failure = (await created.json().catch(() => null)) as { message?: unknown; meta?: { contactId?: unknown } } | null;
+  const existingId = failure?.meta?.contactId;
+  const duplicate =
+    created.status === 400 &&
+    typeof failure?.message === "string" &&
+    failure.message.toLowerCase().includes("duplicat") &&
+    typeof existingId === "string" &&
+    existingId.length > 0;
+  if (!duplicate) {
+    const message = typeof failure?.message === "string" ? failure.message : "request failed";
+    throw new Error(`create ${created.status}: ${message.replace(/pit-[a-z0-9-]+/gi, "[token]")}`);
+  }
+
+  await addNewsletterTag(token, existingId);
 }
