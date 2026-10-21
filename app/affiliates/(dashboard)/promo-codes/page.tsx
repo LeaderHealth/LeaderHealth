@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { PromoCodeCard } from "@/components/affiliate/PromoCodeCard";
-import { loadSavedPromoCodes } from "@/lib/affiliate/store";
+import { loadAssignedSavedPromos } from "@/lib/affiliate/store";
 import { affiliateTrackingLink } from "@/lib/affiliate/link";
 import { labs, products, type Audience, type Category } from "@/lib/content/products";
 import { catalogProductLabels, groupProductsByCategory, type CatalogProductLabel } from "@/lib/genhealth/catalog";
@@ -97,7 +97,10 @@ export default async function AffiliatePromoCodesPage() {
   const local = localProductNames();
   let saved: string[] = [];
   try {
-    saved = await loadSavedPromoCodes(affiliate.code);
+    saved = await loadAssignedSavedPromos(
+      affiliate.code,
+      codes.map((promo) => promo.code),
+    );
   } catch {
     saved = [];
   }
@@ -107,10 +110,10 @@ export default async function AffiliatePromoCodesPage() {
     <div className="space-y-4">
       <div className="min-w-0 rounded-[28px] bg-white px-4 py-4 sm:px-8 sm:py-6">
         <h2 className="text-2xl">Promo codes</h2>
-        <p className="mt-2 text-sm text-brown">Codes assigned to your affiliate ID, with a tracking link for each one.</p>
+        <p className="mt-2 text-sm text-brown">Your promo code. The customer enters it to earn your commission.</p>
       </div>
       {codes.length === 0 ? (
-        <p className="rounded-[28px] bg-white px-4 py-6 text-sm text-brown sm:px-8">No promo codes are assigned to you yet.</p>
+        <p className="rounded-[28px] bg-white px-4 py-6 text-sm text-brown sm:px-8">No promo code is assigned to you yet.</p>
       ) : (
         codes.map((promo) => (
           <PromoCodeCard

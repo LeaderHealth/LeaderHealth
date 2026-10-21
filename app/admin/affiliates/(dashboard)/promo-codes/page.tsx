@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { AssignPromoCode, type AssignableAffiliate } from "@/components/affiliate/AssignPromoCode";
-import { AttachedSlugs } from "@/components/affiliate/AttachedSlugs";
+import { RemovePromoAffiliate } from "@/components/affiliate/RemovePromoAffiliate";
 import { AffiliateStoreError, loadAffiliateDashboard } from "@/lib/affiliate/store";
-import { assignmentNames, listPromoCodes, type PromoCodeRow } from "@/lib/genhealth/promocodes";
+import { listPromoCodes, personalPromoForAffiliate, type PromoCodeRow } from "@/lib/genhealth/promocodes";
 import { ADMIN_ERRORS } from "../../messages";
 
 export const metadata: Metadata = {
@@ -17,16 +17,13 @@ function statusClass(label: PromoCodeRow["statusLabel"]) {
   return "border border-ink/30 text-brown";
 }
 
-function attachedSlugs(promo: PromoCodeRow, accounts: AssignableAffiliate[]) {
-  return promo.affiliates.map((item) => {
-    const account = accounts.find((entry) => entry.code.toLowerCase() === item.utmSlug.trim().toLowerCase());
-    return { slug: item.utmSlug, name: account?.name ?? "" };
-  });
+function affiliateName(slug: string, accounts: AssignableAffiliate[]) {
+  const account = accounts.find((entry) => entry.code.toLowerCase() === slug.trim().toLowerCase());
+  return account?.name || slug;
 }
 
 function AssignmentStatus({ promo, accounts }: { promo: PromoCodeRow; accounts: AssignableAffiliate[] }) {
-  const names = assignmentNames(promo, accounts);
-  const assigned = names.length > 0;
+  const assigned = promo.affiliates.length > 0;
   return (
     <div className="mt-3">
       <span
@@ -36,9 +33,29 @@ function AssignmentStatus({ promo, accounts }: { promo: PromoCodeRow; accounts: 
       >
         {assigned ? "Assigned" : "Available"}
       </span>
-      <AttachedSlugs slugs={attachedSlugs(promo, accounts)} />
+      {assigned ? (
+        <ul className="mt-2 flex flex-wrap gap-1.5" aria-label={`Affiliates on ${promo.code}`}>
+          {promo.affiliates.map((item) => {
+            const name = affiliateName(item.utmSlug, accounts);
+            return (
+              <li key={item.utmSlug} className="inline-flex max-w-full items-center rounded-full bg-background py-0.5 pr-0.5 pl-2.5 text-xs font-medium text-ink">
+                <span className="truncate">{name}</span>
+                <RemovePromoAffiliate code={promo.code} affiliate={item.utmSlug} name={name} />
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
     </div>
   );
+}
+
+function lockedHolderLine(promo: PromoCodeRow) {
+  if (promo.mode === "Shared" || promo.affiliates.length > 1) {
+    return "This code is not locked to one affiliate, so it does not pay anyone.";
+  }
+  if (promo.mode === "Locked" && promo.affiliates.length === 0) return "Locked, with no affiliate listed.";
+  return "";
 }
 
 function noticeCode(value: string | undefined) {
@@ -60,7 +77,7 @@ export default async function PromoCodesPage({
 
   let codes: PromoCodeRow[] = [];
   try {
-    codes = await listPromoCodes();
+    codes = (await listPromoCodes()).filter((promo) => promo.statusLabel !== "Inactive");
   } catch {
     return (
       <p className="rounded-[28px] bg-white px-8 py-6 text-sm text-ink">Promo codes are unavailable right now.</p>
@@ -71,7 +88,11 @@ export default async function PromoCodesPage({
   let accountsError = "";
   try {
     accounts = (await loadAffiliateDashboard()).affiliates
-      .map((affiliate) => ({ code: affiliate.code, name: affiliate.name }))
+      .map((affiliate) => ({
+        code: affiliate.code,
+        name: affiliate.name,
+        promoCode: personalPromoForAffiliate(codes, affiliate.code)?.code ?? "",
+      }))
       .sort((left, right) => left.name.localeCompare(right.name));
   } catch (caught) {
     accountsError = caught instanceof AffiliateStoreError ? caught.message : "Affiliate accounts are unavailable right now.";
@@ -100,7 +121,7 @@ export default async function PromoCodesPage({
       ) : null}
       {removed ? (
         <p role="status" className="break-all rounded-2xl bg-white px-4 py-3 text-sm text-ink">
-          Removed the assignment from <span className="font-medium">{removed}</span>.
+          Removed <span className="font-medium">{removed}</span> from the assigned affiliate.
         </p>
       ) : null}
       {accountsError ? <p className="text-ink">{accountsError}</p> : null}
@@ -110,8 +131,9 @@ export default async function PromoCodesPage({
       </h2>
       <p className="px-4 pt-2 text-sm text-brown">
         {codes.length === 0
-          ? "Promo codes created in Gen Health."
-          : `${assignedCount} assigned · ${availableCount} available. Promo codes are created in Gen Health.`}
+          ? "Promo codes are created in Gen Health."
+          : `${assignedCount} assigned · ${availableCount} available. Each code locks to one affiliate. Promo codes are created in Gen Health.`}{" "}
+        Deactivating a promo code in Gen Health removes it from this dashboard and the affiliate dashboard.
       </p>
       {codes.length === 0 ? (
         <p className="px-4 py-6 text-sm text-brown">No promo codes yet.</p>
@@ -123,6 +145,7 @@ export default async function PromoCodesPage({
                 <div className="min-w-0">
                   <div className="break-all font-medium">{promo.code}</div>
                   <AssignmentStatus promo={promo} accounts={accounts} />
+                  {lockedHolderLine(promo) ? <p className="mt-2 text-sm text-brown">{lockedHolderLine(promo)}</p> : null}
                 </div>
                 <span className={`inline-flex shrink-0 rounded-full px-3 py-1 text-xs font-medium ${statusClass(promo.statusLabel)}`}>
                   {promo.statusLabel}
@@ -155,7 +178,12 @@ export default async function PromoCodesPage({
                 <div className="col-span-2">
                   <dt className="text-xs text-brown">Assign</dt>
                   <dd className="mt-2">
-                    <AssignPromoCode code={promo.code} mode={promo.mode} affiliates={promo.affiliates} accounts={accounts} />
+                    <AssignPromoCode
+                      code={promo.code}
+                      mode={promo.mode}
+                      affiliates={promo.affiliates}
+                      accounts={accounts}
+                    />
                   </dd>
                 </div>
               </dl>
@@ -166,14 +194,14 @@ export default async function PromoCodesPage({
       {codes.length > 0 ? (
       <table className="mt-4 hidden w-full max-w-full table-fixed border-collapse text-left text-sm leading-6 xl:table" aria-labelledby="promo-codes-title">
         <colgroup>
-          <col className="w-[20%]" />
-          <col className="w-[10%]" />
+          <col className="w-[26%]" />
+          <col className="w-[8%]" />
           <col className="w-[11%]" />
           <col className="w-[10%]" />
           <col className="w-[12%]" />
           <col className="w-[11%]" />
           <col className="w-[12%]" />
-          <col className="w-[14%]" />
+          <col className="w-[10%]" />
         </colgroup>
         <thead className="text-brown">
           <tr>
@@ -193,6 +221,7 @@ export default async function PromoCodesPage({
                 <td className="px-4 py-5 align-top">
                   <div className="break-all font-medium">{promo.code}</div>
                   <AssignmentStatus promo={promo} accounts={accounts} />
+                  {lockedHolderLine(promo) ? <p className="mt-2 text-sm text-brown">{lockedHolderLine(promo)}</p> : null}
                 </td>
                 <td className="px-4 py-5 align-top">{promo.mode}</td>
                 <td className="break-words px-4 py-5 align-top">
@@ -215,7 +244,12 @@ export default async function PromoCodesPage({
                   {promo.activeInGenHealth ? <div className="mt-2 leading-5 text-brown">Active in Gen-Health</div> : null}
                 </td>
                 <td className="px-4 py-5 align-top">
-                  <AssignPromoCode code={promo.code} mode={promo.mode} affiliates={promo.affiliates} accounts={accounts} />
+                  <AssignPromoCode
+                    code={promo.code}
+                    mode={promo.mode}
+                    affiliates={promo.affiliates}
+                    accounts={accounts}
+                  />
                 </td>
               </tr>
             ))}

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Header } from "./Header";
 import { ShellFooter } from "./ShellFooter";
 import { PageFade } from "./PageFade";
@@ -10,7 +11,9 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
   return (
     <MotionPreferences>
     <CartProvider>
-      <AffiliateCapture />
+      <Suspense fallback={null}>
+        <AffiliateCapture />
+      </Suspense>
       <Header />
       <main className="flex-1">
         <PageFade>{children}</PageFade>

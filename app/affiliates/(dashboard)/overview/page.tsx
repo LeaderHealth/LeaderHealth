@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { CopyTrackingLink } from "@/components/affiliate/CopyTrackingLink";
 import { SavedLinks, type SavedLink } from "@/components/affiliate/SavedLinks";
 import { affiliateTrackingLink } from "@/lib/affiliate/link";
 import { formatCents, formatCommissionRate } from "@/lib/affiliate/format";
 import { loadPayoutRecords, paidOutInRange } from "@/lib/affiliate/payouts";
 import { syncAttributedGenHealthSales } from "@/lib/affiliate/sales";
-import { AffiliateStoreError, loadAffiliateActivity, loadSavedPromoCodes, type ConversionSummary } from "@/lib/affiliate/store";
-import { listPromoCodes, promoRowsForAffiliate, type PromoCodeRow } from "@/lib/genhealth/promocodes";
+import { AffiliateStoreError, loadAffiliateActivity, loadAssignedSavedPromos, loadSavedPromoCodes, type ConversionSummary } from "@/lib/affiliate/store";
+import { listPromoCodes, personalPromoForAffiliate, promoRowsForAffiliate, type PromoCodeRow } from "@/lib/genhealth/promocodes";
 import { currentAffiliate } from "../../current";
 
 export const metadata: Metadata = {
@@ -83,8 +84,11 @@ export default async function AffiliatePortalOverviewPage({
 
   let promos: PromoCodeRow[] = [];
   let promosUnavailable = false;
+  let personalCode: string | null = null;
   try {
-    promos = promoRowsForAffiliate(await listPromoCodes(), affiliate.code);
+    const codes = await listPromoCodes();
+    promos = promoRowsForAffiliate(codes, affiliate.code);
+    personalCode = personalPromoForAffiliate(codes, affiliate.code)?.code ?? null;
   } catch {
     promosUnavailable = true;
   }
@@ -96,7 +100,12 @@ export default async function AffiliatePortalOverviewPage({
   const recent = [...paid].sort((left, right) => (right.createdAt ?? "").localeCompare(left.createdAt ?? "")).slice(0, 5);
   let savedCodes: string[] = [];
   try {
-    savedCodes = await loadSavedPromoCodes(affiliate.code);
+    savedCodes = promosUnavailable
+      ? await loadSavedPromoCodes(affiliate.code)
+      : await loadAssignedSavedPromos(
+          affiliate.code,
+          promos.map((promo) => promo.code),
+        );
   } catch {
     savedCodes = [];
   }
@@ -111,6 +120,7 @@ export default async function AffiliatePortalOverviewPage({
         detail: promo ? `${discountLabel(promo)} · ${promo.statusLabel}` : "Saved tracking link",
       };
     });
+  const shareUrl = affiliateTrackingLink(affiliate.code);
   const commission =
     affiliate.commissionMode === "fixed" ? `${formatCommissionRate(affiliate)} per order` : `${formatCommissionRate(affiliate)} commission`;
 
@@ -142,6 +152,19 @@ export default async function AffiliatePortalOverviewPage({
       </div>
 
       {loadError ? <p className="text-ink">{loadError}</p> : null}
+
+      <section className="min-w-0 rounded-[28px] bg-white p-4 sm:p-6" aria-labelledby="portal-share-link-title">
+        <h3 id="portal-share-link-title" className="text-xl">
+          Your code
+        </h3>
+        <p className="mt-2 text-sm text-brown">The customer enters this code to earn your commission.</p>
+        <p className="mt-3 break-all text-lg text-ink">{promosUnavailable ? "Promo codes are unavailable right now." : personalCode ?? "No personal code is assigned yet."}</p>
+        {personalCode ? <CopyTrackingLink url={personalCode} label="Copy code" copiedNotice="Code copied." failedNotice="Couldn't copy the code." /> : null}
+        <p className="mt-6 text-sm font-medium text-ink">Tracking link</p>
+        <p className="mt-1 text-sm text-brown">Optional. Customers can open this link instead of typing the code.</p>
+        <p className="mt-3 break-all rounded-[24px] bg-background px-4 py-3 text-sm leading-6 text-ink">{shareUrl}</p>
+        <CopyTrackingLink url={shareUrl} />
+      </section>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <section className="rounded-[28px] bg-white p-6">
@@ -200,7 +223,7 @@ export default async function AffiliatePortalOverviewPage({
         <section className="min-w-0 rounded-[28px] bg-white p-4 sm:p-6" aria-labelledby="portal-overview-promos-title">
           <div className="flex items-baseline justify-between gap-3">
             <h3 id="portal-overview-promos-title" className="text-xl">
-              Promo codes
+              Promo code
             </h3>
             <Link href="/affiliates/promo-codes" className="text-sm font-medium text-ink underline underline-offset-4">
               View all
@@ -209,7 +232,7 @@ export default async function AffiliatePortalOverviewPage({
           {promosUnavailable ? (
             <p className="mt-6 text-sm text-brown">Promo codes are unavailable right now.</p>
           ) : promos.length === 0 ? (
-            <p className="mt-6 text-sm text-brown">No promo codes are assigned to you yet.</p>
+            <p className="mt-6 text-sm text-brown">No promo code is assigned to you yet.</p>
           ) : (
             <ul className="mt-4 divide-y divide-rose/60">
               {promos.slice(0, 5).map((promo) => (

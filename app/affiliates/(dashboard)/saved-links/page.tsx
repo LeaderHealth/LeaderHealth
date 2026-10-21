@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SavedLinks, type SavedLink } from "@/components/affiliate/SavedLinks";
 import { affiliateTrackingLink } from "@/lib/affiliate/link";
-import { loadSavedPromoCodes } from "@/lib/affiliate/store";
+import { loadAssignedSavedPromos, loadSavedPromoCodes } from "@/lib/affiliate/store";
 import { listPromoCodes, promoRowsForAffiliate, type PromoCodeRow } from "@/lib/genhealth/promocodes";
 import { currentAffiliate } from "../../current";
 
@@ -33,18 +33,25 @@ export default async function SavedLinksPage() {
   const affiliate = await currentAffiliate();
   if (!affiliate) redirect("/affiliates");
 
-  let saved: string[] = [];
-  try {
-    saved = await loadSavedPromoCodes(affiliate.code);
-  } catch {
-    return <p className="rounded-[28px] bg-white px-8 py-6 text-sm text-ink">Saved links are unavailable right now.</p>;
-  }
-
   let promos: PromoCodeRow[] = [];
+  let promosLoaded = false;
   try {
     promos = promoRowsForAffiliate(await listPromoCodes(), affiliate.code);
+    promosLoaded = true;
   } catch {
     promos = [];
+  }
+
+  let saved: string[] = [];
+  try {
+    saved = promosLoaded
+      ? await loadAssignedSavedPromos(
+          affiliate.code,
+          promos.map((promo) => promo.code),
+        )
+      : await loadSavedPromoCodes(affiliate.code);
+  } catch {
+    return <p className="rounded-[28px] bg-white px-8 py-6 text-sm text-ink">Saved links are unavailable right now.</p>;
   }
 
   const links = [...saved]

@@ -1,4 +1,4 @@
-import { applyAffiliateTracking } from "@/lib/affiliate/link";
+import { affiliateCampaign, applyAffiliateTracking } from "@/lib/affiliate/link";
 
 export type HandoffLine = {
   slug: string;
@@ -163,10 +163,16 @@ export function storefrontAppOrigin() {
   return INTERNAL_CHECKOUT_ORIGIN;
 }
 
+function applyCheckoutTracking(params: URLSearchParams, ref?: string, campaign?: string | null) {
+  applyAffiliateTracking(params, ref, campaign);
+  if (!affiliateCampaign(campaign)) params.delete("utm_campaign");
+  params.delete("promo");
+}
+
 export function storefrontCheckoutUrl(ids: string[], ref?: string, campaign?: string | null) {
   const params = new URLSearchParams();
   for (const id of ids) params.append("product", id);
-  applyAffiliateTracking(params, ref, campaign);
+  applyCheckoutTracking(params, ref, campaign);
   const query = params.toString();
   return query ? `/checkout?${query}` : "/checkout";
 }
@@ -175,7 +181,7 @@ export function embeddedCheckoutSrc(product: string | string[] | undefined, ref?
   const params = new URLSearchParams();
   const ids = (Array.isArray(product) ? product : product ? [product] : []).filter(Boolean);
   for (const id of ids) params.append("product", id);
-  applyAffiliateTracking(params, ref, campaign);
+  applyCheckoutTracking(params, ref, campaign);
   params.set("embed", "1");
   return `${storefrontAppOrigin()}/checkout?${params.toString()}`;
 }

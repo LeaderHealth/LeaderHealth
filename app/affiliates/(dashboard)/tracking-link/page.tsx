@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { CopyTrackingLink } from "@/components/affiliate/CopyTrackingLink";
 import { formatCommissionRate } from "@/lib/affiliate/format";
 import { affiliateTrackingLink } from "@/lib/affiliate/link";
+import { listPromoCodes, personalPromoForAffiliate } from "@/lib/genhealth/promocodes";
 import { currentAffiliate } from "../../current";
 
 export const metadata: Metadata = {
@@ -17,6 +18,13 @@ const badgeClass = "inline-flex max-w-full items-center rounded-full bg-rose px-
 export default async function TrackingLinkPage() {
   const affiliate = await currentAffiliate();
   if (!affiliate) redirect("/affiliates");
+  let personalCode: string | null = null;
+  let unavailable = false;
+  try {
+    personalCode = personalPromoForAffiliate(await listPromoCodes(), affiliate.code)?.code ?? null;
+  } catch {
+    unavailable = true;
+  }
   const url = affiliateTrackingLink(affiliate.code);
   const commission =
     affiliate.commissionMode === "fixed" ? `${formatCommissionRate(affiliate)} per order` : `${formatCommissionRate(affiliate)} commission`;
@@ -32,10 +40,14 @@ export default async function TrackingLinkPage() {
         <span className={badgeClass}>{commission}</span>
       </div>
       <div className="mt-6">
-        <p id="referral-link-label" className="text-sm font-medium text-ink">
-          Default link
+        <p className="text-sm font-medium text-ink">Promo code</p>
+        <p className="mt-1 text-sm text-brown">The customer enters this code to earn your commission.</p>
+        <p className="mt-2 break-all text-lg text-ink">{unavailable ? "Promo codes are unavailable right now." : personalCode ?? "No personal code is assigned yet."}</p>
+        {personalCode ? <CopyTrackingLink url={personalCode} label="Copy code" copiedNotice="Code copied." failedNotice="Couldn't copy the code." /> : null}
+        <p id="referral-link-label" className="mt-6 text-sm font-medium text-ink">
+          Tracking link
         </p>
-        <p className="mt-1 text-sm text-brown">No promo code. This link uses UTM parameters only.</p>
+        <p className="mt-1 text-sm text-brown">Optional. Customers can open this link instead of typing the code.</p>
         <p id="referral-link" aria-labelledby="referral-link-label" className="mt-2 break-all rounded-[24px] bg-background px-4 py-3 text-sm leading-6 text-ink">
           {url}
         </p>

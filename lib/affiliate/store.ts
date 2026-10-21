@@ -2,7 +2,8 @@ import { createHash, randomBytes, scrypt as scryptCallback, timingSafeEqual } fr
 import { promisify } from "node:util";
 import { FieldValue, type DocumentData, type Timestamp } from "firebase-admin/firestore";
 import { cookies } from "next/headers";
-import { affiliateTrackingPath } from "@/lib/affiliate/link";
+import { AFFILIATE_INVITE_DAYS } from "@/lib/affiliate/email";
+import { affiliateCampaign, affiliateTrackingPath } from "@/lib/affiliate/link";
 import { absoluteUrl } from "@/lib/seo/schema";
 import {
   type CommissionMode,
@@ -17,13 +18,17 @@ import {
   normalizeFixedCommissionCents,
 } from "./code";
 import { affiliateFirebaseConfigured, affiliateFirestore } from "./firebase";
+import { savedPromosStillAssigned } from "./savedPromos";
 
 const scrypt = promisify(scryptCallback);
 const SCRYPT_KEYLEN = 32;
 const MAGIC_LINK_MS = 15 * 60 * 1000;
 const MAGIC_LINK_COOLDOWN_MS = 60 * 1000;
+const INVITE_MS = AFFILIATE_INVITE_DAYS * 24 * 60 * 60 * 1000;
+const TOKEN_PATTERN = /^[A-Za-z0-9_-]{20,200}$/;
 
 export const AFFILIATE_COOKIE = "lh_aff";
+export const AFFILIATE_CAMPAIGN_COOKIE = "lh_aff_campaign";
 export const VISITOR_COOKIE = "lh_vid";
 export const CLICK_LOG_COOKIE = "lh_aff_logged";
 
@@ -62,6 +67,7 @@ export type AffiliateSummary = {
   commissionPercent: number;
   commissionFixedCents: number;
   active: boolean;
+  pendingInvite: boolean;
   clickCount: number;
   paidConversionCount: number;
   commissionCents: number;
@@ -131,6 +137,15 @@ function magicLinkHash(token: string) {
   return createHash("sha256").update(token).digest("base64url");
 }
 
+function tokenShape(token: string | null | undefined): token is string {
+  return Boolean(token && TOKEN_PATTERN.test(token));
+}
+
+function affiliateActivated(data: DocumentData | undefined) {
+  if (!data) return false;
+  return data.invitePending !== true;
+}
+
 const AFFILIATE_ID_ALPHABET = "abcdefghijkmnopqrstuvwxyz23456789";
 
 function generateAffiliateCode() {
@@ -166,6 +181,7 @@ function affiliateFrom(code: string, data: DocumentData | undefined): AffiliateS
     commissionPercent: asNumber(data.commissionPercent),
     commissionFixedCents: asNumber(data.commissionFixedCents),
     active: data.active === true,
+    pendingInvite: !affiliateActivated(data),
     clickCount: asNumber(data.clickCount),
     paidConversionCount: asNumber(data.paidConversionCount),
     commissionCents: asNumber(data.commissionCents),
@@ -353,6 +369,11 @@ export async function affiliateCodeFromCookies() {
   return normalizeAffiliateCode(jar.get(AFFILIATE_COOKIE)?.value);
 }
 
+export async function affiliateCampaignFromCookies() {
+  const jar = await cookies();
+  return affiliateCampaign(jar.get(AFFILIATE_CAMPAIGN_COOKIE)?.value);
+}
+
 export async function createAffiliate(input: {
   name: string;
   email: string;
@@ -394,6 +415,11 @@ export async function createAffiliate(input: {
         commissionFixedCents,
         passwordHash,
         active: true,
+        invitePending: true,
+        activatedAt: null,
+        inviteTokenHash: null,
+        inviteExpiresAt: null,
+        inviteUsedAt: null,
         clickCount: 0,
         paidConversionCount: 0,
         commissionCents: 0,
@@ -431,6 +457,24 @@ export async function loadSavedPromoCodes(code: string) {
   return saved.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
 }
 
+export async function loadAssignedSavedPromos(code: string, assignedCodes: readonly string[]) {
+  const saved = await loadSavedPromoCodes(code);
+  const kept = savedPromosStillAssigned(saved, assignedCodes);
+  const keptKeys = new Set(kept.map((item) => item.trim().toLowerCase()));
+  const stale = saved.filter((item) => !keptKeys.has(item.trim().toLowerCase()));
+  if (stale.length === 0 || !affiliateFirebaseConfigured()) return kept;
+  const normalized = normalizeAffiliateCode(code);
+  if (!normalized) return kept;
+  try {
+    await affiliateFirestore().collection("affiliates").doc(normalized).update({
+      savedLinks: FieldValue.arrayRemove(...stale),
+    });
+  } catch (error) {
+    console.error("[affiliate] saved promo sync failed", error instanceof Error ? error.message : "unknown");
+  }
+  return kept;
+}
+
 export async function saveAffiliatePromoCode(code: string, promoCode: string) {
   if (!affiliateFirebaseConfigured()) {
     throw new AffiliateStoreError("unavailable", "Firestore is not configured.");
@@ -445,6 +489,20 @@ export async function saveAffiliatePromoCode(code: string, promoCode: string) {
   const snap = await ref.get();
   if (!snap.exists || snap.data()?.active !== true) throw new AffiliateStoreError("missing", "Unknown affiliate code.");
   await ref.update({ savedLinks: FieldValue.arrayUnion(promo) });
+}
+
+export async function forgetAffiliateSavedPromo(code: string, promoCode: string) {
+  if (!affiliateFirebaseConfigured()) return;
+  const normalized = normalizeAffiliateCode(code);
+  const promo = promoCode.trim().toLowerCase();
+  if (!normalized || !promo) return;
+  const ref = affiliateFirestore().collection("affiliates").doc(normalized);
+  const snap = await ref.get();
+  const saved = snap.data()?.savedLinks;
+  if (!snap.exists || !Array.isArray(saved)) return;
+  const matches = saved.filter((item) => typeof item === "string" && item.trim().toLowerCase() === promo);
+  if (matches.length === 0) return;
+  await ref.update({ savedLinks: FieldValue.arrayRemove(...matches) });
 }
 
 export async function removeAffiliatePromoCode(code: string, promoCode: string) {
@@ -474,7 +532,14 @@ export async function setAffiliatePassword(code: string, passwordInput: string) 
   const ref = affiliateFirestore().collection("affiliates").doc(normalized);
   const snap = await ref.get();
   if (!snap.exists) throw new AffiliateStoreError("missing", "Unknown affiliate code.");
-  await ref.update({ passwordHash: await hashPassword(password) });
+  await ref.update({
+    passwordHash: await hashPassword(password),
+    invitePending: false,
+    activatedAt: new Date(),
+    inviteTokenHash: null,
+    inviteExpiresAt: null,
+    inviteUsedAt: null,
+  });
 }
 
 export async function affiliateCodeForPassword(emailInput: string, password: string) {
@@ -485,7 +550,7 @@ export async function affiliateCodeForPassword(emailInput: string, password: str
   const data = doc?.data();
   const stored = typeof data?.passwordHash === "string" ? data.passwordHash : null;
   const matches = await passwordMatches(password, stored);
-  if (!doc || !data || data.active !== true || !matches) return null;
+  if (!doc || !data || data.active !== true || !affiliateActivated(data) || !matches) return null;
   return doc.id;
 }
 
@@ -494,7 +559,7 @@ export async function issueAffiliateMagicLink(emailInput: string) {
   const email = normalizeAffiliateEmail(emailInput);
   if (!email) return { status: "denied" as const };
   const doc = await singleAffiliateByEmail(email);
-  if (!doc || doc.data()?.active !== true) return { status: "denied" as const };
+  if (!doc || doc.data()?.active !== true || !affiliateActivated(doc.data())) return { status: "denied" as const };
 
   const token = randomBytes(32).toString("base64url");
   const hash = magicLinkHash(token);
@@ -502,7 +567,7 @@ export async function issueAffiliateMagicLink(emailInput: string) {
   const status = await affiliateFirestore().runTransaction(async (tx) => {
     const snap = await tx.get(doc.ref);
     const data = snap.data();
-    if (!snap.exists || data?.active !== true || data.email !== email) return "denied" as const;
+    if (!snap.exists || data?.active !== true || !affiliateActivated(data) || data.email !== email) return "denied" as const;
     const last = asDate(data.lastMagicLinkAt);
     if (last && Date.now() - last.getTime() < MAGIC_LINK_COOLDOWN_MS) return "limited" as const;
     tx.update(doc.ref, {
@@ -531,8 +596,89 @@ export async function clearAffiliateMagicLink(code: string) {
   await ref.update({ magicLinkHash: null, magicLinkExpiresAt: null, lastMagicLinkAt: null });
 }
 
+export type InvitationState = "valid" | "expired" | "reused" | "missing" | "inactive" | "unavailable";
+
+function invitationState(data: DocumentData | undefined, hash: string): Exclude<InvitationState, "unavailable"> {
+  if (!data || data.inviteTokenHash !== hash) return "missing";
+  if (data.active !== true) return "inactive";
+  if (asDate(data.inviteUsedAt)) return "reused";
+  const expires = asDate(data.inviteExpiresAt);
+  if (!expires || expires.getTime() <= Date.now()) return "expired";
+  if (data.invitePending !== true) return "reused";
+  return "valid";
+}
+
+async function invitationMatch(token: string) {
+  const hash = magicLinkHash(token);
+  const matches = await affiliateFirestore().collection("affiliates").where("inviteTokenHash", "==", hash).limit(2).get();
+  if (matches.size !== 1) return null;
+  return { hash, snap: matches.docs[0] };
+}
+
+export async function issueAffiliateInvitation(code: string) {
+  if (!affiliateFirebaseConfigured()) return { status: "unavailable" as const };
+  const normalized = normalizeAffiliateCode(code);
+  if (!normalized) return { status: "missing" as const };
+  const token = randomBytes(32).toString("base64url");
+  const hash = magicLinkHash(token);
+  const expires = new Date(Date.now() + INVITE_MS);
+  const ref = affiliateFirestore().collection("affiliates").doc(normalized);
+  const result = await affiliateFirestore().runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const data = snap.data();
+    if (!snap.exists || !data || typeof data.email !== "string" || !data.email) return { status: "missing" as const };
+    if (data.active !== true) return { status: "inactive" as const };
+    if (affiliateActivated(data)) return { status: "activated" as const };
+    tx.update(ref, {
+      inviteTokenHash: hash,
+      inviteExpiresAt: expires,
+      inviteUsedAt: null,
+    });
+    return { status: "sent" as const, email: data.email };
+  });
+  if (result.status !== "sent") return result;
+  return {
+    status: "sent" as const,
+    code: normalized,
+    email: result.email,
+    url: absoluteUrl(`/affiliates/activate?token=${encodeURIComponent(token)}`),
+  };
+}
+
+export async function readAffiliateInvitation(token: string | null) {
+  if (!affiliateFirebaseConfigured()) return "unavailable" as const;
+  if (!tokenShape(token)) return "missing" as const;
+  const match = await invitationMatch(token);
+  if (!match) return "missing" as const;
+  return invitationState(match.snap.data(), match.hash);
+}
+
+export async function acceptAffiliateInvitation(token: string, passwordInput: string) {
+  if (!affiliateFirebaseConfigured()) return { status: "unavailable" as const };
+  if (!tokenShape(token)) return { status: "missing" as const };
+  const match = await invitationMatch(token);
+  if (!match) return { status: "missing" as const };
+  const preview = invitationState(match.snap.data(), match.hash);
+  if (preview !== "valid") return { status: preview };
+  const password = normalizeAffiliatePassword(passwordInput);
+  if (!password) return { status: "weak" as const };
+  const passwordHash = await hashPassword(password);
+  return affiliateFirestore().runTransaction(async (tx) => {
+    const snap = await tx.get(match.snap.ref);
+    const state = invitationState(snap.data(), match.hash);
+    if (state !== "valid") return { status: state };
+    tx.update(match.snap.ref, {
+      passwordHash,
+      invitePending: false,
+      activatedAt: new Date(),
+      inviteUsedAt: new Date(),
+    });
+    return { status: "ok" as const, code: snap.id };
+  });
+}
+
 export async function redeemAffiliateMagicLink(token: string | null) {
-  if (!affiliateFirebaseConfigured() || !token || !/^[A-Za-z0-9_-]{20,200}$/.test(token)) return null;
+  if (!affiliateFirebaseConfigured() || !tokenShape(token)) return null;
   const hash = magicLinkHash(token);
   const matches = await affiliateFirestore().collection("affiliates").where("magicLinkHash", "==", hash).limit(2).get();
   if (matches.size !== 1) return null;
@@ -541,7 +687,12 @@ export async function redeemAffiliateMagicLink(token: string | null) {
     const snap = await tx.get(ref);
     const data = snap.data();
     const expires = asDate(data?.magicLinkExpiresAt);
-    const current = data?.active === true && data.magicLinkHash === hash && expires != null && expires.getTime() > Date.now();
+    const current =
+      data?.active === true &&
+      affiliateActivated(data) &&
+      data.magicLinkHash === hash &&
+      expires != null &&
+      expires.getTime() > Date.now();
     if (snap.exists) tx.update(ref, { magicLinkHash: null, magicLinkExpiresAt: null });
     return current ? snap.id : null;
   });

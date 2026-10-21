@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
+import { campaignForCheckout } from "@/lib/affiliate/checkoutCampaign";
 import { affiliateCodeFromCookies } from "@/lib/affiliate/store";
 import { listCheckoutProducts } from "@/lib/genhealth/catalog";
 import { genHealthConfigured } from "@/lib/genhealth/client";
-import { campaignForAffiliateCode } from "@/lib/genhealth/promocodes";
 import {
   resolveCartHandoff,
   storefrontCheckoutUrl,
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
     const result = resolveCartHandoff(lines, products);
     if (!result.ok) return NextResponse.json(result, { status: 422 });
     const ref = await affiliateCodeFromCookies();
-    const campaign = ref ? await campaignForAffiliateCode(ref) : null;
+    const campaign = await campaignForCheckout(ref);
     return NextResponse.json({ ok: true, url: storefrontCheckoutUrl(result.ids, ref ?? undefined, campaign) });
   } catch {
     return NextResponse.json(

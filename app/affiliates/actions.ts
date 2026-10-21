@@ -7,6 +7,7 @@ import { affiliateEmailConfigured, sendAffiliateSignInEmail } from "@/lib/affili
 import { affiliateAdminConfigured, clearPortalSession, portalAffiliateCode, setPortalSession } from "@/lib/affiliate/session";
 import {
   AffiliateStoreError,
+  acceptAffiliateInvitation,
   affiliateCodeForPassword,
   clearAffiliateMagicLink,
   issueAffiliateMagicLink,
@@ -23,6 +24,29 @@ function fail(error: string, method: "password" | "link" = "password"): never {
 
 function portalReady() {
   return affiliateAdminConfigured() && affiliateFirebaseConfigured();
+}
+
+const ACTIVATE_TOKEN = /^[A-Za-z0-9_-]{20,200}$/;
+
+function activateFail(token: string, error: string): never {
+  const params = new URLSearchParams({ error });
+  if (ACTIVATE_TOKEN.test(token)) params.set("token", token);
+  redirect(`/affiliates/activate?${params.toString()}`);
+}
+
+export async function activateAffiliateAccount(formData: FormData) {
+  const token = String(formData.get("token") ?? "");
+  if (!portalReady()) activateFail(token, "unavailable");
+  let result: Awaited<ReturnType<typeof acceptAffiliateInvitation>>;
+  try {
+    result = await acceptAffiliateInvitation(token, String(formData.get("password") ?? ""));
+  } catch (error) {
+    console.error("[affiliate] activation failed", error instanceof Error ? error.message : "unknown");
+    activateFail(token, "unavailable");
+  }
+  if (result.status !== "ok") activateFail(token, result.status);
+  if (!(await setPortalSession(result.code))) activateFail(token, "signin");
+  redirect("/affiliates/overview");
 }
 
 export async function loginAffiliatePortal(formData: FormData) {

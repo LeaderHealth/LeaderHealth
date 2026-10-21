@@ -13,6 +13,7 @@ const buttonClass =
 export type AssignableAffiliate = {
   code: string;
   name: string;
+  promoCode?: string;
 };
 
 function sameSlug(left: string, right: string) {
@@ -39,27 +40,33 @@ export function AssignPromoCode({
   const selectRef = useRef<HTMLSelectElement>(null);
   const [open, setOpen] = useState(false);
   const [affiliate, setAffiliate] = useState("");
+  const [confirmRemove, setConfirmRemove] = useState(false);
 
   function openDialog() {
     const matches = accounts.filter((account) => affiliates.some((item) => sameSlug(item.utmSlug, account.code)));
     setAffiliate(matches.length === 1 ? matches[0].code : "");
+    setConfirmRemove(false);
     setOpen(true);
   }
 
   function closeDialog() {
     setOpen(false);
+    setConfirmRemove(false);
     buttonRef.current?.focus();
   }
 
   useEffect(() => {
     if (!open) return;
-    (selectRef.current ?? dialogRef.current?.querySelector<HTMLElement>("button"))?.focus();
+    (confirmRemove
+      ? dialogRef.current?.querySelector<HTMLElement>("[data-confirm-cancel]")
+      : (selectRef.current ?? dialogRef.current?.querySelector<HTMLElement>("button")))?.focus();
     const root = dialogRef.current;
     const previousOverflow = document.body.style.overflow;
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         event.preventDefault();
         setOpen(false);
+        setConfirmRemove(false);
         buttonRef.current?.focus();
         return;
       }
@@ -83,7 +90,7 @@ export function AssignPromoCode({
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [open]);
+  }, [open, confirmRemove]);
 
   const selected = accounts.find((account) => account.code === affiliate);
   const assigned = Boolean(selected && affiliates.some((item) => sameSlug(item.utmSlug, selected.code)));
@@ -91,7 +98,11 @@ export function AssignPromoCode({
     const account = accounts.find((entry) => sameSlug(entry.code, item.utmSlug));
     return account ? `${account.name} (${account.code})` : item.utmSlug;
   });
-  const replaces = mode === "Locked" && !assigned && holders.length > 0;
+  const soleLocked = Boolean(
+    selected && mode === "Locked" && affiliates.length === 1 && affiliates.some((item) => sameSlug(item.utmSlug, selected.code)),
+  );
+  const otherCode = selected?.promoCode && !sameSlug(selected.promoCode, code) ? selected.promoCode : "";
+  const replaces = !assigned && holders.length > 0;
 
   return (
     <>
@@ -115,13 +126,23 @@ export function AssignPromoCode({
                 className="relative w-full max-w-md rounded-[28px] bg-white p-6 text-ink shadow-[0_24px_80px_rgba(51,17,16,0.22)] sm:p-8"
               >
                 <h2 id={titleId} className="break-all text-2xl">
-                  Assign {code}
+                  {confirmRemove && selected ? `Remove ${selected.name}?` : `Assign ${code}`}
                 </h2>
-                <p className="mt-2 text-sm text-brown">Choose the affiliate who should use this Gen Health promo code.</p>
-                <p className="mt-4 break-words text-sm text-ink">
-                  {holders.length === 0 ? "Available. This code is not assigned yet." : `Assigned to ${holders.join(", ")}.`}
-                </p>
-                {accounts.length === 0 ? (
+                {confirmRemove && selected ? (
+                  <p className="mt-2 text-sm text-brown">
+                    Are you sure? {selected.name} will be removed from {code}. An admin has to assign them to a code again.
+                  </p>
+                ) : (
+                  <p className="mt-2 text-sm text-brown">
+                    Each affiliate has one promo code. Assigning locks {code} to the affiliate you choose.
+                  </p>
+                )}
+                {confirmRemove ? null : (
+                  <p className="mt-4 break-words text-sm text-ink">
+                    {holders.length === 0 ? "Available. This code is not assigned yet." : `Listed for ${holders.join(", ")}.`}
+                  </p>
+                )}
+                {confirmRemove ? null : accounts.length === 0 ? (
                   <p className="mt-6 text-sm text-ink">No affiliates yet.</p>
                 ) : (
                   <label className="mt-6 block text-sm font-medium text-ink" htmlFor={selectId}>
@@ -137,36 +158,54 @@ export function AssignPromoCode({
                       {accounts.map((account) => (
                         <option key={account.code} value={account.code}>
                           {account.name} ({account.code})
-                          {affiliates.some((item) => sameSlug(item.utmSlug, account.code)) ? " — assigned" : ""}
+                          {account.promoCode ? ` — ${account.promoCode}` : ""}
                         </option>
                       ))}
                     </select>
                   </label>
                 )}
-                {replaces ? (
-                  <p className="mt-4 text-sm text-ink">This code is locked. Assigning it here replaces the current affiliate.</p>
+                {!confirmRemove && (holders.length > 1 || replaces || otherCode) ? (
+                  <div className="mt-4 space-y-2 text-sm text-ink">
+                    {holders.length > 1 ? <p>This code lists more than one affiliate, so it does not pay anyone.</p> : null}
+                    {replaces ? <p>Assigning locks this code to the affiliate you choose and removes everyone else listed on it.</p> : null}
+                    {otherCode && selected ? (
+                      <p>
+                        {selected.name} already has {otherCode}. Assigning this code releases that one.
+                      </p>
+                    ) : null}
+                  </div>
                 ) : null}
                 <div className="mt-6 flex flex-wrap gap-3">
-                  {assigned && selected ? (
+                  {confirmRemove && selected ? (
                     <form action={unassignPromoCodeAction}>
                       <input type="hidden" name="code" value={code} />
                       <input type="hidden" name="affiliate" value={selected.code} />
                       <button type="submit" className={buttonClass}>
-                        Remove
+                        Remove {selected.name}
                       </button>
                     </form>
                   ) : (
-                    <form action={assignPromoCodeAction}>
-                      <input type="hidden" name="code" value={code} />
-                      <input type="hidden" name="affiliate" value={affiliate} />
-                      <button type="submit" className={`${buttonClass} disabled:cursor-not-allowed disabled:opacity-40`} disabled={!affiliate}>
-                        Assign
-                      </button>
-                    </form>
+                    <>
+                      {assigned && selected ? (
+                        <button type="button" onClick={() => setConfirmRemove(true)} className={buttonClass}>
+                          Remove assignment
+                        </button>
+                      ) : null}
+                      {soleLocked && !otherCode ? null : (
+                        <form action={assignPromoCodeAction}>
+                          <input type="hidden" name="code" value={code} />
+                          <input type="hidden" name="affiliate" value={affiliate} />
+                          <button type="submit" className={`${buttonClass} disabled:cursor-not-allowed disabled:opacity-40`} disabled={!affiliate}>
+                            Assign
+                          </button>
+                        </form>
+                      )}
+                    </>
                   )}
                   <button
                     type="button"
-                    onClick={closeDialog}
+                    onClick={confirmRemove ? () => setConfirmRemove(false) : closeDialog}
+                    data-confirm-cancel=""
                     className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/20 px-5 text-sm font-medium text-ink hover:bg-background focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                   >
                     Cancel

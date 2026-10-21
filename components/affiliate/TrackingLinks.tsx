@@ -39,7 +39,7 @@ export function TrackingLinks({ links }: { links: TrackingLinkRow[] }) {
         Tracking links
       </h2>
       <p className="mt-2 max-w-2xl text-sm text-brown">
-        Each affiliate has a default link, plus a link for every promo code assigned to them. The default link has no promo code. It uses{" "}
+        Each affiliate has a tracking link, plus a link for every promo code assigned to them. The tracking link has no promo code. It uses{" "}
         <span className="text-ink">utm_source</span>, <span className="text-ink">utm_medium</span>, and{" "}
         <span className="text-ink">utm_campaign</span>. <span className="text-ink">utm_source</span> and{" "}
         <span className="text-ink">utm_campaign</span> are the affiliate ID. <span className="text-ink">utm_medium</span> is affiliate. A promo link uses that promo code as{" "}
@@ -62,7 +62,7 @@ export function TrackingLinks({ links }: { links: TrackingLinkRow[] }) {
                 </div>
               </div>
               <label className="block min-w-0 text-sm text-ink" htmlFor={`tracking-link-${link.code}`}>
-                <span className="mb-1 block text-brown">Default link</span>
+                <span className="mb-1 block text-brown">Tracking link</span>
                 <span className="mb-1 block text-xs text-taupe">No promo code. UTM parameters only.</span>
                 <input
                   id={`tracking-link-${link.code}`}

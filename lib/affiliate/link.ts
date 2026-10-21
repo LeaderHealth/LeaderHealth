@@ -34,3 +34,13 @@ export function applyAffiliateTracking(params: URLSearchParams, code: string | n
     params.set(key, value);
   }
 }
+
+export function checkoutCampaignCandidate(
+  ref: string,
+  cookieCode: string | null,
+  cookieCampaign: string | null,
+  queryCampaign?: unknown,
+) {
+  if (cookieCode === ref) return affiliateCampaign(cookieCampaign);
+  return affiliateCampaign(queryCampaign);
+}

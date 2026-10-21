@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { CommissionOptions } from "@/components/affiliate/CommissionOptions";
-import { PasswordInput } from "@/components/affiliate/PasswordInput";
 import { createAffiliateAction } from "../../actions";
 import { ADMIN_ERRORS } from "../../messages";
 
@@ -33,7 +32,9 @@ export default async function AddAffiliatePage({
       ) : null}
       <form action={createAffiliateAction} className="grid gap-4 rounded-[28px] bg-white p-4 sm:p-8 md:grid-cols-2">
         <h2 className="text-2xl md:col-span-2">Add an affiliate</h2>
-        <p className="text-sm text-brown md:col-span-2">A unique ID and tracking link are created when you save this account.</p>
+        <p className="text-sm text-brown md:col-span-2">
+          A unique ID and an optional tracking link are created when you save this account. Each affiliate gets one promo code. Assign an existing Gen Health code and lock it to this affiliate. An invitation email lets them set a password and open the portal.
+        </p>
         <label className="block text-sm font-medium text-ink" htmlFor="affiliate-name">
           Name
           <input id="affiliate-name" name="name" required autoComplete="name" placeholder="Clinic Partner" className={fieldClass} />
@@ -51,20 +52,6 @@ export default async function AddAffiliatePage({
           />
         </label>
         <CommissionOptions />
-        <label className="block text-sm font-medium text-ink md:col-span-2" htmlFor="affiliate-password">
-          Portal password
-          <PasswordInput
-            id="affiliate-password"
-            name="password"
-            autoComplete="new-password"
-            minLength={8}
-            maxLength={128}
-            placeholder="Optional, 8 or more characters"
-          />
-        </label>
-        <p className="text-sm text-brown md:col-span-2">
-          Leave the password blank if this affiliate will sign in from an email link only.
-        </p>
         <div className="md:col-span-2">
           <button type="submit" className={buttonClass}>
             Create affiliate
