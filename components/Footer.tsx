@@ -316,6 +316,80 @@ function ClockIcon() {
   );
 }
 
+function NewsletterForm() {
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+
+  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (status === "submitting") return;
+    setStatus("submitting");
+    try {
+      const response = await fetch("/api/newsletter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (!response.ok) {
+        setStatus("error");
+        return;
+      }
+      setEmail("");
+      setStatus("success");
+    } catch {
+      setStatus("error");
+    }
+  }
+
+  return (
+    <>
+      <form
+        className="mt-4 flex h-[52px] w-full items-center gap-2 rounded-full border border-white/10 bg-[#290d0c] py-[5px] pr-[5px] pl-5 min-[1200px]:max-w-[279px]"
+        onSubmit={onSubmit}
+      >
+        <div className="relative min-w-0 flex-1">
+          <input
+            type="email"
+            name="email"
+            required
+            autoComplete="email"
+            value={email}
+            onChange={(event) => {
+              setEmail(event.target.value);
+              if (status === "error" || status === "success") setStatus("idle");
+            }}
+            placeholder=" "
+            aria-label="Email address"
+            disabled={status === "submitting"}
+            className="peer w-full bg-transparent text-[15px] leading-none text-[#F7F3F5] outline-none disabled:opacity-70"
+          />
+          <span className="pointer-events-none absolute inset-0 flex items-center text-[15px] text-[#DBD4BD]/50 peer-focus:hidden peer-[:not(:placeholder-shown)]:hidden min-[1200px]:hidden">
+            Email for protocol notes
+          </span>
+          <span className="pointer-events-none absolute inset-0 hidden items-center text-[15px] text-[#DBD4BD]/50 peer-focus:hidden peer-[:not(:placeholder-shown)]:hidden min-[1200px]:flex">
+            Your Email Here
+          </span>
+        </div>
+        <button
+          type="submit"
+          aria-label="Subscribe"
+          disabled={status === "submitting"}
+          className="grid size-[42px] shrink-0 place-items-center rounded-full bg-[#e33d4d] text-white transition-colors duration-200 hover:bg-[#c93240] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-wait disabled:opacity-70"
+        >
+          <ArrowIcon className="size-4" />
+        </button>
+      </form>
+      <p className="mt-3 max-w-[326px] font-sans text-[14px] leading-[1.55] tracking-[-0.02em] text-[#DBD4BD]/62" aria-live="polite">
+        {status === "success"
+          ? "You're on the list. Clinical updates and restock notices. Unsubscribe anytime."
+          : status === "error"
+            ? "We couldn't save that email. Try again in a moment."
+            : "Clinical updates and restock notices. Unsubscribe anytime."}
+      </p>
+    </>
+  );
+}
+
 function UserIcon() {
   return (
     <svg viewBox="0 0 16 16" className="size-3.5 shrink-0" fill="none" aria-hidden>
@@ -361,38 +435,7 @@ export function Footer() {
               <p className="mt-3 font-sans text-[13px] leading-[22px] tracking-[0.08em] text-[#DBD4BD]/62 uppercase min-[1200px]:hidden">
                 Physician-led care for the long run
               </p>
-              <form
-                className="mt-4 flex h-[52px] w-full items-center gap-2 rounded-full border border-white/10 bg-[#290d0c] py-[5px] pr-[5px] pl-5 min-[1200px]:max-w-[279px]"
-                action={`mailto:${site.email}`}
-                method="get"
-              >
-                <div className="relative min-w-0 flex-1">
-                  <input
-                    type="email"
-                    name="body"
-                    required
-                    placeholder=" "
-                    aria-label="Email address"
-                    className="peer w-full bg-transparent text-[15px] leading-none text-[#F7F3F5] outline-none"
-                  />
-                  <span className="pointer-events-none absolute inset-0 flex items-center text-[15px] text-[#DBD4BD]/50 peer-focus:hidden peer-[:not(:placeholder-shown)]:hidden min-[1200px]:hidden">
-                    Email for protocol notes
-                  </span>
-                  <span className="pointer-events-none absolute inset-0 hidden items-center text-[15px] text-[#DBD4BD]/50 peer-focus:hidden peer-[:not(:placeholder-shown)]:hidden min-[1200px]:flex">
-                    Your Email Here
-                  </span>
-                </div>
-                <button
-                  type="submit"
-                  aria-label="Subscribe"
-                  className="grid size-[42px] shrink-0 place-items-center rounded-full bg-[#e33d4d] text-white transition-colors duration-200 hover:bg-[#c93240] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-                >
-                  <ArrowIcon className="size-4" />
-                </button>
-              </form>
-              <p className="mt-3 max-w-[326px] font-sans text-[14px] leading-[1.55] tracking-[-0.02em] text-[#DBD4BD]/62">
-                Clinical updates and restock notices. Unsubscribe anytime.
-              </p>
+              <NewsletterForm />
             </div>
           </div>
 
