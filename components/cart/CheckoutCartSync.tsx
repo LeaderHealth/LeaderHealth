@@ -55,6 +55,7 @@ export function CheckoutCartSync() {
               slug: item.slug,
               name: item.name,
               variant: item.variant,
+              quantity: item.quantity,
               clientProductId: item.clientProductId,
             })),
           }),

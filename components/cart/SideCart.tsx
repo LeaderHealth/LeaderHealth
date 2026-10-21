@@ -4,17 +4,19 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { isQuantityCapped, cartRuleIssue, QUANTITY_LIMIT_MESSAGE } from "@/lib/cart/rules";
 import { useCart } from "./CartProvider";
 import { formatPrice } from "@/lib/genhealth/types";
 
 export function SideCart() {
   const router = useRouter();
   const pathname = usePathname();
-  const { items, isOpen, closeCart, removeItem, setQuantity, subtotal, count } = useCart();
+  const { items, isOpen, closeCart, removeItem, setQuantity, subtotal, count, rejection } = useCart();
   const onCheckout = pathname.startsWith("/checkout");
   const itemsKey = items.map((item) => `${item.id}:${item.quantity}`).join("|");
   const [notice, setNotice] = useState<{ text: string; itemsKey: string } | null>(null);
   const visibleNotice = notice?.itemsKey === itemsKey ? notice.text : null;
+  const ruleNotice = rejection || cartRuleIssue(items);
   const [pending, setPending] = useState(false);
 
   function go(href: string) {
@@ -31,6 +33,11 @@ export function SideCart() {
       go("/checkout");
       return;
     }
+    const issue = cartRuleIssue(items);
+    if (issue) {
+      setNotice({ text: issue, itemsKey });
+      return;
+    }
     setPending(true);
     setNotice(null);
     try {
@@ -42,6 +49,7 @@ export function SideCart() {
             slug: item.slug,
             name: item.name,
             variant: item.variant,
+            quantity: item.quantity,
             clientProductId: item.clientProductId,
           })),
         }),
@@ -145,8 +153,10 @@ export function SideCart() {
                           <span className="w-6 text-center text-sm">{item.quantity}</span>
                           <button
                             type="button"
-                            className="h-8 w-8 text-lg"
+                            className="h-8 w-8 text-lg disabled:cursor-not-allowed disabled:opacity-40"
                             onClick={() => setQuantity(item.id, item.quantity + 1)}
+                            disabled={isQuantityCapped(item)}
+                            title={isQuantityCapped(item) ? QUANTITY_LIMIT_MESSAGE : undefined}
                             aria-label={`Increase ${item.name}`}
                           >
                             +
@@ -171,7 +181,9 @@ export function SideCart() {
                 <p className="text-sm text-taupe">Subtotal</p>
                 <p className="text-2xl">{formatPrice(subtotal)}</p>
               </div>
-              {visibleNotice ? <p className="mt-3 text-sm text-accent">{visibleNotice}</p> : null}
+              {ruleNotice || visibleNotice ? (
+                <p className="mt-3 text-sm text-accent">{ruleNotice || visibleNotice}</p>
+              ) : null}
               <button
                 type="button"
                 onClick={continueToCheckout}

@@ -65,7 +65,7 @@ export const products: Product[] = [
       {
         name: "Semaglutide Injectable",
         eyebrow: "Weekly injection",
-        clientProductId: "lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_48ed6c335e9719fef64960ca",
+        clientProductId: "prod_48ed6c335e9719fef64960ca",
         detail: "Titrated dosing, adjusted as you progress.",
         price: "From $159 / month",
         priceAmount: "$159",

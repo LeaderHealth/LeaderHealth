@@ -3,6 +3,7 @@ import { affiliateCodeFromCookies } from "@/lib/affiliate/store";
 import { listCheckoutProducts } from "@/lib/genhealth/catalog";
 import { genHealthConfigured } from "@/lib/genhealth/client";
 import { campaignForAffiliateCode } from "@/lib/genhealth/promocodes";
+import { cartRuleIssue } from "@/lib/cart/rules";
 import {
   resolveCartHandoff,
   storefrontCheckoutUrl,
@@ -15,12 +16,18 @@ function text(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function parseLines(body: unknown): HandoffLine[] | null {
+type CheckoutLine = HandoffLine & { quantity: number };
+
+function quantityOf(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : 1;
+}
+
+function parseLines(body: unknown): CheckoutLine[] | null {
   const record = body && typeof body === "object" ? (body as { items?: unknown }) : null;
   if (!record || !Array.isArray(record.items) || record.items.length === 0 || record.items.length > 30) {
     return null;
   }
-  const lines: HandoffLine[] = [];
+  const lines: CheckoutLine[] = [];
   for (const raw of record.items) {
     if (!raw || typeof raw !== "object") return null;
     const item = raw as Record<string, unknown>;
@@ -34,6 +41,7 @@ function parseLines(body: unknown): HandoffLine[] | null {
       name,
       variant: variant || undefined,
       clientProductId: clientProductId || undefined,
+      quantity: quantityOf(item.quantity),
     });
   }
   return lines;
@@ -49,6 +57,9 @@ export async function POST(request: Request) {
 
   const lines = parseLines(body);
   if (!lines) return NextResponse.json({ ok: false, error: "Invalid cart." }, { status: 400 });
+
+  const issue = cartRuleIssue(lines);
+  if (issue) return NextResponse.json({ ok: false, error: issue }, { status: 422 });
 
   const first = lines[0].name;
   if (!genHealthConfigured()) {
