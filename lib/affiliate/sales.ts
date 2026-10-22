@@ -22,6 +22,7 @@ async function recordPaidOrder(order: PaidOrder, code: string) {
     productName: order.productName,
     dryRun: false,
     createdAt: order.createdAt,
+    promoCode: order.promoCode,
   });
 }
 

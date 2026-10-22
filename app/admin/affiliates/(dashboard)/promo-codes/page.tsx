@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { AssignPromoCode, type AssignableAffiliate } from "@/components/affiliate/AssignPromoCode";
 import { RemovePromoAffiliate } from "@/components/affiliate/RemovePromoAffiliate";
+import { formatCents } from "@/lib/affiliate/format";
+import { loadRemovedPromoRows, type RemovedPromoRow } from "@/lib/affiliate/removed-promos";
 import { AffiliateStoreError, loadAffiliateDashboard } from "@/lib/affiliate/store";
 import { listPromoCodes, personalPromoForAffiliate, type PromoCodeRow } from "@/lib/genhealth/promocodes";
 import { ADMIN_ERRORS } from "../../messages";
@@ -106,6 +108,13 @@ export default async function PromoCodesPage({
   });
   const assignedCount = codes.filter((promo) => promo.affiliates.length > 0).length;
   const availableCount = codes.length - assignedCount;
+  let removedPromos: RemovedPromoRow[] = [];
+  let removedError = "";
+  try {
+    removedPromos = await loadRemovedPromoRows(codes.map((promo) => promo.code));
+  } catch {
+    removedError = "Saved promo history is unavailable right now.";
+  }
 
   return (
     <div className="space-y-6">
@@ -133,7 +142,7 @@ export default async function PromoCodesPage({
         {codes.length === 0
           ? "Promo codes are created in Gen Health."
           : `${assignedCount} assigned · ${availableCount} available. Each code locks to one affiliate. Promo codes are created in Gen Health.`}{" "}
-        Deactivating a promo code in Gen Health removes it from this dashboard and the affiliate dashboard.
+        Deactivating a promo code in Gen Health removes it from this list. Sales and clicks recorded for that code stay under Removed.
       </p>
       {codes.length === 0 ? (
         <p className="px-4 py-6 text-sm text-brown">No promo codes yet.</p>
@@ -257,6 +266,130 @@ export default async function PromoCodesPage({
       </table>
       ) : null}
     </div>
+    {removedError ? <p className="text-ink">{removedError}</p> : null}
+    <RemovedPromoCodes rows={removedPromos} accounts={accounts} />
+    </div>
+  );
+}
+
+function affiliateLabels(codes: string[], accounts: AssignableAffiliate[]) {
+  if (codes.length === 0) return "—";
+  return codes.map((code) => affiliateName(code, accounts)).join(", ");
+}
+
+function RemovedPromoCodes({ rows, accounts }: { rows: RemovedPromoRow[]; accounts: AssignableAffiliate[] }) {
+  const empty = rows.length === 0;
+  return (
+    <div className="min-w-0 rounded-[28px] bg-white">
+      <h2 id="removed-promo-codes-title" className="px-4 pt-4 text-2xl">
+        Removed
+      </h2>
+      <p className="px-4 pt-2 text-sm text-brown">
+        {empty
+          ? "No recorded sales or clicks for a removed code yet."
+          : "These codes are no longer active in Gen Health. Orders, sales, commission, and clicks were recorded on this site. Gen Health usage is not available after a code is removed."}
+      </p>
+      <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-5 border-t border-ink/10 px-4 py-5 text-sm leading-6 xl:hidden" aria-labelledby="removed-promo-codes-title">
+        {empty ? (
+          <>
+            <div className="col-span-2">
+              <dt className="text-xs text-brown">Promo code</dt>
+              <dd className="mt-1">—</dd>
+            </div>
+            <div className="col-span-2">
+              <dt className="text-xs text-brown">Affiliate</dt>
+              <dd className="mt-1">—</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-brown">Orders</dt>
+              <dd className="mt-1">—</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-brown">Sales</dt>
+              <dd className="mt-1">—</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-brown">Commission</dt>
+              <dd className="mt-1">—</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-brown">Clicks</dt>
+              <dd className="mt-1">—</dd>
+            </div>
+            <div className="col-span-2">
+              <dt className="text-xs text-brown">Usage</dt>
+              <dd className="mt-1">—</dd>
+            </div>
+          </>
+        ) : (
+          rows.map((promo) => (
+            <div key={promo.code} className="col-span-2 border-t border-ink/10 pt-5 first:border-t-0 first:pt-0">
+              <div className="break-all font-medium">{promo.code}</div>
+              <p className="mt-2 text-sm text-brown">{affiliateLabels(promo.affiliateCodes, accounts)}</p>
+              <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-5">
+                <div>
+                  <dt className="text-xs text-brown">Orders</dt>
+                  <dd className="mt-1">{promo.orders}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-brown">Sales</dt>
+                  <dd className="mt-1">{promo.salesCents == null ? "—" : formatCents(promo.salesCents)}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-brown">Commission</dt>
+                  <dd className="mt-1">{formatCents(promo.commissionCents)}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-brown">Clicks</dt>
+                  <dd className="mt-1">{promo.clicks}</dd>
+                </div>
+                <div className="col-span-2">
+                  <dt className="text-xs text-brown">Usage</dt>
+                  <dd className="mt-1">—</dd>
+                </div>
+              </dl>
+            </div>
+          ))
+        )}
+      </dl>
+      <table className="mt-4 hidden w-full table-fixed border-collapse text-left text-sm leading-6 xl:table" aria-labelledby="removed-promo-codes-title">
+        <thead className="text-brown">
+          <tr>
+            <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Promo code</th>
+            <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Affiliate</th>
+            <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Orders</th>
+            <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Sales</th>
+            <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Commission</th>
+            <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Clicks</th>
+            <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Usage</th>
+          </tr>
+        </thead>
+        <tbody>
+          {empty ? (
+            <tr className="border-t border-rose/60">
+              <td className="px-4 py-5 align-top">—</td>
+              <td className="px-4 py-5 align-top">—</td>
+              <td className="px-4 py-5 align-top">—</td>
+              <td className="px-4 py-5 align-top">—</td>
+              <td className="px-4 py-5 align-top">—</td>
+              <td className="px-4 py-5 align-top">—</td>
+              <td className="px-4 py-5 align-top">—</td>
+            </tr>
+          ) : (
+            rows.map((promo) => (
+              <tr key={promo.code} className="border-t border-rose/60">
+                <td className="break-all px-4 py-5 align-top font-medium">{promo.code}</td>
+                <td className="px-4 py-5 align-top">{affiliateLabels(promo.affiliateCodes, accounts)}</td>
+                <td className="px-4 py-5 align-top">{promo.orders}</td>
+                <td className="px-4 py-5 align-top">{promo.salesCents == null ? "—" : formatCents(promo.salesCents)}</td>
+                <td className="px-4 py-5 align-top">{formatCents(promo.commissionCents)}</td>
+                <td className="px-4 py-5 align-top">{promo.clicks}</td>
+                <td className="px-4 py-5 align-top">—</td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
     </div>
   );
 }

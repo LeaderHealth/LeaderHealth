@@ -245,7 +245,14 @@ export async function getAffiliate(code: string) {
   return affiliateFrom(code, snap.data());
 }
 
-export async function logClick(input: { code: string; path: string; visitorId: string; referrer?: string }) {
+function storedCampaign(value: string | null | undefined, affiliateCode: string) {
+  const campaign = affiliateCampaign(value);
+  if (!campaign) return "";
+  if (affiliateCode && campaign.toLowerCase() === affiliateCode.toLowerCase()) return "";
+  return campaign;
+}
+
+export async function logClick(input: { code: string; path: string; visitorId: string; referrer?: string; campaign?: string | null }) {
   if (!affiliateFirebaseConfigured()) return;
   const db = affiliateFirestore();
   const day = new Date().toISOString().slice(0, 10);
@@ -259,11 +266,13 @@ export async function logClick(input: { code: string; path: string; visitorId: s
     }
     if (existing.exists) return;
     const clickCount = asNumber(affiliate.data()?.clickCount);
+    const campaign = storedCampaign(input.campaign, input.code);
     tx.set(clickRef, {
       code: input.code,
       path: input.path,
       referrer: input.referrer?.trim() ?? "",
       visitorId: input.visitorId,
+      ...(campaign ? { campaign } : {}),
       createdAt: new Date(),
     });
     tx.update(affiliateRef, { clickCount: clickCount + 1 });
@@ -277,6 +286,7 @@ export async function recordAffiliateConversion(input: {
   productName: string;
   dryRun: boolean;
   createdAt?: Date;
+  promoCode?: string | null;
 }) {
   if (!affiliateFirebaseConfigured()) return false;
   const code = normalizeAffiliateCode(input.code);
@@ -303,6 +313,7 @@ export async function recordAffiliateConversion(input: {
       fixedCents: commissionFixedCents,
       amountCents,
     });
+    const promoCode = storedCampaign(input.promoCode, "");
     tx.set(conversionRef, {
       code,
       orderId,
@@ -313,6 +324,7 @@ export async function recordAffiliateConversion(input: {
       commissionFixedCents,
       commissionCents,
       dryRun: input.dryRun,
+      ...(promoCode ? { promoCode } : {}),
       createdAt:
         input.createdAt instanceof Date && !Number.isNaN(input.createdAt.getTime())
           ? input.createdAt
@@ -680,6 +692,14 @@ export async function loadClickCounts() {
     counts.set(code, (counts.get(code) ?? 0) + 1);
   }
   return counts;
+}
+
+export async function loadClickTimes() {
+  if (!affiliateFirebaseConfigured()) return [] as string[];
+  const snap = await affiliateFirestore().collection("clicks").get();
+  return snap.docs
+    .map((doc) => asTimestamp(doc.data().createdAt))
+    .filter((value): value is string => Boolean(value));
 }
 
 export async function alignAffiliateRecordTotals(

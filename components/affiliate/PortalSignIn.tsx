@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
+import { PortalBrand } from "./PortalBrand";
 
 type Role = "affiliate" | "admin";
 type Method = "password" | "link";
@@ -78,7 +79,7 @@ export function PortalSignIn({
   const [slide, setSlide] = useState(0);
   const linkForm = method === "link" && emailLinks && linkAction;
   const describedBy = invalid ? errorId : undefined;
-  const supportLabel = affiliate ? "Contact affiliate support" : "Contact support";
+  const supportLabel = "Contact Leader Health support";
   const other = affiliate
     ? { href: "/admin/affiliates", label: "Admin sign-in" }
     : { href: "/affiliates", label: "Affiliate sign-in" };
@@ -87,7 +88,7 @@ export function PortalSignIn({
     <div className="min-h-screen bg-[#efecee] px-3 pt-28 pb-16 text-ink sm:px-4 sm:pt-32 sm:pb-20 lg:px-5 lg:pb-24">
       <div className="mx-auto grid w-full max-w-[1180px] items-stretch gap-3 lg:min-h-[calc(100vh-9rem)] lg:grid-cols-2">
         <section className="flex flex-col justify-center rounded-[28px] bg-[#fbf8f8] px-6 py-10 sm:px-10 lg:px-12">
-          <Brand badge={affiliate ? "Affiliates" : "Admin"} />
+          <PortalBrand badge={affiliate ? "Affiliates" : "Admin"} />
           <h1 className="mt-10 max-w-sm text-[2.65rem] leading-[1.02] font-medium tracking-[-0.035em] text-ink sm:text-5xl">
             {affiliate ? (
               <>
@@ -207,7 +208,7 @@ export function PortalSignIn({
           <p className="mt-3 text-center text-sm">
             <Link
               href={other.href}
-              className="text-[#8d7370] underline decoration-[#8d7370]/40 underline-offset-4 hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+              className="font-medium text-ink underline decoration-ink underline-offset-4 hover:text-brown focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
             >
               {other.label}
             </Link>
@@ -264,27 +265,6 @@ export function PortalSignIn({
         </aside>
       </div>
     </div>
-  );
-}
-
-function Brand({ badge }: { badge: string }) {
-  return (
-    <Link
-      href="/"
-      className="inline-flex w-fit items-center gap-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-    >
-      <Image
-        src="/images/leaderhealth-logo.png"
-        alt="Leader Health"
-        width={1024}
-        height={70}
-        priority
-        className="h-auto w-[168px] sm:w-[196px]"
-      />
-      <span className="rounded-full bg-[#f6d5d8] px-2 py-0.5 text-[10px] font-semibold tracking-[0.12em] text-accent uppercase">
-        {badge}
-      </span>
-    </Link>
   );
 }
 

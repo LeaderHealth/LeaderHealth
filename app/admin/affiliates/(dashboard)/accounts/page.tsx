@@ -125,6 +125,7 @@ export default async function AffiliateAccountsPage({
   function trackingPromos(affiliate: AffiliateSummary) {
     return promosFor(affiliate).map((promo) => ({
       code: promo.code,
+      discount: promo.discount,
       url: affiliateTrackingLink(affiliate.code, promo.code),
     }));
   }
@@ -208,7 +209,7 @@ export default async function AffiliateAccountsPage({
           Accounts
         </h2>
         <p className="px-4 pt-2 text-sm text-brown">
-          Unique visitors counts one visit per person each day. Unpaid orders are checkouts that have not been paid. Unpaid earnings are commission that has not been paid to the affiliate.
+          Unique visitors counts each person once a day. Unpaid orders are checkouts that have not been paid. Unpaid earnings are commission that has not been paid to the affiliate.
         </p>
         {affiliates.length === 0 ? (
           <p className="px-4 py-8 text-sm text-brown">No affiliates yet.</p>

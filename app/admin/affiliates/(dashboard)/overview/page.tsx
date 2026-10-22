@@ -3,7 +3,7 @@ import Link from "next/link";
 import { formatCents, formatCommissionRate } from "@/lib/affiliate/format";
 import { loadPayoutRecords, paidOutInRange } from "@/lib/affiliate/payouts";
 import { syncAttributedGenHealthSales } from "@/lib/affiliate/sales";
-import { AffiliateStoreError, loadAffiliateOverview, type AffiliateSummary, type ConversionSummary } from "@/lib/affiliate/store";
+import { AffiliateStoreError, loadAffiliateOverview, loadClickTimes, type AffiliateSummary, type ConversionSummary } from "@/lib/affiliate/store";
 import { listPromoCodes, promoCodesForAffiliate, type PromoCodeRow } from "@/lib/genhealth/promocodes";
 
 export const metadata: Metadata = {
@@ -100,6 +100,7 @@ export default async function AffiliateOverviewPage({
 
   let affiliates: AffiliateSummary[] = [];
   let conversions: ConversionSummary[] = [];
+  let clickTimes: string[] = [];
   let paidOutCents = 0;
   let loadError = "";
   try {
@@ -107,6 +108,7 @@ export default async function AffiliateOverviewPage({
     const overview = await loadAffiliateOverview();
     affiliates = overview.affiliates;
     conversions = overview.conversions;
+    clickTimes = await loadClickTimes();
     paidOutCents = paidOutInRange(await loadPayoutRecords(), range);
   } catch (caught) {
     loadError = caught instanceof AffiliateStoreError ? caught.message : "Could not load affiliate records.";
@@ -148,6 +150,8 @@ export default async function AffiliateOverviewPage({
   const recent = [...paid]
     .sort((left, right) => (right.createdAt ?? "").localeCompare(left.createdAt ?? ""))
     .slice(0, 5);
+  const newAffiliateCount = affiliates.filter((affiliate) => inRange(affiliate.createdAt, range)).length;
+  const visitorCount = clickTimes.filter((createdAt) => inRange(createdAt, range)).length;
 
   const needle = search.toLowerCase();
   const visible = affiliates
@@ -181,8 +185,8 @@ export default async function AffiliateOverviewPage({
               </Link>
             ))}
           </div>
-          <Link href="/admin/affiliates/add" className={`${pillClass} bg-ink text-white hover:bg-brown`}>
-            Add affiliate
+          <Link href="/admin/affiliates/add-an-affiliate" className={`${pillClass} bg-ink text-white hover:bg-brown`}>
+            Add an affiliate
           </Link>
         </div>
       </div>
@@ -211,26 +215,45 @@ export default async function AffiliateOverviewPage({
         </section>
       </div>
 
-      <section className="rounded-[28px] bg-white p-6" aria-labelledby="admin-earnings-title">
-        <h3 id="admin-earnings-title" className="sr-only">
-          Earnings
-        </h3>
-        <div className="grid sm:grid-cols-2 sm:divide-x sm:divide-rose/60">
-          <div className="sm:pr-8">
-            <h4 className="text-sm text-brown">Unpaid earnings</h4>
-            <p className="mt-2 text-3xl">{formatCents(unpaidCents)}</p>
-            <p className="mt-2 text-sm text-brown">Commission not paid out yet</p>
+      <div className="grid items-stretch gap-4 lg:grid-cols-2">
+        <section className="rounded-[28px] bg-white p-6" aria-labelledby="admin-earnings-title">
+          <h3 id="admin-earnings-title" className="sr-only">
+            Earnings
+          </h3>
+          <div className="grid sm:grid-cols-2 sm:divide-x sm:divide-rose/60">
+            <div className="sm:pr-8">
+              <h4 className="text-sm text-brown">Unpaid earnings</h4>
+              <p className="mt-2 text-3xl">{formatCents(unpaidCents)}</p>
+              <p className="mt-2 text-sm text-brown">Commission not paid out yet</p>
+            </div>
+            <div className="mt-6 border-t border-rose/60 pt-6 sm:mt-0 sm:border-0 sm:pt-0 sm:pl-8">
+              <h4 className="text-sm text-brown">Total earnings</h4>
+              <p className="mt-2 text-3xl">{formatCents(commissionCents)}</p>
+              <p className="mt-2 text-sm text-brown">Commission from paid orders</p>
+            </div>
           </div>
-          <div className="mt-6 border-t border-rose/60 pt-6 sm:mt-0 sm:border-0 sm:pt-0 sm:pl-8">
-            <h4 className="text-sm text-brown">Total earnings</h4>
-            <p className="mt-2 text-3xl">{formatCents(commissionCents)}</p>
-            <p className="mt-2 text-sm text-brown">Commission from paid orders</p>
-          </div>
+          <p className="mt-6 border-t border-rose/60 pt-4 text-sm text-brown">
+            Paid out {formatCents(paidOutCents)} in this period. Unpaid earnings can change if a referred order is refunded. Order details are on the Orders page.
+          </p>
+        </section>
+
+        <div className="grid gap-4">
+          <section className="rounded-[28px] bg-white px-6 py-4" aria-labelledby="new-affiliates-title">
+            <h3 id="new-affiliates-title" className="text-sm text-brown">
+              New affiliates
+            </h3>
+            <p className="mt-1 text-3xl">{newAffiliateCount}</p>
+            <p className="mt-1 text-sm text-brown">Registered in this period</p>
+          </section>
+          <section className="rounded-[28px] bg-white px-6 py-4" aria-labelledby="total-visitors-title">
+            <h3 id="total-visitors-title" className="text-sm text-brown">
+              Total visitors
+            </h3>
+            <p className="mt-1 text-3xl">{visitorCount}</p>
+            <p className="mt-1 text-sm text-brown">Each person counts once a day</p>
+          </section>
         </div>
-        <p className="mt-6 border-t border-rose/60 pt-4 text-sm text-brown">
-          Paid out {formatCents(paidOutCents)} in this period. Unpaid earnings can change if a referred order is refunded. Order details are on the Orders page.
-        </p>
-      </section>
+      </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
         <section className="min-w-0 rounded-[28px] bg-white p-4 sm:p-6" aria-labelledby="top-affiliates-title">

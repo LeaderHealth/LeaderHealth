@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { AreaNav } from "@/components/affiliate/AreaNav";
+import { PortalBrand } from "@/components/affiliate/PortalBrand";
 import { ProfileCard } from "@/components/affiliate/ProfileCard";
 import { logoutAffiliatePortal } from "../actions";
 import { currentAffiliate } from "../current";
@@ -23,11 +24,11 @@ export default async function AffiliateDashboardLayout({ children }: { children:
   return (
     <section className="bg-background px-4 pb-20 pt-32 text-ink sm:px-6">
       <div className="mx-auto max-w-6xl">
-        <h1 className="text-4xl sm:text-5xl">
-          Affiliate <span className="font-serif-italic text-accent">portal</span>
+        <h1>
+          <PortalBrand badge="Affiliates" />
         </h1>
         <p className="mt-4 max-w-2xl text-taupe">
-          Your sales, orders, commission, payouts, and referral link.
+          See your referral link, promo code, orders, earnings, and payouts.
         </p>
         <div className="mt-8 xl:grid xl:grid-cols-[16rem_minmax(0,1fr)] xl:items-start xl:gap-8">
           <div className="z-20 flex flex-col gap-4 xl:sticky xl:top-28 xl:self-start">

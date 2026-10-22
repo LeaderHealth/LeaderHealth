@@ -94,7 +94,12 @@ export async function POST(request: Request) {
   if (jar.get(CLICK_LOG_COOKIE)?.value === loggedKey) return tracked;
 
   try {
-    await logClick({ code, path: affiliatePath(record.path), visitorId });
+    await logClick({
+      code,
+      path: affiliatePath(record.path),
+      visitorId,
+      campaign: affiliateCampaign(record.campaign),
+    });
     tracked.cookies.set(CLICK_LOG_COOKIE, loggedKey, affiliateCookieOptions(CLICK_LOG_MAX_AGE));
   } catch (error) {
     console.error("[affiliate] click log failed", error instanceof Error ? error.message : "unknown");

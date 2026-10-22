@@ -38,7 +38,7 @@ async function requireAdmin() {
 
 export async function createAffiliateAction(formData: FormData) {
   await requireAdmin();
-  if (!affiliateEmailConfigured()) fail("mail", "/admin/affiliates/add");
+  if (!affiliateEmailConfigured()) fail("mail", "/admin/affiliates/add-an-affiliate");
   let code = "";
   try {
     code = await createAffiliate({
@@ -49,9 +49,9 @@ export async function createAffiliateAction(formData: FormData) {
       commissionFixed: formData.get("commissionFixed"),
     });
   } catch (error) {
-    if (error instanceof AffiliateStoreError) fail(error.code, "/admin/affiliates/add");
+    if (error instanceof AffiliateStoreError) fail(error.code, "/admin/affiliates/add-an-affiliate");
     console.error("[affiliate] create failed", error instanceof Error ? error.message : "unknown");
-    fail("unavailable", "/admin/affiliates/add");
+    fail("unavailable", "/admin/affiliates/add-an-affiliate");
   }
   const created = `/admin/affiliates/accounts?created=${encodeURIComponent(code)}`;
   let issued: Awaited<ReturnType<typeof issueAffiliateInvitation>>;

@@ -399,6 +399,49 @@ function UserIcon() {
   );
 }
 
+function SocialIcon({ label }: { label: string }) {
+  if (label === "Facebook") {
+    return (
+      <svg viewBox="0 0 24 24" className="size-4" fill="none" aria-hidden>
+        <path d="M14.2 8.2H16V5.4h-1.8c-2.2 0-3.4 1.3-3.4 3.4v1.5H8.6V13h2.2v6h2.8v-6h2.2l.4-2.7h-2.6V9.1c0-.6.3-.9 1-.9Z" fill="currentColor" />
+      </svg>
+    );
+  }
+  if (label === "LinkedIn") {
+    return (
+      <svg viewBox="0 0 24 24" className="size-4" fill="none" aria-hidden>
+        <path d="M7.2 9.4H4.6V19h2.6V9.4ZM5.9 4.8A1.5 1.5 0 1 0 5.9 7.8 1.5 1.5 0 0 0 5.9 4.8ZM19.4 19h-2.6v-5.1c0-1.4-.5-2.3-1.7-2.3-1 0-1.5.6-1.8 1.3-.1.2-.1.5-.1.8V19h-2.6V9.4h2.6v1.3c.4-.7 1.2-1.6 2.9-1.6 2.1 0 3.7 1.4 3.7 4.4V19Z" fill="currentColor" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 24" className="size-4" fill="none" aria-hidden>
+      <rect x="6" y="6" width="12" height="12" rx="3.2" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="12" cy="12" r="2.6" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="15.4" cy="8.6" r="0.8" fill="currentColor" />
+    </svg>
+  );
+}
+
+function SocialLinks() {
+  return (
+    <nav aria-label="Social media" className="mt-4 flex items-center gap-3">
+      {site.social.map((item) => (
+        <a
+          key={item.label}
+          href={item.href}
+          target="_blank"
+          rel="noreferrer"
+          aria-label={item.label}
+          className="grid size-10 place-items-center rounded-full border border-[#DBD4BD]/70 text-[#DBD4BD] transition-colors duration-200 hover:border-[#f7a8ad] hover:text-[#f7a8ad] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+        >
+          <SocialIcon label={item.label} />
+        </a>
+      ))}
+    </nav>
+  );
+}
+
 function PhoneIcon() {
   return (
     <svg viewBox="0 0 16 16" className="size-3.5 shrink-0 text-[#e33d4d]" fill="none" aria-hidden>
@@ -435,6 +478,7 @@ export function Footer() {
               <p className="mt-3 font-sans text-[13px] leading-[22px] tracking-[0.08em] text-[#DBD4BD]/62 uppercase min-[1200px]:hidden">
                 Physician-led care for the long run
               </p>
+              <SocialLinks />
               <NewsletterForm />
             </div>
           </div>

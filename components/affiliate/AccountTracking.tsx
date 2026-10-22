@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 
 export type AccountTrackingPromo = {
   code: string;
+  discount: string;
   url: string;
 };
 
@@ -164,10 +165,11 @@ export function AccountTracking({
                         <Row label="Promo code">
                           <CopyValue value={promo.code} label={`${promo.code} promo code`} />
                         </Row>
+                        <Row label="Discount">{promo.discount}</Row>
                         <Row label="Promo link with visitors tracking">
                           <CopyValue value={promo.url} label={`${promo.code} promo link`} />
                           <Note>
-                            This does the same visit recording, with <span className="text-ink">utm_campaign</span> set to {promo.code}. The visit still counts. If the paid order includes {promo.code}, {name} is credited from that locked code.
+                            This does the same visit recording, with <span className="text-ink">utm_campaign</span> set to {promo.code}. The visit still counts. This link auto-fills {promo.code} on the products that code covers. If the paid order includes {promo.code}, {name} is credited from that locked code.
                           </Note>
                         </Row>
                       </dl>

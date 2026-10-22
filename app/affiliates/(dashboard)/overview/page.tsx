@@ -154,7 +154,7 @@ export default async function AffiliatePortalOverviewPage({
         <section className="rounded-[28px] bg-white p-6">
           <h3 className="text-sm text-brown">Unique visitors</h3>
           <p className="mt-2 text-3xl">{clicks}</p>
-          <p className="mt-2 text-sm text-brown">One visit per person each day</p>
+          <p className="mt-2 text-sm text-brown">Each person counts once a day</p>
         </section>
       </div>
 
