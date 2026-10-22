@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { AreaNav } from "@/components/affiliate/AreaNav";
+import { PortalBrand } from "@/components/affiliate/PortalBrand";
 import { ProfileCard } from "@/components/affiliate/ProfileCard";
 import { adminAccountProfile } from "@/lib/affiliate/admin-profile";
 import { affiliateFirebaseConfigured } from "@/lib/affiliate/firebase";
@@ -12,9 +13,9 @@ export const dynamic = "force-dynamic";
 
 const items = [
   { href: "/admin/affiliates/overview", label: "Overview" },
-  { href: "/admin/affiliates/add", label: "Add" },
+  { href: "/admin/affiliates/add-an-affiliate", label: "Add an affiliate" },
   { href: "/admin/affiliates/accounts", label: "Accounts" },
-  { href: "/admin/affiliates/tracking-links", label: "Tracking links" },
+  { href: "/admin/affiliates/tracking-links", label: "Referral links" },
   { href: "/admin/affiliates/promo-codes", label: "Promo codes" },
   { href: "/admin/affiliates/orders", label: "Orders" },
   { href: "/admin/affiliates/payouts", label: "Payouts" },
@@ -27,13 +28,11 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
   return (
     <section className="bg-background px-4 pb-20 pt-32 text-ink sm:px-6">
       <div className="mx-auto max-w-[96rem]">
-        <h1 className="text-4xl sm:text-5xl">
-          Affiliate <span className="font-serif-italic text-accent">tracking</span>
+        <h1>
+          <PortalBrand badge="Admin" />
         </h1>
         <p className="mt-4 max-w-2xl text-taupe">
-          Each new affiliate gets a unique ID and a tracking link with utm_source, utm_medium, and utm_campaign. Affiliates sign in at{" "}
-          <span className="text-ink">/affiliates</span>. Clicks and paid orders are stored in Firestore. Commission totals
-          skip dry-run checkouts.
+          Manage affiliate accounts, referral links, promo codes, orders, and payouts.
         </p>
         {affiliateFirebaseConfigured() ? (
           <div className="mt-8 xl:grid xl:grid-cols-[16rem_minmax(0,1fr)] xl:items-start xl:gap-8">

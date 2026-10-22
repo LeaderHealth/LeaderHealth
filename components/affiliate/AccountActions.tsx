@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { setAffiliateActiveAction, setAffiliatePasswordAction } from "@/app/admin/affiliates/actions";
+import { resendAffiliateInvitationAction, setAffiliateActiveAction, setAffiliatePasswordAction } from "@/app/admin/affiliates/actions";
 import { PasswordInput } from "@/components/affiliate/PasswordInput";
 
 const buttonClass =
@@ -15,11 +15,13 @@ export function AccountActions({
   code,
   name,
   active,
+  pendingInvite = false,
   layout = "inline",
 }: {
   code: string;
   name: string;
   active: boolean;
+  pendingInvite?: boolean;
   layout?: "inline" | "stack";
 }) {
   const titleId = useId();
@@ -89,6 +91,14 @@ export function AccountActions({
         >
           Set password
         </button>
+        {pendingInvite ? (
+          <form action={resendAffiliateInvitationAction} className={layout === "stack" ? undefined : "min-[420px]:col-span-2"}>
+            <input type="hidden" name="code" value={code} />
+            <button type="submit" className={`${actionClass} w-full`}>
+              Resend invitation
+            </button>
+          </form>
+        ) : null}
       </div>
       {passwordOpen
         ? createPortal(

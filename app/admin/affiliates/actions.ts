@@ -2,8 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { affiliateEmailConfigured, sendAffiliateInvitationEmail } from "@/lib/affiliate/email";
 import { approvePayout, markPayoutPaid, PayoutError } from "@/lib/affiliate/payouts";
-import { AffiliateStoreError, createAffiliate, setAffiliateActive, setAffiliatePassword } from "@/lib/affiliate/store";
+import { AffiliateStoreError, createAffiliate, issueAffiliateInvitation, setAffiliateActive, setAffiliatePassword } from "@/lib/affiliate/store";
 import { PromoCodeError, assignPromoCode, unassignPromoCode } from "@/lib/genhealth/promocodes";
 import {
   adminCredentialsMatch,
@@ -37,6 +38,7 @@ async function requireAdmin() {
 
 export async function createAffiliateAction(formData: FormData) {
   await requireAdmin();
+  if (!affiliateEmailConfigured()) fail("mail", "/admin/affiliates/add-an-affiliate");
   let code = "";
   try {
     code = await createAffiliate({
@@ -45,14 +47,31 @@ export async function createAffiliateAction(formData: FormData) {
       commissionMode: formData.get("commissionMode"),
       commissionPercent: formData.get("commissionPercent"),
       commissionFixed: formData.get("commissionFixed"),
-      password: String(formData.get("password") ?? ""),
     });
   } catch (error) {
-    if (error instanceof AffiliateStoreError) fail(error.code, "/admin/affiliates/add");
+    if (error instanceof AffiliateStoreError) fail(error.code, "/admin/affiliates/add-an-affiliate");
     console.error("[affiliate] create failed", error instanceof Error ? error.message : "unknown");
-    fail("unavailable", "/admin/affiliates/add");
+    fail("unavailable", "/admin/affiliates/add-an-affiliate");
   }
-  redirect(`/admin/affiliates/accounts?created=${encodeURIComponent(code)}`);
+  const created = `/admin/affiliates/accounts?created=${encodeURIComponent(code)}`;
+  let issued: Awaited<ReturnType<typeof issueAffiliateInvitation>>;
+  try {
+    issued = await issueAffiliateInvitation(code);
+  } catch (error) {
+    console.error("[affiliate] invitation failed", error instanceof Error ? error.message : "unknown");
+    redirect(`${created}&error=invite`);
+  }
+  if (issued.status !== "sent") {
+    const reason = issued.status === "inactive" ? "inactive" : issued.status === "missing" ? "missing" : "unavailable";
+    redirect(`${created}&error=${reason}`);
+  }
+  try {
+    await sendAffiliateInvitationEmail(issued.email, issued.url);
+  } catch (error) {
+    console.error("[affiliate] invitation email failed", error instanceof Error ? error.message : "unknown");
+    redirect(`${created}&error=invite`);
+  }
+  redirect(`${created}&invited=1`);
 }
 
 export async function setAffiliatePasswordAction(formData: FormData) {
@@ -83,19 +102,46 @@ export async function setAffiliateActiveAction(formData: FormData) {
 const PROMO_PATH = "/admin/affiliates/promo-codes";
 const ACCOUNTS_PATH = "/admin/affiliates/accounts";
 
+export async function resendAffiliateInvitationAction(formData: FormData) {
+  await requireAdmin();
+  if (!affiliateEmailConfigured()) fail("mail", ACCOUNTS_PATH);
+  let issued: Awaited<ReturnType<typeof issueAffiliateInvitation>>;
+  try {
+    issued = await issueAffiliateInvitation(String(formData.get("code") ?? ""));
+  } catch (error) {
+    console.error("[affiliate] invitation resend failed", error instanceof Error ? error.message : "unknown");
+    fail("unavailable", ACCOUNTS_PATH);
+  }
+  if (issued.status === "activated") fail("activated", ACCOUNTS_PATH);
+  if (issued.status === "inactive") fail("inactive", ACCOUNTS_PATH);
+  if (issued.status === "missing") fail("missing", ACCOUNTS_PATH);
+  if (issued.status !== "sent") fail("unavailable", ACCOUNTS_PATH);
+  try {
+    await sendAffiliateInvitationEmail(issued.email, issued.url);
+  } catch (error) {
+    console.error("[affiliate] invitation resend failed", error instanceof Error ? error.message : "unknown");
+    fail("invite", ACCOUNTS_PATH);
+  }
+  redirect(`${ACCOUNTS_PATH}?resent=1`);
+}
+
 function refreshAssignments() {
   revalidatePath(PROMO_PATH);
   revalidatePath(ACCOUNTS_PATH);
+  revalidatePath("/admin/affiliates/tracking-links");
+  revalidatePath("/affiliates/overview");
+  revalidatePath("/affiliates/tracking-link");
 }
 
 export async function assignPromoCodeAction(formData: FormData) {
   await requireAdmin();
   const code = String(formData.get("code") ?? "").trim();
+  const affiliate = String(formData.get("affiliate") ?? "");
   try {
-    await assignPromoCode(code, String(formData.get("affiliate") ?? ""));
+    await assignPromoCode(code, affiliate);
   } catch (error) {
-    if (error instanceof PromoCodeError) fail(error.code, PROMO_PATH);
     console.error("[affiliate] promo assign failed", error instanceof Error ? error.message : "unknown");
+    if (error instanceof PromoCodeError) fail(error.code, PROMO_PATH);
     fail("assign", PROMO_PATH);
   }
   refreshAssignments();
@@ -105,8 +151,9 @@ export async function assignPromoCodeAction(formData: FormData) {
 export async function unassignPromoCodeAction(formData: FormData) {
   await requireAdmin();
   const code = String(formData.get("code") ?? "").trim();
+  const affiliate = String(formData.get("affiliate") ?? "");
   try {
-    await unassignPromoCode(code, String(formData.get("affiliate") ?? ""));
+    await unassignPromoCode(code, affiliate);
   } catch (error) {
     if (error instanceof PromoCodeError) fail(error.code, PROMO_PATH);
     console.error("[affiliate] promo unassign failed", error instanceof Error ? error.message : "unknown");

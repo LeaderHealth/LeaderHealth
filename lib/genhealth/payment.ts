@@ -37,6 +37,7 @@ export type PaidOrder = {
   productName: string;
   createdAt: Date;
   source: string;
+  promoCode: string;
 };
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -54,6 +55,27 @@ function customFieldSource(order: Record<string, unknown>) {
 
 function fallbackSource(order: Record<string, unknown>) {
   return normalizeAffiliateCode(asString(order.utm_source)) || normalizeAffiliateCode(customFieldSource(order)) || "";
+}
+
+function orderPromoCode(order: Record<string, unknown>) {
+  const fields = asRecord(order.customFields);
+  const promo = asRecord(order.promo) ?? asRecord(order.promocode);
+  const values = [
+    order.promoCode,
+    order.promocode,
+    order.promo_code,
+    order.couponCode,
+    order.discountCode,
+    promo?.code,
+    promo?.promoCode,
+    fields?.promoCode,
+    fields?.promo,
+  ];
+  for (const value of values) {
+    const code = asString(value);
+    if (code) return code;
+  }
+  return "";
 }
 
 function amountCents(value: unknown) {
@@ -94,6 +116,7 @@ function mapPaidOrder(order: Record<string, unknown>): PaidOrder | null {
     productName: productName(order),
     createdAt,
     source: fallbackSource(order),
+    promoCode: orderPromoCode(order),
   };
 }
 

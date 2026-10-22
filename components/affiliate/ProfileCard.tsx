@@ -33,18 +33,6 @@ function Avatar({ name, src }: { name: string; src: string | null }) {
   );
 }
 
-function EmailAddress({ email }: { email: string }) {
-  const at = email.lastIndexOf("@");
-  if (at <= 0) return <>{email}</>;
-  return (
-    <>
-      {email.slice(0, at + 1)}
-      <wbr />
-      {email.slice(at + 1)}
-    </>
-  );
-}
-
 export function ProfileCard({
   name,
   email,
@@ -60,26 +48,26 @@ export function ProfileCard({
 }) {
   return (
     <section aria-label="Your account" className="rounded-[28px] bg-white p-4">
-      <div className="flex items-center gap-3 xl:flex-col xl:items-start">
-        <Avatar name={name} src={avatarUrl} />
-        <div className="min-w-0">
-          <p className="break-words text-sm font-medium leading-5 text-ink">{name}</p>
-          <p className="mt-1 break-words text-sm leading-5 text-brown">
-            <EmailAddress email={email} />
-          </p>
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between xl:flex-col xl:items-stretch">
+        <div className="flex min-w-0 items-center gap-3">
+          <Avatar name={name} src={avatarUrl} />
+          <div className="min-w-0">
+            <p className="break-words text-sm font-medium leading-5 text-ink">{name}</p>
+            <p className="mt-1 text-sm leading-5 whitespace-nowrap text-brown">{email}</p>
+            <p className="mt-2">
+              <span className="inline-flex rounded-full bg-rose px-3 py-1 text-xs font-medium text-ink">{role}</span>
+            </p>
+          </div>
         </div>
+        <form action={signOut} className="md:shrink-0">
+          <button
+            type="submit"
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-ink/20 bg-white px-5 text-sm font-medium text-ink hover:bg-background focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink md:w-auto md:px-6 xl:w-full"
+          >
+            Sign out
+          </button>
+        </form>
       </div>
-      <p className="mt-3">
-        <span className="inline-flex rounded-full bg-rose px-3 py-1 text-xs font-medium text-ink">{role}</span>
-      </p>
-      <form action={signOut} className="mt-4">
-        <button
-          type="submit"
-          className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-ink/20 bg-white px-5 text-sm font-medium text-ink hover:bg-background focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-        >
-          Sign out
-        </button>
-      </form>
     </section>
   );
 }

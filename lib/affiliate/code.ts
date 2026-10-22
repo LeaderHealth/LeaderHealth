@@ -6,12 +6,50 @@ export function normalizeAffiliateCode(value: unknown) {
   return AFFILIATE_CODE.test(code) ? code : null;
 }
 
+export type AffiliateAttribution = {
+  code: string | null;
+  update: boolean;
+};
+
+// utm_source is the affiliate id. ref is used when utm_source is missing.
+// When those two disagree, a stored id is left in place.
+export function resolveAffiliateAttribution(ref: unknown, utmSource: unknown, stored?: unknown): AffiliateAttribution {
+  const fromRef = normalizeAffiliateCode(ref);
+  const fromSource = normalizeAffiliateCode(utmSource);
+  const cookieCode = normalizeAffiliateCode(stored);
+
+  if (fromSource && fromRef && fromSource !== fromRef) {
+    if (cookieCode) return { code: cookieCode, update: false };
+    return { code: fromSource, update: true };
+  }
+
+  if (fromSource) return { code: fromSource, update: true };
+  if (fromRef) return { code: fromRef, update: true };
+
+  if (cookieCode) return { code: cookieCode, update: false };
+  return { code: null, update: false };
+}
+
 export function affiliatePath(value: unknown) {
   if (typeof value !== "string") return "/";
   const path = value.trim();
   if (!path.startsWith("/") || path.startsWith("//") || path.includes("\\") || path.includes("..")) return "/";
   if (/[\s?#]/.test(path) || !/^\/[A-Za-z0-9/_-]*$/.test(path)) return "/";
   return path.slice(0, 200);
+}
+
+export function affiliateReferrer(value: unknown) {
+  if (typeof value !== "string") return "";
+  const raw = value.trim();
+  if (!raw) return "";
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return "";
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") return "";
+  return `${url.origin}${url.pathname}`.slice(0, 200);
 }
 
 export function normalizeAffiliateName(value: unknown) {

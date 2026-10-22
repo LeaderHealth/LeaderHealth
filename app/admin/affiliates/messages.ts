@@ -1,7 +1,11 @@
 export const ADMIN_ERRORS: Record<string, string> = {
   password: "That email or password is incorrect.",
   unconfigured: "Set AFFILIATE_ADMIN_EMAIL and AFFILIATE_ADMIN_PASSWORD before signing in.",
-  invalid: "Check the name, email, and commission. Passwords need 8–128 characters.",
+  invalid: "Check the name, email, and commission.",
+  mail: "Set RESEND_API_KEY and AFFILIATE_FROM_EMAIL before sending invitations.",
+  invite: "The invitation email could not be sent. Resend it from Accounts.",
+  activated: "This affiliate has already activated their account.",
+  inactive: "Activate this affiliate before sending an invitation.",
   exists: "Could not assign a unique affiliate ID. Try again.",
   email: "That email is already in use.",
   weak: "Passwords need 8–128 characters.",

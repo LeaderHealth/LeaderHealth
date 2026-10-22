@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { SavedLinks, type SavedLink } from "@/components/affiliate/SavedLinks";
-import { affiliateTrackingLink } from "@/lib/affiliate/link";
+import { CopyTrackingLink } from "@/components/affiliate/CopyTrackingLink";
 import { formatCents, formatCommissionRate } from "@/lib/affiliate/format";
 import { loadPayoutRecords, paidOutInRange } from "@/lib/affiliate/payouts";
 import { syncAttributedGenHealthSales } from "@/lib/affiliate/sales";
-import { AffiliateStoreError, loadAffiliateActivity, loadSavedPromoCodes, type ConversionSummary } from "@/lib/affiliate/store";
-import { listPromoCodes, promoRowsForAffiliate, type PromoCodeRow } from "@/lib/genhealth/promocodes";
+import { AffiliateStoreError, loadAffiliateActivity, type ConversionSummary } from "@/lib/affiliate/store";
+import { listPromoCodes, personalPromoForAffiliate } from "@/lib/genhealth/promocodes";
 import { currentAffiliate } from "../../current";
 
 export const metadata: Metadata = {
@@ -52,12 +51,6 @@ function formatDay(value: string | null) {
   return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(date);
 }
 
-function discountLabel(promo: PromoCodeRow) {
-  if (promo.discount.kind === "price") return `Set price ${promo.discount.amount}`;
-  if (promo.discount.kind === "percent") return `${promo.discount.label} off`;
-  return promo.discount.label;
-}
-
 export default async function AffiliatePortalOverviewPage({
   searchParams,
 }: {
@@ -81,10 +74,10 @@ export default async function AffiliatePortalOverviewPage({
     loadError = caught instanceof AffiliateStoreError ? caught.message : "Could not load your overview.";
   }
 
-  let promos: PromoCodeRow[] = [];
   let promosUnavailable = false;
+  let personalCode: string | null = null;
   try {
-    promos = promoRowsForAffiliate(await listPromoCodes(), affiliate.code);
+    personalCode = personalPromoForAffiliate(await listPromoCodes(), affiliate.code)?.code ?? null;
   } catch {
     promosUnavailable = true;
   }
@@ -92,25 +85,9 @@ export default async function AffiliatePortalOverviewPage({
   const paid = conversions.filter((conversion) => !conversion.dryRun && inRange(conversion.createdAt, range));
   const salesCents = paid.reduce((sum, conversion) => sum + (conversion.amountCents ?? 0), 0);
   const commissionCents = paid.reduce((sum, conversion) => sum + conversion.commissionCents, 0);
+  const unpaidCents = Math.max(0, commissionCents - paidOutCents);
   const clicks = clickTimes.filter((createdAt) => inRange(createdAt, range)).length;
   const recent = [...paid].sort((left, right) => (right.createdAt ?? "").localeCompare(left.createdAt ?? "")).slice(0, 5);
-  let savedCodes: string[] = [];
-  try {
-    savedCodes = await loadSavedPromoCodes(affiliate.code);
-  } catch {
-    savedCodes = [];
-  }
-  const savedLinks: SavedLink[] = [...savedCodes]
-    .sort((left, right) => left.localeCompare(right, "en"))
-    .slice(0, 3)
-    .map((code) => {
-      const promo = promos.find((item) => item.code === code);
-      return {
-        code,
-        url: affiliateTrackingLink(affiliate.code, code),
-        detail: promo ? `${discountLabel(promo)} · ${promo.statusLabel}` : "Saved tracking link",
-      };
-    });
   const commission =
     affiliate.commissionMode === "fixed" ? `${formatCommissionRate(affiliate)} per order` : `${formatCommissionRate(affiliate)} commission`;
 
@@ -143,31 +120,66 @@ export default async function AffiliatePortalOverviewPage({
 
       {loadError ? <p className="text-ink">{loadError}</p> : null}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="min-w-0 rounded-[28px] bg-white p-4 sm:p-6" aria-labelledby="portal-share-link-title">
+        <div className="flex items-baseline justify-between gap-3">
+          <h3 id="portal-share-link-title" className="text-xl">
+            Your code
+          </h3>
+          <Link href="/affiliates/tracking-link" className="text-sm font-medium text-ink underline underline-offset-4">
+            Referral link
+          </Link>
+        </div>
+        {personalCode ? (
+          <div className="mt-3 inline-flex max-w-full items-center gap-2 rounded-[24px] bg-background py-2 pl-4 pr-2">
+            <p className="min-w-0 break-all text-lg text-ink">{personalCode}</p>
+            <CopyTrackingLink url={personalCode} label="Copy" quiet accessibleName="Copy code" copiedNotice="Code copied." failedNotice="Couldn't copy the code." />
+          </div>
+        ) : (
+          <p className="mt-3 break-all text-lg text-ink">{promosUnavailable ? "Promo codes are unavailable right now." : "No personal code is assigned yet."}</p>
+        )}
+        <p className="mt-2 text-sm text-brown">Customers enter this code at checkout. Your promo link and tracking link are on the referral link page.</p>
+      </section>
+
+      <div className="grid gap-4 sm:grid-cols-3">
         <section className="rounded-[28px] bg-white p-6">
           <h3 className="text-sm text-brown">Sales</h3>
           <p className="mt-2 text-3xl">{formatCents(salesCents)}</p>
-          <p className="mt-2 text-sm text-brown">From your paid orders</p>
+          <p className="mt-2 text-sm text-brown">From paid orders</p>
         </section>
         <section className="rounded-[28px] bg-white p-6">
           <h3 className="text-sm text-brown">Paid orders</h3>
           <p className="mt-2 text-3xl">{paid.length}</p>
-          <p className="mt-2 text-sm text-brown">Orders in this period</p>
+          <p className="mt-2 text-sm text-brown">Paid orders in this period</p>
         </section>
         <section className="rounded-[28px] bg-white p-6">
-          <h3 className="text-sm text-brown">Earned commission</h3>
-          <p className="mt-2 text-3xl">{formatCents(commissionCents)}</p>
-          <p className="mt-2 text-sm text-brown">Paid out {formatCents(paidOutCents)} in this period</p>
-        </section>
-        <section className="rounded-[28px] bg-white p-6">
-          <h3 className="text-sm text-brown">Clicks</h3>
+          <h3 className="text-sm text-brown">Unique visitors</h3>
           <p className="mt-2 text-3xl">{clicks}</p>
-          <p className="mt-2 text-sm text-brown">Visits from your link</p>
+          <p className="mt-2 text-sm text-brown">Each person counts once a day</p>
         </section>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-2">
-        <section className="min-w-0 rounded-[28px] bg-white p-4 sm:p-6" aria-labelledby="portal-recent-orders-title">
+      <section className="rounded-[28px] bg-white p-6" aria-labelledby="portal-earnings-title">
+        <h3 id="portal-earnings-title" className="sr-only">
+          Your earnings
+        </h3>
+        <div className="grid sm:grid-cols-2 sm:divide-x sm:divide-rose/60">
+          <div className="sm:pr-8">
+            <h4 className="text-sm text-brown">Unpaid earnings</h4>
+            <p className="mt-2 text-3xl">{formatCents(unpaidCents)}</p>
+            <p className="mt-2 text-sm text-brown">Commission not paid out yet</p>
+          </div>
+          <div className="mt-6 border-t border-rose/60 pt-6 sm:mt-0 sm:border-0 sm:pt-0 sm:pl-8">
+            <h4 className="text-sm text-brown">Total earnings</h4>
+            <p className="mt-2 text-3xl">{formatCents(commissionCents)}</p>
+            <p className="mt-2 text-sm text-brown">Commission from paid orders</p>
+          </div>
+        </div>
+        <p className="mt-6 border-t border-rose/60 pt-4 text-sm text-brown">
+          Unpaid earnings can change if a referred order is refunded. Order details are on the Orders page.
+        </p>
+      </section>
+
+      <section className="min-w-0 rounded-[28px] bg-white p-4 sm:p-6" aria-labelledby="portal-recent-orders-title">
           <div className="flex items-baseline justify-between gap-3">
             <h3 id="portal-recent-orders-title" className="text-xl">
               Recent orders
@@ -195,61 +207,6 @@ export default async function AffiliatePortalOverviewPage({
               ))}
             </ul>
           )}
-        </section>
-
-        <section className="min-w-0 rounded-[28px] bg-white p-4 sm:p-6" aria-labelledby="portal-overview-promos-title">
-          <div className="flex items-baseline justify-between gap-3">
-            <h3 id="portal-overview-promos-title" className="text-xl">
-              Promo codes
-            </h3>
-            <Link href="/affiliates/promo-codes" className="text-sm font-medium text-ink underline underline-offset-4">
-              View all
-            </Link>
-          </div>
-          {promosUnavailable ? (
-            <p className="mt-6 text-sm text-brown">Promo codes are unavailable right now.</p>
-          ) : promos.length === 0 ? (
-            <p className="mt-6 text-sm text-brown">No promo codes are assigned to you yet.</p>
-          ) : (
-            <ul className="mt-4 divide-y divide-rose/60">
-              {promos.slice(0, 5).map((promo) => (
-                <li key={promo.code} className="flex items-start justify-between gap-3 py-3 text-sm">
-                  <div className="min-w-0">
-                    <div className="break-all font-medium">{promo.code}</div>
-                    <p className="mt-1 text-brown">{discountLabel(promo)}</p>
-                  </div>
-                  <span
-                    className={`inline-flex shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium ${
-                      promo.statusLabel === "Active" ? "bg-rose text-ink" : "border border-ink/30 text-brown"
-                    }`}
-                  >
-                    {promo.statusLabel}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
-
-      <section className="min-w-0" aria-labelledby="portal-saved-links-title">
-        <div className="flex items-baseline justify-between gap-3 rounded-[28px] bg-white px-4 py-4 sm:px-6">
-          <h3 id="portal-saved-links-title" className="text-xl">
-            Saved links
-          </h3>
-          <Link href="/affiliates/saved-links" className="text-sm font-medium text-ink underline underline-offset-4">
-            View all
-          </Link>
-        </div>
-        {savedLinks.length === 0 ? (
-          <p className="mt-4 rounded-[28px] bg-white px-4 py-6 text-sm text-brown sm:px-6">
-            No saved links yet. Save one from a promo code assigned to you.
-          </p>
-        ) : (
-          <div className="mt-4">
-            <SavedLinks links={savedLinks} />
-          </div>
-        )}
       </section>
     </div>
   );

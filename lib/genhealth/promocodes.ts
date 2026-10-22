@@ -1,4 +1,5 @@
 import { normalizeAffiliateCode } from "@/lib/affiliate/code";
+import { affiliateCampaign } from "@/lib/affiliate/link";
 import { genHealthRequest } from "./client";
 import { formatPrice } from "./types";
 
@@ -51,6 +52,14 @@ function modeOf(value: unknown): PromoCodeRow["mode"] {
   if (mode === "locked") return "Locked";
   if (mode === "shared") return "Shared";
   return "Unassigned";
+}
+
+function affiliatesFromRecord(record: Record<string, unknown>) {
+  const listed = affiliatesOf(record.affiliates);
+  if (listed.length) return listed;
+  const utmSlug = str(record.utmSlug);
+  if (!utmSlug) return [];
+  return [{ affiliateId: str(record.affiliateId), utmSlug }];
 }
 
 function affiliatesOf(value: unknown): PromoAffiliate[] {
@@ -138,7 +147,7 @@ function mapRow(raw: unknown): PromoCodeRow | null {
   const status = str(record.status).toLowerCase();
   const until = validUntil(record.validity);
   const active = status === "active";
-  const affiliates = affiliatesOf(record.affiliates);
+  const affiliates = affiliatesFromRecord(record);
   return {
     code,
     affiliates,
@@ -149,7 +158,7 @@ function mapRow(raw: unknown): PromoCodeRow | null {
     productIds: productIdsOf(record.eligibleClientProductIds),
     usage: usageOf(record.usageCount, record.maxUsage),
     validUntil: until.label,
-    statusLabel: until.expired ? "Expired" : active ? "Active" : "Inactive",
+    statusLabel: !active ? "Inactive" : until.expired ? "Expired" : "Active",
     activeInGenHealth: until.expired && active,
   };
 }
@@ -197,7 +206,7 @@ async function loadPromoAssignment(code: string) {
   const promo = asRecord(response.data.promocode) ?? response.data;
   const assignmentType = str(promo.assignmentType).toLowerCase();
   const mode = assignmentType === "locked" || assignmentType === "shared" ? assignmentType : "unassigned";
-  return { mode, affiliates: affiliatesOf(promo.affiliates) };
+  return { mode, affiliates: affiliatesFromRecord(promo) };
 }
 
 async function patchPromoCode(code: string, body: Record<string, unknown>) {
@@ -216,22 +225,39 @@ function requireAssignment(code: unknown, affiliateCode: unknown) {
   return { promoCode, affiliate };
 }
 
-export async function assignPromoCode(code: unknown, affiliateCode: unknown) {
+export type PromoAssignmentResult = {
+  releasedCodes: string[];
+  replacedAffiliates: string[];
+};
+
+export async function assignPromoCode(code: unknown, affiliateCode: unknown): Promise<PromoAssignmentResult> {
   const { promoCode, affiliate } = requireAssignment(code, affiliateCode);
-  const current = await loadPromoAssignment(promoCode);
-  const already = current.affiliates.some((item) => sameSlug(item.utmSlug, affiliate));
+  const catalog = await listPromoCodes();
+  const current = promoByCode(catalog, promoCode);
+  const currentSlugs = current ? lockedSlugs(current) : [];
+  const alreadySole = current?.mode === "Locked" && currentSlugs.length === 1 && currentSlugs[0] === affiliate;
+  const released = catalog.filter(
+    (promo) => !sameSlug(promo.code, promoCode) && promo.affiliates.some((item) => sameSlug(item.utmSlug, affiliate)),
+  );
+  const replaced = alreadySole
+    ? []
+    : (current?.affiliates ?? []).flatMap((item) => {
+        const slug = normalizeAffiliateCode(item.utmSlug);
+        return slug && slug !== affiliate ? [slug] : [];
+      });
 
-  if (current.mode === "shared") {
-    if (already) return;
-    await patchPromoCode(promoCode, {
-      assignmentType: "shared",
-      affiliates: [...current.affiliates.map(assignmentRow), { affiliateId: affiliate, utmSlug: affiliate }],
-    });
-    return;
+  for (const previous of released) {
+    await unassignPromoCode(previous.code, affiliate);
   }
-
-  if (already && current.affiliates.length === 1) return;
-  await patchPromoCode(promoCode, { utmSlug: affiliate, affiliateId: affiliate });
+  if (!alreadySole) {
+    await patchPromoCode(promoCode, {
+      assignmentType: "locked",
+      utmSlug: affiliate,
+      affiliateId: affiliate,
+      affiliates: [{ affiliateId: affiliate, utmSlug: affiliate }],
+    });
+  }
+  return { releasedCodes: released.map((promo) => promo.code), replacedAffiliates: replaced };
 }
 
 export async function unassignPromoCode(code: unknown, affiliateCode: unknown) {
@@ -240,41 +266,93 @@ export async function unassignPromoCode(code: unknown, affiliateCode: unknown) {
   const assigned = current.affiliates.some((item) => sameSlug(item.utmSlug, affiliate));
   if (!assigned) throw new PromoCodeError("clear", "That affiliate is not assigned to this promo code.");
 
-  if (current.mode === "shared") {
-    await patchPromoCode(promoCode, {
-      assignmentType: "shared",
-      affiliates: current.affiliates.filter((item) => !sameSlug(item.utmSlug, affiliate)).map(assignmentRow),
-    });
-    return;
-  }
-
-  await patchPromoCode(promoCode, { utmSlug: "" });
+  const kept = current.affiliates.filter((item) => !sameSlug(item.utmSlug, affiliate));
+  const patch = promoRemovalPatch(kept);
+  if (!patch) throw new PromoCodeError("assign", "Could not update that promo code.");
+  await patchPromoCode(promoCode, patch);
 }
 
-export function campaignForAffiliate(codes: PromoCodeRow[], affiliateCode: string) {
-  const campaigns = promoCodesForAffiliate(codes, affiliateCode)
-    .map((code) => code.trim())
-    .filter((code) => code.length > 0 && code.length <= 80 && !/[\u0000-\u001f]/.test(code))
-    .sort((left, right) => left.localeCompare(right, "en"));
-  return campaigns[0] ?? null;
-}
-
-export async function campaignForAffiliateCode(affiliateCode: string) {
-  try {
-    return campaignForAffiliate(await listPromoCodes(), affiliateCode);
-  } catch {
-    return null;
+export function promoRemovalPatch(kept: PromoAffiliate[]): Record<string, unknown> | null {
+  if (kept.length === 0) {
+    return { assignmentType: "locked", affiliates: [], utmSlug: null, affiliateId: null };
   }
+  if (kept.length === 1) {
+    const holder = kept[0];
+    const slug = holder.utmSlug.trim();
+    if (!slug) return null;
+    return {
+      assignmentType: "locked",
+      affiliates: [assignmentRow(holder)],
+      utmSlug: slug,
+      affiliateId: holder.affiliateId.trim() || slug,
+    };
+  }
+  return { affiliates: kept.map(assignmentRow) };
 }
 
 export function promoRowsForAffiliate(codes: PromoCodeRow[], affiliateCode: string) {
+  const affiliate = normalizeAffiliateCode(affiliateCode);
+  if (!affiliate) return [];
   return codes
-    .filter((promo) => promo.affiliates.some((item) => sameSlug(item.utmSlug, affiliateCode)))
+    .filter(
+      (promo) =>
+        promo.statusLabel !== "Inactive" &&
+        promo.mode === "Locked" &&
+        lockedSlugs(promo).length === 1 &&
+        lockedSlugs(promo)[0] === affiliate,
+    )
     .sort((left, right) => left.code.localeCompare(right.code, "en"));
 }
 
 export function promoCodesForAffiliate(codes: PromoCodeRow[], affiliateCode: string) {
   return promoRowsForAffiliate(codes, affiliateCode).map((promo) => promo.code);
+}
+
+function lockedSlugs(promo: PromoCodeRow) {
+  const slugs = promo.affiliates.flatMap((item) => {
+    const slug = normalizeAffiliateCode(item.utmSlug);
+    return slug ? [slug] : [];
+  });
+  return [...new Set(slugs)];
+}
+
+export function promoByCode(codes: PromoCodeRow[], code: string) {
+  const wanted = code.trim().toLowerCase();
+  if (!wanted) return null;
+  return codes.find((promo) => promo.code.trim().toLowerCase() === wanted) ?? null;
+}
+
+export function personalAffiliateForCode(promo: PromoCodeRow | null, activeIds: ReadonlySet<string>) {
+  if (!promo || promo.mode !== "Locked") return null;
+  const slugs = lockedSlugs(promo);
+  if (slugs.length !== 1 || !activeIds.has(slugs[0])) return null;
+  return slugs[0];
+}
+
+export function personalPromoForAffiliate(codes: PromoCodeRow[], affiliateCode: string) {
+  return promoRowsForAffiliate(codes, affiliateCode)[0] ?? null;
+}
+
+export function creditedAffiliate(personal: string | null, tracked: string | null) {
+  if (personal) return personal;
+  return tracked || "";
+}
+
+export function assignedCampaign(codes: PromoCodeRow[], affiliateCode: string, campaign: unknown) {
+  const affiliate = normalizeAffiliateCode(affiliateCode);
+  const requested = affiliateCampaign(campaign);
+  if (!affiliate || !requested) return null;
+  const match = promoRowsForAffiliate(codes, affiliate).find((promo) => sameSlug(promo.code, requested));
+  return match?.code ?? null;
+}
+
+export async function assignedCampaignForAffiliate(affiliateCode: string, campaign: unknown) {
+  if (!affiliateCampaign(campaign)) return null;
+  try {
+    return assignedCampaign(await listPromoCodes(), affiliateCode, campaign);
+  } catch {
+    return null;
+  }
 }
 
 export function assignmentNames(promo: PromoCodeRow, accounts: { code: string; name: string }[]) {

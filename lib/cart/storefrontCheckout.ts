@@ -1,4 +1,4 @@
-import { applyAffiliateTracking } from "@/lib/affiliate/link";
+import { affiliateCampaign, applyAffiliateTracking } from "@/lib/affiliate/link";
 
 export type HandoffLine = {
   slug: string;
@@ -101,9 +101,23 @@ function scoreProduct(query: string, queryTokens: string[], product: CheckoutPro
   return score;
 }
 
+function storedCatalogId(stored: string | undefined, products: CheckoutProduct[]) {
+  const id = stored?.trim();
+  if (!id) return null;
+  if (products.some((product) => product.clientProductId === id)) return id;
+  // Older records prefix the catalog id with a tenant key.
+  let match: string | null = null;
+  for (const product of products) {
+    const catalogId = product.clientProductId;
+    if (!id.endsWith(`_${catalogId}`)) continue;
+    if (!match || catalogId.length > match.length) match = catalogId;
+  }
+  return match;
+}
+
 export function matchCheckoutProduct(line: HandoffLine, products: CheckoutProduct[]) {
-  const id = line.clientProductId?.trim();
-  if (id && products.some((product) => product.clientProductId === id)) return id;
+  const resolved = storedCatalogId(line.clientProductId, products);
+  if (resolved) return resolved;
 
   const label = (line.variant || line.name).trim();
   const query = fold(label);
@@ -163,10 +177,16 @@ export function storefrontAppOrigin() {
   return INTERNAL_CHECKOUT_ORIGIN;
 }
 
+function applyCheckoutTracking(params: URLSearchParams, ref?: string, campaign?: string | null) {
+  applyAffiliateTracking(params, ref, campaign);
+  if (!affiliateCampaign(campaign)) params.delete("utm_campaign");
+  params.delete("promo");
+}
+
 export function storefrontCheckoutUrl(ids: string[], ref?: string, campaign?: string | null) {
   const params = new URLSearchParams();
   for (const id of ids) params.append("product", id);
-  applyAffiliateTracking(params, ref, campaign);
+  applyCheckoutTracking(params, ref, campaign);
   const query = params.toString();
   return query ? `/checkout?${query}` : "/checkout";
 }
@@ -175,7 +195,7 @@ export function embeddedCheckoutSrc(product: string | string[] | undefined, ref?
   const params = new URLSearchParams();
   const ids = (Array.isArray(product) ? product : product ? [product] : []).filter(Boolean);
   for (const id of ids) params.append("product", id);
-  applyAffiliateTracking(params, ref, campaign);
+  applyCheckoutTracking(params, ref, campaign);
   params.set("embed", "1");
   return `${storefrontAppOrigin()}/checkout?${params.toString()}`;
 }

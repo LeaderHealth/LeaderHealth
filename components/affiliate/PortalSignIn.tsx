@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
+import { PortalBrand } from "./PortalBrand";
 
 type Role = "affiliate" | "admin";
 type Method = "password" | "link";
@@ -14,7 +15,7 @@ const affiliateSlides = [
   {
     id: "track",
     label: "Track",
-    text: "Follow every referral from first click to completed consult, with your own trackable link.",
+    text: "Follow every referral from first click to a completed consult.",
   },
   {
     id: "earn",
@@ -37,7 +38,7 @@ const adminSlides = [
   {
     id: "earn",
     label: "Earn",
-    text: "Set commission rules and watch each partner's totals update from paid orders.",
+    text: "Set commission rules and watch partner totals from paid orders.",
   },
   {
     id: "paid",
@@ -78,7 +79,7 @@ export function PortalSignIn({
   const [slide, setSlide] = useState(0);
   const linkForm = method === "link" && emailLinks && linkAction;
   const describedBy = invalid ? errorId : undefined;
-  const supportLabel = affiliate ? "Contact affiliate support" : "Contact support";
+  const supportLabel = "Contact Leader Health support";
   const other = affiliate
     ? { href: "/admin/affiliates", label: "Admin sign-in" }
     : { href: "/affiliates", label: "Affiliate sign-in" };
@@ -87,7 +88,7 @@ export function PortalSignIn({
     <div className="min-h-screen bg-[#efecee] px-3 pt-28 pb-16 text-ink sm:px-4 sm:pt-32 sm:pb-20 lg:px-5 lg:pb-24">
       <div className="mx-auto grid w-full max-w-[1180px] items-stretch gap-3 lg:min-h-[calc(100vh-9rem)] lg:grid-cols-2">
         <section className="flex flex-col justify-center rounded-[28px] bg-[#fbf8f8] px-6 py-10 sm:px-10 lg:px-12">
-          <Brand badge={affiliate ? "Affiliates" : "Admin"} />
+          <PortalBrand badge={affiliate ? "Affiliates" : "Admin"} />
           <h1 className="mt-10 max-w-sm text-[2.65rem] leading-[1.02] font-medium tracking-[-0.035em] text-ink sm:text-5xl">
             {affiliate ? (
               <>
@@ -207,7 +208,7 @@ export function PortalSignIn({
           <p className="mt-3 text-center text-sm">
             <Link
               href={other.href}
-              className="text-[#8d7370] underline decoration-[#8d7370]/40 underline-offset-4 hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+              className="font-medium text-ink underline decoration-ink underline-offset-4 hover:text-brown focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
             >
               {other.label}
             </Link>
@@ -219,7 +220,7 @@ export function PortalSignIn({
               ? "Your referrals, commissions, and payouts — all in one place."
               : "Affiliate accounts, commissions, and payouts — all in one place."}
           </h2>
-          {affiliate ? <AffiliatePhoto /> : <PortalMark />}
+          <AffiliatePhoto />
           <div className="rounded-[24px] bg-[#fbf8f8] p-4 sm:p-5">
             <div className="flex items-center justify-between gap-3">
               <div className="flex flex-wrap gap-2">
@@ -259,23 +260,11 @@ export function PortalSignIn({
                 </button>
               </div>
             </div>
-            <p className="mt-4 max-w-md text-sm leading-6 text-[#6d5552]">{slides[slide].text}</p>
+            <p className="mt-4 text-sm leading-6 whitespace-nowrap text-[#6d5552]">{slides[slide].text}</p>
           </div>
         </aside>
       </div>
     </div>
-  );
-}
-
-function Brand({ badge }: { badge: string }) {
-  return (
-    <Link href="/" className="inline-flex w-fit items-center gap-2.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">
-      <PlusMark />
-      <span className="text-[15px] font-semibold tracking-[-0.02em]">Leader Health</span>
-      <span className="rounded-full bg-[#f6d5d8] px-2 py-0.5 text-[10px] font-semibold tracking-[0.12em] text-accent uppercase">
-        {badge}
-      </span>
-    </Link>
   );
 }
 
@@ -335,7 +324,7 @@ function PasswordControl({ id, invalid, describedBy }: { id: string; invalid: bo
 
 function AffiliatePhoto() {
   return (
-    <div className="relative my-6 min-h-72 flex-1 overflow-hidden rounded-[24px]">
+    <div className="relative my-6 aspect-[5/4] w-full shrink-0 overflow-hidden rounded-[24px]">
       <Image
         src="/images/affiliate-login.jpg"
         alt="Two people smiling while looking at a phone together"
@@ -345,29 +334,6 @@ function AffiliatePhoto() {
         className="object-cover object-[center_30%]"
       />
     </div>
-  );
-}
-
-function PortalMark() {
-  return (
-    <div className="flex flex-1 items-center justify-center py-6">
-      <svg viewBox="0 0 460 280" className="w-full max-w-[420px]" aria-hidden>
-        <rect x="28" y="214" width="390" height="12" rx="6" fill="#321110" />
-        <path d="M72 214V128c0-58 46-104 104-104s104 46 104 104v86" fill="#e23d4d" />
-        <path d="M112 214V136c0-36 28-64 64-64s64 28 64 64v78" fill="#f7f1f2" />
-        <circle cx="318" cy="78" r="68" fill="#321110" />
-        <circle cx="318" cy="78" r="38" fill="#f08a96" />
-        <path d="M286 214a72 72 0 0 1 72-72v72z" fill="#e4dcc8" />
-      </svg>
-    </div>
-  );
-}
-
-function PlusMark() {
-  return (
-    <svg viewBox="0 0 24 24" className="size-5 text-accent" aria-hidden>
-      <path d="M12 4v16M4 12h16" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />
-    </svg>
   );
 }
 
