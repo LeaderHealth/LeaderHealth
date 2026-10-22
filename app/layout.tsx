@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Geist, Instrument_Sans, Instrument_Serif } from "next/font/google";
+import { Analytics } from "@/components/analytics/Analytics";
 import { SiteShell } from "@/components/SiteShell";
 import { site } from "@/lib/content/site";
 import "./globals.css";
@@ -65,6 +67,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geist.variable} ${instrumentSans.variable} ${instrumentSerif.variable} h-full antialiased`}
     >
       <body id="top" className="flex min-h-full flex-col bg-background text-foreground">
+        <Suspense fallback={null}>
+          <Analytics />
+        </Suspense>
         <SiteShell>{children}</SiteShell>
       </body>
     </html>
