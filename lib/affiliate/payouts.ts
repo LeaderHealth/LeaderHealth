@@ -2,6 +2,7 @@ import type { DocumentData, DocumentReference, Timestamp } from "firebase-admin/
 import { formatCents } from "./format";
 import { normalizeAffiliateCode } from "./code";
 import { affiliateFirebaseConfigured, affiliateFirestore } from "./firebase";
+import { adjustedCommissionCents } from "./refunds";
 
 export type PayoutStatus = "pending" | "approved" | "paid";
 export type PayoutRange = "30" | "90" | "all";
@@ -34,6 +35,7 @@ export type PayoutLine = {
 type EarnedOrder = {
   code: string;
   commissionCents: number;
+  commissionRefundedCents?: number;
   dryRun: boolean;
   createdAt: string | null;
 };
@@ -153,11 +155,43 @@ function recordFrom(id: string, data: DocumentData | undefined): PayoutRecord | 
   };
 }
 
+function netCommission(order: EarnedOrder) {
+  return adjustedCommissionCents(order.commissionCents, order.commissionRefundedCents ?? 0);
+}
+
 function earnedFor(orders: EarnedOrder[], code: string, period: string) {
   return orders.reduce((sum, order) => {
     if (order.dryRun || order.code !== code || payoutPeriod(order.createdAt) !== period) return sum;
-    return sum + Math.max(0, Math.round(order.commissionCents));
+    return sum + netCommission(order);
   }, 0);
+}
+
+function coveredFor(payouts: PayoutRecord[], code: string, period: string) {
+  return payouts.filter((payout) => payout.code === code && payout.period === period).reduce((sum, payout) => sum + payout.earnedCents, 0);
+}
+
+export function approvableCents(input: { orders: EarnedOrder[]; payouts: PayoutRecord[]; code: string; period: string }) {
+  const earned = input.orders.reduce((sum, order) => (order.dryRun || order.code !== input.code ? sum : sum + netCommission(order)), 0);
+  const covered = input.payouts.filter((payout) => payout.code === input.code).reduce((sum, payout) => sum + payout.earnedCents, 0);
+  let remaining = earned - covered;
+  if (remaining <= 0) return 0;
+  const periods = [
+    ...new Set(
+      input.orders.flatMap((order) => {
+        if (order.dryRun || order.code !== input.code) return [];
+        const period = payoutPeriod(order.createdAt);
+        return period ? [period] : [];
+      }),
+    ),
+  ].sort();
+  for (const period of periods) {
+    const pending = Math.max(0, earnedFor(input.orders, input.code, period) - coveredFor(input.payouts, input.code, period));
+    const take = Math.min(pending, remaining);
+    if (period === input.period) return take;
+    remaining -= take;
+    if (remaining <= 0) return 0;
+  }
+  return 0;
 }
 
 export function payoutLines(input: {
@@ -181,12 +215,10 @@ export function payoutLines(input: {
   for (const key of periods) {
     const [code, period] = key.split("|");
     if (input.period && period !== input.period) continue;
-    const earned = earnedFor(input.orders, code, period);
     const records = input.payouts.filter((payout) => payout.code === code && payout.period === period);
     const paid = records.filter((payout) => payout.status === "paid");
     const approved = records.find((payout) => payout.status === "approved");
-    const covered = paid.reduce((sum, payout) => sum + payout.earnedCents, 0) + (approved?.earnedCents ?? 0);
-    const pending = Math.max(0, earned - covered);
+    const pending = approvableCents({ orders: input.orders, payouts: input.payouts, code, period });
     const name = names.get(code) || code;
     if (pending > 0) {
       lines.push({
@@ -295,17 +327,27 @@ export async function approvePayout(code: string, period: string) {
       tx.get(db.collection("conversions").where("code", "==", normalized)),
       tx.get(db.collection("payouts").where("code", "==", normalized)),
     ]);
-    const earned = orders.docs.reduce((sum, doc) => {
+    const earnedOrders = orders.docs.map((doc) => {
       const data = doc.data();
-      if (data.dryRun === true || payoutPeriod(asTimestamp(data.createdAt)) !== month) return sum;
-      return sum + Math.max(0, Math.round(asNumber(data.commissionCents)));
-    }, 0);
-    const records = payouts.docs
+      return {
+        code: normalized,
+        commissionCents: asNumber(data.commissionCents),
+        commissionRefundedCents: asNumber(data.commissionRefundedCents),
+        dryRun: data.dryRun === true,
+        createdAt: asTimestamp(data.createdAt),
+      };
+    });
+    const saved = payouts.docs
       .map((doc) => ({ ref: doc.ref, record: recordFrom(doc.id, doc.data()) }))
-      .filter((item): item is { ref: DocumentReference; record: PayoutRecord } => item.record?.period === month);
-    const covered = records.reduce((sum, item) => sum + item.record.earnedCents, 0);
-    const pending = earned - covered;
+      .filter((item): item is { ref: DocumentReference; record: PayoutRecord } => item.record != null);
+    const pending = approvableCents({
+      orders: earnedOrders,
+      payouts: saved.map((item) => item.record),
+      code: normalized,
+      period: month,
+    });
     if (pending <= 0) throw new PayoutError("empty", "There is no new commission to approve for that month.");
+    const records = saved.filter((item) => item.record.period === month);
     const approved = records.find((item) => item.record.status === "approved");
     if (approved) {
       tx.update(approved.ref, {

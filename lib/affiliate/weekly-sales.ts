@@ -3,6 +3,7 @@ import { normalizeAffiliateCode, normalizeAffiliateEmail } from "./code";
 import { affiliateEmailConfigured, sendAffiliateWeeklySalesEmail } from "./email";
 import { affiliateFirebaseConfigured, affiliateFirestore } from "./firebase";
 import { formatCents } from "./format";
+import { adjustedCommissionCents } from "./refunds";
 import { instantInWeek, previousUtcWeek } from "./week";
 
 type WeekSale = {
@@ -28,7 +29,9 @@ function saleFrom(data: DocumentData): { code: string; sale: WeekSale } | null {
   const code = normalizeAffiliateCode(data.code);
   if (!code || data.dryRun === true) return null;
   const amountCents = typeof data.amountCents === "number" && Number.isFinite(data.amountCents) ? data.amountCents : null;
-  const commissionCents = typeof data.commissionCents === "number" && Number.isFinite(data.commissionCents) ? data.commissionCents : 0;
+  const originalCommission = typeof data.commissionCents === "number" && Number.isFinite(data.commissionCents) ? data.commissionCents : 0;
+  const refundedCommission = typeof data.commissionRefundedCents === "number" && Number.isFinite(data.commissionRefundedCents) ? data.commissionRefundedCents : 0;
+  const commissionCents = adjustedCommissionCents(originalCommission, refundedCommission);
   return { code, sale: { amountCents, commissionCents, createdAt: createdAtIso(data.createdAt) } };
 }
 

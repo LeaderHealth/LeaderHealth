@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { formatCents, formatCommissionRate } from "@/lib/affiliate/format";
-import { loadPayoutRecords, paidOutInRange } from "@/lib/affiliate/payouts";
+import { loadPayoutRecords, paidOutInRange, type PayoutRecord } from "@/lib/affiliate/payouts";
+import { adjustedCommissionCents, refundStatusLabel } from "@/lib/affiliate/refunds";
 import { syncAttributedGenHealthSales } from "@/lib/affiliate/sales";
 import { AffiliateStoreError, loadAffiliateOverview, loadClickTimes, type AffiliateSummary, type ConversionSummary } from "@/lib/affiliate/store";
 import { listPromoCodes, promoCodesForAffiliate, type PromoCodeRow } from "@/lib/genhealth/promocodes";
@@ -65,6 +66,10 @@ function inRange(createdAt: string | null, range: Range) {
   return new Date(createdAt).getTime() >= Date.now() - days * 24 * 60 * 60 * 1000;
 }
 
+function netCommission(conversion: ConversionSummary) {
+  return adjustedCommissionCents(conversion.commissionCents, conversion.commissionRefundedCents);
+}
+
 function paidInRange(conversions: ConversionSummary[], range: Range) {
   return conversions.filter((conversion) => !conversion.dryRun && inRange(conversion.createdAt, range));
 }
@@ -101,7 +106,7 @@ export default async function AffiliateOverviewPage({
   let affiliates: AffiliateSummary[] = [];
   let conversions: ConversionSummary[] = [];
   let clickTimes: string[] = [];
-  let paidOutCents = 0;
+  let payouts: PayoutRecord[] = [];
   let loadError = "";
   try {
     await syncAttributedGenHealthSales();
@@ -109,7 +114,7 @@ export default async function AffiliateOverviewPage({
     affiliates = overview.affiliates;
     conversions = overview.conversions;
     clickTimes = await loadClickTimes();
-    paidOutCents = paidOutInRange(await loadPayoutRecords(), range);
+    payouts = await loadPayoutRecords();
   } catch (caught) {
     loadError = caught instanceof AffiliateStoreError ? caught.message : "Could not load affiliate records.";
   }
@@ -128,13 +133,16 @@ export default async function AffiliateOverviewPage({
     const current = byCode.get(conversion.code) ?? { orders: 0, salesCents: 0, commissionCents: 0 };
     current.orders += 1;
     current.salesCents += conversion.amountCents ?? 0;
-    current.commissionCents += conversion.commissionCents;
+    current.commissionCents += netCommission(conversion);
     byCode.set(conversion.code, current);
   }
 
   const salesCents = paid.reduce((sum, conversion) => sum + (conversion.amountCents ?? 0), 0);
-  const commissionCents = paid.reduce((sum, conversion) => sum + conversion.commissionCents, 0);
-  const unpaidCents = Math.max(0, commissionCents - paidOutCents);
+  const commissionCents = paid.reduce((sum, conversion) => sum + netCommission(conversion), 0);
+  const paidOutCents = paidOutInRange(payouts, range);
+  const unpaidCents =
+    conversions.filter((conversion) => !conversion.dryRun).reduce((sum, conversion) => sum + netCommission(conversion), 0) -
+    paidOutInRange(payouts, "all");
   const activeCount = affiliates.filter((affiliate) => affiliate.active).length;
   const inactiveCount = affiliates.length - activeCount;
   const sellers = affiliates.filter((affiliate) => (byCode.get(affiliate.code)?.orders ?? 0) > 0).length;
@@ -233,7 +241,7 @@ export default async function AffiliateOverviewPage({
             </div>
           </div>
           <p className="mt-6 border-t border-rose/60 pt-4 text-sm text-brown">
-            Paid out {formatCents(paidOutCents)} in this period. Unpaid earnings can change if a referred order is refunded. Order details are on the Orders page.
+            Paid out {formatCents(paidOutCents)} in this period. A refund can leave unpaid earnings negative until a later sale covers it. Order details are on the Orders page.
           </p>
         </section>
 
@@ -309,8 +317,18 @@ export default async function AffiliateOverviewPage({
                     </p>
                   </div>
                   <div className="shrink-0 text-right">
-                    <span className="inline-flex rounded-full bg-rose px-3 py-1 text-xs font-medium text-ink">Paid</span>
+                    <span className="inline-flex rounded-full bg-rose px-3 py-1 text-xs font-medium text-ink">
+                      {refundStatusLabel(conversion.refundStatus) || "Paid"}
+                    </span>
                     <p className="mt-2 font-medium">{conversion.amountCents == null ? "—" : formatCents(conversion.amountCents)}</p>
+                    {conversion.refundStatus === "none" ? null : (
+                      <p className="text-brown">
+                        {formatCents(netCommission(conversion))} adjusted
+                        {conversion.refundedAmountCents > 0 ? ` · ${formatCents(conversion.refundedAmountCents)} refunded` : ""}
+                        {" · "}
+                        {formatCents(conversion.commissionCents)} original
+                      </p>
+                    )}
                   </div>
                 </li>
               ))}

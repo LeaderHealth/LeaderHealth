@@ -40,6 +40,18 @@ export type PaidOrder = {
   promoCode: string;
 };
 
+export type OrderRefund = {
+  id: string;
+  amountCents: number;
+};
+
+export type ClientOrder = PaidOrder & {
+  paymentStatus: string;
+  refundedAmountCents: number | null;
+  refunds: OrderRefund[];
+  fullyRefunded: boolean;
+};
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
 }
@@ -105,23 +117,70 @@ function orderTime(order: Record<string, unknown>) {
   return null;
 }
 
-function mapPaidOrder(order: Record<string, unknown>): PaidOrder | null {
-  if (asString(order.paymentStatus).toLowerCase() !== "paid") return null;
+function refundsOf(order: Record<string, unknown>): OrderRefund[] {
+  const rows: OrderRefund[] = [];
+  for (const list of [order.refunds, order.refundList]) {
+    if (!Array.isArray(list)) continue;
+    list.forEach((item, index) => {
+      const record = asRecord(item);
+      if (!record) return;
+      const amount =
+        amountCents(record.amount) ??
+        amountCents(record.amountCents) ??
+        amountCents(record.refundedAmount) ??
+        amountCents(record.refundAmount);
+      if (amount == null || amount <= 0) return;
+      const id = asString(record.id) || asString(record.refundId) || asString(record.refund_id) || `refund-${index + 1}`;
+      rows.push({ id, amountCents: amount });
+    });
+  }
+  return rows;
+}
+
+function refundedAmountOf(order: Record<string, unknown>) {
+  for (const key of ["refundedAmount", "refunded_amount", "refundAmount", "amountRefunded", "totalRefunded", "refundedAmountCents"]) {
+    const amount = amountCents(order[key]);
+    if (amount != null) return amount;
+  }
+  return null;
+}
+
+function fullyRefunded(status: string, refunded: number | null, original: number | null) {
+  if (status === "refunded" || status === "fully_refunded" || status === "full_refund") return true;
+  return original != null && original > 0 && refunded != null && refunded >= original;
+}
+
+export function attributableOrderStatus(status: string) {
+  return status === "paid" || status === "partially_refunded" || status === "partial_refund" || status === "partially refunded";
+}
+
+function mapClientOrder(order: Record<string, unknown>): ClientOrder | null {
+  const paymentStatus = asString(order.paymentStatus).toLowerCase();
   const orderId = asString(order.orderId);
   const createdAt = orderTime(order);
   if (!orderId || !createdAt) return null;
+  const amount = amountCents(order.amount);
+  const refunds = refundsOf(order);
+  const refundedAmountCents = refundedAmountOf(order);
+  const refundedFromList = refunds.reduce((sum, refund) => sum + refund.amountCents, 0);
+  const hasRefund = paymentStatus.includes("refund") || (refundedAmountCents != null && refundedAmountCents > 0) || refunds.length > 0;
+  if (!attributableOrderStatus(paymentStatus) && !hasRefund) return null;
   return {
     orderId,
-    amountCents: amountCents(order.amount),
+    amountCents: amount,
     productName: productName(order),
     createdAt,
     source: fallbackSource(order),
     promoCode: orderPromoCode(order),
+    paymentStatus,
+    refundedAmountCents,
+    refunds,
+    fullyRefunded: fullyRefunded(paymentStatus, refundedAmountCents ?? (refundedFromList > 0 ? refundedFromList : null), amount),
   };
 }
 
-export async function listPaidOrders(): Promise<PaidOrder[]> {
-  const rows: PaidOrder[] = [];
+export async function listClientOrders(): Promise<ClientOrder[]> {
+  const rows: ClientOrder[] = [];
   const seen = new Set<string>();
   let cursor: string | undefined;
 
@@ -140,7 +199,7 @@ export async function listPaidOrders(): Promise<PaidOrder[]> {
     }) : [];
 
     for (const order of orders) {
-      const row = mapPaidOrder(order);
+      const row = mapClientOrder(order);
       if (!row || seen.has(row.orderId)) continue;
       seen.add(row.orderId);
       rows.push(row);
@@ -156,6 +215,11 @@ export async function listPaidOrders(): Promise<PaidOrder[]> {
   return rows;
 }
 
+export async function listPaidOrders(): Promise<PaidOrder[]> {
+  const orders = await listClientOrders();
+  return orders.filter((order) => attributableOrderStatus(order.paymentStatus));
+}
+
 function orderRecord(data: Record<string, unknown> | null): Record<string, unknown> | null {
   if (!data) return null;
   const nested = asRecord(data.order);
@@ -168,7 +232,7 @@ function orderRecord(data: Record<string, unknown> | null): Record<string, unkno
   return null;
 }
 
-export async function getPaidOrder(orderId: string): Promise<PaidOrder | null> {
+async function fetchClientOrder(orderId: string): Promise<ClientOrder | null> {
   const id = orderId.trim();
   if (!id) return null;
 
@@ -183,10 +247,19 @@ export async function getPaidOrder(orderId: string): Promise<PaidOrder | null> {
     const record = orderRecord(response.data);
     if (!record) return null;
     const order = asString(record.orderId) ? record : { ...record, orderId: id };
-    return mapPaidOrder(order);
+    return mapClientOrder(order);
   } catch (error) {
     const message = error instanceof Error ? error.message : "unknown error";
     console.error("[affiliate] Gen Health order lookup failed", id, message);
     return null;
   }
+}
+
+export async function getPaidOrder(orderId: string): Promise<PaidOrder | null> {
+  const order = await fetchClientOrder(orderId);
+  return order && attributableOrderStatus(order.paymentStatus) ? order : null;
+}
+
+export async function getOrderSettlement(orderId: string): Promise<ClientOrder | null> {
+  return fetchClientOrder(orderId);
 }

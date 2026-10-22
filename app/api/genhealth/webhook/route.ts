@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
-import { attributeWebhookPaidOrder } from "@/lib/affiliate/sales";
+import { attributePaidGenHealthOrder, attributeWebhookPaidOrder, syncOrderRefund } from "@/lib/affiliate/sales";
 import { deliverPreviousWeekSalesNotices } from "@/lib/affiliate/weekly-sales";
 
 export const runtime = "nodejs";
@@ -100,9 +100,30 @@ export async function POST(request: Request) {
     }
   }
 
-  if (webhookEvent(request, body) !== PAYMENT_EVENT) return NextResponse.json({ ok: true, ignored: true });
-
+  const event = webhookEvent(request, body);
   const payment = paymentEvent(body);
+  const refundEvent = /refund/i.test(event) || Boolean(payment?.paymentStatus.includes("refund"));
+  if (event !== PAYMENT_EVENT && !refundEvent) return NextResponse.json({ ok: true, ignored: true });
+
+  if (refundEvent) {
+    if (!payment?.orderId) return NextResponse.json({ ok: true, ignored: true });
+    try {
+      const attributed = await attributePaidGenHealthOrder(payment.orderId);
+      if (attributed === "unavailable") {
+        return NextResponse.json({ ok: false, error: "Affiliate recording is unavailable." }, { status: 503 });
+      }
+      if (attributed === "recorded") return NextResponse.json({ ok: true, result: "recorded" });
+      const result = await syncOrderRefund(payment.orderId);
+      if (result === "unavailable") {
+        return NextResponse.json({ ok: false, error: "Affiliate recording is unavailable." }, { status: 503 });
+      }
+      return NextResponse.json({ ok: true, result });
+    } catch (error) {
+      console.error("[affiliate] Gen Health refund webhook failed", error instanceof Error ? error.message : "unknown");
+      return NextResponse.json({ ok: false, error: "Could not record the refund." }, { status: 502 });
+    }
+  }
+
   if (!payment?.orderId || payment.paymentStatus !== "paid") {
     return NextResponse.json({ ok: true, result: payment?.orderId ? "unpaid" : "ignored" });
   }
