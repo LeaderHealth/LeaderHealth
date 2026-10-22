@@ -1,6 +1,6 @@
 import { createHash, randomBytes, scrypt as scryptCallback, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
-import { FieldValue, type DocumentData, type Timestamp } from "firebase-admin/firestore";
+import { type DocumentData, type Timestamp } from "firebase-admin/firestore";
 import { cookies } from "next/headers";
 import { AFFILIATE_INVITE_DAYS } from "@/lib/affiliate/email";
 import { affiliateCampaign, affiliateTrackingPath } from "@/lib/affiliate/link";
@@ -18,7 +18,6 @@ import {
   normalizeFixedCommissionCents,
 } from "./code";
 import { affiliateFirebaseConfigured, affiliateFirestore } from "./firebase";
-import { savedPromosStillAssigned } from "./savedPromos";
 
 const scrypt = promisify(scryptCallback);
 const SCRYPT_KEYLEN = 32;
@@ -71,6 +70,12 @@ export type AffiliateSummary = {
   clickCount: number;
   paidConversionCount: number;
   commissionCents: number;
+  createdAt: string | null;
+};
+
+export type ClickSummary = {
+  path: string;
+  referrer: string | null;
   createdAt: string | null;
 };
 
@@ -205,6 +210,14 @@ function orderDocId(orderId: string) {
   return id;
 }
 
+function clickFrom(data: DocumentData): ClickSummary {
+  return {
+    path: typeof data.path === "string" ? data.path : "",
+    referrer: typeof data.referrer === "string" ? data.referrer : null,
+    createdAt: asTimestamp(data.createdAt),
+  };
+}
+
 function conversionFrom(id: string, data: DocumentData): ConversionSummary {
   return {
     orderId: id,
@@ -232,7 +245,7 @@ export async function getAffiliate(code: string) {
   return affiliateFrom(code, snap.data());
 }
 
-export async function logClick(input: { code: string; path: string; visitorId: string }) {
+export async function logClick(input: { code: string; path: string; visitorId: string; referrer?: string }) {
   if (!affiliateFirebaseConfigured()) return;
   const db = affiliateFirestore();
   const day = new Date().toISOString().slice(0, 10);
@@ -249,6 +262,7 @@ export async function logClick(input: { code: string; path: string; visitorId: s
     tx.set(clickRef, {
       code: input.code,
       path: input.path,
+      referrer: input.referrer?.trim() ?? "",
       visitorId: input.visitorId,
       createdAt: new Date(),
     });
@@ -447,80 +461,6 @@ export async function setAffiliateActive(code: string, active: boolean) {
   await ref.update({ active });
 }
 
-export async function loadSavedPromoCodes(code: string) {
-  if (!affiliateFirebaseConfigured()) return [];
-  const normalized = normalizeAffiliateCode(code);
-  if (!normalized) return [];
-  const snap = await affiliateFirestore().collection("affiliates").doc(normalized).get();
-  const saved = snap.data()?.savedLinks;
-  if (!Array.isArray(saved)) return [];
-  return saved.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
-}
-
-export async function loadAssignedSavedPromos(code: string, assignedCodes: readonly string[]) {
-  const saved = await loadSavedPromoCodes(code);
-  const kept = savedPromosStillAssigned(saved, assignedCodes);
-  const keptKeys = new Set(kept.map((item) => item.trim().toLowerCase()));
-  const stale = saved.filter((item) => !keptKeys.has(item.trim().toLowerCase()));
-  if (stale.length === 0 || !affiliateFirebaseConfigured()) return kept;
-  const normalized = normalizeAffiliateCode(code);
-  if (!normalized) return kept;
-  try {
-    await affiliateFirestore().collection("affiliates").doc(normalized).update({
-      savedLinks: FieldValue.arrayRemove(...stale),
-    });
-  } catch (error) {
-    console.error("[affiliate] saved promo sync failed", error instanceof Error ? error.message : "unknown");
-  }
-  return kept;
-}
-
-export async function saveAffiliatePromoCode(code: string, promoCode: string) {
-  if (!affiliateFirebaseConfigured()) {
-    throw new AffiliateStoreError("unavailable", "Firestore is not configured.");
-  }
-  const normalized = normalizeAffiliateCode(code);
-  const promo = promoCode.trim();
-  if (!normalized) throw new AffiliateStoreError("invalid", "Unknown affiliate code.");
-  if (!promo || promo.length > 80 || /[\u0000-\u001f]/.test(promo)) {
-    throw new AffiliateStoreError("invalid", "Unknown promo code.");
-  }
-  const ref = affiliateFirestore().collection("affiliates").doc(normalized);
-  const snap = await ref.get();
-  if (!snap.exists || snap.data()?.active !== true) throw new AffiliateStoreError("missing", "Unknown affiliate code.");
-  await ref.update({ savedLinks: FieldValue.arrayUnion(promo) });
-}
-
-export async function forgetAffiliateSavedPromo(code: string, promoCode: string) {
-  if (!affiliateFirebaseConfigured()) return;
-  const normalized = normalizeAffiliateCode(code);
-  const promo = promoCode.trim().toLowerCase();
-  if (!normalized || !promo) return;
-  const ref = affiliateFirestore().collection("affiliates").doc(normalized);
-  const snap = await ref.get();
-  const saved = snap.data()?.savedLinks;
-  if (!snap.exists || !Array.isArray(saved)) return;
-  const matches = saved.filter((item) => typeof item === "string" && item.trim().toLowerCase() === promo);
-  if (matches.length === 0) return;
-  await ref.update({ savedLinks: FieldValue.arrayRemove(...matches) });
-}
-
-export async function removeAffiliatePromoCode(code: string, promoCode: string) {
-  if (!affiliateFirebaseConfigured()) {
-    throw new AffiliateStoreError("unavailable", "Firestore is not configured.");
-  }
-  const normalized = normalizeAffiliateCode(code);
-  const promo = promoCode.trim();
-  if (!normalized) throw new AffiliateStoreError("invalid", "Unknown affiliate code.");
-  if (!promo || promo.length > 80 || /[\u0000-\u001f]/.test(promo)) {
-    throw new AffiliateStoreError("invalid", "Unknown promo code.");
-  }
-  const ref = affiliateFirestore().collection("affiliates").doc(normalized);
-  const snap = await ref.get();
-  if (!snap.exists || snap.data()?.active !== true) throw new AffiliateStoreError("missing", "Unknown affiliate code.");
-  await ref.update({ savedLinks: FieldValue.arrayRemove(promo) });
-}
-
 export async function setAffiliatePassword(code: string, passwordInput: string) {
   if (!affiliateFirebaseConfigured()) {
     throw new AffiliateStoreError("unavailable", "Firestore is not configured.");
@@ -703,7 +643,7 @@ export async function loadAffiliateActivity(code: string) {
     throw new AffiliateStoreError("unavailable", "Firestore is not configured.");
   }
   const normalized = normalizeAffiliateCode(code);
-  if (!normalized) return { conversions: [] as ConversionSummary[], clickTimes: [] as string[] };
+  if (!normalized) return { conversions: [] as ConversionSummary[], clicks: [] as ClickSummary[], clickTimes: [] as string[] };
   const db = affiliateFirestore();
   const [conversionsSnap, clicksSnap] = await Promise.all([
     db.collection("conversions").where("code", "==", normalized).get(),
@@ -712,10 +652,9 @@ export async function loadAffiliateActivity(code: string) {
   const conversions = conversionsSnap.docs
     .map((doc) => conversionFrom(doc.id, doc.data()))
     .sort((left, right) => (right.createdAt ?? "").localeCompare(left.createdAt ?? ""));
-  const clickTimes = clicksSnap.docs
-    .map((doc) => asTimestamp(doc.data().createdAt))
-    .filter((value): value is string => Boolean(value));
-  return { conversions, clickTimes };
+  const clicks = clicksSnap.docs.map((doc) => clickFrom(doc.data()));
+  const clickTimes = clicks.map((click) => click.createdAt).filter((value): value is string => Boolean(value));
+  return { conversions, clicks, clickTimes };
 }
 
 export async function loadAffiliateConversions(code: string) {
@@ -729,6 +668,49 @@ export async function loadAffiliateConversions(code: string) {
     .map((doc) => conversionFrom(doc.id, doc.data()))
     .sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""))
     .slice(0, 20);
+}
+
+export async function loadClickCounts() {
+  const counts = new Map<string, number>();
+  if (!affiliateFirebaseConfigured()) return counts;
+  const snap = await affiliateFirestore().collection("clicks").get();
+  for (const doc of snap.docs) {
+    const code = normalizeAffiliateCode(doc.data().code);
+    if (!code) continue;
+    counts.set(code, (counts.get(code) ?? 0) + 1);
+  }
+  return counts;
+}
+
+export async function alignAffiliateRecordTotals(
+  code: string,
+  stored: { clickCount: number; paidConversionCount: number; commissionCents: number },
+  next: { clickCount: number; paidConversionCount: number; commissionCents: number },
+) {
+  if (!affiliateFirebaseConfigured()) return;
+  const normalized = normalizeAffiliateCode(code);
+  if (!normalized) return;
+  if (
+    stored.clickCount === next.clickCount &&
+    stored.paidConversionCount === next.paidConversionCount &&
+    stored.commissionCents === next.commissionCents
+  ) {
+    return;
+  }
+  const ref = affiliateFirestore().collection("affiliates").doc(normalized);
+  await affiliateFirestore().runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const data = snap.data();
+    if (!snap.exists || !data) return;
+    if (
+      asNumber(data.clickCount) !== stored.clickCount ||
+      asNumber(data.paidConversionCount) !== stored.paidConversionCount ||
+      asNumber(data.commissionCents) !== stored.commissionCents
+    ) {
+      return;
+    }
+    tx.update(ref, next);
+  });
 }
 
 export async function loadAffiliateOverview() {

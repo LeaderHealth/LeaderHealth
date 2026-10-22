@@ -10,10 +10,8 @@ export const dynamic = "force-dynamic";
 
 const items = [
   { href: "/affiliates/overview", label: "Overview" },
-  { href: "/affiliates/tracking-link", label: "Tracking link" },
-  { href: "/affiliates/promo-codes", label: "Promo codes" },
-  { href: "/affiliates/saved-links", label: "Saved links" },
-  { href: "/affiliates/results", label: "Results" },
+  { href: "/affiliates/tracking-link", label: "Referral link" },
+  { href: "/affiliates/stats", label: "Stats" },
   { href: "/affiliates/orders", label: "Orders" },
   { href: "/affiliates/payouts", label: "Payouts" },
 ];
@@ -29,7 +27,7 @@ export default async function AffiliateDashboardLayout({ children }: { children:
           Affiliate <span className="font-serif-italic text-accent">portal</span>
         </h1>
         <p className="mt-4 max-w-2xl text-taupe">
-          Your sales, orders, commission, payouts, tracking link, and promo codes.
+          Your sales, orders, commission, payouts, and referral link.
         </p>
         <div className="mt-8 xl:grid xl:grid-cols-[16rem_minmax(0,1fr)] xl:items-start xl:gap-8">
           <div className="z-20 flex flex-col gap-4 xl:sticky xl:top-28 xl:self-start">

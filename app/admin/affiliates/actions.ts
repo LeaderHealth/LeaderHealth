@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { affiliateEmailConfigured, sendAffiliateInvitationEmail } from "@/lib/affiliate/email";
 import { approvePayout, markPayoutPaid, PayoutError } from "@/lib/affiliate/payouts";
-import { AffiliateStoreError, createAffiliate, forgetAffiliateSavedPromo, issueAffiliateInvitation, setAffiliateActive, setAffiliatePassword } from "@/lib/affiliate/store";
+import { AffiliateStoreError, createAffiliate, issueAffiliateInvitation, setAffiliateActive, setAffiliatePassword } from "@/lib/affiliate/store";
 import { PromoCodeError, assignPromoCode, unassignPromoCode } from "@/lib/genhealth/promocodes";
 import {
   adminCredentialsMatch,
@@ -131,30 +131,18 @@ function refreshAssignments() {
   revalidatePath("/admin/affiliates/tracking-links");
   revalidatePath("/affiliates/overview");
   revalidatePath("/affiliates/tracking-link");
-  revalidatePath("/affiliates/promo-codes");
-  revalidatePath("/affiliates/saved-links");
 }
 
 export async function assignPromoCodeAction(formData: FormData) {
   await requireAdmin();
   const code = String(formData.get("code") ?? "").trim();
   const affiliate = String(formData.get("affiliate") ?? "");
-  let released: string[] = [];
-  let replaced: string[] = [];
   try {
-    const result = await assignPromoCode(code, affiliate);
-    released = result.releasedCodes;
-    replaced = result.replacedAffiliates;
+    await assignPromoCode(code, affiliate);
   } catch (error) {
     console.error("[affiliate] promo assign failed", error instanceof Error ? error.message : "unknown");
     if (error instanceof PromoCodeError) fail(error.code, PROMO_PATH);
     fail("assign", PROMO_PATH);
-  }
-  try {
-    for (const previous of released) await forgetAffiliateSavedPromo(affiliate, previous);
-    for (const holder of replaced) await forgetAffiliateSavedPromo(holder, code);
-  } catch (error) {
-    console.error("[affiliate] saved promo removal failed", error instanceof Error ? error.message : "unknown");
   }
   refreshAssignments();
   redirect(`${PROMO_PATH}?assigned=${encodeURIComponent(code)}`);
@@ -170,11 +158,6 @@ export async function unassignPromoCodeAction(formData: FormData) {
     if (error instanceof PromoCodeError) fail(error.code, PROMO_PATH);
     console.error("[affiliate] promo unassign failed", error instanceof Error ? error.message : "unknown");
     fail("assign", PROMO_PATH);
-  }
-  try {
-    await forgetAffiliateSavedPromo(affiliate, code);
-  } catch (error) {
-    console.error("[affiliate] saved promo removal failed", error instanceof Error ? error.message : "unknown");
   }
   refreshAssignments();
   redirect(`${PROMO_PATH}?removed=${encodeURIComponent(code)}`);

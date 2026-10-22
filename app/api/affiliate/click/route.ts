@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { affiliatePath, resolveAffiliateAttribution } from "@/lib/affiliate/code";
+import { affiliatePath, affiliateReferrer, resolveAffiliateAttribution } from "@/lib/affiliate/code";
 import { affiliateFirebaseConfigured } from "@/lib/affiliate/firebase";
 import { affiliateCampaign } from "@/lib/affiliate/link";
 import {

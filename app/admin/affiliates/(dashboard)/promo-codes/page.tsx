@@ -151,7 +151,7 @@ export default async function PromoCodesPage({
                   {promo.statusLabel}
                 </span>
               </div>
-              {promo.activeInGenHealth ? <p className="mt-2 text-xs text-brown">Active in Gen-Health</p> : null}
+              {promo.activeInGenHealth ? <p className="mt-2 text-xs text-brown">Active in Gen Health</p> : null}
               <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-5 text-sm leading-6">
                 <div>
                   <dt className="text-xs text-brown">Mode</dt>
@@ -205,7 +205,7 @@ export default async function PromoCodesPage({
         </colgroup>
         <thead className="text-brown">
           <tr>
-            <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Code</th>
+            <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Promo code</th>
             <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Mode</th>
             <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Discount</th>
             <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Scope</th>
@@ -241,7 +241,7 @@ export default async function PromoCodesPage({
                   <span className={`inline-flex whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium ${statusClass(promo.statusLabel)}`}>
                     {promo.statusLabel}
                   </span>
-                  {promo.activeInGenHealth ? <div className="mt-2 leading-5 text-brown">Active in Gen-Health</div> : null}
+                  {promo.activeInGenHealth ? <div className="mt-2 leading-5 text-brown">Active in Gen Health</div> : null}
                 </td>
                 <td className="px-4 py-5 align-top">
                   <AssignPromoCode

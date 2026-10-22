@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { accountColumnTotals } from "@/lib/affiliate/account-figures";
 import { normalizeAffiliateCode } from "@/lib/affiliate/code";
 import { formatCents, formatCommissionRate } from "@/lib/affiliate/format";
 import { affiliateTrackingLink } from "@/lib/affiliate/link";
@@ -7,9 +8,12 @@ import { syncAttributedGenHealthSales } from "@/lib/affiliate/sales";
 import {
   AffiliateStoreError,
   AFFILIATE_MAX_AGE,
-  loadAffiliateDashboard,
+  alignAffiliateRecordTotals,
+  loadAffiliateOverview,
+  loadClickCounts,
   loadUncommissionedPendingOrders,
   type AffiliateSummary,
+  type ConversionSummary,
 } from "@/lib/affiliate/store";
 import { AccountSettings } from "@/components/affiliate/AccountSettings";
 import { AccountTracking } from "@/components/affiliate/AccountTracking";
@@ -65,6 +69,8 @@ export default async function AffiliateAccountsPage({
   const created = normalizeAffiliateCode(query.created);
 
   let affiliates: AffiliateSummary[] = [];
+  let conversions: ConversionSummary[] = [];
+  let clickCounts = new Map<string, number>();
   let loadError = "";
   const unpaidOrders = new Map<string, number>();
   let unpaidOrdersReady = false;
@@ -72,7 +78,10 @@ export default async function AffiliateAccountsPage({
   let payoutsReady = false;
   try {
     await syncAttributedGenHealthSales();
-    affiliates = (await loadAffiliateDashboard()).affiliates;
+    const overview = await loadAffiliateOverview();
+    affiliates = overview.affiliates;
+    conversions = overview.conversions;
+    clickCounts = await loadClickCounts();
   } catch (caught) {
     loadError = caught instanceof AffiliateStoreError ? caught.message : "Could not load affiliate records.";
   }
@@ -123,14 +132,38 @@ export default async function AffiliateAccountsPage({
   const cookieDays = AFFILIATE_MAX_AGE / (60 * 60 * 24);
 
   function figures(affiliate: AffiliateSummary) {
-    const paid = payoutsReady ? paidEarningsCents(affiliate.code, payouts) : null;
-    return {
-      visitors: affiliate.clickCount,
-      paidOrders: affiliate.paidConversionCount,
+    return accountColumnTotals({
+      code: affiliate.code,
+      clicks: clickCounts.get(affiliate.code) ?? 0,
+      orders: conversions,
       unpaidOrders: unpaidOrdersReady ? (unpaidOrders.get(affiliate.code) ?? 0) : null,
-      unpaidEarnings: paid == null ? null : Math.max(0, affiliate.commissionCents - paid),
-      paidEarnings: paid,
-    };
+      paidOutCents: payoutsReady ? paidEarningsCents(affiliate.code, payouts) : null,
+    });
+  }
+
+  if (!loadError) {
+    await Promise.all(
+      affiliates.map(async (affiliate) => {
+        const totals = figures(affiliate);
+        try {
+          await alignAffiliateRecordTotals(
+            affiliate.code,
+            {
+              clickCount: affiliate.clickCount,
+              paidConversionCount: affiliate.paidConversionCount,
+              commissionCents: affiliate.commissionCents,
+            },
+            {
+              clickCount: totals.visitors,
+              paidConversionCount: totals.paidOrders,
+              commissionCents: totals.earnedCents,
+            },
+          );
+        } catch (caught) {
+          console.error("[affiliate] total align failed", caught instanceof Error ? caught.message : "unknown");
+        }
+      }),
+    );
   }
 
   function settings(affiliate: AffiliateSummary) {

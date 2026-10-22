@@ -132,6 +132,7 @@ export default async function AffiliateOverviewPage({
 
   const salesCents = paid.reduce((sum, conversion) => sum + (conversion.amountCents ?? 0), 0);
   const commissionCents = paid.reduce((sum, conversion) => sum + conversion.commissionCents, 0);
+  const unpaidCents = Math.max(0, commissionCents - paidOutCents);
   const activeCount = affiliates.filter((affiliate) => affiliate.active).length;
   const inactiveCount = affiliates.length - activeCount;
   const sellers = affiliates.filter((affiliate) => (byCode.get(affiliate.code)?.orders ?? 0) > 0).length;
@@ -188,21 +189,16 @@ export default async function AffiliateOverviewPage({
 
       {loadError ? <p className="text-ink">{loadError}</p> : null}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-3">
         <section className="rounded-[28px] bg-white p-6">
-          <h3 className="text-sm text-brown">Affiliate sales</h3>
+          <h3 className="text-sm text-brown">Sales</h3>
           <p className="mt-2 text-3xl">{formatCents(salesCents)}</p>
-          <p className="mt-2 text-sm text-brown">From paid affiliate orders</p>
+          <p className="mt-2 text-sm text-brown">From paid orders</p>
         </section>
         <section className="rounded-[28px] bg-white p-6">
-          <h3 className="text-sm text-brown">Orders from affiliates</h3>
+          <h3 className="text-sm text-brown">Paid orders</h3>
           <p className="mt-2 text-3xl">{paid.length}</p>
           <p className="mt-2 text-sm text-brown">Paid orders in this period</p>
-        </section>
-        <section className="rounded-[28px] bg-white p-6">
-          <h3 className="text-sm text-brown">Earned commission</h3>
-          <p className="mt-2 text-3xl">{formatCents(commissionCents)}</p>
-          <p className="mt-2 text-sm text-brown">Paid out {formatCents(paidOutCents)} in this period</p>
         </section>
         <section className="rounded-[28px] bg-white p-6">
           <h3 className="text-sm text-brown">Active affiliates</h3>
@@ -214,6 +210,27 @@ export default async function AffiliateOverviewPage({
           </p>
         </section>
       </div>
+
+      <section className="rounded-[28px] bg-white p-6" aria-labelledby="admin-earnings-title">
+        <h3 id="admin-earnings-title" className="sr-only">
+          Earnings
+        </h3>
+        <div className="grid sm:grid-cols-2 sm:divide-x sm:divide-rose/60">
+          <div className="sm:pr-8">
+            <h4 className="text-sm text-brown">Unpaid earnings</h4>
+            <p className="mt-2 text-3xl">{formatCents(unpaidCents)}</p>
+            <p className="mt-2 text-sm text-brown">Commission not paid out yet</p>
+          </div>
+          <div className="mt-6 border-t border-rose/60 pt-6 sm:mt-0 sm:border-0 sm:pt-0 sm:pl-8">
+            <h4 className="text-sm text-brown">Total earnings</h4>
+            <p className="mt-2 text-3xl">{formatCents(commissionCents)}</p>
+            <p className="mt-2 text-sm text-brown">Commission from paid orders</p>
+          </div>
+        </div>
+        <p className="mt-6 border-t border-rose/60 pt-4 text-sm text-brown">
+          Paid out {formatCents(paidOutCents)} in this period. Unpaid earnings can change if a referred order is refunded. Order details are on the Orders page.
+        </p>
+      </section>
 
       <div className="grid gap-4 xl:grid-cols-2">
         <section className="min-w-0 rounded-[28px] bg-white p-4 sm:p-6" aria-labelledby="top-affiliates-title">
@@ -350,11 +367,11 @@ export default async function AffiliateOverviewPage({
                       {promos ? <dd className="text-brown">{promos}</dd> : null}
                     </div>
                     <div>
-                      <dt className="text-xs text-brown">Rate</dt>
+                      <dt className="text-xs text-brown">Commission rate</dt>
                       <dd className="mt-1">{formatCommissionRate(affiliate)}</dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-brown">Orders</dt>
+                      <dt className="text-xs text-brown">Paid orders</dt>
                       <dd className="mt-1">{stats.orders}</dd>
                     </div>
                     <div>
@@ -362,7 +379,7 @@ export default async function AffiliateOverviewPage({
                       <dd className="mt-1">{formatCents(stats.salesCents)}</dd>
                     </div>
                     <div className="col-span-2">
-                      <dt className="text-xs text-brown">Commission</dt>
+                      <dt className="text-xs text-brown">Total earnings</dt>
                       <dd className="mt-1">{formatCents(stats.commissionCents)}</dd>
                     </div>
                   </dl>
@@ -387,9 +404,9 @@ export default async function AffiliateOverviewPage({
               <tr>
                 <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Affiliate</th>
                 <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Affiliate ID</th>
-                <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Orders</th>
+                <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Paid orders</th>
                 <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Sales</th>
-                <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Commission</th>
+                <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Total earnings</th>
                 <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Status</th>
                 <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">
                   <span className="sr-only">Manage</span>

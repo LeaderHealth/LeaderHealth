@@ -14,7 +14,7 @@ const items = [
   { href: "/admin/affiliates/overview", label: "Overview" },
   { href: "/admin/affiliates/add", label: "Add" },
   { href: "/admin/affiliates/accounts", label: "Accounts" },
-  { href: "/admin/affiliates/tracking-links", label: "Tracking links" },
+  { href: "/admin/affiliates/tracking-links", label: "Referral links" },
   { href: "/admin/affiliates/promo-codes", label: "Promo codes" },
   { href: "/admin/affiliates/orders", label: "Orders" },
   { href: "/admin/affiliates/payouts", label: "Payouts" },
@@ -32,7 +32,7 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
         </h1>
         <p className="mt-4 max-w-2xl text-taupe">
           Each new affiliate gets a unique ID and a tracking link with utm_source, utm_medium, and utm_campaign. Affiliates sign in at{" "}
-          <span className="text-ink">/affiliates</span>. Clicks and paid orders are stored in Firestore. Commission totals
+          <span className="text-ink">/affiliates</span>. Unique visitors and paid orders are stored in Firestore. Commission totals
           skip dry-run checkouts.
         </p>
         {affiliateFirebaseConfigured() ? (

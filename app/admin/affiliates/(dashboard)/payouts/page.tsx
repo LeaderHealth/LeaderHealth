@@ -123,7 +123,7 @@ export default async function AffiliatePayoutsPage({
       <div>
         <h2 className="text-2xl">Payouts</h2>
         <p className="mt-2 max-w-2xl text-sm text-brown">
-          Review earned commission, approve a month, then record the payment. Mark paid only records a payment that was already made somewhere else.
+          Review total earnings, approve a month, then record the payment. Mark paid only records a payment that was already made somewhere else.
         </p>
       </div>
 

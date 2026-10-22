@@ -18,7 +18,7 @@ export function AffiliateCapture() {
     void fetch("/api/affiliate/click", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ ref, utm_source: utmSource, path, campaign }),
+      body: JSON.stringify({ ref, utm_source: utmSource, path, campaign, referrer: document.referrer }),
       keepalive: true,
     });
   }, [pathname, ref, utmSource, code, campaign]);

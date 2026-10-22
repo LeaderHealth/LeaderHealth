@@ -30,7 +30,7 @@ function checkoutParams(campaign: string | null) {
 }
 
 test("checkout sends the campaign captured from the affiliate link", () => {
-  const candidate = checkoutCampaignCandidate("abc", "abc", "ZEBRA", "ALPHA");
+  const candidate = checkoutCampaignCandidate("abc", "abc", "ZEBRA", null);
   const campaign = assignedCampaign(codes, "abc", candidate);
   const params = checkoutParams(campaign);
   assert.equal(campaign, "ZEBRA");
@@ -49,10 +49,19 @@ test("a campaign that is not an assigned promo code is not attached", () => {
   assert.equal(params.get("utm_source"), "abc");
 });
 
+test("a promo link prefills that code, and a tracking link does not", () => {
+  assert.equal(checkoutCampaignCandidate("abc", "abc", "abc", "ZEBRA"), "ZEBRA");
+  assert.equal(checkoutCampaignCandidate("abc", "abc", null, "ZEBRA"), "ZEBRA");
+  assert.equal(assignedCampaign(codes, "abc", "ZEBRA"), "ZEBRA");
+  const params = checkoutParams("ZEBRA");
+  assert.equal(params.get("utm_campaign"), "ZEBRA");
+  assert.equal(params.get("utm_source"), "abc");
+});
+
 test("affiliate-only links keep the affiliate id and omit campaign", () => {
   const fromDefaultLink = checkoutCampaignCandidate("abc", "abc", "abc", null);
   assert.equal(assignedCampaign(codes, "abc", fromDefaultLink), null);
-  assert.equal(checkoutCampaignCandidate("abc", "abc", null, "ZEBRA"), null);
+  assert.equal(checkoutCampaignCandidate("abc", "abc", "abc", "abc"), null);
   const params = checkoutParams(null);
   assert.equal(params.get("ref"), "abc");
   assert.equal(params.get("utm_source"), "abc");

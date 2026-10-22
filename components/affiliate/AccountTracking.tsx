@@ -58,6 +58,10 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
+function Note({ children }: { children: ReactNode }) {
+  return <p className="mt-2 text-sm leading-6 text-brown">{children}</p>;
+}
+
 export function AccountTracking({
   name,
   code,
@@ -143,6 +147,9 @@ export function AccountTracking({
                     <Row label="Cookie duration">{cookieDays} days</Row>
                     <Row label="Tracking link">
                       <CopyValue value={trackingLink} label="tracking link" />
+                      <Note>
+                        <span className="text-ink">utm_campaign</span> is the affiliate id. Opening it stores {name} for {cookieDays} days. If that visitor pays later, {name} is credited even when the order has no promo code.
+                      </Note>
                     </Row>
                   </dl>
                   <h3 className="mt-8 text-xs font-medium uppercase tracking-wide text-brown">Promo tracking information</h3>
@@ -159,6 +166,9 @@ export function AccountTracking({
                         </Row>
                         <Row label="Promo link with visitors tracking">
                           <CopyValue value={promo.url} label={`${promo.code} promo link`} />
+                          <Note>
+                            This does the same visit recording, with <span className="text-ink">utm_campaign</span> set to {promo.code}. The visit still counts. If the paid order includes {promo.code}, {name} is credited from that locked code.
+                          </Note>
                         </Row>
                       </dl>
                     ))

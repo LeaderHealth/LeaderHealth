@@ -161,7 +161,7 @@ export function AffiliatePromoCodes({
                         </colgroup>
                         <thead className="text-brown">
                           <tr>
-                            <th scope="col" className="px-3 py-3 align-bottom font-medium leading-snug">Code</th>
+                            <th scope="col" className="px-3 py-3 align-bottom font-medium leading-snug">Promo code</th>
                             <th scope="col" className="px-3 py-3 align-bottom font-medium leading-snug">Mode</th>
                             <th scope="col" className="px-3 py-3 align-bottom font-medium leading-snug">Discount</th>
                             <th scope="col" className="px-3 py-3 align-bottom font-medium leading-snug">Scope</th>

@@ -38,6 +38,20 @@ export function affiliatePath(value: unknown) {
   return path.slice(0, 200);
 }
 
+export function affiliateReferrer(value: unknown) {
+  if (typeof value !== "string") return "";
+  const raw = value.trim();
+  if (!raw) return "";
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return "";
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") return "";
+  return `${url.origin}${url.pathname}`.slice(0, 200);
+}
+
 export function normalizeAffiliateName(value: unknown) {
   if (typeof value !== "string") return null;
   const name = value.trim().replace(/\s+/g, " ");

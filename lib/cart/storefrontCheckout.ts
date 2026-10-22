@@ -101,9 +101,23 @@ function scoreProduct(query: string, queryTokens: string[], product: CheckoutPro
   return score;
 }
 
+function storedCatalogId(stored: string | undefined, products: CheckoutProduct[]) {
+  const id = stored?.trim();
+  if (!id) return null;
+  if (products.some((product) => product.clientProductId === id)) return id;
+  // Older records prefix the catalog id with a tenant key.
+  let match: string | null = null;
+  for (const product of products) {
+    const catalogId = product.clientProductId;
+    if (!id.endsWith(`_${catalogId}`)) continue;
+    if (!match || catalogId.length > match.length) match = catalogId;
+  }
+  return match;
+}
+
 export function matchCheckoutProduct(line: HandoffLine, products: CheckoutProduct[]) {
-  const id = line.clientProductId?.trim();
-  if (id && products.some((product) => product.clientProductId === id)) return id;
+  const resolved = storedCatalogId(line.clientProductId, products);
+  if (resolved) return resolved;
 
   const label = (line.variant || line.name).trim();
   const query = fold(label);

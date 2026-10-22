@@ -44,7 +44,7 @@ export default async function AffiliateOrdersPage() {
                   <dd className="mt-1">{formatWhen(conversion.createdAt)}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-brown">Code</dt>
+                  <dt className="text-xs text-brown">Affiliate ID</dt>
                   <dd className="mt-1 break-all">{conversion.code}</dd>
                 </div>
                 <div>
@@ -76,7 +76,7 @@ export default async function AffiliateOrdersPage() {
         <thead className="text-brown">
           <tr>
             <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">When</th>
-            <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Code</th>
+            <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Affiliate ID</th>
             <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Order</th>
             <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Product</th>
             <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Amount</th>
