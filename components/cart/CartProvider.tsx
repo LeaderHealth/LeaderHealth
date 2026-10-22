@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useState, useSyncExternalStore } from "react";
+import { cartRuleIssue } from "@/lib/cart/rules";
 import { cartCount, cartSubtotal, type CartItem } from "@/lib/cart/types";
 
 const STORAGE_KEY = "lh-cart-v1";
@@ -11,6 +12,7 @@ type CartContextValue = {
   subtotal: number;
   ready: boolean;
   isOpen: boolean;
+  rejection: string | null;
   openCart: () => void;
   closeCart: () => void;
   addItem: (item: CartItem, options?: { open?: boolean }) => void;
@@ -67,6 +69,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const cart = useSyncExternalStore(subscribeCart, getCartSnapshot, () => SERVER_CART);
   const { items, ready } = cart;
   const [isOpen, setIsOpen] = useState(false);
+  const [rejection, setRejection] = useState<string | null>(null);
 
   const addItem = useCallback((item: CartItem, options?: { open?: boolean }) => {
     const current = getCartSnapshot().items;
@@ -82,24 +85,43 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             : entry,
         )
       : [...current, { ...item, quantity: item.quantity || 1 }];
+    const issue = cartRuleIssue(next);
+    if (issue) {
+      setRejection(issue);
+      if (options?.open !== false) setIsOpen(true);
+      return;
+    }
+    setRejection(null);
     commitCart(next);
     if (options?.open !== false) setIsOpen(true);
   }, []);
 
   const removeItem = useCallback((id: string) => {
+    setRejection(null);
     commitCart(getCartSnapshot().items.filter((item) => item.id !== id));
   }, []);
 
   const setQuantity = useCallback((id: string, quantity: number) => {
     const current = getCartSnapshot().items;
-    commitCart(
-      quantity < 1
-        ? current.filter((item) => item.id !== id)
-        : current.map((item) => (item.id === id ? { ...item, quantity } : item)),
-    );
+    if (quantity < 1) {
+      setRejection(null);
+      commitCart(current.filter((item) => item.id !== id));
+      return;
+    }
+    const next = current.map((item) => (item.id === id ? { ...item, quantity } : item));
+    const issue = cartRuleIssue(next);
+    if (issue) {
+      setRejection(issue);
+      return;
+    }
+    setRejection(null);
+    commitCart(next);
   }, []);
 
-  const clear = useCallback(() => commitCart([]), []);
+  const clear = useCallback(() => {
+    setRejection(null);
+    commitCart([]);
+  }, []);
 
   const value = useMemo<CartContextValue>(
     () => ({
@@ -108,6 +130,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       subtotal: cartSubtotal(items),
       ready,
       isOpen,
+      rejection,
       openCart: () => setIsOpen(true),
       closeCart: () => setIsOpen(false),
       addItem,
@@ -115,7 +138,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       setQuantity,
       clear,
     }),
-    [items, ready, isOpen, addItem, removeItem, setQuantity, clear],
+    [items, ready, isOpen, rejection, addItem, removeItem, setQuantity, clear],
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

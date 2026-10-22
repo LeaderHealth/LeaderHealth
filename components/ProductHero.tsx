@@ -60,7 +60,7 @@ export function ProductHero({ product }: { product: Product }) {
       className={`relative pb-16 pt-28 text-white ${heroCover ? "overflow-hidden" : "bg-gradient-to-b from-[#d07a7c] to-[#a24b4e]"}`}
       style={heroCover ? { backgroundImage: heroCover } : undefined}
     >
-      <div className="relative mx-auto grid max-w-6xl items-center gap-8 px-6 lg:grid-cols-[1fr_minmax(320px,440px)]">
+      <div className="relative mx-auto grid max-w-7xl items-center gap-8 px-6 lg:grid-cols-[minmax(280px,0.9fr)_minmax(480px,620px)]">
         <div className="flex min-h-[480px] flex-col items-center justify-center">
           {menHormoneCover ? (
             <div className="relative mx-auto aspect-[363/623] w-full max-w-[363px] overflow-hidden">

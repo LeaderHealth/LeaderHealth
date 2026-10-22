@@ -284,7 +284,7 @@ export function WomenHormoneTherapy() {
       {(trigger) => (
         <>
           <section className="bg-gradient-to-b from-[#f37477] to-[#e9989f] px-6 pb-16 pt-28 text-white">
-            <div className="mx-auto grid max-w-6xl items-center gap-8 md:grid-cols-[1.05fr_minmax(280px,460px)] md:gap-8 lg:gap-10">
+            <div className="mx-auto grid max-w-7xl items-center gap-8 md:grid-cols-[minmax(280px,0.9fr)_minmax(480px,620px)] md:gap-8 lg:gap-10">
               <div className="flex min-h-[280px] w-full flex-col items-center justify-center sm:min-h-[420px]">
                 <div className="flex w-full flex-1 items-center justify-center overflow-hidden">
                   <Image
@@ -312,7 +312,7 @@ export function WomenHormoneTherapy() {
                 </p>
                 <p className="mt-4 text-[16px] font-semibold">Starting at just $69/Month.</p>
                 <p className="mt-3 text-[14px] leading-relaxed text-white/90">
-                  Already have your labs? You can upload them during intake. If not, we&apos;ll schedule your panel for you — no extra steps.
+                  Already have results? Upload them in the patient portal after checkout. Add a panel below only if you don&apos;t.
                 </p>
                 <BundledLabPanel slug="women-hormone-therapy" />
                 <ChooseTreatmentButton href="#womenintakes" className="mt-6" />

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/components/cart/CartProvider";
 import { cartItemFromSlug } from "@/lib/cart/items";
+import { cartRuleIssue, isQuantityCapped, QUANTITY_LIMIT_MESSAGE } from "@/lib/cart/rules";
 import { cartSubtotal } from "@/lib/cart/types";
 import { getProduct, labs } from "@/lib/content/products";
 import {
@@ -86,7 +87,7 @@ function isHormoneSlug(slug: string) {
 
 export function CheckoutForm({ catalog, seedProduct, seedVariant }: CheckoutFormProps) {
   const router = useRouter();
-  const { items, addItem, setQuantity, removeItem, ready } = useCart();
+  const { items, addItem, setQuantity, removeItem, ready, rejection } = useCart();
   const [openStep, setOpenStep] = useState<CheckoutStepId>("details");
   const [contact, setContact] = useState(emptyContact);
   const [shipping, setShipping] = useState(emptyShipping);
@@ -202,6 +203,7 @@ export function CheckoutForm({ catalog, seedProduct, seedVariant }: CheckoutForm
   const screeningDone = isScreeningComplete(screeningAnswer, consent);
   const shippingDone = isShippingComplete(shipping) && !blockedByState && !(hasLabs && isPoBoxAddress(shipping.address1));
   const subtotal = cartSubtotal(items);
+  const bagNotice = rejection || cartRuleIssue(items);
   const payLabel = ALLOW_LIVE_NMI_CHARGES && subtotal > 0 ? `PAY ${formatPrice(subtotal)}` : "COMPLETE CHECKOUT";
 
   function patchContact(update: Partial<ContactState>) {
@@ -283,6 +285,11 @@ export function CheckoutForm({ catalog, seedProduct, seedVariant }: CheckoutForm
     }
     if (items.length === 0) {
       setError("Add a treatment to your cart before checking out.");
+      return;
+    }
+    const cartIssue = cartRuleIssue(items);
+    if (cartIssue) {
+      setError(cartIssue);
       return;
     }
     if (!selected?.clientProductId) {
@@ -799,7 +806,14 @@ export function CheckoutForm({ catalog, seedProduct, seedVariant }: CheckoutForm
                           –
                         </button>
                         <span className="w-5 text-center text-xs">{item.quantity}</span>
-                        <button type="button" className="h-7 w-7" onClick={() => setQuantity(item.id, item.quantity + 1)}>
+                        <button
+                          type="button"
+                          className="h-7 w-7 disabled:cursor-not-allowed disabled:opacity-40"
+                          onClick={() => setQuantity(item.id, item.quantity + 1)}
+                          disabled={isQuantityCapped(item)}
+                          title={isQuantityCapped(item) ? QUANTITY_LIMIT_MESSAGE : undefined}
+                          aria-label={`Increase ${item.name}`}
+                        >
                           +
                         </button>
                       </div>
@@ -814,6 +828,7 @@ export function CheckoutForm({ catalog, seedProduct, seedVariant }: CheckoutForm
               ))
             )}
           </div>
+          {bagNotice ? <p className="mt-4 text-sm text-[#ffd6d6]">{bagNotice}</p> : null}
           <dl className="mt-5 space-y-2 text-sm">
             <div className="flex justify-between text-white/70">
               <dt>Subtotal</dt>
