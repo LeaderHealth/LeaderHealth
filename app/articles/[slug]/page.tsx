@@ -6,6 +6,7 @@ import { ArticleRichText } from "@/components/articles/ArticleRichText";
 import { FAQArticles } from "@/components/articles/FAQArticles";
 import { ArticleExpertQuoteCard } from "@/components/ArticleExpertQuoteCard";
 import { articleCovers, getArticle, publishedArticles } from "@/lib/content/articles";
+import { isPublicHref } from "@/lib/content/visibility";
 import { JsonLd } from "@/components/JsonLd";
 import { buildArticlePageSchema } from "@/lib/seo/schema";
 import type { Metadata } from "next";
@@ -27,14 +28,14 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const article = getArticle(slug);
-  if (!article || article.listed === false) notFound();
+  if (!article || article.listed === false || !isPublicHref(`/articles/${slug}`)) notFound();
   return { title: article.title };
 }
 
 export default async function ArticlePage({ params }: Props) {
   const { slug } = await params;
   const article = getArticle(slug);
-  if (!article || article.listed === false) notFound();
+  if (!article || article.listed === false || !isPublicHref(`/articles/${slug}`)) notFound();
 
   const cover = articleCovers[article.slug];
   const related = publishedArticles()

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
+import { LabGenderButton } from "@/components/LabGenderButton";
 import { labs } from "@/lib/content/products";
 
 const smoothEase = [0.44, 0, 0.56, 1] as const;
@@ -168,7 +169,7 @@ export function LabsTeaser() {
             Labs
           </h2>
           <p className="mt-4 max-w-[449px] font-sans text-[21px] font-normal leading-[25.2px] tracking-normal text-[#32120e]">
-            Get a clearer picture of your health with comprehensive lab testing and expert clinical insights.
+            Get a clearer picture of your health with comprehensive lab testing.
           </p>
           <div className="mt-8">
             {labMetrics.map((metric) => (
@@ -182,6 +183,13 @@ export function LabsTeaser() {
                 {metric.label}
               </p>
             ))}
+          </div>
+          <h3 className="mt-8 font-sans text-[22px] font-semibold leading-tight tracking-normal text-[#32120e] min-[810px]:text-[26px]">
+            Start <span className="font-serif-italic text-[#e43c4e]">Advanced Labs</span> Now
+          </h3>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <LabGenderButton gender="Men" />
+            <LabGenderButton gender="Women" />
           </div>
         </motion.div>
         <div className="min-w-0 min-[810px]:col-span-7">

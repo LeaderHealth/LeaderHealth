@@ -890,7 +890,7 @@ function MobileScreenView({
     return (
       <div>
         <p className="mb-2.5 text-[13px] leading-4 font-medium text-white/70">Who We Are</p>
-        {whoRows.map((row) => (
+        {whoRows.filter((row) => isPublicHref(row.href)).map((row) => (
           <Link
             key={row.href}
             href={row.href}

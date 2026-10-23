@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { BlogSection } from "@/components/blogs/BlogSection";
 import { HeroTitleFade } from "@/components/HeroTitleFade";
 import { blogArticles, blogCategories } from "@/components/blogs/content";
@@ -15,6 +16,7 @@ const title = "Learn More";
 const intro = "Articles on treatment, dosing, and what the research actually says.";
 
 export default function BlogsPage() {
+  if (!isPublicHref("/blogs")) notFound();
   return (
     <div>
       <JsonLd

@@ -524,7 +524,7 @@ function WhoWeAreMenu({
         <div data-mega-panel="" className={`${megaHoverBridgeClass} left-0`}>
           <div className={`w-[260px] px-6 py-6 ${megaPanelSurfaceClass} ${megaPanelMotionClass(fading)}`}>
             <nav className="flex flex-col gap-3.5">
-              {whoLinks.map((item) => (
+              {whoLinks.filter((item) => isPublicHref(item.href)).map((item) => (
                 <Link key={item.href + item.label} href={item.href} className={megaLinkClass}>
                   {item.label}
                 </Link>

@@ -372,7 +372,7 @@ export function TabletNavPanel({
 
       {panel === "who" ? (
         <nav className="mx-auto flex max-w-[760px] flex-col py-2" aria-label="Who We Are">
-          {whoLinks.map((item) => (
+          {whoLinks.filter((item) => isPublicHref(item.href)).map((item) => (
             <Link
               key={item.href}
               href={item.href}

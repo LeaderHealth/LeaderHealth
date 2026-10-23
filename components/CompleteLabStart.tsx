@@ -1,6 +1,7 @@
+"use client";
+
 import { HeroVideo } from "@/components/HeroVideo";
-import { GET_STARTED_URL } from "@/lib/content/site";
-import { showIntakeCta } from "@/lib/content/visibility";
+import { LabGenderButton } from "@/components/LabGenderButton";
 
 export function CompleteLabStart() {
   return (
@@ -16,21 +17,13 @@ export function CompleteLabStart() {
               Not sure where to start?
             </h2>
             <p className="mt-3 font-sans text-[15px] leading-snug text-white min-[810px]:max-w-[34rem] min-[810px]:text-[16px]">
-              <span className="min-[810px]:hidden">
-                We recommend getting lab-tested first to give you access to a health coach and clinician that will help
-                guide your personal health.
-              </span>
-              <span className="hidden min-[810px]:inline">
-                Tell us a little about your health and goals, and we&apos;ll help guide you toward the right next steps.
-              </span>
+              We recommend starting with the <span className="font-serif-italic">Advance</span> labs
             </p>
           </div>
-          {showIntakeCta(GET_STARTED_URL) ? <a
-            href={GET_STARTED_URL}
-            className="mt-8 inline-flex h-11 items-center justify-center self-center rounded-full bg-[#2C1412] px-6 font-sans text-[15px] font-medium text-white transition-colors hover:bg-[#451816] min-[810px]:mb-1 min-[810px]:mt-0 min-[810px]:self-auto"
-          >
-            Get Started
-          </a> : null}
+          <div className="mt-8 flex flex-wrap gap-3 min-[810px]:mb-1 min-[810px]:mt-0">
+            <LabGenderButton gender="Men" />
+            <LabGenderButton gender="Women" />
+          </div>
         </div>
       </div>
     </section>

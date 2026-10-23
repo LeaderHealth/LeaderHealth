@@ -10,6 +10,7 @@ import { HsaFsaBadge } from "@/components/HsaFsaBadge";
 import { IllustrationNote } from "@/components/IllustrationNote";
 import { ChooseTreatmentButton } from "@/components/ProductHeroCta";
 import { PriceCompare } from "@/components/PriceCompare";
+import { isSectionVisible } from "@/lib/content/visibility";
 import { SafetyInformationModal } from "@/components/SafetyInformationModal";
 
 const HERO_IMAGE =
@@ -245,7 +246,7 @@ export function MenComboTroches() {
             </div>
           </section>
 
-          <PriceCompare />
+          {isSectionVisible("price-compare") ? <PriceCompare /> : null}
         </>
       )}
     </SafetyInformationModal>

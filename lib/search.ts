@@ -1,4 +1,5 @@
 import { publishedArticles } from "@/lib/content/articles";
+import { isPublicHref } from "@/lib/content/visibility";
 import { faqCategories } from "@/lib/content/faqs";
 import { labs, products, type Category } from "@/lib/content/products";
 
@@ -133,7 +134,7 @@ function index(): IndexedHit[] {
     ],
   }));
 
-  return [...treatments, ...articles, ...faq, ...diagnosticLabs];
+  return [...treatments, ...articles, ...faq, ...diagnosticLabs].filter((hit) => isPublicHref(hit.href));
 }
 
 const catalog = index();

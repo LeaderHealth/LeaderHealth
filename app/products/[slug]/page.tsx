@@ -14,6 +14,7 @@ import { MenComboTroches } from "@/components/MenComboTroches";
 import { IntimacyBlend } from "@/components/IntimacyBlend";
 import { JsonLd } from "@/components/JsonLd";
 import { buildProductPageSchema } from "@/lib/seo/schema";
+import { isSectionVisible } from "@/lib/content/visibility";
 import type { Metadata } from "next";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -161,7 +162,7 @@ export default async function ProductPage({ params }: Props) {
     <>
       {structuredData}
       <ProductHero product={visibleProduct} />
-      {product.compare !== false && <PriceCompare />}
+      {product.compare !== false && isSectionVisible("price-compare") && <PriceCompare />}
       <SiteTestimonials />
       {(visibleProduct.variants?.length ?? 0) > 1 && <ProductVariants product={visibleProduct} />}
       <section className="bg-white px-6 py-16">
