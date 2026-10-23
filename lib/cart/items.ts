@@ -1,5 +1,21 @@
-import { labs, products, type Lab, type Product } from "@/lib/content/products";
+import { labs, listedClientProductIds, listedVariants, presentListedProduct, products, type Lab, type Product } from "@/lib/content/products";
 import { cartLineId, parsePriceAmount, type CartItem } from "./types";
+
+export const UNAVAILABLE_TREATMENT = "This treatment isn't available.";
+
+export function isSellableLine(line: { slug: string; variant?: string; clientProductId?: string }) {
+  const lab = labs.find((item) => item.slug === line.slug);
+  if (lab) {
+    if (!line.clientProductId) return true;
+    const ids = [lab.clientProductId, lab.clientProductIds?.Men, lab.clientProductIds?.Women].filter(Boolean);
+    return ids.includes(line.clientProductId);
+  }
+  const product = products.find((item) => item.slug === line.slug);
+  if (!product || product.listed === false) return false;
+  if (line.variant && !listedVariants(product).some((variant) => variant.name === line.variant)) return false;
+  if (line.clientProductId && !listedClientProductIds().has(line.clientProductId)) return false;
+  return true;
+}
 
 type Variant = NonNullable<Product["variants"]>[number];
 
@@ -35,12 +51,18 @@ export function cartItemFromLab(lab: Lab, gender?: "Men" | "Women"): CartItem {
 }
 
 export function cartItemFromSlug(slug: string, variantName?: string) {
-  const product = products.find((item) => item.slug === slug);
-  if (product) {
-    const variant = variantName
-      ? product.variants?.find((item) => item.name === variantName)
-      : undefined;
-    return cartItemFromProduct(product, variant);
+  const found = products.find((item) => item.slug === slug);
+  if (found) {
+    if (found.listed === false) return null;
+    const product = presentListedProduct(found);
+    const variants = product.variants ?? [];
+    if (variantName) {
+      const variant = variants.find((item) => item.name === variantName);
+      if (!variant) return null;
+      return cartItemFromProduct(product, variant);
+    }
+    if (variants.length === 1) return cartItemFromProduct(product, variants[0]);
+    return cartItemFromProduct(product);
   }
   const lab = labs.find((item) => item.slug === slug);
   if (!lab) return null;

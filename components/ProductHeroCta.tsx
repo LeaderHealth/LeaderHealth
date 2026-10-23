@@ -1,7 +1,7 @@
 "use client";
 
 import type { MouseEvent } from "react";
-import type { Product } from "@/lib/content/products";
+import { listedVariants, type Product } from "@/lib/content/products";
 import { cartItemFromProduct } from "@/lib/cart/items";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
 
@@ -35,13 +35,14 @@ export function ChooseTreatmentButton({
 }
 
 export function ProductHeroCta({ product }: { product: Product }) {
-  if (product.variants?.length) {
+  const variants = listedVariants(product);
+  if (variants.length > 1) {
     return <ChooseTreatmentButton href="#find-what-fits" className="mt-7" />;
   }
 
   return (
     <div className="mt-7">
-      <AddToCartButton item={cartItemFromProduct(product)} />
+      <AddToCartButton item={cartItemFromProduct(product, variants[0])} />
     </div>
   );
 }

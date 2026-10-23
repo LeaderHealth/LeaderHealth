@@ -4,13 +4,13 @@ overview: Keep hidden products and page sections in the same staging-to-main cod
 todos:
   - id: catalog-404
     content: Make unlisted products and articles return a 404 and stop building those pages
-    status: pending
+    status: completed
   - id: nav-home
     content: Filter the navbar, mobile menu, tablet menu, footer, and homepage from the same listed and visible flags
     status: pending
   - id: checkout-guard
     content: Refuse checkout and cart adds for unlisted products
-    status: pending
+    status: completed
 isProject: false
 ---
 

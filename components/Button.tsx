@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { GET_STARTED_URL } from "@/lib/content/site";
+import { showIntakeCta } from "@/lib/content/visibility";
 
 type Props = {
   href?: string;
@@ -16,6 +17,7 @@ export function Button({
   variant = "light",
   className = "",
 }: Props) {
+  if (!showIntakeCta(href)) return null;
   const styles = {
     light:
       "bg-white text-ink transition-colors duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[#331110] hover:text-[#F7F3F5] motion-reduce:transition-none",

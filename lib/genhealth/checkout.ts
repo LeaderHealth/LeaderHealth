@@ -3,6 +3,7 @@ import { listCatalog } from "./catalog";
 import { matchCatalogItem } from "./match";
 import type { CatalogItem } from "./types";
 import { genHealthRequest } from "./client";
+import { listedClientProductIds } from "@/lib/content/products";
 import { ALLOW_LIVE_GENHEALTH_ORDERS } from "./flags";
 import { US_STATES } from "./usStates";
 
@@ -100,6 +101,9 @@ export function parseCheckoutInput(body: unknown): { ok: true; value: CheckoutIn
   };
 
   if (!value.clientProductId) return { ok: false, error: "Choose a treatment." };
+  if (!listedClientProductIds().has(value.clientProductId)) {
+    return { ok: false, error: "This treatment isn't available." };
+  }
   if (!value.firstName || !value.lastName) return { ok: false, error: "Enter your first and last name." };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.email)) return { ok: false, error: "Enter a valid email." };
   if (value.phone.replace(/\D/g, "").length < 10) return { ok: false, error: "Enter a valid phone number." };

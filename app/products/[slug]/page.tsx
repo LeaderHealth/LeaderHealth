@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getProduct, products } from "@/lib/content/products";
+import { getProduct, presentListedProduct, products } from "@/lib/content/products";
 import { faqsForProduct } from "@/lib/content/faqs";
 import { ProductHero } from "@/components/ProductHero";
 import { PriceCompare } from "@/components/PriceCompare";
@@ -19,12 +19,13 @@ import type { Metadata } from "next";
 type Props = { params: Promise<{ slug: string }> };
 
 export function generateStaticParams() {
-  return products.map((p) => ({ slug: p.slug }));
+  return products.filter((product) => product.listed !== false).map((p) => ({ slug: p.slug }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const product = getProduct(slug);
+  if (!product || product.listed === false) notFound();
   if (slug === "women-hormone-therapy") {
     return {
       title: "Hormone Therapy for Women (HRT) Online",
@@ -38,10 +39,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
   const product = getProduct(slug);
-  if (!product) notFound();
+  if (!product || product.listed === false) notFound();
 
   const faqs = product.faqs ?? faqsForProduct(slug);
-  const structuredData = <JsonLd data={buildProductPageSchema(product, faqs)} />;
+  const visibleProduct = presentListedProduct(product);
+  const structuredData = <JsonLd data={buildProductPageSchema(visibleProduct, faqs)} />;
 
   if (slug === "women-hormone-therapy") {
     return (
@@ -158,10 +160,10 @@ export default async function ProductPage({ params }: Props) {
   return (
     <>
       {structuredData}
-      <ProductHero product={product} />
+      <ProductHero product={visibleProduct} />
       {product.compare !== false && <PriceCompare />}
       <SiteTestimonials />
-      {product.variants && <ProductVariants product={product} />}
+      {visibleProduct.variants.length > 1 && <ProductVariants product={visibleProduct} />}
       <section className="bg-white px-6 py-16">
         <div className="mx-auto max-w-3xl">
           <h2 className="text-left font-sans text-[40px] leading-[1.1] font-medium !tracking-[-0.04em] text-[#331110]">

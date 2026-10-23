@@ -5,13 +5,14 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { assets, GET_STARTED_URL, PORTAL_URL, site } from "@/lib/content/site";
+import { isPublicHref, showIntakeCta } from "@/lib/content/visibility";
 import { searchHref, searchSuggestions } from "@/lib/search";
 import {
   type FeatureCard,
   type MegaCategory,
   menDefaultCard,
   menMegaCategories,
-  womenDefaultCard,
+  visibleMegaCategories,
   womenMegaCategories,
 } from "@/lib/content/nav";
 import { cartItemFromSlug } from "@/lib/cart/items";
@@ -155,11 +156,11 @@ function FeatureCardLink({
           <button type="button" onClick={() => addItem(cartItem)} className={actionClass}>
             {actionLabel}
           </button>
-        ) : (
+        ) : showIntakeCta(GET_STARTED_URL) ? (
           <a href={GET_STARTED_URL} className={actionClass}>
             {actionLabel}
           </a>
-        )}
+        ) : null}
       </div>
     </div>
   );
@@ -284,10 +285,14 @@ function MegaCategoryPane({
                     >
                       <div className="overflow-hidden">
                         <p className="mt-2 whitespace-nowrap text-[13px] tracking-[-0.01em] text-white/80">
-                          <Link href={category.coverHref} className="hover:opacity-80">
-                            What Longevity Covers
-                          </Link>
-                          <span aria-hidden> • </span>
+                          {isPublicHref(category.coverHref) ? (
+                            <>
+                              <Link href={category.coverHref} className="hover:opacity-80">
+                                What Longevity Covers
+                              </Link>
+                              <span aria-hidden> • </span>
+                            </>
+                          ) : null}
                           <button type="button" className="hover:opacity-80" onClick={() => onOpenDrill(category.id)}>
                             Browse Longevity
                           </button>
@@ -452,10 +457,12 @@ function MegaMenuPanel({
                   onBack={backToCategories}
                 />
               </div>
-              <Link href={shopAll.href} className={`mt-3.5 ${megaLinkClass}`}>
-                {shopAll.label}
-              </Link>
-              <a
+              {isPublicHref(shopAll.href) ? (
+                <Link href={shopAll.href} className={`mt-3.5 ${megaLinkClass}`}>
+                  {shopAll.label}
+                </Link>
+              ) : null}
+              {showIntakeCta(GET_STARTED_URL) ? <a
                 href={GET_STARTED_URL}
                 className="group relative mt-4 flex h-12 w-[285px] max-w-full items-center gap-3 overflow-hidden rounded-full bg-white px-3 text-ink transition-[background-color,color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[#331110] hover:text-[#F7F3F5] focus-visible:bg-[#331110] focus-visible:text-[#F7F3F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none"
               >
@@ -473,7 +480,7 @@ function MegaMenuPanel({
                 <svg viewBox="0 0 16 16" className="relative z-10 ml-auto h-4 w-4 shrink-0 transition-transform duration-[400ms] ease-out group-hover:translate-x-1 motion-reduce:translate-x-0! motion-reduce:transition-none" fill="none" aria-hidden>
                   <path d="M3 8h9M8.5 4.5 12.5 8 8.5 11.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-              </a>
+              </a> : null}
             </div>
             <div className="flex w-[55%] flex-col px-5 py-6 pr-6">
               <FeatureCardView label={featureLabel} card={defaultCard} />
@@ -866,7 +873,7 @@ export function Header() {
               fading={leavingMega === "men" || (closingMega && shownMega === "men")}
               onOpen={() => openMega("men")}
               onClose={() => closeMega("men")}
-              categories={menMegaCategories}
+              categories={visibleMegaCategories(menMegaCategories)}
               shopAll={{ href: "/shop-men-products", label: "Shop All Men →" }}
               defaultCard={menDefaultCard}
               featureLabel="Explore Popular Treatment"
@@ -880,9 +887,9 @@ export function Header() {
               onOpen={() => openMega("women")}
               onClose={() => closeMega("women")}
               shift
-              categories={womenMegaCategories}
+              categories={visibleMegaCategories(womenMegaCategories)}
               shopAll={{ href: "/shop-women-products", label: "Shop All For Women →" }}
-              defaultCard={womenDefaultCard}
+              defaultCard={visibleMegaCategories(womenMegaCategories)[0]?.card ?? menDefaultCard}
               featureLabel="Popular Therapies"
             />
 
@@ -960,7 +967,7 @@ export function Header() {
 
             <CartButton />
 
-            {!onCheckout ? (
+            {!onCheckout && showIntakeCta(GET_STARTED_URL) ? (
               <a
                 href={GET_STARTED_URL}
                 className="group relative inline-flex items-center justify-center overflow-hidden rounded-full bg-white px-6 py-1.5 text-[13px] font-medium text-ink transition-[background-color,color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[#331110] hover:text-[#F7F3F5] focus-visible:bg-[#331110] focus-visible:text-[#F7F3F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none"

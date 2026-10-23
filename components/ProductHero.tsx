@@ -40,14 +40,12 @@ export function ProductHero({ product }: { product: Product }) {
   const nadHero =
     product.slug === "longevity-nad" ||
     product.slug === "nad-injectable" ||
-    product.slug === "longevity-nad-nasal-spray";
-  const sermorelinHero = product.slug === "longevity-sermorelin";
-  const nasalHero = oxytocinHero || pt141Hero;
-  const pt141CoverHero =
-    pt141Hero ||
-    glutathioneHero ||
+    product.slug === "longevity-nad-nasal-spray" ||
     product.slug === "weight-loss-semaglutide" ||
     product.slug === "weight-loss-tirzepatide";
+  const sermorelinHero = product.slug === "longevity-sermorelin";
+  const nasalHero = oxytocinHero || pt141Hero;
+  const pt141CoverHero = pt141Hero || glutathioneHero;
   const heroCover = pt141CoverHero ? pt141Cover : oxytocinHero || nadHero || sermorelinHero ? oxytocinCover : redHeroCover ? tadalafilCover : undefined;
 
   return (

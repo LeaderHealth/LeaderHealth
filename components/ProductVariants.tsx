@@ -1,5 +1,5 @@
 import Image from "next/image";
-import type { Product } from "@/lib/content/products";
+import { listedVariants, type Product } from "@/lib/content/products";
 import { cartItemFromProduct } from "@/lib/cart/items";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
 
@@ -26,7 +26,8 @@ function TabletIcon() {
 }
 
 export function ProductVariants({ product }: { product: Product }) {
-  if (!product.variants?.length) return null;
+  const variants = listedVariants(product);
+  if (!variants.length) return null;
 
   return (
     <section id="find-what-fits" className="scroll-mt-28 bg-white px-6 py-20">
@@ -35,12 +36,12 @@ export function ProductVariants({ product }: { product: Product }) {
           Find What <span className="font-serif-italic">Fits</span> You
         </h2>
         <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-taupe">
-          Same goal, two paths. Each option is personalized to your body and backed by
-          clinician support. Tell us what fits your routine, and your provider helps you land
-          on the right one.
+          {variants.length > 1
+            ? "Same goal, two paths. Each option is personalized to your body and backed by clinician support. Tell us what fits your routine, and your provider helps you land on the right one."
+            : "This option is personalized to your body and backed by clinician support. Your provider sets the dose and follows your progress."}
         </p>
-        <div className="mt-10 grid gap-5 md:grid-cols-2">
-          {product.variants.map((v) => {
+        <div className={`mt-10 grid gap-5 ${variants.length > 1 ? "md:grid-cols-2" : ""}`}>
+          {variants.map((v) => {
             const sublingual = /sublingual|troche|nasal|pill|oral/i.test(
               `${v.eyebrow ?? ""} ${v.name}`,
             );

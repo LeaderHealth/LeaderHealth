@@ -66,7 +66,9 @@ function index(): IndexedHit[] {
         product.eyebrow,
         product.badge,
         ...product.benefits.map((benefit) => benefit.title),
-        ...(product.variants?.map((variant) => `${variant.name} ${variant.eyebrow ?? ""}`) ?? []),
+        ...(product.variants
+          ?.filter((variant) => variant.listed !== false)
+          .map((variant) => `${variant.name} ${variant.eyebrow ?? ""}`) ?? []),
       ]
         .filter(Boolean)
         .join(" ");

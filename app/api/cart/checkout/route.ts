@@ -3,6 +3,7 @@ import { campaignForCheckout } from "@/lib/affiliate/checkoutCampaign";
 import { affiliateCodeFromCookies } from "@/lib/affiliate/store";
 import { listCheckoutProducts } from "@/lib/genhealth/catalog";
 import { genHealthConfigured } from "@/lib/genhealth/client";
+import { isSellableLine, UNAVAILABLE_TREATMENT } from "@/lib/cart/items";
 import { cartRuleIssue } from "@/lib/cart/rules";
 import {
   resolveCartHandoff,
@@ -57,6 +58,9 @@ export async function POST(request: Request) {
 
   const lines = parseLines(body);
   if (!lines) return NextResponse.json({ ok: false, error: "Invalid cart." }, { status: 400 });
+  if (lines.some((line) => !isSellableLine(line))) {
+    return NextResponse.json({ ok: false, error: UNAVAILABLE_TREATMENT }, { status: 422 });
+  }
 
   const issue = cartRuleIssue(lines);
   if (issue) return NextResponse.json({ ok: false, error: issue }, { status: 422 });

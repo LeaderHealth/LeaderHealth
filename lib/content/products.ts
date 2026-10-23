@@ -34,6 +34,7 @@ export type Product = {
     image?: string;
     clientProductId?: string;
     threeMonthProductId?: string;
+    listed?: boolean;
   }[];
 };
 
@@ -45,7 +46,6 @@ export const products: Product[] = [
     category: "weight-loss",
     audience: "all",
     price: "Starting From $129/mo",
-    labRequired: true,
     image: "/images/products/semaglutide.png",
     tagline: "Provider-guided GLP-1 support for sustainable weight management.",
     eyebrow: "Weight Loss",
@@ -93,7 +93,6 @@ export const products: Product[] = [
     category: "weight-loss",
     audience: "all",
     price: "Starting at $229",
-    labRequired: true,
     image: "/images/products/tirzepatide.png",
     tagline: "Dual-agonist support for appetite, metabolism, and body composition.",
     eyebrow: "Weight Loss",
@@ -179,11 +178,10 @@ export const products: Product[] = [
     name: "NAD+",
     category: "longevity",
     audience: "all",
-    listed: false,
     clientProductId: "lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_3d638894ad732191af0214fa",
     threeMonthProductId: "prod_3d638894ad732191af0214fa_2",
     price: "Starting at $149/month",
-    image: "/images/products/nad-overview.png",
+    image: "/images/products/nad-compounded.png",
     tagline: "Injectable NAD+ for cellular energy support under clinician direction.",
     highlight: "$149/month, three-month start, then cancel anytime.",
     description:
@@ -606,6 +604,24 @@ export const products: Product[] = [
   },
 ];
 
+/** Treatments that stay on the public site. Everything else keeps its record and stays off until this list changes. */
+const publicProductSlugs = new Set([
+  "weight-loss-semaglutide",
+  "weight-loss-tirzepatide",
+  "longevity-nad",
+  "men-trt-testosterone-cypionate",
+  "men-trt-enclomiphene",
+]);
+
+const hiddenVariantNames = new Set(["Semaglutide Sublingual", "Tirzepatide Sublingual"]);
+
+for (const product of products) {
+  product.listed = publicProductSlugs.has(product.slug);
+  for (const variant of product.variants ?? []) {
+    if (hiddenVariantNames.has(variant.name)) variant.listed = false;
+  }
+}
+
 export type Lab = {
   slug: string;
   name: string;
@@ -654,11 +670,61 @@ export function getProduct(slug: string) {
   return products.find((p) => p.slug === slug);
 }
 
+export function listedVariants(product: Product) {
+  return (product.variants ?? []).filter((variant) => variant.listed !== false);
+}
+
+const singleFormImages: Record<string, string> = {
+  "weight-loss-semaglutide": "/images/products/semaglutide-injectable.png",
+  "weight-loss-tirzepatide": "/images/products/tirzepatide-injectable.png",
+};
+
+/** Public view of a product. A single listed form uses that form's image and price; the other forms stay in the catalog. */
+export function presentListedProduct(product: Product): Product {
+  const variants = listedVariants(product);
+  if (variants.length !== 1) return { ...product, variants };
+  const variant = variants[0];
+  const price = variant.priceAmount ? `Starting at ${variant.priceAmount}/month` : variant.price;
+  return {
+    ...product,
+    variants: variants.map((item) => ({
+      ...item,
+      image: singleFormImages[product.slug] ?? item.image,
+    })),
+    image: singleFormImages[product.slug] ?? variant.image ?? product.image,
+    price,
+    clientProductId: variant.clientProductId ?? product.clientProductId,
+    threeMonthProductId: variant.threeMonthProductId ?? product.threeMonthProductId,
+  };
+}
+
+export function listedClientProductIds() {
+  const ids = new Set<string>();
+  const add = (id?: string) => {
+    if (id) ids.add(id);
+  };
+  for (const product of products) {
+    if (product.listed === false) continue;
+    add(product.clientProductId);
+    add(product.threeMonthProductId);
+    for (const variant of listedVariants(product)) {
+      add(variant.clientProductId);
+      add(variant.threeMonthProductId);
+    }
+  }
+  for (const lab of labs) {
+    add(lab.clientProductId);
+    add(lab.clientProductIds?.Men);
+    add(lab.clientProductIds?.Women);
+  }
+  return ids;
+}
+
 export function productsFor(audience?: Audience, category?: Category) {
   return products.filter((p) => {
     if (p.listed === false) return false;
     const audienceOk = !audience || audience === "all" || p.audience === audience || p.audience === "all";
     const categoryOk = !category || p.category === category;
     return audienceOk && categoryOk;
-  });
+  }).map(presentListedProduct);
 }

@@ -2,10 +2,12 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import { testimonials } from "@/lib/content/site";
+import { publishedTestimonials } from "@/lib/content/site";
 
 export function Testimonials({ variant = "grid" }: { variant?: "grid" | "featured" }) {
-  const [index, setIndex] = useState(1);
+  const testimonials = publishedTestimonials();
+  const [index, setIndex] = useState(() => Math.min(1, Math.max(testimonials.length - 1, 0)));
+  if (testimonials.length === 0) return null;
   const featured = testimonials[index];
   const prev = testimonials[(index + testimonials.length - 1) % testimonials.length];
   const next = testimonials[(index + 1) % testimonials.length];

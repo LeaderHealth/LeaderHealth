@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { DrawRule, Reveal, RevealGroup, RevealItem, RevealPhoto } from "@/components/about/AboutMotion";
 import { HeroTitleFade } from "@/components/HeroTitleFade";
 import { assets, GET_STARTED_URL } from "@/lib/content/site";
+import { showIntakeCta } from "@/lib/content/visibility";
 
 export const metadata: Metadata = { title: "About Us" };
 
@@ -174,7 +175,7 @@ export default function AboutPage() {
               At Leader Health, the goal is simple: to make advanced medical therapies accessible, safe, and
               effective for everyone.
             </p>
-            <a
+            {showIntakeCta(GET_STARTED_URL) ? <a
               href={GET_STARTED_URL}
               className="group relative mt-4 inline-flex h-[47px] min-w-[148px] items-center justify-center overflow-hidden rounded-[39px] bg-[#DF4452] px-[26px] py-[14px] font-sans text-[16px] leading-none font-semibold tracking-[-0.02em] text-[#F7F3F5] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#331110]"
             >
@@ -191,7 +192,7 @@ export default function AboutPage() {
               >
                 →
               </span>
-            </a>
+            </a> : null}
           </Reveal>
 
           <RevealGroup className="grid flex-1 grid-cols-2 gap-3">

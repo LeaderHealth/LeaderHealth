@@ -5,7 +5,9 @@ import { ArticleLibrary } from "@/components/ArticleLibrary";
 import { JsonLd } from "@/components/JsonLd";
 import { labs, productsFor } from "@/lib/content/products";
 import { buildCollectionPageSchema } from "@/lib/seo/schema";
+import { isPublicHref } from "@/lib/content/visibility";
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 
 export const metadata: Metadata = { title: "Shop Men" };
 
@@ -14,6 +16,7 @@ const intro =
   "Testosterone, weight, longevity, and sexual health, physician-led protocols tuned to your labs, not an average.";
 
 export default function ShopMenPage() {
+  if (!isPublicHref("/shop-men-products")) notFound();
   return (
     <>
       <JsonLd

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { TestimonialsVideoSection } from "@/components/TestimonialsVideoSection";
 import { FaqBrowse } from "@/components/FaqBrowse";
 import { FaqHero } from "@/components/FaqHero";
-import { assets, testimonials } from "@/lib/content/site";
+import { assets, publishedTestimonials } from "@/lib/content/site";
 import { faqCategories } from "@/lib/content/faqs";
 import { JsonLd } from "@/components/JsonLd";
 import { buildFaqSchema } from "@/lib/seo/schema";
@@ -35,7 +35,7 @@ export default function FaqPage() {
       <TestimonialsVideoSection
         videoSrc={assets.heroVideoAlt}
         posterSrc={assets.weightlifting}
-        testimonials={testimonials.map((item) => ({
+        testimonials={publishedTestimonials().map((item) => ({
           quote: item.quote,
           name: item.name,
           role: item.treatment,
