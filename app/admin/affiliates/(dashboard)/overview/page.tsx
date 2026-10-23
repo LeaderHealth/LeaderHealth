@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ManageAffiliate } from "@/components/affiliate/ManageAffiliate";
 import { formatCents, formatCommissionRate } from "@/lib/affiliate/format";
-import { loadPayoutRecords, paidOutInRange, type PayoutRecord } from "@/lib/affiliate/payouts";
+import { monthFigures } from "@/lib/affiliate/month-figures";
+import { currentPayoutPeriod, formatPayoutMonth, loadPayoutRecords, paidOutInRange, previousPayoutPeriod, type PayoutRecord } from "@/lib/affiliate/payouts";
 import { adjustedCommissionCents, refundStatusLabel } from "@/lib/affiliate/refunds";
 import { syncAttributedGenHealthSales } from "@/lib/affiliate/sales";
 import { AffiliateStoreError, loadAffiliateOverview, loadClickTimes, type AffiliateSummary, type ConversionSummary } from "@/lib/affiliate/store";
@@ -172,6 +174,28 @@ export default async function AffiliateOverviewPage({
       return [affiliate.name, affiliate.email, affiliate.code].some((value) => value.toLowerCase().includes(needle));
     })
     .sort((left, right) => (byCode.get(right.code)?.salesCents ?? 0) - (byCode.get(left.code)?.salesCents ?? 0) || left.name.localeCompare(right.name));
+
+  const currentPeriod = currentPayoutPeriod();
+  const priorPeriod = previousPayoutPeriod(currentPeriod) ?? currentPeriod;
+
+  function manageMonths(code: string) {
+    const prior = monthFigures({ code, period: priorPeriod, orders: conversions });
+    const current = monthFigures({ code, period: currentPeriod, orders: conversions });
+    return {
+      prior: {
+        label: formatPayoutMonth(priorPeriod),
+        orders: prior.orders,
+        sales: formatCents(prior.salesCents),
+        earnings: formatCents(prior.earningsCents),
+      },
+      current: {
+        label: formatPayoutMonth(currentPeriod),
+        orders: current.orders,
+        sales: formatCents(current.salesCents),
+        earnings: formatCents(current.earningsCents),
+      },
+    };
+  }
 
   return (
     <div className="space-y-4">
@@ -424,6 +448,12 @@ export default async function AffiliateOverviewPage({
                       <dd className="mt-1">{formatCents(stats.commissionCents)}</dd>
                     </div>
                   </dl>
+                  <ManageAffiliate
+                    name={affiliate.name}
+                    email={affiliate.email}
+                    {...manageMonths(affiliate.code)}
+                    className="mt-5 inline-flex font-medium text-ink underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                  />
                 </li>
               );
             })}
@@ -489,9 +519,12 @@ export default async function AffiliateOverviewPage({
                       </span>
                     </td>
                     <td className="px-4 py-5 align-top">
-                      <Link href="/admin/affiliates/accounts" className="font-medium text-ink underline underline-offset-4">
-                        Manage
-                      </Link>
+                      <ManageAffiliate
+                        name={affiliate.name}
+                        email={affiliate.email}
+                        {...manageMonths(affiliate.code)}
+                        className="font-medium text-ink underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                      />
                     </td>
                   </tr>
                 );

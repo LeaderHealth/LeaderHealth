@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { accountColumnTotals } from "@/lib/affiliate/account-figures";
 import { normalizeAffiliateCode } from "@/lib/affiliate/code";
 import { formatCents, formatCommissionRate } from "@/lib/affiliate/format";
+import { monthFigures } from "@/lib/affiliate/month-figures";
+import { currentPayoutPeriod, formatPayoutMonth, previousPayoutPeriod } from "@/lib/affiliate/payouts";
 import { affiliateTrackingLink } from "@/lib/affiliate/link";
 import { loadPayoutRecords, type PayoutRecord } from "@/lib/affiliate/payouts";
 import { syncAttributedGenHealthSales } from "@/lib/affiliate/sales";
@@ -55,6 +57,34 @@ function money(cents: number | null) {
   return cents == null ? "—" : formatCents(cents);
 }
 
+function MonthBlock({
+  label,
+  figures,
+}: {
+  label: string;
+  figures: { orders: number; salesCents: number; earningsCents: number };
+}) {
+  return (
+    <div className="rounded-[24px] bg-background px-4 py-5">
+      <h3 className="text-lg">{label}</h3>
+      <dl className="mt-4 grid grid-cols-3 gap-3 text-sm leading-6">
+        <div>
+          <dt className="text-xs text-brown">Paid orders</dt>
+          <dd className="mt-1">{figures.orders}</dd>
+        </div>
+        <div>
+          <dt className="text-xs text-brown">Sales</dt>
+          <dd className="mt-1">{formatCents(figures.salesCents)}</dd>
+        </div>
+        <div>
+          <dt className="text-xs text-brown">Earnings</dt>
+          <dd className="mt-1">{formatCents(figures.earningsCents)}</dd>
+        </div>
+      </dl>
+    </div>
+  );
+}
+
 function countText(value: number | null) {
   return value == null ? "—" : String(value);
 }
@@ -62,11 +92,12 @@ function countText(value: number | null) {
 export default async function AffiliateAccountsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; created?: string; invited?: string; resent?: string }>;
+  searchParams: Promise<{ error?: string; created?: string; invited?: string; resent?: string; code?: string }>;
 }) {
   const query = await searchParams;
   const error = query.error ? ADMIN_ERRORS[query.error] : "";
   const created = normalizeAffiliateCode(query.created);
+  const requestedCode = normalizeAffiliateCode(query.code);
 
   let affiliates: AffiliateSummary[] = [];
   let conversions: ConversionSummary[] = [];
@@ -184,8 +215,36 @@ export default async function AffiliateAccountsPage({
     );
   }
 
+  const selected = requestedCode ? (affiliates.find((affiliate) => affiliate.code === requestedCode) ?? null) : null;
+  const currentPeriod = currentPayoutPeriod();
+  const priorPeriod = previousPayoutPeriod(currentPeriod);
+
   return (
     <div className="space-y-6">
+      {selected && priorPeriod ? (
+        <section aria-labelledby="month-figures-title" className="rounded-[28px] bg-white p-4 sm:p-8">
+          <h2 id="month-figures-title" className="text-2xl">
+            {selected.name}
+          </h2>
+          <p className="mt-1 break-all text-sm text-brown">{selected.email}</p>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            <MonthBlock
+              label={formatPayoutMonth(priorPeriod)}
+              figures={monthFigures({ code: selected.code, period: priorPeriod, orders: conversions })}
+            />
+            <MonthBlock
+              label={formatPayoutMonth(currentPeriod)}
+              figures={monthFigures({ code: selected.code, period: currentPeriod, orders: conversions })}
+            />
+          </div>
+          <p className="mt-6 max-w-2xl text-sm text-brown">
+            Payouts are usually recorded around the 3rd, after the prior month has closed. These months match the Payouts page. Allotment is still your check of these numbers.
+          </p>
+        </section>
+      ) : null}
+      {requestedCode && !selected && !loadError ? (
+        <p className="text-ink">That affiliate was not found.</p>
+      ) : null}
       {error ? (
         <p role="alert" className="rounded-2xl bg-rose px-4 py-3 text-sm text-ink">
           {error}

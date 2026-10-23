@@ -30,7 +30,7 @@ export default async function AffiliateDashboardLayout({ children }: { children:
         <p className="mt-4 max-w-2xl text-taupe">
           See your referral link, promo code, orders, earnings, and payouts.
         </p>
-        <div className="mt-8 xl:grid xl:grid-cols-[16rem_minmax(0,1fr)] xl:items-start xl:gap-8">
+        <div className="mt-8 xl:grid xl:grid-cols-[minmax(18rem,max-content)_minmax(0,1fr)] xl:items-start xl:gap-8">
           <div className="z-20 flex flex-col gap-4 xl:sticky xl:top-28 xl:self-start">
             <ProfileCard
               name={affiliate.name}

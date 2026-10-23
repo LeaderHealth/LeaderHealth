@@ -1,13 +1,19 @@
-import { createHash, createHmac, timingSafeEqual } from "node:crypto";
-import { cookies } from "next/headers";
+import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { cookies, headers } from "next/headers";
 import { normalizeAffiliateCode, normalizeAffiliateEmail } from "./code";
+import { activeDashboardSession, createDashboardSession, type DashboardRole } from "./dashboard-sessions";
 
 export const ADMIN_COOKIE = "lh_aff_admin";
 export const PORTAL_COOKIE = "lh_aff_portal";
 const SESSION_SECONDS = 60 * 60 * 12;
+const SESSION_ID = /^[A-Za-z0-9_-]{20,80}$/;
+
+function sessionSecret() {
+  return process.env.AFFILIATE_SESSION_SECRET?.trim() ?? "";
+}
 
 export function affiliateAdminConfigured() {
-  return Boolean(process.env.AFFILIATE_ADMIN_PASSWORD?.trim());
+  return Boolean(process.env.AFFILIATE_ADMIN_PASSWORD?.trim() && sessionSecret());
 }
 
 function adminPassword() {
@@ -32,7 +38,7 @@ function secretMatches(input: string, expected: string) {
 }
 
 export function adminLoginConfigured() {
-  return Boolean(adminPassword() && adminEmail());
+  return Boolean(adminPassword() && adminEmail() && sessionSecret());
 }
 
 export function adminCredentialsMatch(email: string, password: string) {
@@ -44,7 +50,7 @@ export function adminCredentialsMatch(email: string, password: string) {
 }
 
 function sign(body: string) {
-  return createHmac("sha256", adminPassword()).update(body).digest("base64url");
+  return createHmac("sha256", sessionSecret()).update(body).digest("base64url");
 }
 
 function signatureMatches(body: string, signature: string) {
@@ -55,43 +61,52 @@ function signatureMatches(body: string, signature: string) {
   return timingSafeEqual(actualBuffer, expectedBuffer);
 }
 
-export function createAdminSessionToken() {
-  const body = `v1.${Date.now() + SESSION_SECONDS * 1000}`;
-  return `${body}.${sign(body)}`;
-}
+export type AdminActor = { role: "owner" } | { role: "sub"; id: string };
 
-export function adminSessionValid(token: string | undefined) {
-  if (!token || !affiliateAdminConfigured()) return false;
-  const parts = token.split(".");
-  if (parts.length !== 3) return false;
-  const [version, expiresAt, signature] = parts;
-  if (version !== "v1") return false;
-  const body = `${version}.${expiresAt}`;
-  if (!signatureMatches(body, signature)) return false;
+function sessionExpiry(expiresAt: string) {
   const expires = Number(expiresAt);
   return Number.isFinite(expires) && expires > Date.now();
 }
 
-export function createPortalSessionToken(code: string) {
-  const normalized = normalizeAffiliateCode(code);
-  if (!normalized || !affiliateAdminConfigured()) return null;
-  const body = `v1.${normalized}.${Date.now() + SESSION_SECONDS * 1000}`;
-  return `${body}.${sign(body)}`;
-}
-
-export function portalSessionCode(token: string | undefined) {
-  if (!token || !affiliateAdminConfigured()) return null;
+function parseSessionToken(token: string | undefined) {
+  if (!token || !sessionSecret()) return null;
   const parts = token.split(".");
   if (parts.length !== 4) return null;
-  const [version, code, expiresAt, signature] = parts;
-  if (version !== "v1") return null;
-  const normalized = normalizeAffiliateCode(code);
-  if (!normalized) return null;
-  const body = `${version}.${normalized}.${expiresAt}`;
-  if (!signatureMatches(body, signature)) return null;
-  const expires = Number(expiresAt);
-  if (!Number.isFinite(expires) || expires <= Date.now()) return null;
-  return normalized;
+  const [version, id, expiresAt, signature] = parts;
+  if (version !== "v3" || !SESSION_ID.test(id)) return null;
+  const body = `${version}.${id}.${expiresAt}`;
+  if (!signatureMatches(body, signature) || !sessionExpiry(expiresAt)) return null;
+  return id;
+}
+
+async function browserLabel() {
+  try {
+    const header = (await headers()).get("user-agent") ?? "";
+    return header.replace(/[\u0000-\u001f]/g, "").trim().slice(0, 180);
+  } catch {
+    return "";
+  }
+}
+
+async function issueSession(role: DashboardRole, subject: string) {
+  if (!sessionSecret() || !subject) return null;
+  const id = randomBytes(18).toString("base64url");
+  const expiresAt = Date.now() + SESSION_SECONDS * 1000;
+  try {
+    const saved = await createDashboardSession({
+      id,
+      role,
+      subject,
+      userAgent: await browserLabel(),
+      expiresAt,
+    });
+    if (!saved) return null;
+  } catch (error) {
+    console.error("[affiliate] session create failed", error instanceof Error ? error.message : "unknown");
+    return null;
+  }
+  const body = `v3.${id}.${expiresAt}`;
+  return `${body}.${sign(body)}`;
 }
 
 function sessionCookieOptions() {
@@ -104,14 +119,48 @@ function sessionCookieOptions() {
   };
 }
 
-export async function adminIsSignedIn() {
+async function remember(name: string, token: string | null) {
+  if (!token) return false;
   const jar = await cookies();
-  return adminSessionValid(jar.get(ADMIN_COOKIE)?.value);
+  jar.set(name, token, sessionCookieOptions());
+  return true;
+}
+
+export async function adminSessionActor(): Promise<AdminActor | null> {
+  const jar = await cookies();
+  const id = parseSessionToken(jar.get(ADMIN_COOKIE)?.value);
+  if (!id) return null;
+  let session;
+  try {
+    session = await activeDashboardSession(id);
+  } catch (error) {
+    console.error("[affiliate] session read failed", error instanceof Error ? error.message : "unknown");
+    return null;
+  }
+  if (!session) return null;
+  if (session.role === "owner") return { role: "owner" };
+  if (session.role !== "sub") return null;
+  return { role: "sub", id: session.subject };
+}
+
+export async function currentAdminSessionId() {
+  const jar = await cookies();
+  return parseSessionToken(jar.get(ADMIN_COOKIE)?.value);
+}
+
+export async function adminIsSignedIn() {
+  return (await adminSessionActor()) != null;
 }
 
 export async function setAdminSession() {
-  const jar = await cookies();
-  jar.set(ADMIN_COOKIE, createAdminSessionToken(), sessionCookieOptions());
+  const email = adminEmail();
+  if (!email) return false;
+  return remember(ADMIN_COOKIE, await issueSession("owner", email));
+}
+
+export async function setSubAdminSession(id: string) {
+  if (!SESSION_ID.test(id)) return false;
+  return remember(ADMIN_COOKIE, await issueSession("sub", id));
 }
 
 export async function clearAdminSession() {
@@ -121,15 +170,22 @@ export async function clearAdminSession() {
 
 export async function portalAffiliateCode() {
   const jar = await cookies();
-  return portalSessionCode(jar.get(PORTAL_COOKIE)?.value);
+  const id = parseSessionToken(jar.get(PORTAL_COOKIE)?.value);
+  if (!id) return null;
+  try {
+    const session = await activeDashboardSession(id);
+    if (!session || session.role !== "affiliate") return null;
+    return normalizeAffiliateCode(session.subject);
+  } catch (error) {
+    console.error("[affiliate] portal session read failed", error instanceof Error ? error.message : "unknown");
+    return null;
+  }
 }
 
 export async function setPortalSession(code: string) {
-  const token = createPortalSessionToken(code);
-  if (!token) return false;
-  const jar = await cookies();
-  jar.set(PORTAL_COOKIE, token, sessionCookieOptions());
-  return true;
+  const normalized = normalizeAffiliateCode(code);
+  if (!normalized) return false;
+  return remember(PORTAL_COOKIE, await issueSession("affiliate", normalized));
 }
 
 export async function clearPortalSession() {

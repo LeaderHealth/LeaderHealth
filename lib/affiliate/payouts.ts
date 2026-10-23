@@ -79,6 +79,15 @@ export function currentPayoutPeriod(now = new Date()) {
   return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
+export function previousPayoutPeriod(period: string) {
+  const normalized = normalizePayoutPeriod(period);
+  if (!normalized) return null;
+  const year = Number(normalized.slice(0, 4));
+  const month = Number(normalized.slice(5, 7));
+  const date = new Date(Date.UTC(year, month - 2, 1));
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
 export function normalizePayoutPeriod(value: unknown) {
   if (typeof value !== "string" || !/^\d{4}-(0[1-9]|1[0-2])$/.test(value)) return null;
   return value;

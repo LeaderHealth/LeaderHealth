@@ -5,7 +5,7 @@ import { PortalBrand } from "@/components/affiliate/PortalBrand";
 import { ProfileCard } from "@/components/affiliate/ProfileCard";
 import { adminAccountProfile } from "@/lib/affiliate/admin-profile";
 import { affiliateFirebaseConfigured } from "@/lib/affiliate/firebase";
-import { adminIsSignedIn } from "@/lib/affiliate/session";
+import { adminSessionActor } from "@/lib/affiliate/session";
 import { logoutAffiliateAdmin } from "../actions";
 
 export const runtime = "nodejs";
@@ -22,7 +22,9 @@ const items = [
 ];
 
 export default async function AdminDashboardLayout({ children }: { children: ReactNode }) {
-  if (!(await adminIsSignedIn())) redirect("/admin/affiliates");
+  const actor = await adminSessionActor();
+  if (!actor) redirect("/admin/affiliates");
+  const nav = actor.role === "owner" ? [...items, { href: "/admin/affiliates/team", label: "Team" }] : items;
   const admin = await adminAccountProfile();
 
   return (
@@ -35,7 +37,7 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
           Manage affiliate accounts, referral links, promo codes, orders, and payouts.
         </p>
         {affiliateFirebaseConfigured() ? (
-          <div className="mt-8 xl:grid xl:grid-cols-[16rem_minmax(0,1fr)] xl:items-start xl:gap-8">
+          <div className="mt-8 xl:grid xl:grid-cols-[minmax(18rem,max-content)_minmax(0,1fr)] xl:items-start xl:gap-8">
             <div className="z-20 flex flex-col gap-4 xl:sticky xl:top-28 xl:self-start">
               {admin ? (
                 <ProfileCard
@@ -46,7 +48,7 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
                   signOut={logoutAffiliateAdmin}
                 />
               ) : null}
-              <AreaNav label="Affiliate admin" items={items} />
+              <AreaNav label="Affiliate admin" items={nav} />
             </div>
             <div className="mt-8 min-w-0 xl:mt-0">{children}</div>
           </div>

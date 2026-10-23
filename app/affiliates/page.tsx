@@ -44,7 +44,7 @@ export default async function AffiliatePortalPage({
       error={error}
       sent={sent}
       errorId="affiliate-portal-error"
-      unconfigured="Affiliate sign-in needs AFFILIATE_ADMIN_PASSWORD and Firestore configured on the server."
+      unconfigured="Affiliate sign-in needs AFFILIATE_ADMIN_PASSWORD, AFFILIATE_SESSION_SECRET, and Firestore configured on the server."
       loginAction={loginAffiliatePortal}
       linkAction={requestAffiliateLink}
     />

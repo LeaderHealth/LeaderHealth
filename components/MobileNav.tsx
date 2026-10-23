@@ -671,8 +671,8 @@ export function MobileNav({
             <Image
               src={assets.logo}
               alt={site.name}
-              width={160}
-              height={18}
+              width={8103}
+              height={554}
               className="h-auto w-[min(9rem,42vw)] object-contain brightness-0 invert"
               style={{ height: "auto" }}
               priority

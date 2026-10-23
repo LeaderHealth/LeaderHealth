@@ -915,8 +915,8 @@ export function Header() {
             <Image
               src={assets.logo}
               alt={site.name}
-              width={180}
-              height={20}
+              width={8103}
+              height={554}
               className="
                 block
                 h-auto

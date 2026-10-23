@@ -539,8 +539,8 @@ export function HomePage() {
           <Image
             src={assets.logo}
             alt="LEADERHEALTH"
-            width={280}
-            height={32}
+            width={8103}
+            height={554}
             className="mb-5 h-auto w-[280px] max-w-[280px] object-contain object-left brightness-0 invert"
             style={{ width: 280, height: "auto", maxWidth: 280 }}
             priority

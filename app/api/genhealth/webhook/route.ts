@@ -1,7 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { attributePaidGenHealthOrder, attributeWebhookPaidOrder, syncOrderRefund } from "@/lib/affiliate/sales";
-import { deliverPreviousWeekSalesNotices } from "@/lib/affiliate/weekly-sales";
 
 export const runtime = "nodejs";
 
@@ -133,9 +132,6 @@ export async function POST(request: Request) {
     if (result === "unavailable") {
       return NextResponse.json({ ok: false, error: "Affiliate recording is unavailable." }, { status: 503 });
     }
-    await deliverPreviousWeekSalesNotices().catch((error: unknown) => {
-      console.error("[affiliate] weekly sales notice failed", error instanceof Error ? error.message : "unknown");
-    });
     return NextResponse.json({ ok: true, result });
   } catch (error) {
     console.error("[affiliate] Gen Health webhook failed", error instanceof Error ? error.message : "unknown");

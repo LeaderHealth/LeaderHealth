@@ -125,13 +125,13 @@ function asDate(value: unknown) {
   return null;
 }
 
-async function hashPassword(password: string) {
+export async function hashPassword(password: string) {
   const salt = randomBytes(16);
   const hash = (await scrypt(password, salt, SCRYPT_KEYLEN)) as Buffer;
   return `scrypt$${salt.toString("base64url")}$${hash.toString("base64url")}`;
 }
 
-async function passwordMatches(password: string, stored: string | null) {
+export async function passwordMatches(password: string, stored: string | null) {
   const parts = stored?.split("$") ?? [];
   const valid = parts.length === 3 && parts[0] === "scrypt";
   const salt = valid ? Buffer.from(parts[1], "base64url") : randomBytes(16);
