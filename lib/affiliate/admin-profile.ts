@@ -1,5 +1,6 @@
+import { readSubAdmin } from "./admins";
 import { affiliateFirebaseConfigured, affiliateFirestore } from "./firebase";
-import { adminAccountEmail } from "./session";
+import { adminAccountEmail, adminSessionActor } from "./session";
 
 function nameFromEmail(email: string) {
   const local = email.split("@")[0] ?? "";
@@ -15,6 +16,13 @@ function httpsUrl(value: string | null | undefined) {
 }
 
 export async function adminAccountProfile() {
+  const actor = await adminSessionActor();
+  if (!actor) return null;
+  if (actor.role === "sub") {
+    const admin = await readSubAdmin(actor.id);
+    if (!admin) return null;
+    return { name: admin.name, email: admin.email, avatarUrl: null };
+  }
   const email = adminAccountEmail();
   if (!email) return null;
   let name = "";

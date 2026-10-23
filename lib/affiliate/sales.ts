@@ -1,7 +1,8 @@
 import { normalizeAffiliateCode } from "./code";
 import { affiliateFirebaseConfigured, affiliateFirestore } from "./firebase";
-import { loadUncommissionedPendingOrders, markPendingOrderCommissioned, pendingAffiliateCode, recordAffiliateConversion } from "./store";
-import { getPaidOrder, listPaidOrders, type PaidOrder } from "@/lib/genhealth/payment";
+import { refundObservations } from "./refunds";
+import { applyOrderRefund, loadUncommissionedPendingOrders, markPendingOrderCommissioned, pendingAffiliateCode, recordAffiliateConversion } from "./store";
+import { attributableOrderStatus, getOrderSettlement, listClientOrders, type ClientOrder, type PaidOrder } from "@/lib/genhealth/payment";
 import { creditedAffiliate, listPromoCodes, personalAffiliateForCode, promoByCode, type PromoCodeRow } from "@/lib/genhealth/promocodes";
 
 function trackedAffiliate(order: PaidOrder, pendingCode: string, activeIds: Set<string>) {
@@ -12,6 +13,12 @@ function trackedAffiliate(order: PaidOrder, pendingCode: string, activeIds: Set<
 function affiliateForPaidOrder(order: PaidOrder, pendingCode: string, activeIds: Set<string>, promos: PromoCodeRow[]) {
   const personal = personalAffiliateForCode(promoByCode(promos, order.promoCode), activeIds);
   return creditedAffiliate(personal, trackedAffiliate(order, pendingCode, activeIds));
+}
+
+async function settleRecordedOrder(order: ClientOrder) {
+  const incoming = refundObservations(order);
+  if (incoming.length === 0) return;
+  await applyOrderRefund({ orderId: order.orderId, incoming });
 }
 
 async function recordPaidOrder(order: PaidOrder, code: string) {
@@ -52,13 +59,31 @@ export async function attributePaidGenHealthOrder(orderId: string) {
   if (!id) return "ignored" as const;
   const pending = await pendingAffiliateCode(id);
   const ids = await activeAffiliateIds();
-  const order = await getPaidOrder(id);
+  const order = await getOrderSettlement(id);
   if (!order) return "unpaid" as const;
-  const code = affiliateForPaidOrder(order, pending && ids.has(pending) ? pending : "", ids, await promoCatalog());
-  if (!code) return "unmatched" as const;
-  await recordPaidOrder(order, code);
-  if (pending) await markPendingOrderCommissioned(order.orderId);
-  return "recorded" as const;
+  if (attributableOrderStatus(order.paymentStatus)) {
+    const code = affiliateForPaidOrder(order, pending && ids.has(pending) ? pending : "", ids, await promoCatalog());
+    if (code) {
+      await recordPaidOrder(order, code);
+      if (pending) await markPendingOrderCommissioned(order.orderId);
+      await settleRecordedOrder(order);
+      return "recorded" as const;
+    }
+  }
+  await settleRecordedOrder(order);
+  return attributableOrderStatus(order.paymentStatus) ? "unmatched" as const : "unpaid" as const;
+}
+
+export async function syncOrderRefund(orderId: string) {
+  if (!affiliateFirebaseConfigured()) return "unavailable" as const;
+  const id = orderId.trim();
+  if (!id) return "ignored" as const;
+  const order = await getOrderSettlement(id);
+  if (!order) return "ignored" as const;
+  const incoming = refundObservations(order);
+  if (incoming.length === 0) return "unchanged" as const;
+  const applied = await applyOrderRefund({ orderId: order.orderId, incoming });
+  return applied ? "adjusted" as const : "unchanged" as const;
 }
 
 export async function attributeWebhookPaidOrder(input: { orderId: string; amountCents: number | null; occurredAt?: Date }) {
@@ -67,13 +92,18 @@ export async function attributeWebhookPaidOrder(input: { orderId: string; amount
   if (!id) return "ignored" as const;
   const pending = await pendingAffiliateCode(id);
   const ids = await activeAffiliateIds();
-  const order = await getPaidOrder(id);
-  if (order) {
+  const order = await getOrderSettlement(id);
+  if (order && attributableOrderStatus(order.paymentStatus)) {
     const code = affiliateForPaidOrder(order, pending && ids.has(pending) ? pending : "", ids, await promoCatalog());
     if (!code) return "unmatched" as const;
     await recordPaidOrder(order, code);
     if (pending) await markPendingOrderCommissioned(id);
+    await settleRecordedOrder(order);
     return "recorded" as const;
+  }
+  if (order) {
+    await settleRecordedOrder(order);
+    return "unpaid" as const;
   }
   if (!pending || !ids.has(pending)) return "unmatched" as const;
   const amount = input.amountCents == null ? null : input.amountCents / 100;
@@ -102,15 +132,17 @@ export async function syncAttributedGenHealthSales() {
 
   try {
     const pending = await loadUncommissionedPendingOrders();
-    const orders = await listPaidOrders();
+    const orders = await listClientOrders();
     const promos = await promoCatalog();
     for (const order of orders) {
+      if (!attributableOrderStatus(order.paymentStatus)) continue;
       const pendingCode = pending.get(order.orderId) ?? "";
       const code = affiliateForPaidOrder(order, pendingCode && ids.has(pendingCode) ? pendingCode : "", ids, promos);
       if (!code) continue;
       await recordPaidOrder(order, code);
       if (pendingCode) await markPendingOrderCommissioned(order.orderId);
     }
+    for (const order of orders) await settleRecordedOrder(order);
   } catch (error) {
     const message = error instanceof Error ? error.message : "unknown error";
     console.error("[affiliate] Gen Health sales sync failed", message);
@@ -121,12 +153,16 @@ export async function syncAttributedGenHealthSales() {
     const promos = await promoCatalog();
     for (const [orderId, pendingCode] of remaining) {
       try {
-        const order = await getPaidOrder(orderId);
+        const order = await getOrderSettlement(orderId);
         if (!order) continue;
-        const code = affiliateForPaidOrder(order, ids.has(pendingCode) ? pendingCode : "", ids, promos);
-        if (!code) continue;
-        await recordPaidOrder(order, code);
-        await markPendingOrderCommissioned(order.orderId);
+        if (attributableOrderStatus(order.paymentStatus)) {
+          const code = affiliateForPaidOrder(order, ids.has(pendingCode) ? pendingCode : "", ids, promos);
+          if (code) {
+            await recordPaidOrder(order, code);
+            await markPendingOrderCommissioned(order.orderId);
+          }
+        }
+        await settleRecordedOrder(order);
       } catch (error) {
         const message = error instanceof Error ? error.message : "unknown error";
         console.error("[affiliate] Gen Health order lookup failed", orderId, message);

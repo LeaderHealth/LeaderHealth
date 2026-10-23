@@ -1,6 +1,6 @@
 export const ADMIN_ERRORS: Record<string, string> = {
   password: "That email or password is incorrect.",
-  unconfigured: "Set AFFILIATE_ADMIN_EMAIL and AFFILIATE_ADMIN_PASSWORD before signing in.",
+  unconfigured: "Set AFFILIATE_ADMIN_EMAIL, AFFILIATE_ADMIN_PASSWORD, and AFFILIATE_SESSION_SECRET before signing in.",
   invalid: "Check the name, email, and commission.",
   mail: "Set RESEND_API_KEY and AFFILIATE_FROM_EMAIL before sending invitations.",
   invite: "The invitation email could not be sent. Resend it from Accounts.",
@@ -21,4 +21,14 @@ export const ADMIN_ERRORS: Record<string, string> = {
   "payout-date": "Enter the payment date.",
   "payout-missing": "That affiliate was not found.",
   "payout-unavailable": "Payouts are unavailable right now.",
+  application: "That application is no longer waiting.",
+  taken: "We already have that email.",
+  "team-invalid": "Check the name and email.",
+  "team-email": "Check the email address.",
+  "team-owner": "That email belongs to the main admin.",
+  "team-invite": "The invitation email could not be sent. Try again from Team.",
+  "team-missing": "That admin was not found.",
+  "team-inactive": "Activate this admin before sending an invitation.",
+  "team-activated": "This admin has already set a password.",
+  "team-session": "That sign-in was not found.",
 };

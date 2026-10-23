@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useId, useState } from "react";
 import { assets, PORTAL_URL, site } from "@/lib/content/site";
+import { isPublicHref } from "@/lib/content/visibility";
 
 const wordmark =
   "https://framerusercontent.com/images/LVaS2fRqoJ2LsJYEYoCtlTjng.svg?width=2126&height=166";
@@ -117,6 +118,21 @@ const legalLinks: FooterLink[] = [
   { href: "/legal/consumer-health-data-privacy", label: "Consumer Health Data Privacy" },
   { href: "/legal/do-not-sell", label: "Do Not Sell or Share My Info" },
 ];
+
+function visibleAccordions(items: FooterAccordion[]) {
+  return items.flatMap((item) => {
+    const sections = item.sections.flatMap((section) => {
+      const links = section.links?.filter((link) => isPublicHref(link.href));
+      const action = section.action && isPublicHref(section.action.href) ? section.action : undefined;
+      if ((!links || links.length === 0) && !action) return [];
+      return [{ ...section, links, action }];
+    });
+    if (sections.length === 0) return [];
+    return [{ ...item, sections }];
+  });
+}
+
+const visibleTreatments = visibleAccordions(treatmentAccordions);
 
 const legalAccordions: FooterAccordion[] = [
   {
@@ -487,22 +503,24 @@ export function Footer() {
             <ColumnTitle>Treatments</ColumnTitle>
             <div className="mt-5">
               <AccordionList
-                items={treatmentAccordions.slice(0, 4)}
+                items={visibleTreatments.filter((item) => item.id !== "labs")}
                 openId={treatmentOpen}
                 onToggle={(id) => setTreatmentOpen((current) => (current === id ? null : id))}
                 labelClassName="font-sans text-[16px] font-medium tracking-[-0.02em] text-[#F7F3F5]"
               />
-              <div className="border-b border-[#DBD4BD]/20">
-                <Link
-                  href="/advanced-peptides"
-                  className={`flex h-[46px] items-center justify-between gap-3 font-sans text-[16px] font-medium tracking-[-0.02em] text-[#F7F3F5] ${linkHover}`}
-                >
-                  Peptides
-                  <ArrowIcon />
-                </Link>
-              </div>
+              {isPublicHref("/advanced-peptides") ? (
+                <div className="border-b border-[#DBD4BD]/20">
+                  <Link
+                    href="/advanced-peptides"
+                    className={`flex h-[46px] items-center justify-between gap-3 font-sans text-[16px] font-medium tracking-[-0.02em] text-[#F7F3F5] ${linkHover}`}
+                  >
+                    Peptides
+                    <ArrowIcon />
+                  </Link>
+                </div>
+              ) : null}
               <AccordionList
-                items={treatmentAccordions.slice(4)}
+                items={visibleTreatments.filter((item) => item.id === "labs")}
                 openId={treatmentOpen}
                 onToggle={(id) => setTreatmentOpen((current) => (current === id ? null : id))}
                 labelClassName="font-sans text-[16px] font-medium tracking-[-0.02em] text-[#F7F3F5]"

@@ -14,9 +14,10 @@ import {
   type FeatureCard,
   type MegaCategory,
   type MegaItem,
-  womenDefaultCard,
+  visibleMegaCategories,
   womenMegaCategories,
 } from "@/lib/content/nav";
+import { isPublicHref, showIntakeCta } from "@/lib/content/visibility";
 
 type Audience = "men" | "women";
 
@@ -70,7 +71,7 @@ const womenTiles = [
 ];
 
 function listItems(audience: Audience, categoryId: string): MegaItem[] {
-  const categories = audience === "men" ? menMegaCategories : womenMegaCategories;
+  const categories = visibleMegaCategories(audience === "men" ? menMegaCategories : womenMegaCategories);
   const category = findMegaCategory(categories, categoryId);
   if (!category || category.kind === "link") return [];
 
@@ -102,7 +103,9 @@ function listItems(audience: Audience, categoryId: string): MegaItem[] {
 
 function featuredFor(audience: Audience): { label: string; card: FeatureCard } {
   const label = audience === "men" ? "Explore Popular Treatment" : "Popular Therapies";
-  return { label, card: audience === "men" ? menDefaultCard : womenDefaultCard };
+  const categories = visibleMegaCategories(audience === "men" ? menMegaCategories : womenMegaCategories);
+  const card = audience === "men" ? menDefaultCard : (categories[0]?.card ?? menDefaultCard);
+  return { label, card };
 }
 
 const MORPH_EASE = "cubic-bezier(0.32,0.72,0,1)";
@@ -671,8 +674,8 @@ export function MobileNav({
             <Image
               src={assets.logo}
               alt={site.name}
-              width={160}
-              height={18}
+              width={8103}
+              height={554}
               className="h-auto w-[min(9rem,42vw)] object-contain brightness-0 invert"
               style={{ height: "auto" }}
               priority
@@ -790,7 +793,7 @@ export function MobileNav({
             >
               Patient Portal
             </a>
-            <a
+            {showIntakeCta(GET_STARTED_URL) ? <a
               href={GET_STARTED_URL}
               className={`group relative flex min-h-12 items-center justify-center overflow-hidden rounded-full bg-white text-[15px] font-medium text-ink transition-[background-color,color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[#331110] hover:text-[#F7F3F5] motion-reduce:transition-none ${tapFocus} focus-visible:bg-[#331110] focus-visible:text-[#F7F3F5] focus-visible:outline-ink`}
             >
@@ -807,7 +810,7 @@ export function MobileNav({
               >
                 →
               </span>
-            </a>
+            </a> : null}
           </div>
         </div>
       </div>
@@ -837,7 +840,7 @@ function MobileScreenView({
   if (screen.name === "root") {
     return (
       <div className="flex flex-col gap-2.5">
-        {rootTiles.map((tile, index) => {
+        {rootTiles.filter((tile) => !("href" in tile) || isPublicHref(tile.href)).map((tile, index) => {
           const motion = introStyle(revealed, intro, reducedMotion, 180 + index * 40, 260, 12);
           const className = `relative flex h-[clamp(82px,21.5vw,90px)] w-full overflow-hidden rounded-[10px] bg-ink ${tapFocus}`;
           const content = (
@@ -901,8 +904,10 @@ function MobileScreenView({
   }
 
   if (screen.name === "audience") {
-    const tiles = screen.audience === "men" ? menTiles : womenTiles;
-    const categories = screen.audience === "men" ? menMegaCategories : womenMegaCategories;
+    const categories = visibleMegaCategories(screen.audience === "men" ? menMegaCategories : womenMegaCategories);
+    const tiles = (screen.audience === "men" ? menTiles : womenTiles).filter((tile) =>
+      categories.some((category) => category.id === tile.id),
+    );
     const shopAll =
       screen.audience === "men"
         ? { href: "/shop-men-products", label: "Shop All Men" }
@@ -913,15 +918,17 @@ function MobileScreenView({
         <p className="mb-2.5 text-[13px] leading-4 font-medium text-white/70">
           {screen.audience === "men" ? "Men" : "Women"}
         </p>
-        <Link
-          href={shopAll.href}
-          className={`mb-3 flex min-h-12 items-center justify-between gap-3 rounded-[10px] border border-white/70 px-4 text-[15px] leading-snug font-medium ${tapFocus}`}
-        >
-          <span className="min-w-0 break-words">{shopAll.label}</span>
-          <span className="shrink-0" aria-hidden>
-            →
-          </span>
-        </Link>
+        {isPublicHref(shopAll.href) ? (
+          <Link
+            href={shopAll.href}
+            className={`mb-3 flex min-h-12 items-center justify-between gap-3 rounded-[10px] border border-white/70 px-4 text-[15px] leading-snug font-medium ${tapFocus}`}
+          >
+            <span className="min-w-0 break-words">{shopAll.label}</span>
+            <span className="shrink-0" aria-hidden>
+              →
+            </span>
+          </Link>
+        ) : null}
         <div className="grid grid-cols-2 items-stretch gap-2.5">
           {tiles.map((tile) => {
             const category = findMegaCategory(categories, tile.id);
@@ -953,7 +960,7 @@ function MobileScreenView({
   }
 
   const category = findMegaCategory(
-    screen.audience === "men" ? menMegaCategories : womenMegaCategories,
+    visibleMegaCategories(screen.audience === "men" ? menMegaCategories : womenMegaCategories),
     screen.categoryId,
   );
   const items = listItems(screen.audience, screen.categoryId);
@@ -984,7 +991,7 @@ function MobileScreenView({
             {item.label}
           </Link>
         ))}
-        {screen.categoryId === "longevity" ? (
+        {screen.categoryId === "longevity" && isPublicHref("/energy-longevity") ? (
           <Link
             href="/energy-longevity"
             className={`flex min-h-12 items-center border-b border-white/15 py-4 text-[15px] leading-snug font-medium break-words ${tapFocus}`}

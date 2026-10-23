@@ -11,11 +11,11 @@ import { AddToCartButton } from "@/components/cart/AddToCartButton";
 // Artwork fills a different share of each source file. Scale so every product
 // occupies about the same area inside the card.
 const cardImageScale: Record<string, number> = {
-  "weight-loss-semaglutide": 1.65,
-  "weight-loss-tirzepatide": 1.29,
+  "weight-loss-semaglutide": 0.92,
+  "weight-loss-tirzepatide": 0.92,
   "longevity-sermorelin": 1.31,
   "longevity-glutathione": 1.24,
-  "longevity-nad": 0.78,
+  "longevity-nad": 0.92,
   "men-trt-testosterone-cypionate": 1.27,
   "men-trt-enclomiphene": 1,
   "men-trt-testosterone-cream": 2.19,

@@ -5,7 +5,7 @@ import { ArticleBodyWithTableOfContents } from "@/components/articles/ArticleBod
 import { ArticleRichText } from "@/components/articles/ArticleRichText";
 import { FAQArticles } from "@/components/articles/FAQArticles";
 import { ArticleExpertQuoteCard } from "@/components/ArticleExpertQuoteCard";
-import { articleCovers, articles, getArticle, publishedArticles } from "@/lib/content/articles";
+import { articleCovers, getArticle, publishedArticles } from "@/lib/content/articles";
 import { JsonLd } from "@/components/JsonLd";
 import { buildArticlePageSchema } from "@/lib/seo/schema";
 import type { Metadata } from "next";
@@ -21,19 +21,20 @@ const expertQuote =
   "Stephen Ratcliff, MD is the Chief Medical Officer of Leader Health and the board-certified physician responsible for clinical governance, medical content review, and regulatory oversight across the platform. Every article on the Leader Health blog is reviewed and approved by Dr. Ratcliff before publication.";
 
 export function generateStaticParams() {
-  return articles.map((a) => ({ slug: a.slug }));
+  return publishedArticles().map((a) => ({ slug: a.slug }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const article = getArticle(slug);
-  return { title: article?.title ?? "Article" };
+  if (!article || article.listed === false) notFound();
+  return { title: article.title };
 }
 
 export default async function ArticlePage({ params }: Props) {
   const { slug } = await params;
   const article = getArticle(slug);
-  if (!article) notFound();
+  if (!article || article.listed === false) notFound();
 
   const cover = articleCovers[article.slug];
   const related = publishedArticles()

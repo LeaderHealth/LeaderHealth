@@ -171,6 +171,58 @@ function formatWeeklyMoney(cents: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
 }
 
+export async function sendApplicationLinkEmail(email: string, url: string, rate: string) {
+  await deliverAffiliateEmail(
+    email,
+    "Apply to the Leader Health affiliate program",
+    [
+      "You are invited to apply as a Leader Health affiliate.",
+      `This link is set at ${rate}.`,
+      "Enter your name and email. An admin reviews the application before an account is created.",
+      "",
+      url,
+      "",
+      "If you were not expecting this, you can ignore this email.",
+    ].join("\n"),
+    "Affiliate application link email failed",
+    brandedEmailHtml({
+      preview: `Apply to the Leader Health affiliate program. Commission on this link: ${rate}.`,
+      heading: "Apply to be an affiliate",
+      body: `You are invited to apply as a Leader Health affiliate. This link is set at ${rate}.`,
+      note: "Enter your name and email. An admin reviews the application before an account is created.",
+      button: "Apply",
+      url,
+    }),
+    [logoAttachment()],
+  );
+}
+
+export async function sendAdminInvitationEmail(email: string, url: string) {
+  await deliverAffiliateEmail(
+    email,
+    "Activate your Leader Health admin account",
+    [
+      "You are invited to help manage Leader Health affiliates.",
+      "Use this link to choose your name, email, and password, then open the admin dashboard.",
+      `It expires in ${AFFILIATE_INVITE_DAYS} days and works once.`,
+      "",
+      url,
+      "",
+      "If you were not expecting this, you can ignore this email.",
+    ].join("\n"),
+    "Admin invitation email failed",
+    brandedEmailHtml({
+      preview: "Choose your name, email, and password for the Leader Health affiliate admin.",
+      heading: "You are invited",
+      body: "You are invited to help manage Leader Health affiliates. Use the button below to choose your name, email, and password, then open the admin dashboard.",
+      note: `This link expires in ${AFFILIATE_INVITE_DAYS} days and works once.`,
+      button: "Set up your account",
+      url,
+    }),
+    [logoAttachment()],
+  );
+}
+
 export async function sendAffiliateInvitationEmail(email: string, url: string) {
   await deliverAffiliateEmail(
     email,

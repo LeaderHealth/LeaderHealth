@@ -98,6 +98,7 @@ export async function POST(request: Request) {
       code,
       path: affiliatePath(record.path),
       visitorId,
+      referrer: affiliateReferrer(record.referrer),
       campaign: affiliateCampaign(record.campaign),
     });
     tracked.cookies.set(CLICK_LOG_COOKIE, loggedKey, affiliateCookieOptions(CLICK_LOG_MAX_AGE));

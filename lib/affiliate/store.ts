@@ -18,6 +18,14 @@ import {
   normalizeFixedCommissionCents,
 } from "./code";
 import { affiliateFirebaseConfigured, affiliateFirestore } from "./firebase";
+import {
+  type RefundObservation,
+  type RefundStatus,
+  adjustmentDocId,
+  planRefundAdjustments,
+  refundStatusOf,
+  totalRefundedAmount,
+} from "./refunds";
 
 const scrypt = promisify(scryptCallback);
 const SCRYPT_KEYLEN = 32;
@@ -88,6 +96,9 @@ export type ConversionSummary = {
   commissionPercent: number;
   commissionFixedCents: number;
   commissionCents: number;
+  commissionRefundedCents: number;
+  refundedAmountCents: number;
+  refundStatus: RefundStatus;
   dryRun: boolean;
   createdAt: string | null;
 };
@@ -114,13 +125,13 @@ function asDate(value: unknown) {
   return null;
 }
 
-async function hashPassword(password: string) {
+export async function hashPassword(password: string) {
   const salt = randomBytes(16);
   const hash = (await scrypt(password, salt, SCRYPT_KEYLEN)) as Buffer;
   return `scrypt$${salt.toString("base64url")}$${hash.toString("base64url")}`;
 }
 
-async function passwordMatches(password: string, stored: string | null) {
+export async function passwordMatches(password: string, stored: string | null) {
   const parts = stored?.split("$") ?? [];
   const valid = parts.length === 3 && parts[0] === "scrypt";
   const salt = valid ? Buffer.from(parts[1], "base64url") : randomBytes(16);
@@ -228,6 +239,9 @@ function conversionFrom(id: string, data: DocumentData): ConversionSummary {
     commissionPercent: asNumber(data.commissionPercent),
     commissionFixedCents: asNumber(data.commissionFixedCents),
     commissionCents: asNumber(data.commissionCents),
+    commissionRefundedCents: asNumber(data.commissionRefundedCents),
+    refundedAmountCents: asNumber(data.refundedAmountCents),
+    refundStatus: data.refundStatus === "full" || data.refundStatus === "partial" ? data.refundStatus : "none",
     dryRun: data.dryRun === true,
     createdAt: asTimestamp(data.createdAt),
   };
@@ -334,6 +348,79 @@ export async function recordAffiliateConversion(input: {
       tx.update(affiliateRef, {
         paidConversionCount: asNumber(affiliate.data()?.paidConversionCount) + 1,
         commissionCents: asNumber(affiliate.data()?.commissionCents) + commissionCents,
+      });
+    }
+    return true;
+  });
+}
+
+export async function applyOrderRefund(input: { orderId: string; incoming: readonly RefundObservation[] }) {
+  if (!affiliateFirebaseConfigured() || input.incoming.length === 0) return false;
+  const orderId = orderDocId(input.orderId);
+  if (!orderId) return false;
+  const db = affiliateFirestore();
+  const conversionRef = db.collection("conversions").doc(orderId);
+
+  return db.runTransaction(async (tx) => {
+    const conversion = await tx.get(conversionRef);
+    const data = conversion.data();
+    if (!conversion.exists || !data || data.dryRun === true) return false;
+    const existing = await tx.get(db.collection("commissionAdjustments").where("orderId", "==", orderId));
+    const recorded = existing.docs.flatMap((doc) => {
+      const row = doc.data();
+      const key = typeof row.key === "string" ? row.key : "";
+      if (!key) return [];
+      return [
+        {
+          key,
+          refundedAmountCents: asNumber(row.refundedAmountCents),
+          commissionCents: asNumber(row.commissionCents),
+          cumulative: row.cumulative === true,
+        },
+      ];
+    });
+    const originalAmount = typeof data.amountCents === "number" ? data.amountCents : null;
+    const originalCommission = asNumber(data.commissionCents);
+    const plans = planRefundAdjustments({
+      originalAmountCents: originalAmount,
+      originalCommissionCents: originalCommission,
+      recorded,
+      incoming: input.incoming,
+    });
+    if (plans.length === 0) return false;
+    const affiliateCode = typeof data.code === "string" ? data.code : "";
+    const affiliateRef = affiliateCode ? db.collection("affiliates").doc(affiliateCode) : null;
+    const affiliate = affiliateRef ? await tx.get(affiliateRef) : null;
+    let addedCommission = 0;
+    for (const plan of plans) {
+      const ref = db.collection("commissionAdjustments").doc(adjustmentDocId(orderId, plan.key));
+      tx.set(ref, {
+        key: plan.key,
+        orderId,
+        code: affiliateCode,
+        refundedAmountCents: plan.refundedAmountCents,
+        commissionCents: plan.commissionCents,
+        cumulative: plan.cumulative,
+        full: plan.full,
+        createdAt: new Date(),
+      });
+      addedCommission += plan.commissionCents;
+      recorded.push(plan);
+    }
+    const commissionRefundedCents = recorded.reduce((sum, refund) => sum + asNumber(refund.commissionCents), 0);
+    tx.update(conversionRef, {
+      refundedAmountCents: totalRefundedAmount(recorded),
+      commissionRefundedCents,
+      refundStatus: refundStatusOf({
+        originalAmountCents: originalAmount,
+        originalCommissionCents: originalCommission,
+        refundedAmountCents: totalRefundedAmount(recorded),
+        commissionRefundedCents,
+      }),
+    });
+    if (affiliateRef && affiliate?.exists && addedCommission > 0) {
+      tx.update(affiliateRef, {
+        commissionCents: Math.max(0, asNumber(affiliate.data()?.commissionCents) - addedCommission),
       });
     }
     return true;

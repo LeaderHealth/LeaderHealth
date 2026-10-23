@@ -1,5 +1,6 @@
 import { assets } from "@/lib/content/site";
-import { getProduct, labs } from "@/lib/content/products";
+import { getProduct, labs, presentListedProduct } from "@/lib/content/products";
+import { isPublicHref } from "@/lib/content/visibility";
 
 export type FeatureCard = {
   href: string;
@@ -41,7 +42,8 @@ export type MegaCategory =
     };
 
 export function productCard(slug: string): FeatureCard {
-  const product = getProduct(slug);
+  const found = getProduct(slug);
+  const product = found ? presentListedProduct(found) : undefined;
   return {
     href: `/products/${slug}`,
     image: product?.image ?? "",
@@ -96,8 +98,7 @@ export const peptidesCategory: MegaCategory = {
 export const longevityCategory: MegaCategory = {
   id: "longevity",
   label: "Longevity",
-  kind: "expand-drill",
-  coverHref: "/energy-longevity",
+  kind: "drill",
   items: longevityItems,
   card: productCard("longevity-nad"),
 };
@@ -203,4 +204,18 @@ export function findMegaCategory(
   id: string,
 ): MegaCategory | undefined {
   return categories.find((category) => category.id === id);
+}
+
+export function visibleMegaCategories(categories: MegaCategory[]): MegaCategory[] {
+  const visible: MegaCategory[] = [];
+  for (const category of categories) {
+    if (category.kind === "link") {
+      if (isPublicHref(category.href)) visible.push(category);
+      continue;
+    }
+    const items = category.items.filter((item) => isPublicHref(item.href));
+    if (items.length === 0) continue;
+    visible.push({ ...category, items, card: items[0].card });
+  }
+  return visible;
 }

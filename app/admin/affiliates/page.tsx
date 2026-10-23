@@ -32,7 +32,7 @@ export default async function AffiliatesAdminPage({
       error={error}
       sent={false}
       errorId="affiliate-admin-error"
-      unconfigured="Set AFFILIATE_ADMIN_EMAIL and AFFILIATE_ADMIN_PASSWORD in the server environment, then reload this page."
+      unconfigured="Set AFFILIATE_ADMIN_EMAIL, AFFILIATE_ADMIN_PASSWORD, and AFFILIATE_SESSION_SECRET in the server environment, then reload this page."
       loginAction={loginAffiliateAdmin}
     />
   );

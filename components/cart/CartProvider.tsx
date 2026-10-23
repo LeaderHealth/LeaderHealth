@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useState, useSyncExternalStore } from "react";
+import { isSellableLine, UNAVAILABLE_TREATMENT } from "@/lib/cart/items";
 import { cartRuleIssue } from "@/lib/cart/rules";
 import { cartCount, cartSubtotal, type CartItem } from "@/lib/cart/types";
 
@@ -35,7 +36,9 @@ function parseStored(raw: string | null): CartItem[] {
   if (!raw) return EMPTY_ITEMS;
   try {
     const parsed = JSON.parse(raw) as CartItem[];
-    return Array.isArray(parsed) ? parsed.filter((item) => item?.id && item?.name) : EMPTY_ITEMS;
+    return Array.isArray(parsed)
+      ? parsed.filter((item) => item?.id && item?.name && isSellableLine(item))
+      : EMPTY_ITEMS;
   } catch {
     return EMPTY_ITEMS;
   }
@@ -72,6 +75,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [rejection, setRejection] = useState<string | null>(null);
 
   const addItem = useCallback((item: CartItem, options?: { open?: boolean }) => {
+    if (!isSellableLine(item)) {
+      setRejection(UNAVAILABLE_TREATMENT);
+      if (options?.open !== false) setIsOpen(true);
+      return;
+    }
     const current = getCartSnapshot().items;
     const existing = current.find((entry) => entry.id === item.id);
     const next = existing

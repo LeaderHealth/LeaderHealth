@@ -5,7 +5,9 @@ import { ArticleLibrary } from "@/components/ArticleLibrary";
 import { JsonLd } from "@/components/JsonLd";
 import { labs, productsFor } from "@/lib/content/products";
 import { buildCollectionPageSchema } from "@/lib/seo/schema";
+import { isPublicHref } from "@/lib/content/visibility";
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 
 export const metadata: Metadata = { title: "Shop Women" };
 
@@ -14,6 +16,7 @@ const intro =
   "Hormones, weight, longevity, and intimacy, physician-led treatments built around a woman's biology, reviewed by clinicians who listen.";
 
 export default function ShopWomenPage() {
+  if (!isPublicHref("/shop-women-products")) notFound();
   return (
     <>
       <JsonLd

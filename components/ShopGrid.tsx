@@ -198,7 +198,7 @@ export function ShopGrid({
           </>
         )}
         <div className="mt-8 flex flex-wrap items-center gap-2">
-          {filters.map((f) => (
+          {filters.filter((filter) => !filter.category || productsFor(who ?? audience, filter.category).length > 0).map((f) => (
             <button
               key={f.label}
               type="button"

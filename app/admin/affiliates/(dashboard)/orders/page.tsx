@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { formatCents, formatCommissionRate, formatWhen } from "@/lib/affiliate/format";
+import { OrderCommission } from "@/components/affiliate/OrderCommission";
+import { formatCents, formatWhen } from "@/lib/affiliate/format";
 import { syncAttributedGenHealthSales } from "@/lib/affiliate/sales";
 import { AffiliateStoreError, loadAffiliateDashboard, type ConversionSummary } from "@/lib/affiliate/store";
 
@@ -54,8 +55,7 @@ export default async function AffiliateOrdersPage() {
                 <div>
                   <dt className="text-xs text-brown">Commission</dt>
                   <dd className="mt-1">
-                    {formatCents(conversion.commissionCents)}
-                    <div className="text-brown">{formatCommissionRate(conversion)}</div>
+                    <OrderCommission conversion={conversion} />
                   </dd>
                 </div>
               </dl>
@@ -95,8 +95,7 @@ export default async function AffiliateOrdersPage() {
                 <td className="break-words px-4 py-5 align-top">{conversion.productName}</td>
                 <td className="px-4 py-5 align-top">{conversion.amountCents == null ? "—" : formatCents(conversion.amountCents)}</td>
                 <td className="px-4 py-5 align-top">
-                  <div>{formatCents(conversion.commissionCents)}</div>
-                  <div className="mt-1 text-brown">{formatCommissionRate(conversion)}</div>
+                  <OrderCommission conversion={conversion} />
                 </td>
               </tr>
             ))}

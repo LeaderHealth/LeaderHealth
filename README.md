@@ -37,6 +37,17 @@ Affiliates sign in at [http://localhost:3000/affiliates](http://localhost:3000/a
 
 Email sign-in links stay hidden until both `RESEND_API_KEY` and `AFFILIATE_FROM_EMAIL` are set. `AFFILIATE_FROM_EMAIL` must be a verified Resend sender, for example `Leader Health <affiliates@leaderhealth.clinic>`. A link expires in 15 minutes, works once, and can be requested again after one minute. Existing affiliates have no password until you set one; until then they can sign in only by email link, and only after Resend is configured.
 
+### Firestore rules
+
+`firestore.rules` denies every client read and write. This site reads and writes Firestore only from the server through the Admin SDK, which is not limited by these rules. Publish the rules after any change:
+
+```powershell
+npx --yes firebase-tools login
+npx --yes firebase-tools deploy --only firestore:rules --project leaderhealth-affiliate
+```
+
+The sign-in account needs access to the `leaderhealth-affiliate` project. Mark paid on the Payouts page only records a payment that was already made somewhere else. It does not send money.
+
 ## Affiliate order tracking
 
 Affiliate order tracking is integrated between the Leader Health website and internal checkout repositories using Firebase Firestore. Leader Health stores the affiliate ID alongside the corresponding Gen Health order ID, rather than relying on Gen Health to store affiliate information.

@@ -7,7 +7,9 @@ import { buildFaqSchema } from "@/lib/seo/schema";
 import { PeptidesHowItWorks } from "@/components/PeptidesHowItWorks";
 import { PeptidesQuality } from "@/components/PeptidesQuality";
 import { GET_STARTED_URL } from "@/lib/content/site";
+import { isPublicHref, showIntakeCta } from "@/lib/content/visibility";
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { Cormorant_Garamond } from "next/font/google";
 
 const cormorant = Cormorant_Garamond({
@@ -18,6 +20,7 @@ const cormorant = Cormorant_Garamond({
 export const metadata: Metadata = { title: "Peptides" };
 
 export default function PeptidesPage() {
+  if (!isPublicHref("/advanced-peptides")) notFound();
   return (
     <div>
       <JsonLd data={buildFaqSchema(peptideFaqs)} />
@@ -54,7 +57,7 @@ export default function PeptidesPage() {
             your dose, and your goals stay in the same conversation.
           </p>
           <div className="flex flex-col items-center gap-3">
-            <a
+            {showIntakeCta(GET_STARTED_URL) ? <a
               href={GET_STARTED_URL}
               className="group relative inline-flex h-[47px] items-center justify-center overflow-hidden rounded-full bg-[#DF4452] px-7 text-base font-medium text-[#F7F3F5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#32120E]"
             >
@@ -81,7 +84,7 @@ export default function PeptidesPage() {
                   </span>
                 </span>
               </span>
-            </a>
+            </a> : null}
             <p className="text-[16px] font-normal leading-[1.2] tracking-normal text-[#5F4947]">
               Takes about 5 minutes. No membership required to get your plan.
             </p>

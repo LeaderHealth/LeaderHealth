@@ -37,6 +37,14 @@ test("groups visits, pages, and paid orders by day", () => {
   assert.equal(earningsPerClickCents(3000, 2), 1500);
 });
 
+test("daily earnings use the commission left after a refund", () => {
+  const [row] = dailyAffiliateStats([], [
+    { createdAt: "2026-09-16T12:00:00.000Z", commissionCents: 4905, commissionRefundedCents: 1635, dryRun: false },
+  ]);
+  assert.equal(row.commissionCents, 3270);
+  assert.equal(earningsPerClickCents(row.commissionCents, 3), 1090);
+});
+
 test("leaves conversion blank when a paid order has no visits", () => {
   const [row] = dailyAffiliateStats([], [{ createdAt: "2026-09-16T12:00:00.000Z", commissionCents: 4905, dryRun: false }]);
   assert.equal(row.orders, 1);

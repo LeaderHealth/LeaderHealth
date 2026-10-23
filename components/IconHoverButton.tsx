@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { GET_STARTED_URL } from "@/lib/content/site";
+import { showIntakeCta } from "@/lib/content/visibility";
 
 type Variant = "light" | "accent";
 type Size = "sm" | "md";
@@ -33,6 +34,7 @@ export function IconHoverButton({
   size = "md",
   className = "",
 }: Props) {
+  if (!showIntakeCta(href)) return null;
   const sizes = {
     sm: "h-8 min-w-[5.5rem] px-4 text-[13px] font-medium",
     md: "h-[47px] min-w-[9.5rem] px-[26px] text-base font-semibold",

@@ -47,11 +47,11 @@ export function ProfileCard({
   signOut: () => Promise<void>;
 }) {
   return (
-    <section aria-label="Your account" className="rounded-[28px] bg-white p-4">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between xl:flex-col xl:items-stretch">
-        <div className="flex min-w-0 items-center gap-3">
+    <section aria-label="Your account" className="rounded-[28px] bg-white p-6">
+      <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between xl:flex-col xl:items-stretch">
+        <div className="flex min-w-0 items-center gap-3 xl:min-w-max">
           <Avatar name={name} src={avatarUrl} />
-          <div className="min-w-0">
+          <div className="min-w-0 xl:min-w-max">
             <p className="break-words text-sm font-medium leading-5 text-ink">{name}</p>
             <p className="mt-1 text-sm leading-5 whitespace-nowrap text-brown">{email}</p>
             <p className="mt-2">
