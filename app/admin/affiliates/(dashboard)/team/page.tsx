@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { adminAccountProfile } from "@/lib/affiliate/admin-profile";
 import { listSubAdmins, type SubAdminRecord } from "@/lib/affiliate/admins";
 import { listOpenDashboardSessions, type DashboardSessionRecord } from "@/lib/affiliate/dashboard-sessions";
+import { reportHandledAffiliateError } from "@/lib/affiliate/report";
 import { adminSessionActor, currentAdminSessionId } from "@/lib/affiliate/session";
 import { getAffiliate } from "@/lib/affiliate/store";
 import { inviteSubAdminAction, removeSubAdminAction, resendSubAdminInvitationAction, revokeDashboardSessionAction, setSubAdminActiveAction } from "../../actions";
@@ -90,14 +91,14 @@ export default async function AdminTeamPage({
   try {
     admins = await listSubAdmins();
   } catch (caught) {
-    console.error("[affiliate] sub-admin list failed", caught instanceof Error ? caught.message : "unknown");
+    reportHandledAffiliateError("[affiliate] sub-admin list failed", caught);
     loadError = "The team list is unavailable right now.";
   }
   try {
     sessions = await listOpenDashboardSessions();
     currentSessionId = await currentAdminSessionId();
   } catch (caught) {
-    console.error("[affiliate] session list failed", caught instanceof Error ? caught.message : "unknown");
+    reportHandledAffiliateError("[affiliate] session list failed", caught);
     sessionError = "Signed-in browsers are unavailable right now.";
   }
   const affiliates = new Map<string, { name: string; email: string }>();
@@ -107,7 +108,7 @@ export default async function AdminTeamPage({
       const affiliate = await getAffiliate(session.subject);
       if (affiliate) affiliates.set(session.subject, { name: affiliate.name, email: affiliate.email });
     } catch (caught) {
-      console.error("[affiliate] session affiliate lookup failed", caught instanceof Error ? caught.message : "unknown");
+      reportHandledAffiliateError("[affiliate] session affiliate lookup failed", caught);
     }
   }
 

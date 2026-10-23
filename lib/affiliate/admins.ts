@@ -4,6 +4,7 @@ import { AFFILIATE_INVITE_DAYS } from "@/lib/affiliate/email";
 import { absoluteUrl } from "@/lib/seo/schema";
 import { normalizeAffiliateEmail, normalizeAffiliateName, normalizeAffiliatePassword } from "./code";
 import { affiliateFirebaseConfigured, affiliateFirestore } from "./firebase";
+import { reportHandledAffiliateError } from "./report";
 import { hashPassword, passwordMatches } from "./store";
 
 const INVITE_MS = AFFILIATE_INVITE_DAYS * 24 * 60 * 60 * 1000;
@@ -109,7 +110,7 @@ export async function subAdminSessionActive(id: string) {
     const data = snap.data();
     return snap.exists && data?.active === true && data.invitePending !== true;
   } catch (error) {
-    console.error("[affiliate] sub-admin session check failed", error instanceof Error ? error.message : "unknown");
+    reportHandledAffiliateError("[affiliate] sub-admin session check failed", error);
     return false;
   }
 }

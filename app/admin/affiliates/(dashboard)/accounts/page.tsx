@@ -6,6 +6,7 @@ import { monthFigures } from "@/lib/affiliate/month-figures";
 import { currentPayoutPeriod, formatPayoutMonth, previousPayoutPeriod } from "@/lib/affiliate/payouts";
 import { affiliateTrackingLink } from "@/lib/affiliate/link";
 import { loadPayoutRecords, type PayoutRecord } from "@/lib/affiliate/payouts";
+import { reportHandledAffiliateError } from "@/lib/affiliate/report";
 import { syncAttributedGenHealthSales } from "@/lib/affiliate/sales";
 import {
   AffiliateStoreError,
@@ -192,7 +193,7 @@ export default async function AffiliateAccountsPage({
             },
           );
         } catch (caught) {
-          console.error("[affiliate] total align failed", caught instanceof Error ? caught.message : "unknown");
+          reportHandledAffiliateError("[affiliate] total align failed", caught);
         }
       }),
     );

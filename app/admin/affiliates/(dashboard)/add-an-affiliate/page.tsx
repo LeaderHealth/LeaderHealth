@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ApplicationLinkForm } from "@/components/affiliate/ApplicationLinkForm";
 import { PendingApplications } from "@/components/affiliate/PendingApplications";
 import { listOpenApplications, type AffiliateApplication } from "@/lib/affiliate/applications";
+import { reportHandledAffiliateError } from "@/lib/affiliate/report";
 import { approveAffiliateApplicationAction, createApplicationLinkAction, declineAffiliateApplicationAction, sendApplicationLinkAction } from "../../actions";
 import { ADMIN_ERRORS } from "../../messages";
 
@@ -24,7 +25,7 @@ export default async function AddAffiliatePage({
   try {
     applications = await listOpenApplications();
   } catch (caught) {
-    console.error("[affiliate] applications failed", caught instanceof Error ? caught.message : "unknown");
+    reportHandledAffiliateError("[affiliate] applications failed", caught);
     applicationsError = "Applications are unavailable right now.";
   }
 
