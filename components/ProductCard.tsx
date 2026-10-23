@@ -50,7 +50,7 @@ export function ProductCard({ product }: { product: Product }) {
   const imageScale = cardImageScale[product.slug] ?? 1;
 
   return (
-    <article className="group flex h-full flex-col overflow-hidden rounded-[22px] border border-[#32120E]/10 bg-white shadow-[0_14px_36px_rgba(50,18,14,0.06)] transition duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_22px_48px_rgba(50,18,14,0.12)] motion-reduce:transition-none motion-reduce:hover:translate-y-0">
+    <article className="group flex h-full flex-col overflow-hidden rounded-[22px] bg-white shadow-[0_14px_36px_rgba(50,18,14,0.06)] transition duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_22px_48px_rgba(50,18,14,0.12)] motion-reduce:transition-none motion-reduce:hover:translate-y-0">
       <Link
         href={`/products/${product.slug}`}
         className="relative aspect-[4/5] overflow-hidden bg-[#f4e7e8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#32120E]"

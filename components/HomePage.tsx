@@ -40,7 +40,7 @@ const campaign = [
     href: "/products/weight-loss-semaglutide",
     title: "Lose Weight, Keep it Off",
     sub: "with Compounded Semaglutide",
-    img: "/images/products/semaglutide-injectable.png",
+    img: "/images/products/semaglutide-injectable.png?v=4",
     // The vial fills less of this frame than the testosterone file, so a smaller
     // scale lands it on the same height.
     imageScale: 1.16,
@@ -180,7 +180,7 @@ const careOptions = [
     name: "NAD+",
     category: "Longevity",
     price: "Starting at $139 per month",
-    image: "/images/products/nad-compounded.png",
+    image: "/images/products/nad-compounded.png?v=4",
     width: 1122,
     height: 1402,
     imageScale: 0.81,
@@ -190,7 +190,7 @@ const careOptions = [
     name: "Semaglutide",
     category: "Weight",
     price: "Starting at $159 per month",
-    image: "/images/products/semaglutide-injectable.png",
+    image: "/images/products/semaglutide-injectable.png?v=4",
     width: 1122,
     height: 1402,
     imageScale: 0.81,
@@ -1094,7 +1094,7 @@ export function HomePage() {
             >
               <div className="sermorelin-vial-float relative">
                 <Image
-                  src="/images/products/nad-compounded.png"
+                  src="/images/products/nad-compounded.png?v=4"
                   alt="NAD+ vial"
                   width={1122}
                   height={1402}
