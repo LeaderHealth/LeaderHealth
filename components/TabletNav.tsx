@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { GET_STARTED_URL, PORTAL_URL } from "@/lib/content/site";
+import { isPublicHref, showIntakeCta } from "@/lib/content/visibility";
 import type { SearchHit } from "@/lib/search";
 
 const tabletEase = [0.45, 0, 0.55, 1] as const;
@@ -136,6 +137,16 @@ const womenCards: TabletCard[] = [
     overlay: true,
   },
 ];
+
+function visibleCards(cards: TabletCard[]) {
+  return cards.flatMap((card) => {
+    if (card.href && !isPublicHref(card.href)) return [];
+    if (!card.links) return [card];
+    const links = card.links.filter((link) => isPublicHref(link.href));
+    if (links.length === 0 && !card.href) return [];
+    return [{ ...card, links }];
+  });
+}
 
 const whoLinks = [
   { href: "/aboutus", label: "About Us" },
@@ -305,12 +316,14 @@ export function TabletNavBar({
           <path d="m16 16 4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
         </svg>
       </button>
-      <a
-        href={GET_STARTED_URL}
-        className="inline-flex h-11 items-center justify-center rounded-full bg-white px-4 font-sans text-[15px] font-medium text-[#331110] transition-[background-color,color,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[#331110] hover:text-[#F7F3F5] active:scale-[0.98] motion-reduce:transform-none motion-reduce:transition-none"
-      >
-        Get Started
-      </a>
+      {showIntakeCta(GET_STARTED_URL) ? (
+        <a
+          href={GET_STARTED_URL}
+          className="inline-flex h-11 items-center justify-center rounded-full bg-white px-4 font-sans text-[15px] font-medium text-[#331110] transition-[background-color,color,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[#331110] hover:text-[#F7F3F5] active:scale-[0.98] motion-reduce:transform-none motion-reduce:transition-none"
+        >
+          Get Started
+        </a>
+      ) : null}
     </div>
   );
 }
@@ -341,23 +354,25 @@ export function TabletNavPanel({
       {panel === "men" || panel === "women" ? (
         <>
           <div className="mx-auto grid max-w-[760px] grid-cols-3 items-start gap-x-3 gap-y-4">
-            {(panel === "men" ? menCards : womenCards).map((card) => (
+            {visibleCards(panel === "men" ? menCards : womenCards).map((card) => (
               <CategoryCard key={card.title} card={card} onNavigate={onNavigate} />
             ))}
           </div>
-          <div className="mx-auto max-w-[760px]">
-            <BrowseRow
-              href={panel === "men" ? "/shop-men-products" : "/shop-women-products"}
-              detail={panel === "men" ? "See the full men's lineup." : "See the full women's lineup."}
-              onNavigate={onNavigate}
-            />
-          </div>
+          {isPublicHref(panel === "men" ? "/shop-men-products" : "/shop-women-products") ? (
+            <div className="mx-auto max-w-[760px]">
+              <BrowseRow
+                href={panel === "men" ? "/shop-men-products" : "/shop-women-products"}
+                detail={panel === "men" ? "See the full men's lineup." : "See the full women's lineup."}
+                onNavigate={onNavigate}
+              />
+            </div>
+          ) : null}
         </>
       ) : null}
 
       {panel === "who" ? (
         <nav className="mx-auto flex max-w-[760px] flex-col py-2" aria-label="Who We Are">
-          {whoLinks.map((item) => (
+          {whoLinks.filter((item) => isPublicHref(item.href)).map((item) => (
             <Link
               key={item.href}
               href={item.href}

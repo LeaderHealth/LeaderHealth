@@ -305,6 +305,11 @@ export function RecommendedProducts({ tone = "women", ...overrides }: Recommende
     }
   }
   const dark = tone === "men";
+  const offered = {
+    intimacy: getProduct(intimacySlug)?.listed !== false,
+    arousal: getProduct(arousalSlug)?.listed !== false,
+  };
+  if (!offered.intimacy && !offered.arousal) return null;
   const cards = [
     {
       image: content.card1Image,
@@ -346,7 +351,7 @@ export function RecommendedProducts({ tone = "women", ...overrides }: Recommende
         ? "bg-[linear-gradient(180deg,rgba(46,27,22,0.66)_0%,rgba(46,27,22,0.3)_38%,rgba(169,39,33,0.66)_70%,rgba(228,61,78,0.94)_100%)]"
         : "bg-[linear-gradient(180deg,rgba(42,16,18,0.62)_0%,rgba(42,16,18,0.16)_40%,rgba(176,64,78,0.42)_70%,rgba(150,42,58,0.82)_100%)]",
     },
-  ];
+  ].filter((_, index) => (tone === "men" ? [offered.arousal, offered.intimacy] : [offered.intimacy, offered.arousal])[index]);
 
   return (
     <section

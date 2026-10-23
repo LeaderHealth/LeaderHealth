@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { assets, testimonials as siteTestimonials } from "@/lib/content/site";
+import { assets, publishedTestimonials } from "@/lib/content/site";
 import {
   useCallback,
   useEffect,
@@ -564,7 +564,7 @@ export function SiteTestimonials() {
     <TestimonialsVideoSection
       videoSrc={assets.heroVideoAlt}
       posterSrc={assets.weightlifting}
-      testimonials={siteTestimonials.map((item) => ({
+      testimonials={publishedTestimonials().map((item) => ({
         quote: item.quote,
         name: item.name,
         role: item.treatment,

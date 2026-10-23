@@ -6,6 +6,7 @@ import { GET_STARTED_URL } from "@/lib/content/site";
 import { getLegal } from "@/lib/content/legal";
 import { getProductSafety } from "@/lib/content/product-safety";
 import { PriceCompare } from "@/components/PriceCompare";
+import { isSectionVisible } from "@/lib/content/visibility";
 import { SafetyInformationModal } from "@/components/SafetyInformationModal";
 import { IconHoverButton } from "@/components/IconHoverButton";
 import { IllustrationNote } from "@/components/IllustrationNote";
@@ -321,7 +322,7 @@ export function WomenHormoneTherapy() {
             </div>
           </section>
 
-          <PriceCompare />
+          {isSectionVisible("price-compare") ? <PriceCompare /> : null}
 
           <div className="bg-gradient-to-b from-[#e9989f] to-[#e56070] text-[#331110]">
             <section id="womenintakes" className="scroll-mt-28 px-6 py-16 sm:py-20">

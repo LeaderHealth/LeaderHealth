@@ -3,7 +3,9 @@
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type RefObject } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { getProduct } from "@/lib/content/products";
 import { assets, careSteps, designedFor, GET_STARTED_URL } from "@/lib/content/site";
+import { isPublicHref, showIntakeCta } from "@/lib/content/visibility";
 import { HeroVideo } from "./HeroVideo";
 import { Marquee } from "./Marquee";
 import { LabsTeaser } from "./LabsTeaser";
@@ -34,6 +36,15 @@ const campaign = [
     imageScale: 1.6,
     imageOffset: "4.06%",
   },
+  {
+    href: "/products/weight-loss-semaglutide",
+    title: "Lose Weight, Keep it Off",
+    sub: "with Compounded Semaglutide",
+    img: "/images/products/semaglutide-injectable.png?v=4",
+    // The vial fills less of this frame than the testosterone file, so a smaller
+    // scale lands it on the same height.
+    imageScale: 1.16,
+  },
 ];
 
 const featured = [
@@ -50,6 +61,7 @@ const featured = [
   },
   {
     href: "/products/weight-loss-semaglutide#find-what-fits",
+    variant: "Semaglutide Sublingual",
     category: "WEIGHT LOSS",
     name: "Semaglutide Sublingual",
     price: "Starting From $129/mo",
@@ -69,6 +81,14 @@ const featured = [
     imageScale: 2,
   },
 ];
+
+function showHomeCard(card: { href: string; variant?: string }) {
+  if (!isPublicHref(card.href)) return false;
+  if (!card.variant) return true;
+  const slug = card.href.split("#")[0].split("/").filter(Boolean).pop() ?? "";
+  const product = getProduct(decodeURIComponent(slug));
+  return !!product && product.variants?.some((variant) => variant.name === card.variant && variant.listed !== false);
+}
 
 function FeaturedCareTile({ item }: { item: (typeof featured)[number] }) {
   const assetRef = useRef<HTMLDivElement>(null);
@@ -160,22 +180,37 @@ const careOptions = [
     name: "NAD+",
     category: "Longevity",
     price: "Starting at $139 per month",
-    image: "/images/products/nad-overview.png",
+    image: "/images/products/nad-compounded.png?v=4",
     width: 1122,
     height: 1402,
-    imageScale: 0.68,
+    imageScale: 0.81,
   },
   {
     href: "/products/weight-loss-semaglutide",
     name: "Semaglutide",
     category: "Weight",
     price: "Starting at $159 per month",
-    image: "/images/products/semaglutide.png",
-    width: 1312,
-    height: 996,
-    imageScale: 1.55,
+    image: "/images/products/semaglutide-injectable.png?v=4",
+    width: 1122,
+    height: 1402,
+    imageScale: 0.81,
+  },
+  {
+    href: "/labs/labs-advance-panel",
+    name: "Advanced Lab",
+    category: "Labs",
+    badge: "Recommended",
+    price: "100 biomarkers / $399",
+    image: "/images/products/advanced-lab.png",
+    width: 1620,
+    height: 2880,
+    imageScale: 0.72,
   },
 ];
+
+const visibleCampaign = campaign.filter(showHomeCard);
+const visibleFeatured = featured.filter(showHomeCard);
+const visibleCare = careOptions.filter(showHomeCard);
 
 function navClearance() {
   const gap = 16;
@@ -551,7 +586,7 @@ export function HomePage() {
           <p className="mt-5 max-w-[640px] text-base font-medium leading-snug md:text-lg">
             Personalized, clinician-led protocols that help you lose weight, build strength, and live with more energy—no guesswork.
           </p>
-          <a
+          {showIntakeCta(GET_STARTED_URL) ? <a
             href={GET_STARTED_URL}
             className="group relative mt-6 inline-flex h-[47px] min-w-[188px] items-center justify-center self-start overflow-hidden rounded-[39px] bg-[#DF4452] px-[26px] py-[14px] font-sans text-[16px] leading-none font-semibold tracking-[-0.02em] text-[#F7F3F5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
           >
@@ -565,7 +600,7 @@ export function HomePage() {
             >
               →
             </span>
-          </a>
+          </a> : null}
         </div>
       </section>
       <Marquee />
@@ -601,7 +636,7 @@ export function HomePage() {
 
           <div className="mt-8 rounded-[28px] border border-white/80 bg-[#f7f4f4]/90 p-3 shadow-[0_16px_50px_rgba(80,40,40,0.06)] sm:p-4 lg:mt-11 lg:p-4">
             <div className="grid grid-cols-1 items-stretch gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {careOptions.map((item) => (
+              {visibleCare.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
@@ -617,7 +652,7 @@ export function HomePage() {
                   </span>
                   <div className="flex min-h-7 flex-wrap items-center gap-1.5 pr-9">
                     <span className="rounded-full bg-[#f6e4e6] px-2.5 py-1 font-sans text-[11px] leading-none text-[#3a221e]">
-                      Popular
+                      {"badge" in item && item.badge ? item.badge : "Popular"}
                     </span>
                     <span className="rounded-full border border-[#eadfdd] px-2.5 py-1 font-sans text-[11px] leading-none text-[#3a221e]">
                       {item.category}
@@ -660,7 +695,7 @@ export function HomePage() {
                   →
                 </span>
               </Link>
-              <a
+              {showIntakeCta(intakeUrl) ? <a
                 href={intakeUrl}
                 className="group relative inline-flex w-fit items-center justify-center overflow-hidden rounded-full bg-[#e33d4d] px-9 py-1.5 font-sans text-[13px] font-medium text-white"
               >
@@ -669,7 +704,7 @@ export function HomePage() {
                 <span aria-hidden className={careButtonArrowClass}>
                   →
                 </span>
-              </a>
+              </a> : null}
             </div>
           </div>
         </div>
@@ -712,7 +747,7 @@ export function HomePage() {
                 ))}
               </div>
             </div>
-            <a
+            {showIntakeCta(intakeUrl) ? <a
               href={intakeUrl}
               className="group relative mt-5 inline-flex h-[47px] min-w-[188px] shrink-0 items-center justify-center self-center overflow-hidden rounded-[39px] bg-[#DF4452] px-[26px] py-[14px] font-sans text-[16px] leading-none font-semibold tracking-[-0.02em] text-[#F7F3F5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink [@media(max-height:740px)]:mt-4"
             >
@@ -726,7 +761,7 @@ export function HomePage() {
               >
                 →
               </span>
-            </a>
+            </a> : null}
           </div>
         </div>
 
@@ -794,7 +829,7 @@ export function HomePage() {
               );
             })}
           </div>
-          <a
+          {showIntakeCta(intakeUrl) ? <a
             href={intakeUrl}
             className="group relative mt-10 inline-flex h-[47px] min-w-[188px] items-center justify-center overflow-hidden rounded-[39px] bg-[#DF4452] px-[26px] py-[14px] font-sans text-[16px] leading-none font-semibold tracking-[-0.02em] text-[#F7F3F5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
           >
@@ -808,7 +843,7 @@ export function HomePage() {
             >
               →
             </span>
-          </a>
+          </a> : null}
         </div>
       </section>
 
@@ -873,7 +908,7 @@ export function HomePage() {
                     Physician-prescribed treatments, quarterly labs, and real clinical support — delivered to your door.
                   </p>
                 </div>
-                <a
+                {showIntakeCta(GET_STARTED_URL) ? <a
                   href={GET_STARTED_URL}
                   className="group relative inline-flex items-center justify-center self-end overflow-hidden rounded-[39px] bg-[#f9f9f9] px-9 py-[5px] text-[15px] font-medium text-ink transition-[background-color,color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[#331110] hover:text-[#F7F3F5] focus-visible:bg-[#331110] focus-visible:text-[#F7F3F5] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink motion-reduce:transition-none"
                 >
@@ -890,7 +925,7 @@ export function HomePage() {
                   >
                     →
                   </span>
-                </a>
+                </a> : null}
               </div>
             </article>
 
@@ -947,7 +982,7 @@ export function HomePage() {
           </div>
 
           <div id="our-top-3" className="relative z-10 mt-2.5 scroll-mt-24 grid items-stretch gap-2.5 md:grid-cols-3">
-            {campaign.map((card, index) => (
+            {visibleCampaign.map((card, index) => (
               <div
                 key={card.href}
                 ref={showUpAssets.setNode(index + 2)}
@@ -977,7 +1012,8 @@ export function HomePage() {
                       alt=""
                       width={1080}
                       height={1350}
-                      className={`h-[420px] w-auto max-w-none shrink-0 origin-center object-contain transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:-translate-y-2 motion-reduce:transition-none motion-reduce:group-hover:translate-y-0 md:h-[560px] ${card.imageScale ? "scale-[1.6] group-hover:scale-[1.67] motion-reduce:scale-[1.6] motion-reduce:group-hover:scale-[1.6]" : "group-hover:scale-[1.045] motion-reduce:group-hover:scale-100"}`}
+                      style={card.imageScale ? ({ "--campaign-scale": card.imageScale } as CSSProperties) : undefined}
+                      className={`h-[420px] w-auto max-w-none shrink-0 origin-center object-contain transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:-translate-y-2 motion-reduce:transition-none motion-reduce:group-hover:translate-y-0 md:h-[560px] ${card.imageScale ? "scale-[var(--campaign-scale)] group-hover:scale-[calc(var(--campaign-scale)*1.045)] motion-reduce:scale-[var(--campaign-scale)] motion-reduce:group-hover:scale-[var(--campaign-scale)]" : "group-hover:scale-[1.045] motion-reduce:group-hover:scale-100"}`}
                     />
                   </div>
                 </div>
@@ -1058,19 +1094,20 @@ export function HomePage() {
             >
               <div className="sermorelin-vial-float relative">
                 <Image
-                  src="/images/products/sermorelin.png"
-                  alt="Sermorelin injection vial"
-                  width={587}
-                  height={1041}
+                  src="/images/products/nad-compounded.png?v=4"
+                  alt="NAD+ vial"
+                  width={1122}
+                  height={1402}
                   className="sermorelin-vial h-auto w-full object-contain"
                 />
-                <p className="absolute top-[62%] left-[66%] z-10 flex h-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center whitespace-nowrap rounded-[13px] bg-black/50 px-4 font-serif-italic text-[18px] leading-none text-[#f7f3f4] md:h-16 md:px-6 md:text-[28px] md:leading-[33.6px]">
+                <p className="absolute top-[82%] left-[76%] z-10 flex h-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center whitespace-nowrap rounded-[13px] bg-black/50 px-4 font-serif-italic text-[18px] leading-none text-[#f7f3f4] md:h-16 md:px-6 md:text-[28px] md:leading-[33.6px]">
                   More by design.
                 </p>
               </div>
             </div>
           </div>
 
+          {visibleFeatured.length > 0 ? (
           <div className="mt-16 text-center">
             <h2 className="font-serif-italic text-[36px] font-normal leading-tight tracking-normal text-[#f7f3f4] md:text-[47px] md:leading-[56.4px]">
               Energy. Weight. Performance.
@@ -1079,11 +1116,12 @@ export function HomePage() {
               When one is off, everything feels off. Here&apos;s where most members start.
             </p>
             <div className="mx-auto mt-10 grid max-w-[980px] gap-4 md:grid-cols-3">
-              {featured.map((item) => (
+              {visibleFeatured.map((item) => (
                 <FeaturedCareTile key={item.href} item={item} />
               ))}
             </div>
           </div>
+          ) : null}
         </div>
         </div>
       </section>

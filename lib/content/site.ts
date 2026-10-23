@@ -158,6 +158,10 @@ export const testimonials = [
   },
 ];
 
+export function publishedTestimonials() {
+  return testimonials.filter((item) => !("listed" in item) || item.listed !== false);
+}
+
 export const founders = [
   { name: "Stephen Ratcliff, MD, MBA", role: "CMO · Co-Founder" },
   { name: "Steven Fowler, NP", role: "COO · Co-founder" },

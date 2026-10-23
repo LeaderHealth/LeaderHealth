@@ -1,10 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { BlogSection } from "@/components/blogs/BlogSection";
 import { HeroTitleFade } from "@/components/HeroTitleFade";
 import { blogArticles, blogCategories } from "@/components/blogs/content";
 import { JsonLd } from "@/components/JsonLd";
 import { publishedArticles } from "@/lib/content/articles";
+import { isPublicHref } from "@/lib/content/visibility";
 import { buildCollectionPageSchema } from "@/lib/seo/schema";
 import type { Metadata } from "next";
 
@@ -14,6 +16,7 @@ const title = "Learn More";
 const intro = "Articles on treatment, dosing, and what the research actually says.";
 
 export default function BlogsPage() {
+  if (!isPublicHref("/blogs")) notFound();
   return (
     <div>
       <JsonLd
@@ -51,7 +54,7 @@ export default function BlogsPage() {
       </section>
       <div className="mx-auto max-w-5xl px-6 pb-16">
         <div className="mx-auto mt-10 grid max-w-[760px] grid-cols-1 gap-3 sm:grid-cols-2">
-          <Link
+          {isPublicHref("/advanced-peptides") ? <Link
             href="/advanced-peptides"
             className="group relative flex h-[148px] items-end overflow-hidden rounded-[24px] px-5 pb-4 text-white shadow-[0_16px_36px_rgba(50,17,16,0.16)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
           >
@@ -75,8 +78,8 @@ export default function BlogsPage() {
                 </span>
               </span>
             </span>
-          </Link>
-          <Link
+          </Link> : null}
+          {isPublicHref("/energy-longevity") ? <Link
             href="/energy-longevity"
             className="group relative flex h-[148px] items-end overflow-hidden rounded-[24px] px-5 pb-4 text-white shadow-[0_16px_36px_rgba(50,17,16,0.16)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
           >
@@ -102,7 +105,7 @@ export default function BlogsPage() {
                 </span>
               </span>
             </span>
-          </Link>
+          </Link> : null}
         </div>
       </div>
       <BlogSection articles={blogArticles()} categories={blogCategories} />

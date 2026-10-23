@@ -4,6 +4,7 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { IconHoverButton } from "@/components/IconHoverButton";
 import { assets } from "@/lib/content/site";
+import { isPublicHref } from "@/lib/content/visibility";
 
 const ease = [0.22, 1, 0.36, 1] as const;
 const entrance = { duration: 1.4, ease };
@@ -51,7 +52,7 @@ const rows: Row[] = [
       { n: "02", text: "Functions as a coenzyme in cellular pathways involving sirtuins and PARPs." },
       { n: "03", text: "Your provider determines whether NAD+ may be appropriate based on your health history and goals." },
     ],
-    href: "/products/nad-injectable",
+    href: "/products/longevity-nad",
   },
   {
     id: "glutathione",
@@ -135,6 +136,7 @@ function TimelineDot() {
 }
 
 export function EnergyLongevityWalkthrough() {
+  const visibleRows = rows.filter((row) => !row.href || isPublicHref(row.href));
   return (
     <section className="relative overflow-hidden bg-[#F7F3F5] px-6 py-14 md:px-10 md:py-16 lg:py-[72px]">
       <div
@@ -142,7 +144,7 @@ export function EnergyLongevityWalkthrough() {
         className="pointer-events-none absolute top-24 bottom-24 left-1/2 hidden w-px -translate-x-1/2 bg-[#331110]/20 md:block"
       />
       <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-16 md:gap-20 lg:gap-24">
-        {rows.map((row) => (
+        {visibleRows.map((row) => (
           <div
             key={row.id}
             className="grid items-center gap-8 md:grid-cols-[minmax(0,1fr)_40px_minmax(0,1fr)] md:gap-x-5 lg:grid-cols-[minmax(0,1fr)_56px_minmax(0,1fr)] lg:gap-x-8"

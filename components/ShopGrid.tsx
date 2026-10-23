@@ -158,7 +158,7 @@ export function ShopGrid({
                 <span className={catalogTone === "dark" ? "font-semibold text-[#E04450]" : "font-semibold"}>
                   First-time patient?
                 </span>{" "}
-                Lab work is required to help your provider determine the right treatment plan for you.
+                Lab work may be required to help your provider determine the right treatment plan for you.
               </p>
               <a
                 href="#explore-labs"
@@ -190,7 +190,7 @@ export function ShopGrid({
               className="w-full max-w-md rounded-full border border-ink/10 bg-white px-5 py-3 text-sm outline-none"
             />
             <p className="mt-6 text-sm text-brown">
-              First-time patient? Lab work is required to help your provider determine the right treatment plan for you.{" "}
+              First-time patient? Lab work may be required to help your provider determine the right treatment plan for you.{" "}
               <Link href="/labs/labs-complete-panel" className="underline">
                 Explore Labs
               </Link>
@@ -198,7 +198,7 @@ export function ShopGrid({
           </>
         )}
         <div className="mt-8 flex flex-wrap items-center gap-2">
-          {filters.map((f) => (
+          {filters.filter((filter) => !filter.category || productsFor(who ?? audience, filter.category).length > 0).map((f) => (
             <button
               key={f.label}
               type="button"

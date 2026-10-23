@@ -7,6 +7,7 @@ import { HsaFsaBadge } from "@/components/HsaFsaBadge";
 import { IllustrationNote } from "@/components/IllustrationNote";
 import { ProductHeroCta } from "@/components/ProductHeroCta";
 import { PriceCompare } from "@/components/PriceCompare";
+import { isSectionVisible } from "@/lib/content/visibility";
 import { SafetyInformationModal } from "@/components/SafetyInformationModal";
 
 const benefits = [
@@ -79,7 +80,7 @@ export function IntimacyBlend() {
             </div>
           </section>
 
-          <PriceCompare />
+          {isSectionVisible("price-compare") ? <PriceCompare /> : null}
         </>
       )}
     </SafetyInformationModal>
