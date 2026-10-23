@@ -6,7 +6,7 @@ todos:
     content: In Vercel project leaderhealth-platform, add leaderhealth.clinic as Production and redirect www to the apex
     status: pending
   - id: dns
-    content: At the DNS host, replace only the Framer A and CNAME records for the apex and www with the records Vercel shows. Leave products, myportal, and mail records unchanged
+    content: In Cloudflare, delete the two Framer A records, add the apex CNAME and both _vercel TXT records Vercel shows, and point www at the same Vercel CNAME. Leave every other record.
     status: pending
   - id: framer-remove
     content: After the clinic domain loads the Vercel site, remove leaderhealth.clinic and www from the Framer project so Framer no longer claims the domain
@@ -30,33 +30,43 @@ If the CookieYes banner still needs to be on the Vercel site before public traff
 
 ## 1. Add the domain in Vercel
 
-Open the Vercel project `leaderhealth-platform` → **Settings → Domains**.
+Open the Vercel project `leaderhealth-platform` → **Settings → Domains** → **Add Domains**.
 
-- Add `leaderhealth.clinic` and assign it to **Production** (the deployment that is already on `leaderhealth-platform.vercel.app`).
-- Add `www.leaderhealth.clinic` and set it to **redirect** to `https://leaderhealth.clinic`.
-- Copy the DNS records Vercel shows. Use those values in the next step, not a remembered IP. Vercel’s usual values are an A record of `76.76.21.21` for the apex and a CNAME of `cname.vercel-dns.com` for `www`.
-- Leave `leaderhealth-platform.vercel.app` attached. It keeps working after the cutover.
+On the dialog, for the apex:
+
+- Domain: `leaderhealth.clinic`
+- Uncheck **Redirect apex domains to www**. That box makes `www.leaderhealth.clinic` the public site and sends `leaderhealth.clinic` to www. This app, the affiliate links, and the LegitScript badge use the apex.
+- **Connect to an environment** → **Production**
+- Add the domain
+
+Then add `www.leaderhealth.clinic` in a second pass:
+
+- Choose **Redirect to Another Domain**
+- Redirect to `leaderhealth.clinic`
+- Use a **308 Permanent Redirect**
+
+Copy the DNS records from the Vercel domain page. This project is on the new Vercel DNS target, so there is no A record. Both `leaderhealth.clinic` and `www` use a CNAME to `93a890475e381814.vercel-dns-016.com`. Vercel also asks for two TXT records at `_vercel` because the domain is already linked to another Vercel account. Leave `leaderhealth-platform.vercel.app` attached. It keeps working after the cutover.
 
 Vercel will show the new domain as misconfigured until DNS updates. That is expected.
 
-## 2. Point the website DNS at Vercel
+## 2. Match the records on the Vercel domain page
 
-Open the DNS host for `leaderhealth.clinic` (the registrar, Cloudflare, or wherever the records live). Replace only the records that currently send the main site to Framer.
+DNS is on Cloudflare. Vercel is not asking for `76.76.21.21`. Cloudflare can put a CNAME on the apex, which is the record Vercel shows. Copy each value with the copy button on that page so the long TXT strings are complete. Set every new or edited record to **DNS only** (grey cloud).
 
-- Apex (`@` / `leaderhealth.clinic`): delete the Framer A records (Framer’s are often `31.43.160.6` and `31.43.161.6`, or a CNAME to `sites.framer.app`). Add the single A record Vercel gave you.
-- `www`: delete the Framer CNAME (often `sites.framer.app`). Add a CNAME to `cname.vercel-dns.com`, or whatever host Vercel lists.
+Delete:
 
-Leave these records exactly as they are:
+- Both apex A records: `leaderhealth.clinic` → `31.43.160.6` and `leaderhealth.clinic` → `31.43.161.6`. Those are Framer. The apex CNAME cannot be added while these A records exist.
+- The `_acme-challenge` CNAME (`82358840-24dc-…`). That is Framer’s certificate check.
 
-- `products.leaderhealth.clinic` (Get Started / quiz)
-- `myportal.leaderhealth.clinic` (patient portal)
-- MX, SPF, DKIM, and DMARC records. Those are mail. The public site email is `@myleaderhealth.com`. Replacing TXT or MX records can break sending.
+Add or edit:
 
-If the domain’s nameservers are Framer’s, move DNS back to the registrar (or Cloudflare) and recreate the records there, including the untouched subdomains and mail records, before deleting anything. Export or screenshot the full zone first.
+- Apex CNAME: name `@`, target `93a890475e381814.vercel-dns-016.com`.
+- `www` CNAME: change `sites.framer.app` to `93a890475e381814.vercel-dns-016.com`.
+- Two TXT records, both named `_vercel`. One value starts with `vc-domain-verify=leaderhealth.clinic,` and the other with `vc-domain-verify=www.leaderhealth.clinic,`. The orange banner is why these exist: the domain is already claimed by a different Vercel account, and these records prove this project may use it. Vercel says they can be removed after verification succeeds.
 
-On Cloudflare, set the apex and `www` records to DNS only (grey cloud) until Vercel marks the domain Valid.
+Leave every other row. That includes the three CAA records, `_domainconnect`, `affiliate`, `autodiscover`, `myportal`, `products`, `pm-bounces`, `rsend`, `send`, the MX record, and the existing TXT records. Those are the quiz, the portal, and mail.
 
-Propagation is often a few minutes and can take up to 48 hours. During that window some visitors still see Framer and some see this site.
+In Vercel, click **Refresh** on both domains after Cloudflare saves. Both should leave “Verification Required” and the apex should show Production. Propagation is often a few minutes. During that window some visitors still see Framer.
 
 ## 3. Remove the domain from Framer
 
