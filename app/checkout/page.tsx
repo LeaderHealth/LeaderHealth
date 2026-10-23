@@ -3,6 +3,7 @@ import { resolveAffiliateAttribution } from "@/lib/affiliate/code";
 import { campaignForCheckout } from "@/lib/affiliate/checkoutCampaign";
 import { affiliateCodeFromCookies } from "@/lib/affiliate/store";
 import { CheckoutCartSync } from "@/components/cart/CheckoutCartSync";
+import { EmbeddedCheckout } from "@/components/cart/EmbeddedCheckout";
 import { embeddedCheckoutSrc } from "@/lib/cart/storefrontCheckout";
 
 export const metadata: Metadata = { title: "Checkout" };
@@ -33,13 +34,7 @@ export default async function CheckoutPage({ searchParams }: Props) {
     <section className="bg-background pt-28">
       <h1 className="sr-only">Checkout</h1>
       <CheckoutCartSync />
-      <iframe
-        key={frameKey}
-        title="Checkout"
-        src={src}
-        className="block h-[calc(100dvh-7rem)] w-full border-0"
-        allow="payment"
-      />
+      <EmbeddedCheckout src={src} frameKey={frameKey} />
     </section>
   );
 }

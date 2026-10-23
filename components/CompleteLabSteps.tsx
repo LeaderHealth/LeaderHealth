@@ -26,7 +26,7 @@ const steps = [
   },
   {
     label: "03",
-    title: "Get your labs done quickly and easily",
+    title: "Complete your bloodwork order",
     src: "/images/labs-step-draw.png",
     alt: "Clipboard checklist, blood vial, and a clock",
     width: 790,

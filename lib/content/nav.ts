@@ -154,7 +154,7 @@ export const menMegaCategories: MegaCategory[] = [
     card: labCard("labs-complete-panel"),
     items: [
       { label: "Complete Panel · 64 biomarkers", href: "/labs/labs-complete-panel", card: labCard("labs-complete-panel") },
-      { label: "Advanced Panel · 64 biomarkers", href: "/labs/labs-advance-panel", card: labCard("labs-advance-panel") },
+      { label: "Advanced Panel · 100 biomarkers", href: "/labs/labs-advance-panel", card: labCard("labs-advance-panel") },
     ],
   },
 ];
