@@ -12,6 +12,7 @@ import { CompleteLabHero } from "@/components/CompleteLabHero";
 import { HsaFsaBadge } from "@/components/HsaFsaBadge";
 import { LabAddToCart } from "@/components/LabAddToCart";
 import { labs } from "@/lib/content/products";
+import { isSectionVisible } from "@/lib/content/visibility";
 import { buildLabPageSchema } from "@/lib/seo/schema";
 import type { Metadata } from "next";
 
@@ -98,7 +99,7 @@ export default async function LabPage({ params }: Props) {
         </section>
         <CompleteLabBiomarkers panel={lab.slug === "labs-advance-panel" ? "advance" : "complete"} />
         <CompleteLabSteps />
-        <CompleteLabIncluded />
+        {isSectionVisible("whats-included") ? <CompleteLabIncluded /> : null}
         <SiteTestimonials />
         <CompleteLabFaq />
         <CompleteLabStart />

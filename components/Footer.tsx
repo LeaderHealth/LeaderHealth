@@ -531,7 +531,7 @@ export function Footer() {
           <div>
             <ColumnTitle>Who We Are</ColumnTitle>
             <ul className="mt-5 space-y-[13px]">
-              {whoLinks.map((link) => (
+              {whoLinks.filter((link) => isPublicHref(link.href)).map((link) => (
                 <li key={link.href}>
                   <FooterAnchor link={link} className={textLink} />
                 </li>

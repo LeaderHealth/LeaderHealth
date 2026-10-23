@@ -15,17 +15,27 @@ export function showIntakeCta(href: string) {
   }
 }
 
+/** Page sections kept in the repo and taken off the public site until this set changes. */
+const hiddenSections = new Set(["price-compare", "whats-included", "explore-library"]);
+
+export function isSectionVisible(section: string) {
+  return !hiddenSections.has(section);
+}
+
 /** Marketing pages kept in the repo and taken off the public site until this set changes. */
 const hiddenPages = new Set([
   "/advanced-peptides",
   "/energy-longevity",
   "/shop-men-products",
   "/shop-women-products",
+  "/blogs",
 ]);
+
+const hiddenPrefixes = ["/articles/"];
 
 export function isPublicHref(href: string) {
   const path = href.split(/[?#]/)[0];
-  if (hiddenPages.has(path)) return false;
+  if (hiddenPages.has(path) || hiddenPrefixes.some((prefix) => path.startsWith(prefix))) return false;
   const match = path.match(/^\/products\/([^/]+)$/);
   if (!match) return true;
   const product = getProduct(decodeURIComponent(match[1]));

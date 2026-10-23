@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { articleCovers, publishedArticles } from "@/lib/content/articles";
+import { isSectionVisible } from "@/lib/content/visibility";
 
 export function ArticleLibrary({
   limit = 3,
@@ -9,6 +10,7 @@ export function ArticleLibrary({
   limit?: number;
   slugs?: string[];
 }) {
+  if (!isSectionVisible("explore-library")) return null;
   const all = publishedArticles();
   const list = slugs
     ? slugs.flatMap((slug) => {
