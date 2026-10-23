@@ -181,7 +181,7 @@ export const products: Product[] = [
     clientProductId: "lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_3d638894ad732191af0214fa",
     threeMonthProductId: "prod_3d638894ad732191af0214fa_2",
     price: "Starting at $149/month",
-    image: "/images/products/nad-compounded.png",
+    image: "/images/products/nad-compounded.png?v=4",
     tagline: "Injectable NAD+ for cellular energy support under clinician direction.",
     highlight: "$149/month, three-month start, then cancel anytime.",
     description:
@@ -675,8 +675,8 @@ export function listedVariants(product: Product) {
 }
 
 const singleFormImages: Record<string, string> = {
-  "weight-loss-semaglutide": "/images/products/semaglutide-injectable.png",
-  "weight-loss-tirzepatide": "/images/products/tirzepatide-injectable.png",
+  "weight-loss-semaglutide": "/images/products/semaglutide-injectable.png?v=4",
+  "weight-loss-tirzepatide": "/images/products/tirzepatide-injectable.png?v=4",
 };
 
 /** Public view of a product. A single listed form uses that form's image and price; the other forms stay in the catalog. */
