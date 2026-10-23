@@ -1,4 +1,5 @@
 import { readSubAdmin } from "./admins";
+import { reportHandledAffiliateError } from "./report";
 import { affiliateFirebaseConfigured, affiliateFirestore } from "./firebase";
 import { adminAccountEmail, adminSessionActor } from "./session";
 
@@ -36,8 +37,8 @@ export async function adminAccountProfile() {
       avatarUrl = httpsUrl(user.photoURL);
     } catch (error) {
       const code = (error as { code?: string }).code;
-      if (code !== "auth/user-not-found") {
-        console.error("[affiliate] admin profile load failed", code ?? (error instanceof Error ? error.message : "unknown"));
+      if (code !== "auth/user-not-found" && code !== "auth/configuration-not-found") {
+        reportHandledAffiliateError("[affiliate] admin profile load failed", code ?? error);
       }
     }
   }

@@ -1,4 +1,5 @@
 import { normalizeAffiliateCode } from "./code";
+import { reportHandledAffiliateError } from "./report";
 import { affiliateFirebaseConfigured, affiliateFirestore } from "./firebase";
 import { refundObservations } from "./refunds";
 import { applyOrderRefund, loadUncommissionedPendingOrders, markPendingOrderCommissioned, pendingAffiliateCode, recordAffiliateConversion } from "./store";
@@ -47,8 +48,7 @@ async function promoCatalog() {
   try {
     return await listPromoCodes();
   } catch (error) {
-    const message = error instanceof Error ? error.message : "unknown error";
-    console.error("[affiliate] promo lookup failed", message);
+    reportHandledAffiliateError("[affiliate] promo lookup failed", error);
     return [];
   }
 }
@@ -125,8 +125,7 @@ export async function syncAttributedGenHealthSales() {
   try {
     ids = await activeAffiliateIds();
   } catch (error) {
-    const message = error instanceof Error ? error.message : "unknown error";
-    console.error("[affiliate] Gen Health sales sync failed", message);
+    reportHandledAffiliateError("[affiliate] Gen Health sales sync failed", error);
     return;
   }
 
@@ -144,8 +143,7 @@ export async function syncAttributedGenHealthSales() {
     }
     for (const order of orders) await settleRecordedOrder(order);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "unknown error";
-    console.error("[affiliate] Gen Health sales sync failed", message);
+    reportHandledAffiliateError("[affiliate] Gen Health sales sync failed", error);
   }
 
   try {
@@ -164,12 +162,10 @@ export async function syncAttributedGenHealthSales() {
         }
         await settleRecordedOrder(order);
       } catch (error) {
-        const message = error instanceof Error ? error.message : "unknown error";
-        console.error("[affiliate] Gen Health order lookup failed", orderId, message);
+        reportHandledAffiliateError(`[affiliate] Gen Health order lookup failed ${orderId}`, error);
       }
     }
   } catch (error) {
-    const message = error instanceof Error ? error.message : "unknown error";
-    console.error("[affiliate] Gen Health sales sync failed", message);
+    reportHandledAffiliateError("[affiliate] Gen Health sales sync failed", error);
   }
 }

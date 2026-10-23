@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { checkoutWasSettled } from "@/lib/cart/settled";
 import { useCart } from "./CartProvider";
 
 function productIds(search: string) {
@@ -31,6 +32,9 @@ export function CheckoutCartSync() {
     }
     if (seen.current === lineKey) return;
     seen.current = lineKey;
+    // Payment empties the bag while the frame is already on the patient portal.
+    // Rewriting the URL here would remount that frame and pull them out of it.
+    if (checkoutWasSettled()) return;
     const generation = ++request.current;
     const snapshot = items;
 
