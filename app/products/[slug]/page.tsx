@@ -163,7 +163,7 @@ export default async function ProductPage({ params }: Props) {
       <ProductHero product={visibleProduct} />
       {product.compare !== false && <PriceCompare />}
       <SiteTestimonials />
-      {visibleProduct.variants.length > 1 && <ProductVariants product={visibleProduct} />}
+      {(visibleProduct.variants?.length ?? 0) > 1 && <ProductVariants product={visibleProduct} />}
       <section className="bg-white px-6 py-16">
         <div className="mx-auto max-w-3xl">
           <h2 className="text-left font-sans text-[40px] leading-[1.1] font-medium !tracking-[-0.04em] text-[#331110]">
