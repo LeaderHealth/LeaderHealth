@@ -1,3 +1,4 @@
+import { labProductAliases } from "@/lib/content/products";
 import { genHealthRequest } from "./client";
 import type { CatalogItem, CatalogKind } from "./types";
 
@@ -233,15 +234,17 @@ export type CheckoutCatalogProduct = {
 };
 
 /**
- * Products the local checkout can sell.
+ * Products the checkout can sell.
  * That app ignores Gen Health's storefrontEligible flag, so this list keeps
  * products listCatalog() would drop for storefrontEligible or showPatient.
  * Inactive or uncategorized rows are still left out.
- * Lab panels that checkout can sell are product records, included here by id.
+ * Lab panels are the records from `/v2/client/labs`. The older product-record
+ * ids for those same panels are left out; checkout rewrites them to the lab id.
  */
 export async function listCheckoutProducts(): Promise<CheckoutCatalogProduct[]> {
-  const [rawProducts, categoryResponse] = await Promise.all([
+  const [rawProducts, rawLabs, categoryResponse] = await Promise.all([
     paginate("/v2/client/products", "products"),
+    paginate("/v2/client/labs", "labs"),
     genHealthRequest<Record<string, unknown>>("/v2/client/categories"),
   ]);
   if (!categoryResponse.success || !categoryResponse.data) {
@@ -260,15 +263,16 @@ export async function listCheckoutProducts(): Promise<CheckoutCatalogProduct[]> 
   }
   if (categoryNames.size === 0) throw new Error("Failed to load categories.");
 
+  const retiredPanelIds = new Set(Object.keys(labProductAliases));
   const items: CheckoutCatalogProduct[] = [];
   const seen = new Set<string>();
-  for (const raw of rawProducts) {
+  for (const raw of [...rawProducts, ...rawLabs]) {
     const record = asRecord(raw);
     if (!record) continue;
     const status = str(record.status).toLowerCase();
     if (status === "inactive" || status === "archived") continue;
     const clientProductId = str(record.clientProductId);
-    if (!clientProductId || seen.has(clientProductId)) continue;
+    if (!clientProductId || seen.has(clientProductId) || retiredPanelIds.has(clientProductId)) continue;
     const categoryIds = Array.isArray(record.categories) ? record.categories.map((id) => String(id)) : [];
     const names = categoryIds
       .map((id) => categoryNames.get(id))

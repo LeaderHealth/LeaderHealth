@@ -634,14 +634,41 @@ export type Lab = {
   clientProductIds?: { Men: string; Women: string };
 };
 
+/**
+ * Product-record ids these panels used to be sold under. Checkout links and
+ * saved carts still carry them. The values are the lab records Gen Health
+ * fulfills. Keep this in step with `LAB_PRODUCT_ALIASES` in the checkout app.
+ */
+export const labProductAliases: Record<string, string> = {
+  prod_2ffa3e2c3529d51fdc902bb9: "lab-quest-a530dda9-complete-lab-panel-men",
+  MOm8K4PW2aanX9qiz35M: "lab-junction-a530dda9-complete-panel-mktg-women",
+  o5OqsW4Mva0AhsKMq5E2: "lab-junction-a530dda9-advanced-panel-mktg-men",
+  "1IMJ6w6iDS0IiHYGDTWP": "lab-junction-a530dda9-advanced-panel-mktg-women",
+};
+
+export function canonicalLabProductId(id: string) {
+  const trimmed = id.trim();
+  return labProductAliases[trimmed] || trimmed;
+}
+
+export function idsForLab(lab: Lab) {
+  const current = [lab.clientProductId, lab.clientProductIds?.Men, lab.clientProductIds?.Women].filter(
+    (id): id is string => Boolean(id),
+  );
+  const aliases = Object.entries(labProductAliases)
+    .filter(([, labId]) => current.includes(labId))
+    .map(([alias]) => alias);
+  return [...current, ...aliases];
+}
+
 export const labs: Lab[] = [
   {
     slug: "labs-complete-panel",
     name: "Complete Lab",
     biomarkers: "64 biomarkers",
     clientProductIds: {
-      Men: "prod_2ffa3e2c3529d51fdc902bb9",
-      Women: "MOm8K4PW2aanX9qiz35M",
+      Men: "lab-quest-a530dda9-complete-lab-panel-men",
+      Women: "lab-junction-a530dda9-complete-panel-mktg-women",
     },
     price: "$179",
     image:
@@ -654,8 +681,8 @@ export const labs: Lab[] = [
     name: "Advanced Lab",
     biomarkers: "100 biomarkers",
     clientProductIds: {
-      Men: "o5OqsW4Mva0AhsKMq5E2",
-      Women: "1IMJ6w6iDS0IiHYGDTWP",
+      Men: "lab-junction-a530dda9-advanced-panel-mktg-men",
+      Women: "lab-junction-a530dda9-advanced-panel-mktg-women",
     },
     price: "$399",
     recommended: true,
@@ -713,9 +740,7 @@ export function listedClientProductIds() {
     }
   }
   for (const lab of labs) {
-    add(lab.clientProductId);
-    add(lab.clientProductIds?.Men);
-    add(lab.clientProductIds?.Women);
+    for (const id of idsForLab(lab)) add(id);
   }
   return ids;
 }
