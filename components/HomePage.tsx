@@ -875,16 +875,14 @@ export function HomePage() {
                 className="show-up-photo object-cover"
                 sizes="(min-width: 768px) 582px, 92vw"
               />
-              <div
-                aria-hidden
-                className="pointer-events-none absolute inset-0"
-                style={{
-                  background:
-                    "linear-gradient(160deg, rgba(26, 8, 8, 0.74) 0%, rgba(26, 8, 8, 0.44) 45%, rgba(26, 8, 8, 0.1) 70%)",
-                }}
-              />
-              <div className="relative z-10 flex h-full flex-col justify-between px-[22px] pb-[22px] pt-10">
-                <div>
+              <div className="relative z-10 flex h-full flex-col justify-between">
+                <div
+                  className="px-[22px] pt-10 pb-24"
+                  style={{
+                    background:
+                      "linear-gradient(to bottom, rgba(26, 8, 8, 0.86) 0%, rgba(26, 8, 8, 0.82) calc(100% - 6rem), rgba(26, 8, 8, 0.36) calc(100% - 2.75rem), rgba(26, 8, 8, 0) 100%)",
+                  }}
+                >
                   <h3 className="max-w-[538px] font-sans text-[28px] font-medium leading-[1.2] tracking-normal text-[#f7f3f4] md:text-[34px] md:leading-[40.8px]">
                     Provider-Guided Weight Loss
                   </h3>
@@ -926,15 +924,14 @@ export function HomePage() {
                 className="show-up-photo object-cover"
                 sizes="(min-width: 768px) 582px, 92vw"
               />
-              <div
-                aria-hidden
-                className="pointer-events-none absolute inset-0"
-                style={{
-                  background:
-                    "linear-gradient(0deg, rgba(26, 8, 8, 0.7) 0%, rgba(26, 8, 8, 0.3) 40%, rgba(26, 8, 8, 0) 65%)",
-                }}
-              />
-              <div className="relative z-10 flex h-full flex-col justify-end px-[22px] pb-[22px] pt-10">
+              <div className="relative z-10 flex h-full flex-col justify-end">
+                <div
+                  className="px-[22px] pt-28 pb-[22px]"
+                  style={{
+                    background:
+                      "linear-gradient(to top, rgba(26, 8, 8, 0.88) 0%, rgba(26, 8, 8, 0.86) calc(100% - 7rem), rgba(26, 8, 8, 0.4) calc(100% - 3.25rem), rgba(26, 8, 8, 0) 100%)",
+                  }}
+                >
                 <h3 className="max-w-[345px] font-sans text-[28px] font-medium leading-[40.8px] tracking-normal text-[#f7f3f4] md:text-[34px]">
                   Care Built Around You
                 </h3>
@@ -960,6 +957,7 @@ export function HomePage() {
                       →
                     </span>
                   </Link>
+                </div>
                 </div>
               </div>
             </article>
