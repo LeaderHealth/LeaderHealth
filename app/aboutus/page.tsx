@@ -160,7 +160,7 @@ export default function AboutPage() {
               <br className="hidden min-[1200px]:block" /> Meets Care
             </h2>
             <p className="mt-3.5 max-w-[36rem] font-sans text-[16px] leading-[1.72] min-[1200px]:text-[18px]">
-              Personalized therapies for hormones, weight, and vitality — guided by doctors, backed by research,
+              Personalized therapies for hormones, weight, and vitality — guided by doctors, rooted in science,
               designed for real results.
             </p>
             <h2
