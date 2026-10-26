@@ -8,6 +8,7 @@ import { assets, GET_STARTED_URL, PORTAL_URL, site } from "@/lib/content/site";
 import { getProduct } from "@/lib/content/products";
 import { searchHref, searchSuggestions } from "@/lib/search";
 import {
+  categoryMenuArt,
   findMegaCategory,
   menDefaultCard,
   menMegaCategories,
@@ -36,12 +37,28 @@ const whoRows = [
 ];
 
 type RootTile =
-  | { label: string; image: string; screen: { name: "who" } | { name: "audience"; audience: Audience } }
-  | { label: string; image: string; href: string };
+  | {
+      label: string;
+      image: string;
+      imagePosition?: string;
+      imageScale?: number;
+      screen: { name: "who" } | { name: "audience"; audience: Audience };
+    }
+  | { label: string; image: string; imagePosition?: string; imageScale?: number; href: string };
 
 const rootTiles: RootTile[] = [
-  { label: "Women", image: assets.stretching, screen: { name: "audience", audience: "women" } },
-  { label: "Men", image: assets.weightlifting, screen: { name: "audience", audience: "men" } },
+  {
+    label: "Women",
+    image: "/images/shop-women-hero.jpg",
+    imagePosition: "center 32%",
+    screen: { name: "audience", audience: "women" },
+  },
+  {
+    label: "Men",
+    image: assets.weightlifting,
+    imageScale: 1.26,
+    screen: { name: "audience", audience: "men" },
+  },
   { label: "Who Are We?", image: assets.showUp, screen: { name: "who" } },
   { label: "Shop All Products", image: assets.shopHero, href: "/shop-all-products" },
   {
@@ -52,6 +69,8 @@ const rootTiles: RootTile[] = [
 ];
 
 function categoryImage(category: MegaCategory) {
+  const key = category.id === "weight-loss" ? "weight" : category.id;
+  if (key in categoryMenuArt) return categoryMenuArt[key as keyof typeof categoryMenuArt];
   return category.card.image || assets.shopHero;
 }
 
@@ -331,12 +350,16 @@ function ImageTile({
 }
 
 function FeaturedCard({ label, card }: { label: string; card: FeatureCard }) {
+  const slug = card.href.split("/").filter(Boolean).pop() ?? "";
+  const learnMore =
+    slug === "women-hormone-therapy" || slug === "weight-loss-semaglutide" || slug === "longevity-nad";
+
   return (
     <div className="pt-5 pb-1">
       <p className="text-[12px] leading-4 font-medium text-white/70">{label}</p>
       <Link
         href={card.href}
-        className={`mt-2 block overflow-hidden rounded-[12px] bg-white p-2 text-ink ${tapFocus} focus-visible:outline-ink`}
+        className={`group mt-2 block overflow-hidden rounded-[12px] bg-white p-2 text-ink ${tapFocus} focus-visible:outline-ink`}
       >
         <div className="relative aspect-[5/4] overflow-hidden rounded-[10px] bg-ink">
           {card.image ? (
@@ -354,6 +377,23 @@ function FeaturedCard({ label, card }: { label: string; card: FeatureCard }) {
           <p className="text-[20px] leading-tight font-bold break-words">{card.heading}</p>
           <p className="mt-1 text-[14px] leading-snug text-ink/75 break-words">{card.subline}</p>
           <p className="mt-1.5 text-[13px] font-medium">{card.price}</p>
+          {learnMore ? (
+            <span className="relative mt-3 inline-flex h-10 items-center justify-center overflow-hidden rounded-full bg-[#331110] px-6 text-[13px] font-semibold text-[#F7F3F5]">
+              <span
+                aria-hidden
+                className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#5A3431] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
+              />
+              <span className="relative z-10 whitespace-nowrap transition-transform duration-[400ms] ease-out group-hover:-translate-x-[15px] motion-reduce:translate-x-0! motion-reduce:transition-none">
+                Find out more
+              </span>
+              <span
+                aria-hidden
+                className="pointer-events-none absolute top-1/2 right-0 z-10 -translate-y-1/2 translate-x-full transition-transform duration-[400ms] ease-out group-hover:translate-x-[calc(100%-28px)] motion-reduce:translate-x-full! motion-reduce:transition-none"
+              >
+                →
+              </span>
+            </span>
+          ) : null}
         </div>
       </Link>
     </div>
@@ -728,7 +768,7 @@ export function MobileNav({
             ref={scrollRef}
             data-fade={scrollFade}
             onScroll={updateFade}
-            className={`lh-mobile-nav-scroll min-h-0 min-w-0 flex-1 ${menuPad} pb-10`}
+            className={`lh-mobile-nav-scroll min-h-0 min-w-0 flex-1 ${screen.name === "root" && !query.trim() ? "flex flex-col" : ""} ${menuPad} pb-10`}
           >
             {showSearch ? (
               <div className="mb-3.5" style={introStyle(revealed, intro, reducedMotion, 120, 220, 8)}>
@@ -738,7 +778,7 @@ export function MobileNav({
 
             <div
               key={screenKey}
-              className="motion-safe:transition-[opacity,transform] motion-safe:duration-200 motion-safe:ease-out [@starting-style]:translate-x-2 [@starting-style]:opacity-0"
+              className={`motion-safe:transition-[opacity,transform] motion-safe:duration-200 motion-safe:ease-out [@starting-style]:translate-x-2 [@starting-style]:opacity-0 ${screen.name === "root" && !query.trim() ? "flex min-h-0 flex-1 flex-col" : ""}`}
             >
               {query.trim() && showSearch ? (
                 <div className="rounded-2xl bg-white/10">
@@ -839,13 +879,36 @@ function MobileScreenView({
 }) {
   if (screen.name === "root") {
     return (
-      <div className="flex flex-col gap-2.5">
+      <div className="flex min-h-0 flex-1 flex-col gap-2.5">
         {rootTiles.filter((tile) => !("href" in tile) || isPublicHref(tile.href)).map((tile, index) => {
           const motion = introStyle(revealed, intro, reducedMotion, 180 + index * 40, 260, 12);
-          const className = `relative flex h-[clamp(82px,21.5vw,90px)] w-full overflow-hidden rounded-[10px] bg-ink ${tapFocus}`;
+          const className = `relative flex h-full min-h-[5.75rem] w-full flex-1 overflow-hidden rounded-[10px] bg-ink ${tapFocus}`;
           const content = (
             <>
-              <Image src={tile.image} alt="" fill className="object-cover object-center" sizes="400px" />
+              {tile.imageScale ? (
+                <Image
+                  src={tile.image}
+                  alt=""
+                  width={2496}
+                  height={1664}
+                  className="absolute top-0 h-auto max-w-none"
+                  style={{
+                    width: `${tile.imageScale * 100}%`,
+                    height: "auto",
+                    left: `${(1 - tile.imageScale) * 100}%`,
+                  }}
+                  sizes="480px"
+                />
+              ) : (
+                <Image
+                  src={tile.image}
+                  alt=""
+                  fill
+                  className="object-cover"
+                  style={{ objectPosition: tile.imagePosition ?? "center" }}
+                  sizes="400px"
+                />
+              )}
               <span className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
               <span className="absolute right-3 bottom-2.5 left-3 flex items-end justify-between gap-3">
                 <span className="min-w-0 text-[16px] leading-snug font-bold break-words">{tile.label}</span>
@@ -858,7 +921,7 @@ function MobileScreenView({
 
           if ("href" in tile) {
             return (
-              <div key={tile.label} style={motion}>
+              <div key={tile.label} style={motion} className="flex min-h-[5.75rem] flex-1 flex-col">
                 <Link href={tile.href} className={className}>
                   {content}
                 </Link>
@@ -868,7 +931,7 @@ function MobileScreenView({
 
           const { screen } = tile;
           return (
-            <div key={tile.label} style={motion}>
+            <div key={tile.label} style={motion} className="flex min-h-[5.75rem] flex-1 flex-col">
               <button
                 type="button"
                 onClick={() => {

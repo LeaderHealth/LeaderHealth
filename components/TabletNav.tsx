@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { categoryMenuArt } from "@/lib/content/nav";
 import { GET_STARTED_URL, PORTAL_URL } from "@/lib/content/site";
 import { isPublicHref, showIntakeCta } from "@/lib/content/visibility";
 import type { SearchHit } from "@/lib/search";
@@ -24,14 +25,7 @@ type TabletCard = {
   overlay?: boolean;
 };
 
-const art = {
-  hormone: "https://framerusercontent.com/images/0Dc1AHzfwqI1KOT0DPkVQC15OJc.png?width=1243&height=829",
-  sexual: "https://framerusercontent.com/images/49YJbEpaofXSfvWXDy61AIkQ6B8.png?width=955&height=637",
-  weight: "https://framerusercontent.com/images/QA1T6u9qvcx7CQjYHi0OoXD8.png?width=855&height=570",
-  longevity: "https://framerusercontent.com/images/JEVbW8is3dGZ8TcfoGQtiV5Clos.png?width=1029&height=686",
-  labs: "https://framerusercontent.com/images/Q44i4peG4DmvEogvXXYSxkQO4.png?width=1063&height=709",
-  peptides: "https://framerusercontent.com/images/afGkBI82CZ5CHahlNzZPk7a5SIk.png?width=1536&height=1024",
-};
+const art = categoryMenuArt;
 
 const menCards: TabletCard[] = [
   {

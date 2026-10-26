@@ -103,6 +103,15 @@ export const longevityCategory: MegaCategory = {
   card: productCard("longevity-nad"),
 };
 
+export const categoryMenuArt = {
+  hormone: "https://framerusercontent.com/images/0Dc1AHzfwqI1KOT0DPkVQC15OJc.png?width=1243&height=829",
+  sexual: "https://framerusercontent.com/images/49YJbEpaofXSfvWXDy61AIkQ6B8.png?width=955&height=637",
+  weight: "https://framerusercontent.com/images/QA1T6u9qvcx7CQjYHi0OoXD8.png?width=855&height=570",
+  longevity: "https://framerusercontent.com/images/JEVbW8is3dGZ8TcfoGQtiV5Clos.png?width=1029&height=686",
+  labs: "https://framerusercontent.com/images/Q44i4peG4DmvEogvXXYSxkQO4.png?width=1063&height=709",
+  peptides: "https://framerusercontent.com/images/afGkBI82CZ5CHahlNzZPk7a5SIk.png?width=1536&height=1024",
+} as const;
+
 export const menDefaultCard: FeatureCard = {
   ...productCard("weight-loss-semaglutide"),
   image: "/images/featured/semaglutide-vial.jpg",
