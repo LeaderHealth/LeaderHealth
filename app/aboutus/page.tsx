@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { DrawRule, Reveal, RevealGroup, RevealItem, RevealPhoto } from "@/components/about/AboutMotion";
 import { HeroTitleFade } from "@/components/HeroTitleFade";
 import { assets, GET_STARTED_URL } from "@/lib/content/site";
-import { showIntakeCta } from "@/lib/content/visibility";
+import { isSectionVisible, showIntakeCta } from "@/lib/content/visibility";
 
 export const metadata: Metadata = { title: "About Us" };
 
@@ -297,6 +297,7 @@ export default function AboutPage() {
         </div>
       </section>
 
+      {isSectionVisible("personalized-care") ? (
       <section className="py-12 min-[1200px]:pt-12 min-[1200px]:pb-12" style={{ backgroundImage: warmPanel }}>
         <div className="mx-auto flex w-full max-w-[1200px] flex-col items-center gap-8 px-6 min-[1000px]:flex-row min-[1000px]:items-start min-[1000px]:gap-16 min-[1000px]:px-10 min-[1200px]:gap-20 min-[1200px]:px-4">
           <Reveal className="relative h-[433px] w-full max-w-[322px] overflow-hidden rounded-[28px] min-[1000px]:h-[635px] min-[1000px]:max-w-none min-[1000px]:w-[467px] min-[1000px]:shrink-0 min-[1000px]:rounded-[16px]">
@@ -330,6 +331,7 @@ export default function AboutPage() {
           </Reveal>
         </div>
       </section>
+      ) : null}
 
       <section className="bg-[#F7F3F5] px-6 pt-16 pb-16 min-[1000px]:px-10 min-[1200px]:px-16 min-[1200px]:pt-24 min-[1200px]:pb-20">
         <Reveal>
