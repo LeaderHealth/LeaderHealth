@@ -109,9 +109,8 @@ export const menDefaultCard: FeatureCard = {
   imagePosition: "center 46%",
 };
 export const womenDefaultCard: FeatureCard = {
-  ...productCard("women-hormone-therapy"),
-  image: "/images/featured/womens-hormone-therapy.jpg",
-  imagePosition: "center 68%",
+  ...productCard("longevity-nad"),
+  image: "/images/featured/nad-injection.jpg",
 };
 
 export const menMegaCategories: MegaCategory[] = [

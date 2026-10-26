@@ -13,6 +13,7 @@ import {
   menDefaultCard,
   menMegaCategories,
   visibleMegaCategories,
+  womenDefaultCard,
   womenMegaCategories,
 } from "@/lib/content/nav";
 import { cartItemFromSlug } from "@/lib/cart/items";
@@ -86,7 +87,8 @@ function FeatureCardLink({
   const amount = card.price.match(/\$[\d,]+(?:\.\d+)?/)?.[0] ?? card.price;
   const slug = card.href.split("/").filter(Boolean).pop() ?? "";
   const cartItem = cartItemFromSlug(slug);
-  const learnMore = slug === "women-hormone-therapy" || slug === "weight-loss-semaglutide";
+  const learnMore =
+    slug === "women-hormone-therapy" || slug === "weight-loss-semaglutide" || slug === "longevity-nad";
   const actionClass =
     "group relative inline-flex h-10 min-h-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#331110] px-6 text-[13px] font-semibold text-[#F7F3F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#331110]";
   const actionLabel = (
@@ -889,7 +891,7 @@ export function Header() {
               shift
               categories={visibleMegaCategories(womenMegaCategories)}
               shopAll={{ href: "/shop-women-products", label: "Shop All For Women →" }}
-              defaultCard={visibleMegaCategories(womenMegaCategories)[0]?.card ?? menDefaultCard}
+              defaultCard={womenDefaultCard}
               featureLabel="Popular Therapies"
             />
 

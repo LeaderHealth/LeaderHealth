@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { PORTAL_URL } from "@/lib/content/site";
 
 const CLOSE_MS = 320;
@@ -135,8 +136,9 @@ export function ProductSignupPrompt() {
   return (
     <>
       <div ref={sentinelRef} aria-hidden className="h-px w-full bg-white" />
-      {phase === "open" ? (
-        <div className="fixed inset-0 z-[70]">
+      {phase === "open"
+        ? createPortal(
+        <div className="fixed inset-0 z-[90]">
           <div
             className={`absolute inset-0 bg-[#331110]/45 backdrop-blur-[3px] transition-opacity duration-[320ms] motion-reduce:transition-none ${
               entered ? "opacity-100" : "opacity-0"
@@ -205,7 +207,8 @@ export function ProductSignupPrompt() {
               Continue browsing
             </button>
           </div>
-        </div>
+        </div>,
+        document.body,
       ) : null}
     </>
   );
