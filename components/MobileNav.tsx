@@ -11,6 +11,7 @@ import {
   findMegaCategory,
   menDefaultCard,
   menMegaCategories,
+  womenDefaultCard,
   type FeatureCard,
   type MegaCategory,
   type MegaItem,
@@ -103,8 +104,7 @@ function listItems(audience: Audience, categoryId: string): MegaItem[] {
 
 function featuredFor(audience: Audience): { label: string; card: FeatureCard } {
   const label = audience === "men" ? "Explore Popular Treatment" : "Popular Therapies";
-  const categories = visibleMegaCategories(audience === "men" ? menMegaCategories : womenMegaCategories);
-  const card = audience === "men" ? menDefaultCard : (categories[0]?.card ?? menDefaultCard);
+  const card = audience === "men" ? menDefaultCard : womenDefaultCard;
   return { label, card };
 }
 

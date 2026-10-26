@@ -1,4 +1,4 @@
-import { labs, products, type Audience, type Category } from "@/lib/content/products";
+import { idsForLab, labs, products, type Audience, type Category } from "@/lib/content/products";
 import { catalogProductLabels, groupProductsByCategory, type CatalogProductLabel } from "@/lib/genhealth/catalog";
 
 function localCategory(category: Category, audience: Audience) {
@@ -24,9 +24,7 @@ function localProductNames() {
     }
   }
   for (const lab of labs) {
-    add(lab.clientProductId, lab.name, "Labs");
-    add(lab.clientProductIds?.Men, lab.name, "Labs");
-    add(lab.clientProductIds?.Women, lab.name, "Labs");
+    for (const id of idsForLab(lab)) add(id, lab.name, "Labs");
   }
   return names;
 }
