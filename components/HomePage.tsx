@@ -168,7 +168,8 @@ const careOptions = [
     image: "/images/products/testosterone-cypionate.png",
     width: 461,
     height: 984,
-    imageScale: 1.12,
+    imageScale: 1.243,
+    imageShift: "3.16%",
   },
   {
     href: "/products/men-sexual-health-combo-troches",
@@ -188,7 +189,7 @@ const careOptions = [
     image: "/images/products/nad-compounded.png?v=4",
     width: 1122,
     height: 1402,
-    imageScale: 0.81,
+    imageScale: 0.907,
   },
   {
     href: "/products/weight-loss-semaglutide",
@@ -198,7 +199,7 @@ const careOptions = [
     image: "/images/products/semaglutide-injectable.png?v=4",
     width: 1122,
     height: 1402,
-    imageScale: 0.81,
+    imageScale: 0.907,
   },
   {
     href: "/labs/labs-advance-panel",
@@ -628,7 +629,10 @@ export function HomePage() {
                       alt=""
                       width={item.width}
                       height={item.height}
-                      style={{ scale: item.imageScale }}
+                      style={{
+                        scale: item.imageScale,
+                        ...("imageShift" in item && item.imageShift ? { translate: `0 ${item.imageShift}` } : {}),
+                      }}
                       className="h-auto max-h-[240px] w-auto max-w-[88%] origin-center object-contain"
                     />
                   </div>
