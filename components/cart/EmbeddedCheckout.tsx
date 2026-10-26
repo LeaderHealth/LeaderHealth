@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
+import { portalHandoffUrl } from "@/lib/cart/portalHandoff";
 import { CHECKOUT_PAID_MESSAGE, clearCheckoutSettled, markCheckoutSettled } from "@/lib/cart/settled";
 import { useCart } from "./CartProvider";
 
@@ -22,15 +23,17 @@ export function EmbeddedCheckout({ src, frameKey }: { src: string; frameKey: str
   const visit = useRef<string | null>(null);
   const settleRef = useRef(() => {});
 
-  function settle() {
+  const settle = useCallback(() => {
     if (settled.current) return;
     settled.current = true;
     markCheckoutSettled();
     clear();
     closeCart();
-  }
+  }, [clear, closeCart]);
 
-  settleRef.current = settle;
+  useEffect(() => {
+    settleRef.current = settle;
+  }, [settle]);
 
   useEffect(() => {
     const firstVisit = visit.current === null;
@@ -53,9 +56,19 @@ export function EmbeddedCheckout({ src, frameKey }: { src: string; frameKey: str
     });
 
     function onMessage(event: MessageEvent) {
-      if (event.source !== frameRef.current?.contentWindow) return;
+      const frame = frameRef.current;
+      if (!frame || event.source !== frame.contentWindow) return;
       if (!event.data || event.data.type !== CHECKOUT_PAID_MESSAGE) return;
+      let frameOrigin = "";
+      try {
+        frameOrigin = new URL(frame.src).origin;
+      } catch {
+        return;
+      }
+      if (event.origin !== frameOrigin) return;
+      const portalUrl = portalHandoffUrl(event.data.url);
       settleRef.current();
+      if (portalUrl) window.location.assign(portalUrl);
     }
 
     window.addEventListener("message", onMessage);
