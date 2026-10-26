@@ -14,8 +14,8 @@ const heroImage = "https://framerusercontent.com/images/7jQVmW4yiq3pvyrl3im6JIvO
 
 const collage = [
   {
-    src: "https://framerusercontent.com/images/pJuQJ6GVQHWdbE5f53l3qpW3gOM.png?width=1200&height=896",
-    alt: "Hand holding a smartphone displaying a Leader Health dose reminder screen reading \"Time for your dose\" with a progress ring and \"Mark as done\" button.",
+    src: "/images/about-jogging.jpg",
+    alt: "A woman and a man jogging together on a sunlit street.",
   },
   {
     src: "https://framerusercontent.com/images/eS2i5fcV2jlzXSBJTEcJGOKVqCA.png?width=1391&height=1391",
@@ -160,7 +160,7 @@ export default function AboutPage() {
               <br className="hidden min-[1200px]:block" /> Meets Care
             </h2>
             <p className="mt-3.5 max-w-[36rem] font-sans text-[16px] leading-[1.72] min-[1200px]:text-[18px]">
-              Personalized therapies for hormones, weight, and vitality — guided by doctors, backed by research,
+              Personalized therapies for hormones, weight, and vitality — guided by doctors, rooted in science,
               designed for real results.
             </p>
             <h2
