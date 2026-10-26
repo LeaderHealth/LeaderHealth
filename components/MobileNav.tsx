@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
+import { CartButton } from "@/components/cart/CartButton";
 import { assets, GET_STARTED_URL, PORTAL_URL, site } from "@/lib/content/site";
 import { getProduct } from "@/lib/content/products";
 import { searchHref, searchSuggestions } from "@/lib/search";
@@ -632,6 +633,7 @@ export function MobileNav({
         : "none";
 
   return (
+    <>
     <div
       ref={shellRef}
       className={`lh-site-header fixed inset-0 z-50 min-[765px]:hidden touch-manipulation overflow-x-hidden ${
@@ -855,6 +857,14 @@ export function MobileNav({
         </div>
       </div>
     </div>
+    <div
+      className={`fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-[55] min-[765px]:hidden transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none ${
+        phase === "closed" ? "" : "pointer-events-none scale-90 opacity-0"
+      }`}
+    >
+      <CartButton className="h-14 w-14 bg-[#331110] text-white shadow-[0_10px_28px_rgba(51,17,16,0.32)] hover:bg-[#4a221f] [&_svg]:h-6 [&_svg]:w-6" />
+    </div>
+    </>
   );
 }
 

@@ -303,13 +303,28 @@ export function TabletNavBar({
         aria-label="Search"
         aria-expanded={panel === "search"}
         onClick={() => onToggle("search")}
-        className="grid h-11 w-11 place-items-center rounded-full border border-white/35 bg-white/10 text-white transition-[background-color,transform] duration-200 ease-out hover:bg-white/20 active:scale-[0.97] aria-expanded:bg-white/20 motion-reduce:transform-none"
+        className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-white/35 bg-white/10 text-white transition-[background-color,transform] duration-200 ease-out hover:bg-white/20 active:scale-[0.97] aria-expanded:bg-white/20 motion-reduce:transform-none"
       >
         <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden>
           <circle cx="11" cy="11" r="6.25" stroke="currentColor" strokeWidth="1.8" />
           <path d="m16 16 4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
         </svg>
       </button>
+      <a
+        href={PORTAL_URL}
+        className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full border border-white/35 bg-white/10 px-3 font-sans text-[15px] font-medium text-white transition-[background-color,transform] duration-200 ease-out hover:bg-white/20 active:scale-[0.98] motion-reduce:transform-none motion-reduce:transition-none"
+      >
+        Patient Portal
+        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden>
+          <circle cx="12" cy="8" r="3.2" stroke="currentColor" strokeWidth="1.8" />
+          <path
+            d="M5.5 18.5c1.2-2.6 3.5-4 6.5-4s5.3 1.4 6.5 4"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+          />
+        </svg>
+      </a>
       {showIntakeCta(GET_STARTED_URL) ? (
         <a
           href={GET_STARTED_URL}

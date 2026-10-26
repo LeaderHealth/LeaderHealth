@@ -2,16 +2,28 @@
 
 import { useCart } from "./CartProvider";
 
-export function CartButton({ compact = false }: { compact?: boolean }) {
+export function CartButton({
+  compact = false,
+  className = "",
+  onOpen,
+}: {
+  compact?: boolean;
+  className?: string;
+  onOpen?: () => void;
+}) {
   const { count, ready, openCart } = useCart();
   const visibleCount = ready ? count : 0;
+  const size = className || (compact ? "h-7 w-7 bg-white/15 hover:bg-white/25 sm:h-8 sm:w-8" : "h-8 w-10 bg-white/15 hover:bg-white/25");
 
   return (
     <button
       type="button"
       aria-label={visibleCount ? `Open cart, ${visibleCount} items` : "Open cart"}
-      onClick={openCart}
-      className={`relative grid place-items-center rounded-full bg-white/15 transition-[transform,background-color] duration-200 ease-out hover:scale-[1.06] hover:bg-white/25 active:scale-95 ${compact ? "h-7 w-7 sm:h-8 sm:w-8" : "h-8 w-10"}`}
+      onClick={() => {
+        onOpen?.();
+        openCart();
+      }}
+      className={`relative grid place-items-center rounded-full transition-[transform,background-color] duration-200 ease-out hover:scale-[1.06] active:scale-95 ${size}`}
     >
       <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden>
         <path

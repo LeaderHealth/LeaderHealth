@@ -895,6 +895,13 @@ export function Header() {
         onClose={() => setMobile(false)}
       />
 
+      <div className="lh-tablet-cart-fab fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-[55]">
+        <CartButton
+          onOpen={() => setTabletPanel(null)}
+          className="h-14 w-14 bg-[#331110] text-white shadow-[0_10px_28px_rgba(51,17,16,0.32)] hover:bg-[#4a221f] [&_svg]:h-6 [&_svg]:w-6"
+        />
+      </div>
+
       <header
         ref={headerRef}
         className={`lh-site-header lh-tablet-header pointer-events-none fixed inset-x-0 top-2 z-50 hidden justify-center px-2 transition-transform duration-300 ease-out min-[765px]:flex sm:top-3 sm:px-3 md:top-4 ${

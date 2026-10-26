@@ -742,6 +742,10 @@ h3.font-sans,
   display: none;
 }
 
+.lh-tablet-cart-fab {
+  display: none;
+}
+
 @media (min-width: 765px) and (max-width: 1199px) {
   .lh-tablet-header {
     top: 12px;
@@ -810,6 +814,10 @@ h3.font-sans,
 
   .lh-tablet-bar {
     display: flex;
+  }
+
+  .lh-tablet-cart-fab {
+    display: block;
   }
 
   .lh-tablet-panel {
