@@ -594,7 +594,7 @@ export function MobileNav({
   return (
     <div
       ref={shellRef}
-      className={`fixed inset-0 z-50 min-[765px]:hidden touch-manipulation overflow-x-hidden ${
+      className={`lh-site-header fixed inset-0 z-50 min-[765px]:hidden touch-manipulation overflow-x-hidden ${
         showBar ? "translate-y-0" : "-translate-y-[calc(100%+1rem)]"
       } ${phase === "closed" ? "pointer-events-none" : ""} transition-transform duration-300 ease-out motion-reduce:transition-none`}
     >

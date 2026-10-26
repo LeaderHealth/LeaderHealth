@@ -720,6 +720,20 @@ h3.font-sans,
   }
 }
 
+/* After Restart My Purchase, the shop is inside the checkout frame. Hide the
+   checkout page navbar and let the shop page's own navbar sit at the top. */
+html[data-checkout-left="1"] .lh-site-header {
+  display: none;
+}
+
+html[data-checkout-left="1"] .lh-checkout-page {
+  padding-top: 0;
+}
+
+html[data-checkout-left="1"] .lh-checkout-frame {
+  height: 100dvh;
+}
+
 .lh-mobile-nav-scroll[data-fade="both"] {
   -webkit-mask-image: linear-gradient(
     to bottom,
