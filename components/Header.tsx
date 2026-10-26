@@ -327,9 +327,6 @@ function MegaCategoryPane({
                 </button>
               );
             })}
-        {drilled ? null : (
-          <p className="mt-1 text-[13px] font-medium text-white/60">More is coming soon.</p>
-        )}
       </div>
     </div>
   );
