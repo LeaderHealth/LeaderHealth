@@ -25,6 +25,7 @@ const campaign = [
     title: "Transform Your Body",
     sub: "with Compounded Tirzepatide",
     img: "https://framerusercontent.com/images/wLJd6Casd45671gr7VQ42JuQQkE.png?width=1080&height=1350",
+    tabletScale: 1.039,
   },
   {
     href: "/products/men-trt-testosterone-cypionate",
@@ -36,6 +37,8 @@ const campaign = [
     // offset drops it onto the same line as the other two tiles.
     imageScale: 1.6,
     imageOffset: "4.06%",
+    tabletScale: 1.657,
+    tabletShift: "4.21%",
   },
   {
     href: "/products/weight-loss-semaglutide",
@@ -45,6 +48,7 @@ const campaign = [
     // The vial fills less of this frame than the testosterone file, so a smaller
     // scale lands it on the same height.
     imageScale: 1.16,
+    tabletScale: 1.21,
   },
 ];
 
@@ -804,16 +808,35 @@ export function HomePage() {
         </div>
       </section>
 
-      <section ref={showUpRef} data-phase={showUpPhase} className="show-up-scene relative overflow-hidden rounded-t-[25px]">
+      <section ref={showUpRef} data-phase={showUpPhase} className="show-up-scene relative overflow-hidden bg-[#F7797D] min-[1200px]:rounded-t-[25px] min-[1200px]:bg-transparent">
+        <div className="show-up-tablet-frame pointer-events-none absolute top-0">
+          <Image
+            src="/images/show-up-tablet.png?v=5"
+            alt="A man looking down at a red Leader Health case on a sunlit ledge."
+            width={941}
+            height={585}
+            sizes="120vw"
+            quality={100}
+            className="show-up-bg h-auto w-full"
+          />
+        </div>
         <Image
           src={assets.showUp}
           alt="A man standing beside an oversized LeaderHealth tablet embossed with the LH monogram."
           width={2720}
           height={1536}
-          className="show-up-bg absolute inset-0 h-full w-full object-cover"
+          className="show-up-bg absolute inset-0 hidden h-full w-full object-cover min-[1200px]:block"
         />
-        <div className="relative mx-auto w-[min(1174px,calc(100%-2rem))] pb-16 pt-[72px]">
-          <h2 className="text-center font-sans text-[40px] font-medium leading-[1.1] tracking-normal text-[#331110] md:text-[56px] md:leading-[61.6px]">
+        <div className="relative mx-auto w-[min(1174px,calc(100%-2rem))] pb-16 min-[1200px]:pt-[72px]">
+          <div className="min-h-[calc(46vw+5.5rem)] px-2 pt-8 md:min-h-[calc(46vw+5.75rem)] md:pt-10 min-[1200px]:hidden">
+            <h2 className="text-center font-sans text-[40px] font-medium leading-[0.95] tracking-normal text-[#331110] md:text-[56px] md:leading-[61.6px]">
+              <span className="inline">Show Up</span>{" "}
+              <span className="inline font-serif-italic text-[40px] leading-[0.95] text-[#e43d4e] md:text-[56px] md:leading-[61.6px]">
+                Stronger
+              </span>
+            </h2>
+          </div>
+          <h2 className="hidden text-center font-sans text-[40px] font-medium leading-[1.1] tracking-normal text-[#331110] min-[1200px]:block md:text-[56px] md:leading-[61.6px]">
             Show Up <span className="font-serif-italic text-[40px] leading-[1.1] text-[#e43d4e] md:text-[56px] md:leading-[61.6px]">Stronger</span>
           </h2>
           <div className="mt-7 flex justify-center">
@@ -938,7 +961,7 @@ export function HomePage() {
             </article>
           </div>
 
-          <div id="our-top-3" className="relative z-10 mt-2.5 scroll-mt-24 grid items-stretch gap-2.5 md:grid-cols-3">
+          <div id="our-top-3" className="relative z-10 mt-2.5 scroll-mt-24 grid items-stretch gap-2.5 min-[1200px]:grid-cols-3">
             {visibleCampaign.map((card, index) => (
               <div
                 key={card.href}
@@ -949,7 +972,7 @@ export function HomePage() {
               >
               <Link
                 href={card.href}
-                className="group relative flex h-[660px] w-full flex-col overflow-hidden rounded-[22px] bg-[#442928] px-6 pt-8 pb-7 transition-colors duration-300 ease-out hover:bg-[#e6d8c6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e33d4d] motion-reduce:transition-none md:h-[860px] md:px-8 md:pt-10 md:pb-10"
+                className="show-up-campaign-link group relative flex h-[660px] w-full flex-col overflow-hidden rounded-[22px] bg-[#442928] px-6 pt-8 pb-7 transition-colors duration-300 ease-out hover:bg-[#e6d8c6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e33d4d] motion-reduce:transition-none min-[1200px]:h-[860px] min-[1200px]:px-8 min-[1200px]:pt-10 min-[1200px]:pb-10"
               >
                 <span
                   aria-hidden
@@ -961,29 +984,37 @@ export function HomePage() {
                 </span>
                 <div className="show-up-vial flex min-h-0 flex-1 items-center justify-center">
                   <div
-                    className="w-fit"
-                    style={card.imageOffset ? { transform: `translateY(${card.imageOffset})` } : undefined}
+                    className="w-fit max-md:translate-y-[var(--campaign-offset)] min-[1200px]:translate-y-[var(--campaign-offset)]"
+                    style={card.imageOffset ? ({ "--campaign-offset": card.imageOffset } as CSSProperties) : undefined}
                   >
                     <Image
                       src={card.img}
                       alt=""
                       width={1080}
                       height={1350}
-                      style={card.imageScale ? ({ "--campaign-scale": card.imageScale } as CSSProperties) : undefined}
-                      className={`h-[420px] w-auto max-w-none shrink-0 origin-center object-contain transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:-translate-y-2 motion-reduce:transition-none motion-reduce:group-hover:translate-y-0 md:h-[560px] ${card.imageScale ? "scale-[var(--campaign-scale)] group-hover:scale-[calc(var(--campaign-scale)*1.045)] motion-reduce:scale-[var(--campaign-scale)] motion-reduce:group-hover:scale-[var(--campaign-scale)]" : "group-hover:scale-[1.045] motion-reduce:group-hover:scale-100"}`}
+                      style={
+                        {
+                          ...(card.imageScale ? { "--campaign-scale": card.imageScale } : {}),
+                          ...(card.tabletScale ? { "--tablet-scale": card.tabletScale } : {}),
+                          ...(card.tabletShift ? { "--tablet-shift": card.tabletShift } : {}),
+                        } as CSSProperties
+                      }
+                      className={`show-up-campaign-img h-[420px] w-auto max-w-none shrink-0 origin-center object-contain transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:-translate-y-2 motion-reduce:transition-none motion-reduce:group-hover:translate-y-0 min-[1200px]:h-[560px] ${card.imageScale ? "scale-[var(--campaign-scale)] group-hover:scale-[calc(var(--campaign-scale)*1.045)] motion-reduce:scale-[var(--campaign-scale)] motion-reduce:group-hover:scale-[var(--campaign-scale)]" : "group-hover:scale-[1.045] motion-reduce:group-hover:scale-100"}`}
                     />
                   </div>
                 </div>
-                <p className="mt-1 shrink-0 text-center font-geist text-[11px] leading-[1.35] italic text-[#f0c2c0] transition-colors duration-300 ease-out group-hover:text-[#e33d4d] motion-reduce:transition-none md:text-[12px]">
-                  Illustration only. Actual medication and label may vary.
-                </p>
-                <div className="mt-3 w-full shrink-0">
-                  <h3 className="font-sans text-[26px] leading-[1.15] font-semibold tracking-normal text-[#e86a6e] transition-colors duration-300 ease-out group-hover:text-[#e33d4d] motion-reduce:transition-none md:min-h-[2.4em] md:text-[34px]">
-                    {card.title}
-                  </h3>
-                  <p className="mt-2 font-sans text-[16px] leading-6 font-medium tracking-normal text-[#f0c2c0] transition-colors duration-300 ease-out group-hover:text-[#e33d4d] motion-reduce:transition-none md:text-[18px]">
-                    {card.sub}
+                <div className="show-up-campaign-copy mt-3 flex w-full shrink-0 flex-col">
+                  <p className="show-up-campaign-note order-1 mt-1 shrink-0 text-center font-geist text-[11px] leading-[1.35] italic text-[#f0c2c0] transition-colors duration-300 ease-out group-hover:text-[#e33d4d] motion-reduce:transition-none md:text-[12px] min-[1200px]:mt-0">
+                    Illustration only. Actual medication and label may vary.
                   </p>
+                  <div className="show-up-campaign-text order-2 mt-3">
+                    <h3 className="font-sans text-[26px] leading-[1.15] font-semibold tracking-normal text-[#e86a6e] transition-colors duration-300 ease-out group-hover:text-[#e33d4d] motion-reduce:transition-none min-[1200px]:min-h-[2.4em] min-[1200px]:text-[34px]">
+                      {card.title}
+                    </h3>
+                    <p className="mt-2 font-sans text-[16px] leading-6 font-medium tracking-normal text-[#f0c2c0] transition-colors duration-300 ease-out group-hover:text-[#e33d4d] motion-reduce:transition-none md:text-[18px]">
+                      {card.sub}
+                    </p>
+                  </div>
                 </div>
               </Link>
               </div>
