@@ -36,6 +36,7 @@ export function EmbeddedCheckout({ src, frameKey }: { src: string; frameKey: str
   }, [settle]);
 
   useEffect(() => {
+    delete document.documentElement.dataset.checkoutLeft;
     const firstVisit = visit.current === null;
     const nextFrame = visit.current !== frameKey;
     visit.current = frameKey;
@@ -85,7 +86,10 @@ export function EmbeddedCheckout({ src, frameKey }: { src: string; frameKey: str
       const href = frame.contentWindow?.location.href ?? "";
       if (href === "" || href === "about:blank") return;
       // The checkout wordmark loads this site inside the frame. That is not a paid order.
-      if (new URL(href).origin === window.location.origin) return;
+      if (new URL(href).origin === window.location.origin) {
+        document.documentElement.dataset.checkoutLeft = "1";
+        return;
+      }
     } catch {
       /* A cross-origin document is the checkout app, or the patient portal after payment. */
     }
@@ -105,7 +109,7 @@ export function EmbeddedCheckout({ src, frameKey }: { src: string; frameKey: str
       title="Checkout"
       src={src}
       onLoad={onLoad}
-      className="block h-[calc(100dvh-7rem)] w-full border-0"
+      className="lh-checkout-frame block h-[calc(100dvh-7rem)] w-full border-0"
       allow="payment"
     />
   );

@@ -31,7 +31,7 @@ export default async function CheckoutPage({ searchParams }: Props) {
   const frameKey = (Array.isArray(query.product) ? query.product : query.product ? [query.product] : []).join("|");
 
   return (
-    <section className="bg-background pt-28">
+    <section className="lh-checkout-page bg-background pt-28">
       <h1 className="sr-only">Checkout</h1>
       <CheckoutCartSync />
       <EmbeddedCheckout src={src} frameKey={frameKey} />

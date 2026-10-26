@@ -1,4 +1,5 @@
 import { affiliateCampaign, applyAffiliateTracking } from "@/lib/affiliate/link";
+import { canonicalLabProductId } from "@/lib/content/products";
 
 export type HandoffLine = {
   slug: string;
@@ -102,7 +103,7 @@ function scoreProduct(query: string, queryTokens: string[], product: CheckoutPro
 }
 
 function storedCatalogId(stored: string | undefined, products: CheckoutProduct[]) {
-  const id = stored?.trim();
+  const id = stored ? canonicalLabProductId(stored) : "";
   if (!id) return null;
   if (products.some((product) => product.clientProductId === id)) return id;
   // Older records prefix the catalog id with a tenant key.
@@ -185,7 +186,7 @@ function applyCheckoutTracking(params: URLSearchParams, ref?: string, campaign?:
 
 export function storefrontCheckoutUrl(ids: string[], ref?: string, campaign?: string | null) {
   const params = new URLSearchParams();
-  for (const id of ids) params.append("product", id);
+  for (const id of ids) params.append("product", canonicalLabProductId(id));
   applyCheckoutTracking(params, ref, campaign);
   const query = params.toString();
   return query ? `/checkout?${query}` : "/checkout";
@@ -194,7 +195,7 @@ export function storefrontCheckoutUrl(ids: string[], ref?: string, campaign?: st
 export function embeddedCheckoutSrc(product: string | string[] | undefined, ref?: string, campaign?: string | null) {
   const params = new URLSearchParams();
   const ids = (Array.isArray(product) ? product : product ? [product] : []).filter(Boolean);
-  for (const id of ids) params.append("product", id);
+  for (const id of ids) params.append("product", canonicalLabProductId(id));
   applyCheckoutTracking(params, ref, campaign);
   params.set("embed", "1");
   return `${storefrontAppOrigin()}/checkout?${params.toString()}`;

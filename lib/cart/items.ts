@@ -1,4 +1,4 @@
-import { labs, listedClientProductIds, listedVariants, presentListedProduct, products, type Lab, type Product } from "@/lib/content/products";
+import { idsForLab, labs, listedClientProductIds, listedVariants, presentListedProduct, products, type Lab, type Product } from "@/lib/content/products";
 import { cartLineId, parsePriceAmount, type CartItem } from "./types";
 
 export const UNAVAILABLE_TREATMENT = "This treatment isn't available.";
@@ -7,8 +7,7 @@ export function isSellableLine(line: { slug: string; variant?: string; clientPro
   const lab = labs.find((item) => item.slug === line.slug);
   if (lab) {
     if (!line.clientProductId) return true;
-    const ids = [lab.clientProductId, lab.clientProductIds?.Men, lab.clientProductIds?.Women].filter(Boolean);
-    return ids.includes(line.clientProductId);
+    return idsForLab(lab).includes(line.clientProductId);
   }
   const product = products.find((item) => item.slug === line.slug);
   if (!product || product.listed === false) return false;
