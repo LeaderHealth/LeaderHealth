@@ -158,13 +158,13 @@ h3.font-sans,
 }
 
 .sermorelin-vial-float {
-  animation: vialFloatY 5.6s ease-in-out 0.4s infinite alternate;
+  animation: vialFloatY 2s ease-in-out 0.4s infinite alternate;
   will-change: transform;
 }
 
 .sermorelin-vial {
   transform: rotate(-10deg);
-  animation: vialTilt 5.6s ease-in-out 0.4s infinite alternate;
+  animation: vialTilt 4s ease-in-out 0.4s infinite alternate;
   will-change: transform;
 }
 
