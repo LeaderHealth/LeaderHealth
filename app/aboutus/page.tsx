@@ -14,8 +14,8 @@ const heroImage = "https://framerusercontent.com/images/7jQVmW4yiq3pvyrl3im6JIvO
 
 const collage = [
   {
-    src: "https://framerusercontent.com/images/pJuQJ6GVQHWdbE5f53l3qpW3gOM.png?width=1200&height=896",
-    alt: "Hand holding a smartphone displaying a Leader Health dose reminder screen reading \"Time for your dose\" with a progress ring and \"Mark as done\" button.",
+    src: "/images/about-jogging.jpg",
+    alt: "A woman and a man jogging together on a sunlit street.",
   },
   {
     src: "https://framerusercontent.com/images/eS2i5fcV2jlzXSBJTEcJGOKVqCA.png?width=1391&height=1391",
