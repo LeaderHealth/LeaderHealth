@@ -16,7 +16,7 @@ export function showIntakeCta(href: string) {
 }
 
 /** Page sections kept in the repo and taken off the public site until this set changes. */
-const hiddenSections = new Set(["price-compare", "whats-included", "explore-library", "lab-metrics"]);
+const hiddenSections = new Set(["price-compare", "whats-included", "explore-library", "lab-metrics", "personalized-care"]);
 
 export function isSectionVisible(section: string) {
   return !hiddenSections.has(section);

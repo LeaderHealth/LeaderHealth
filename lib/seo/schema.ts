@@ -157,7 +157,7 @@ function faqPairs(faqs: readonly FaqEntry[] | undefined) {
   if (!Array.isArray(faqs)) return [];
   return faqs.flatMap((entry) => {
     const question = (entry.q ?? entry.question)?.trim();
-    const answer = (entry.a ?? entry.answer)?.trim();
+    const answer = (entry.a ?? entry.answer)?.trim().replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
     if (!question || !answer) return [];
     return [{ question, answer }];
   });

@@ -159,7 +159,7 @@ export function ProductSignupPrompt() {
             <button
               ref={closeRef}
               type="button"
-              aria-label="Close sign up"
+              aria-label="Close sign in"
               onClick={dismiss}
               className="absolute top-3 right-3 grid size-11 place-items-center rounded-full text-[#331110] hover:bg-[#331110]/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#331110]"
             >
@@ -174,10 +174,10 @@ export function ProductSignupPrompt() {
               id={titleId}
               className="mt-2 font-sans text-[32px] leading-[1.05] font-medium tracking-[-0.03em] text-[#331110]"
             >
-              Sign up
+              Sign in
             </h2>
             <p id={descriptionId} className="mx-auto mt-3 max-w-[28rem] font-sans text-[15px] leading-snug text-[#4a2a26] sm:text-[16px]">
-              Create an account to follow your visit, prescriptions, and messages.
+              Once product is purchased, you will be invited to create a patient portal. Sign in here or continue browsing to find your fit.
             </p>
             <a
               href={PORTAL_URL}
@@ -188,7 +188,7 @@ export function ProductSignupPrompt() {
                 className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#E33D4E] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
               />
               <span className="relative z-10 whitespace-nowrap transition-transform duration-[400ms] ease-out group-hover:-translate-x-[15px] motion-reduce:translate-x-0! motion-reduce:transition-none">
-                Sign Up
+                Sign In
               </span>
               <span
                 aria-hidden
@@ -202,7 +202,7 @@ export function ProductSignupPrompt() {
               onClick={dismiss}
               className="mt-3 block w-full font-sans text-[14px] text-[#6e5555] underline decoration-[#6e5555]/40 underline-offset-4 hover:text-[#331110] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#331110]"
             >
-              Not now
+              Continue browsing
             </button>
           </div>
         </div>
