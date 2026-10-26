@@ -103,22 +103,22 @@ export const assets = {
 export const careSteps = [
   {
     step: "Step 1",
-    title: "Complete form",
-    body: "Tell us about your goals and health history",
+    title: "Find Your Focus",
+    body: "Decide on a health plan",
     image: assets.stepForm,
     alt: "Patient filling out the LeaderHealth online health intake form on a phone",
   },
   {
     step: "Step 2",
-    title: "Labs + Clinician Review",
-    body: "Licensed providers review your history and labs before any prescription.",
+    title: "Purchase & Set Up",
+    body: "Checkout and create a portal access",
     image: assets.stepLabs,
     alt: "LeaderHealth clinician reviewing a patient's lab results on screen",
   },
   {
     step: "Step 3",
-    title: "Receive Meds Fast",
-    body: "Medication ships to your door after your clinician approves a plan.",
+    title: "Complete & Progress",
+    body: "Review your portal for next steps and continue your goals",
     image: assets.stepShip,
     alt: "Man opening a LeaderHealth medication shipment at home",
   },

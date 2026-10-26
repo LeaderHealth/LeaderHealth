@@ -1017,7 +1017,10 @@ export function HomePage() {
                     />
                   </div>
                 </div>
-                <div className="mt-4 w-full shrink-0">
+                <p className="mt-1 shrink-0 text-center font-geist text-[11px] leading-[1.35] italic text-[#f0c2c0] transition-colors duration-300 ease-out group-hover:text-[#e33d4d] motion-reduce:transition-none md:text-[12px]">
+                  Illustration only. Actual medication and label may vary.
+                </p>
+                <div className="mt-3 w-full shrink-0">
                   <h3 className="font-sans text-[26px] leading-[1.15] font-semibold tracking-normal text-[#e86a6e] transition-colors duration-300 ease-out group-hover:text-[#e33d4d] motion-reduce:transition-none md:min-h-[2.4em] md:text-[34px]">
                     {card.title}
                   </h3>
