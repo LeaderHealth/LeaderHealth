@@ -11,6 +11,7 @@ import { Marquee } from "./Marquee";
 import { LabsTeaser } from "./LabsTeaser";
 import { SiteTestimonials } from "./TestimonialsVideoSection";
 import { ArticleLibrary } from "./ArticleLibrary";
+import { scrollToOurTop3 } from "./scrollToOurTop3";
 
 const campaign = [
   {
@@ -211,50 +212,6 @@ const careOptions = [
 const visibleCampaign = campaign.filter(showHomeCard);
 const visibleFeatured = featured.filter(showHomeCard);
 const visibleCare = careOptions.filter(showHomeCard);
-
-function navClearance() {
-  const gap = 16;
-  const header = document.querySelector("header");
-  if (header && getComputedStyle(header).display !== "none") {
-    const top = Number.parseFloat(getComputedStyle(header).top) || 0;
-    return top + header.offsetHeight + gap;
-  }
-  return 12 + 50 + gap;
-}
-
-function scrollToOurTop3() {
-  const grid = document.getElementById("our-top-3");
-  const target = grid?.querySelector("a") ?? grid;
-  if (!target) return;
-
-  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const clearance = navClearance();
-  const rect = target.getBoundingClientRect();
-  const absTop = rect.top + window.scrollY;
-  const absBottom = rect.bottom + window.scrollY;
-  const bottomPad = 16;
-  const lift = 72;
-  let top = absTop - clearance;
-
-  if (absBottom - top > window.innerHeight - bottomPad) {
-    top = absBottom - (window.innerHeight - bottomPad);
-  }
-
-  top += lift;
-
-  const vial = target.querySelector("img");
-  const label = target.querySelector("p") ?? target.querySelector("h3");
-  if (vial) {
-    const vialTop = vial.getBoundingClientRect().top + window.scrollY;
-    top = Math.min(top, vialTop - clearance);
-  }
-  if (label) {
-    const labelBottom = label.getBoundingClientRect().bottom + window.scrollY;
-    top = Math.max(top, labelBottom - (window.innerHeight - bottomPad));
-  }
-
-  window.scrollTo({ top: Math.max(0, top), behavior: reduced ? "auto" : "smooth" });
-}
 
 const careButtonLabelClass =
   "relative z-10 whitespace-nowrap transition-transform duration-[400ms] ease-out group-hover:-translate-x-[15px] group-focus-visible:-translate-x-[15px] motion-reduce:translate-x-0! motion-reduce:transition-none";

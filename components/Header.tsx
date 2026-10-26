@@ -20,6 +20,7 @@ import { cartItemFromSlug } from "@/lib/cart/items";
 import { CartButton } from "./cart/CartButton";
 import { useCart } from "./cart/CartProvider";
 import { MobileNav } from "./MobileNav";
+import { scrollToOurTop3 } from "./scrollToOurTop3";
 import { TabletNavBar, TabletNavDisclosure, type TabletPanel } from "./TabletNav";
 
 const whoLinks = [
@@ -45,6 +46,16 @@ function DocumentIcon() {
       />
       <path d="M14.2 3.5V8h4.3" stroke="currentColor" strokeWidth="1.6" />
       <path d="M10.2 12h5.2M10.2 15.4h5.2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function TopThreeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-6 w-6 shrink-0" fill="none" aria-hidden>
+      <rect x="3.5" y="6" width="4.6" height="12" rx="1.2" stroke="currentColor" strokeWidth="1.6" />
+      <rect x="9.7" y="6" width="4.6" height="12" rx="1.2" stroke="currentColor" strokeWidth="1.6" />
+      <rect x="15.9" y="6" width="4.6" height="12" rx="1.2" stroke="currentColor" strokeWidth="1.6" />
     </svg>
   );
 }
@@ -316,6 +327,9 @@ function MegaCategoryPane({
                 </button>
               );
             })}
+        {drilled ? null : (
+          <p className="mt-1 text-[13px] font-medium text-white/60">More is coming soon.</p>
+        )}
       </div>
     </div>
   );
@@ -371,6 +385,7 @@ function MegaMenu({
           shopAll={shopAll}
           defaultCard={defaultCard}
           featureLabel={featureLabel}
+          onClose={onClose}
         />
       ) : null}
     </div>
@@ -384,6 +399,7 @@ function MegaMenuPanel({
   shopAll,
   defaultCard,
   featureLabel,
+  onClose,
 }: {
   shift?: boolean;
   fading: boolean;
@@ -391,7 +407,9 @@ function MegaMenuPanel({
   shopAll: { href: string; label: string };
   defaultCard: FeatureCard;
   featureLabel: string;
+  onClose: () => void;
 }) {
+  const pathname = usePathname();
   const [view, setView] = useState("root");
   const [shownView, setShownView] = useState("root");
   const [leavingView, setLeavingView] = useState<string | null>(null);
@@ -482,7 +500,32 @@ function MegaMenuPanel({
                 <svg viewBox="0 0 16 16" className="relative z-10 ml-auto h-4 w-4 shrink-0 transition-transform duration-[400ms] ease-out group-hover:translate-x-1 motion-reduce:translate-x-0! motion-reduce:transition-none" fill="none" aria-hidden>
                   <path d="M3 8h9M8.5 4.5 12.5 8 8.5 11.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-              </a> : null}
+              </a> : <a
+                href="/#our-top-3"
+                onClick={(event) => {
+                  onClose();
+                  if (pathname !== "/") return;
+                  event.preventDefault();
+                  window.history.pushState(null, "", "/#our-top-3");
+                  scrollToOurTop3();
+                }}
+                className="group relative mt-4 flex h-12 w-[285px] max-w-full items-center gap-3 overflow-hidden rounded-full bg-white px-3 text-ink transition-[background-color,color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-[#331110] hover:text-[#F7F3F5] focus-visible:bg-[#331110] focus-visible:text-[#F7F3F5] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none"
+              >
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute bottom-0 left-1/2 size-2 -translate-x-1/2 translate-y-full rounded-full bg-[#331110] transition-transform duration-[400ms] ease-out group-hover:scale-[36] motion-reduce:scale-100! motion-reduce:transition-none"
+                />
+                <span className="relative z-10 shrink-0">
+                  <TopThreeIcon />
+                </span>
+                <span className="relative z-10 min-w-0 leading-tight">
+                  <span className="block text-[13px] font-bold">Not sure where to start?</span>
+                  <span className="block text-[12px]">See our top 3.</span>
+                </span>
+                <svg viewBox="0 0 16 16" className="relative z-10 ml-auto h-4 w-4 shrink-0 transition-transform duration-[400ms] ease-out group-hover:translate-x-1 motion-reduce:translate-x-0! motion-reduce:transition-none" fill="none" aria-hidden>
+                  <path d="M3 8h9M8.5 4.5 12.5 8 8.5 11.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </a>}
             </div>
             <div className="flex w-[55%] flex-col px-5 py-6 pr-6">
               <FeatureCardView label={featureLabel} card={defaultCard} />
