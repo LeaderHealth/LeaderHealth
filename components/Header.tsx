@@ -897,7 +897,7 @@ export function Header() {
 
       <header
         ref={headerRef}
-        className={`lh-tablet-header pointer-events-none fixed inset-x-0 top-2 z-50 hidden justify-center px-2 transition-transform duration-300 ease-out min-[765px]:flex sm:top-3 sm:px-3 md:top-4 ${
+        className={`lh-site-header lh-tablet-header pointer-events-none fixed inset-x-0 top-2 z-50 hidden justify-center px-2 transition-transform duration-300 ease-out min-[765px]:flex sm:top-3 sm:px-3 md:top-4 ${
           navVisible || mobile || search || tabletPanel
             ? "translate-y-0"
             : "-translate-y-[calc(100%+1rem)]"
