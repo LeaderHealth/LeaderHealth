@@ -1,8 +1,27 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
+import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { faqCategories } from "@/lib/content/faqs";
+
+function FaqAnswer({ text }: { text: string }) {
+  const nodes: React.ReactNode[] = [];
+  const pattern = /\[([^\]]+)\]\((\/[^)\s]+)\)/g;
+  let last = 0;
+  for (const match of text.matchAll(pattern)) {
+    const index = match.index ?? 0;
+    if (index > last) nodes.push(text.slice(last, index));
+    nodes.push(
+      <Link key={index} href={match[2]} className="underline decoration-[#4A2A26]/50 underline-offset-[3px] hover:decoration-[#4A2A26]">
+        {match[1]}
+      </Link>,
+    );
+    last = index + match[0].length;
+  }
+  if (last < text.length) nodes.push(text.slice(last));
+  return nodes;
+}
 
 const accordionEase = [0.12, 0.23, 0.5, 1] as const;
 
@@ -253,7 +272,7 @@ export function FaqBrowse() {
                     style={{ overflow: "hidden" }}
                   >
                     <p className="px-4 pb-4 pl-[46px] font-sans text-[14px] leading-[1.55] text-[#4A2A26] sm:px-5 sm:pb-5 sm:pl-[52px] sm:text-[15px]">
-                      {item.a}
+                      <FaqAnswer text={item.a} />
                     </p>
                   </motion.div>
                 </div>

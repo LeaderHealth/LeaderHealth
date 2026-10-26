@@ -1,3 +1,7 @@
+export function faqPlainText(value: string) {
+  return value.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
+}
+
 export const faqs = [
   {
     q: "How does Leader Health work?",
@@ -459,7 +463,7 @@ export const faqCategories: FaqCategory[] = [
       {
         id: "refunds",
         q: "How do refunds work?",
-        a: "Because compounded medications are prepared for you, opened or shipped prescriptions are generally not returnable. If a shipment is lost, damaged, or filled in error, contact support so we can coordinate with the pharmacy. Lab panels that have already been drawn are not refundable.",
+        a: "Because compounded medications are prepared for you, opened or shipped prescriptions are generally not returnable. If a shipment is lost, damaged, or filled in error, contact support so we can coordinate with the pharmacy. Lab panels that have already been drawn are not refundable. See [Refunds & Cancellations](/legal/refunds-cancellations) for the full policy.",
       },
     ],
   },

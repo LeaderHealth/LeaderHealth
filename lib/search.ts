@@ -1,6 +1,6 @@
 import { publishedArticles } from "@/lib/content/articles";
 import { isPublicHref } from "@/lib/content/visibility";
-import { faqCategories } from "@/lib/content/faqs";
+import { faqCategories, faqPlainText } from "@/lib/content/faqs";
 import { labs, products, type Category } from "@/lib/content/products";
 
 export type SearchSection = "treatments" | "articles" | "faq" | "labs";
@@ -110,12 +110,12 @@ function index(): IndexedHit[] {
       section: "faq" as const,
       title: item.q,
       category: category.title,
-      description: snippet(item.a),
+      description: snippet(faqPlainText(item.a)),
       href: `/faq#${item.id}`,
       fields: [
         { text: item.q, weight: 10 },
         { text: category.title, weight: 5 },
-        { text: item.a, weight: 2 },
+        { text: faqPlainText(item.a), weight: 2 },
       ],
     })),
   );
