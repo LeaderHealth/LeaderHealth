@@ -5,6 +5,7 @@ import { PageFade } from "./PageFade";
 import { MotionPreferences } from "./MotionPreferences";
 import { CartProvider } from "./cart/CartProvider";
 import { SideCart } from "./cart/SideCart";
+import { AccessibilityButton } from "./AccessibilityButton";
 import { AffiliateCapture } from "./affiliate/AffiliateCapture";
 
 export function SiteShell({ children }: { children: React.ReactNode }) {
@@ -19,6 +20,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
         <PageFade>{children}</PageFade>
       </main>
       <ShellFooter />
+      <AccessibilityButton />
       <SideCart />
     </CartProvider>
     </MotionPreferences>

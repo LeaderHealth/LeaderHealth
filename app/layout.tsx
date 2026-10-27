@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Geist, Instrument_Sans, Instrument_Serif } from "next/font/google";
+import { Geist, Instrument_Sans, Instrument_Serif, Lexend } from "next/font/google";
 import { Analytics } from "@/components/analytics/Analytics";
 import { SiteShell } from "@/components/SiteShell";
 import { site } from "@/lib/content/site";
@@ -21,6 +21,12 @@ const instrumentSerif = Instrument_Serif({
   subsets: ["latin"],
   weight: "400",
   style: ["normal", "italic"],
+});
+
+const lexend = Lexend({
+  variable: "--font-readable",
+  subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -64,9 +70,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       data-scroll-behavior="smooth"
-      className={`${geist.variable} ${instrumentSans.variable} ${instrumentSerif.variable} h-full antialiased`}
+      className={`${geist.variable} ${instrumentSans.variable} ${instrumentSerif.variable} ${lexend.variable} h-full antialiased`}
     >
       <body id="top" className="flex min-h-full flex-col bg-background text-foreground">
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              'try{var p=JSON.parse(localStorage.getItem("lh-a11y")||"null");if(p&&typeof p==="object"){var d=document.documentElement;var text=p.text===true?1:p.text;if(text===1||text===2||text===3)d.dataset.a11yText=String(text);var contrast=p.contrast===true?"light":p.contrast;if(contrast==="light"||contrast==="dark"||contrast==="invert")d.dataset.a11yContrast=contrast;if(p.cursor)d.dataset.a11yCursor="large";if(p.leading)d.dataset.a11yLeading="loose";if(p.spacing)d.dataset.a11ySpacing="wide";if(p.font)d.dataset.a11yFont="readable";if(p.links)d.dataset.a11yLinks="on";if(p.motion)d.dataset.a11yMotion="reduce";if(p.images)d.dataset.a11yImages="hide";if(p.align==="left"||p.align==="center"||p.align==="right")d.dataset.a11yAlign=p.align;if(p.saturation==="low"||p.saturation==="high"||p.saturation==="mono")d.dataset.a11ySaturation=p.saturation;var parts=[];if(contrast==="invert")parts.push("invert(1)","hue-rotate(180deg)");if(p.saturation==="low")parts.push("saturate(0.35)");if(p.saturation==="high")parts.push("saturate(1.8)");if(p.saturation==="mono")parts.push("grayscale(1)");if(parts.length){d.dataset.a11yFilter="on";d.style.setProperty("--a11y-filters",parts.join(" "));}}}catch(e){}',
+          }}
+        />
         <Suspense fallback={null}>
           <Analytics />
         </Suspense>
