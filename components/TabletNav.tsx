@@ -219,7 +219,7 @@ function CategoryCard({ card, onNavigate }: { card: TabletCard; onNavigate: () =
                   <Link
                     href={item.href}
                     onClick={onNavigate}
-                    className={`${linkClass} ${washTap} flex min-h-8 w-full items-center px-2`}
+                    className={`${linkClass} ${washTap} flex min-h-8 w-full items-center`}
                   >
                     {item.label}
                   </Link>
@@ -362,7 +362,7 @@ export function TabletNavPanel({
     >
       {panel === "men" || panel === "women" ? (
         <>
-          <div className="mx-auto grid max-w-[760px] grid-cols-3 items-start gap-x-3 gap-y-4">
+          <div className="mx-auto grid max-w-[760px] grid-cols-3 items-start gap-x-10 gap-y-4">
             {visibleCards(panel === "men" ? menCards : womenCards).map((card) => (
               <CategoryCard key={card.title} card={card} onNavigate={onNavigate} />
             ))}

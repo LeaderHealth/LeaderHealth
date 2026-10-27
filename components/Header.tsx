@@ -774,85 +774,20 @@ export function Header() {
   }, [tabletPanel]);
 
   useEffect(() => {
-    if (!tabletPanel) return;
+    const header = headerRef.current;
+    if (!header) return;
 
-    const html = document.documentElement;
-    const body = document.body;
-    const scrollY = window.scrollY;
-    const previousHtmlOverflow = html.style.overflow;
-    const previousOverscroll = html.style.overscrollBehavior;
-    const previousScrollBehavior = html.style.scrollBehavior;
-    const previousBodyOverflow = body.style.overflow;
-    const previousBodyPosition = body.style.position;
-    const previousBodyTop = body.style.top;
-    const previousBodyLeft = body.style.left;
-    const previousBodyRight = body.style.right;
-    const previousBodyWidth = body.style.width;
-    const previousBodyPaddingRight = body.style.paddingRight;
-    const scrollbar = window.innerWidth - html.clientWidth;
-
-    html.style.overflow = "hidden";
-    html.style.overscrollBehavior = "none";
-    body.style.overflow = "hidden";
-    body.style.position = "fixed";
-    body.style.top = `-${scrollY}px`;
-    body.style.left = "0";
-    body.style.right = "0";
-    body.style.width = "100%";
-    if (scrollbar > 0) body.style.paddingRight = `${scrollbar}px`;
-
-    const scrollableMenu = (target: EventTarget | null, deltaY = 1) => {
-      if (!(target instanceof Element)) return false;
-      let node: Element | null = target;
-      const header = headerRef.current;
-      while (node && header?.contains(node)) {
-        const style = getComputedStyle(node);
-        const canScroll = /(auto|scroll)/.test(style.overflowY) && node.scrollHeight > node.clientHeight + 1;
-        if (canScroll) {
-          const atTop = node.scrollTop <= 0;
-          const atBottom = node.scrollTop + node.clientHeight >= node.scrollHeight - 1;
-          if ((deltaY < 0 && !atTop) || (deltaY > 0 && !atBottom)) return true;
-        }
-        node = node.parentElement;
-      }
-      return false;
+    const clearScrollbar = () => {
+      header.style.right = "0px";
+      const overlap = Math.round(header.getBoundingClientRect().right - document.documentElement.clientWidth);
+      header.style.right = overlap > 1 ? `${overlap}px` : "";
     };
 
-    const blockWheel = (event: WheelEvent) => {
-      if (scrollableMenu(event.target, event.deltaY)) return;
-      event.preventDefault();
-    };
-    const blockTouch = (event: TouchEvent) => {
-      if (scrollableMenu(event.target)) return;
-      event.preventDefault();
-    };
-    const blockKeys = (event: KeyboardEvent) => {
-      if (![" ", "PageUp", "PageDown", "Home", "End", "ArrowUp", "ArrowDown"].includes(event.key)) return;
-      const target = event.target;
-      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return;
-      event.preventDefault();
-    };
-
-    window.addEventListener("wheel", blockWheel, { passive: false });
-    window.addEventListener("touchmove", blockTouch, { passive: false });
-    window.addEventListener("keydown", blockKeys);
-
+    clearScrollbar();
+    window.addEventListener("resize", clearScrollbar);
     return () => {
-      window.removeEventListener("wheel", blockWheel);
-      window.removeEventListener("touchmove", blockTouch);
-      window.removeEventListener("keydown", blockKeys);
-      html.style.overflow = previousHtmlOverflow;
-      html.style.overscrollBehavior = previousOverscroll;
-      html.style.scrollBehavior = "auto";
-      body.style.overflow = previousBodyOverflow;
-      body.style.position = previousBodyPosition;
-      body.style.top = previousBodyTop;
-      body.style.left = previousBodyLeft;
-      body.style.right = previousBodyRight;
-      body.style.width = previousBodyWidth;
-      body.style.paddingRight = previousBodyPaddingRight;
-      window.scrollTo(0, scrollY);
-      html.style.scrollBehavior = previousScrollBehavior;
+      window.removeEventListener("resize", clearScrollbar);
+      header.style.right = "";
     };
   }, [tabletPanel]);
 
