@@ -1,3 +1,12 @@
+import { showGetStartedFaq } from "@/lib/content/visibility";
+
+const portalSignInBase = "Existing patients sign in at the Leader Health patient portal.";
+const portalSignInIntake = " New patients start with Get Started, which opens the intake.";
+
+function portalSignInAnswer() {
+  return showGetStartedFaq() ? `${portalSignInBase}${portalSignInIntake}` : portalSignInBase;
+}
+
 export function faqPlainText(value: string) {
   return value.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
 }
@@ -37,7 +46,7 @@ export const faqs = [
   },
   {
     q: "Where is the patient portal?",
-    a: "Existing patients sign in at the Leader Health patient portal. New patients start with Get Started, which opens the intake.",
+    a: portalSignInAnswer(),
   },
 ];
 
@@ -291,7 +300,7 @@ export type FaqCategory = {
   items: { id: string; q: string; a: string }[];
 };
 
-export const faqCategories: FaqCategory[] = [
+const faqCategorySource: FaqCategory[] = [
   {
     id: "getting-started",
     title: "Getting Started",
@@ -495,7 +504,7 @@ export const faqCategories: FaqCategory[] = [
       {
         id: "patient-portal",
         q: "Where is the patient portal?",
-        a: "Existing patients sign in at the Leader Health patient portal. New patients start with Get Started, which opens the intake.",
+        a: portalSignInAnswer(),
       },
     ],
   },
@@ -512,7 +521,7 @@ export const faqCategories: FaqCategory[] = [
       {
         id: "sign-in",
         q: "I already have an account. Where do I sign in?",
-        a: "Existing patients sign in at the Leader Health patient portal. New patients start with Get Started, which opens the intake.",
+        a: portalSignInAnswer(),
       },
       {
         id: "emergency",
@@ -532,6 +541,13 @@ export const faqCategories: FaqCategory[] = [
     ],
   },
 ];
+
+export const faqCategories: FaqCategory[] = faqCategorySource
+  .map((category) => ({
+    ...category,
+    items: category.items.filter((item) => item.id !== "get-started" || showGetStartedFaq()),
+  }))
+  .filter((category) => category.items.length > 0);
 
 export const energyLongevityFaqs = [
   {

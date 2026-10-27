@@ -4,6 +4,16 @@ import { GET_STARTED_URL } from "@/lib/content/site";
 /** Buttons that open the general intake form. Flip this to show them again. */
 const intakeCtasVisible = false;
 
+/**
+ * FAQ copy that sends new patients to Get Started.
+ * Set this to true when those buttons are shown again.
+ */
+const getStartedFaqVisible = false;
+
+export function showGetStartedFaq() {
+  return getStartedFaqVisible;
+}
+
 export function showIntakeCta(href: string) {
   if (intakeCtasVisible) return true;
   try {
