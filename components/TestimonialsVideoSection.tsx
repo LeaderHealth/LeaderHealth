@@ -252,7 +252,7 @@ export function TestimonialsVideoSection({
           layout
           layoutDependency={layoutEpoch}
           transition={{ layout: frameTransition }}
-          className="relative z-10 mx-auto flex h-full w-[min(370px,calc(100%-20px))] flex-col items-stretch pt-12 md:w-[min(96%,1100px)] md:items-center md:px-0 md:pt-[56px] lg:pt-[64px]"
+          className="relative z-10 mx-auto flex h-full w-full flex-col items-stretch px-2 pt-12 md:w-[min(96%,1100px)] md:items-center md:px-0 md:pt-[56px] lg:pt-[64px]"
         >
           <div className="max-w-4xl text-left md:text-center">
             <h2 className="font-sans text-[40px] font-semibold leading-[1.05] tracking-normal text-[#331110] md:text-[44px] lg:text-[58px] lg:leading-[1.05]">
@@ -279,7 +279,14 @@ export function TestimonialsVideoSection({
             <p id={labelId} className="sr-only">
               Member stories, slide {index + 1} of {count}
             </p>
-            <div className="relative flex items-stretch justify-center lg:h-[416px]" style={{ gap, perspective: 1200 }}>
+            <div className="relative flex items-center justify-center md:items-stretch lg:h-[416px]" style={{ gap, perspective: 1200 }}>
+              {showArrows && count > 1 ? (
+                <div className="shrink-0 md:hidden">
+                  <NavButton label="Previous story" onClick={() => go(-1)} accent={accentColor}>
+                    <Chevron direction="left" />
+                  </NavButton>
+                </div>
+              ) : null}
               {count > 1 ? (
                 <motion.button
                   key={`prev-${prev.name}`}
@@ -315,16 +322,37 @@ export function TestimonialsVideoSection({
                 initial={playEnter ? { opacity: 0.7, x: -120 } : false}
                 animate={{ opacity: 1, x: 0 }}
                 transition={cardTransition}
-                className={`min-w-0 w-[370px] max-w-full touch-pan-y md:w-auto md:flex-1 md:max-w-[726px] lg:h-[416px] lg:w-[726px] lg:flex-none ${draggable && count > 1 ? "cursor-grab active:cursor-grabbing" : ""}`}
+                className={`min-w-0 w-auto max-w-[370px] flex-1 touch-pan-y md:w-auto md:max-w-[726px] lg:h-[416px] lg:w-[726px] lg:flex-none ${draggable && count > 1 ? "cursor-grab active:cursor-grabbing" : ""}`}
               >
-                <FeaturedCard
-                  item={featured}
-                  cardBackground={cardBackground}
-                  cardTextColor={cardTextColor}
-                  accentColor={accentColor}
-                  bodyFontFamily={bodyFontFamily}
-                  cardRadius={cardRadius}
-                />
+                <div className="grid md:block">
+                  {testimonials.map((item, i) => (
+                    <div
+                      key={`${item.name}-${i}`}
+                      className={`col-start-1 row-start-1 self-center md:hidden ${i === index ? "" : "invisible"}`}
+                      aria-hidden={i === index ? undefined : true}
+                      inert={i === index ? undefined : true}
+                    >
+                      <FeaturedCard
+                        item={item}
+                        cardBackground={cardBackground}
+                        cardTextColor={cardTextColor}
+                        accentColor={accentColor}
+                        bodyFontFamily={bodyFontFamily}
+                        cardRadius={cardRadius}
+                      />
+                    </div>
+                  ))}
+                  <div className="hidden md:block">
+                    <FeaturedCard
+                      item={featured}
+                      cardBackground={cardBackground}
+                      cardTextColor={cardTextColor}
+                      accentColor={accentColor}
+                      bodyFontFamily={bodyFontFamily}
+                      cardRadius={cardRadius}
+                    />
+                  </div>
+                </div>
               </motion.div>
 
               {count > 1 ? (
@@ -346,11 +374,18 @@ export function TestimonialsVideoSection({
                   <PeekCard item={next} side="right" background={cardBackground} text={cardTextColor} accent={accentColor} />
                 </motion.button>
               ) : null}
+              {showArrows && count > 1 ? (
+                <div className="shrink-0 md:hidden">
+                  <NavButton label="Next story" onClick={() => go(1)} accent={accentColor}>
+                    <Chevron direction="right" />
+                  </NavButton>
+                </div>
+              ) : null}
 
               {showArrows && count > 1 ? (
                 <>
                   <motion.div
-                    className="absolute top-1/2 left-2 z-20 -translate-y-1/2"
+                    className="absolute top-1/2 left-2 z-20 hidden -translate-y-1/2 md:block"
                     initial={reduceMotion ? false : { opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={reduceMotion ? { duration: 0 } : { duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
@@ -360,7 +395,7 @@ export function TestimonialsVideoSection({
                     </NavButton>
                   </motion.div>
                   <motion.div
-                    className="absolute top-1/2 right-2 z-20 -translate-y-1/2"
+                    className="absolute top-1/2 right-2 z-20 hidden -translate-y-1/2 md:block"
                     initial={reduceMotion ? false : { opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={reduceMotion ? { duration: 0 } : { duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
@@ -428,15 +463,15 @@ function FeaturedCard({
         fontFamily: type,
       }}
     >
-      <div className="flex min-h-[667px] w-[370px] max-w-full flex-col px-5 pb-8 pt-5 md:hidden">
+      <div className="flex w-full flex-col px-5 pb-8 pt-5 md:hidden">
         <div className="flex justify-center">
           <Portrait
             src={item.image}
             alt={item.name}
-            className="h-[271px] w-[203px] rounded-[16px] object-fill"
+            className="h-[271px] w-[203px] max-w-full rounded-[16px] object-fill"
           />
         </div>
-        <div className="mt-8 flex min-w-0 flex-1 flex-col text-left">
+        <div className="mt-8 flex min-w-0 flex-col text-left">
           <div className="flex items-start gap-3">
             <QuoteIcon className="mt-0.5 h-10 w-10 shrink-0" />
             {item.role ? (
