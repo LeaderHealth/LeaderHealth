@@ -831,9 +831,18 @@ export function MobileNav({
           >
             <a
               href={PORTAL_URL}
-              className={`flex min-h-12 items-center justify-center rounded-full border border-white/70 text-[15px] font-medium text-white ${tapFocus}`}
+              className={`flex min-h-12 items-center justify-center gap-1.5 rounded-full border border-white/70 text-[15px] font-medium text-white ${tapFocus}`}
             >
               Patient Portal
+              <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" aria-hidden>
+                <circle cx="12" cy="8" r="3.2" stroke="currentColor" strokeWidth="1.8" />
+                <path
+                  d="M5.5 18.5c1.2-2.6 3.5-4 6.5-4s5.3 1.4 6.5 4"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
+              </svg>
             </a>
             {showIntakeCta(GET_STARTED_URL) ? <a
               href={GET_STARTED_URL}
