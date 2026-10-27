@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 
 const STORAGE_KEY = "lh-a11y";
 
@@ -70,14 +70,15 @@ function isAlign(value: unknown): value is Align {
   return value === "off" || value === "left" || value === "center" || value === "right";
 }
 
-function readPreferences(): Preferences {
+function parsePreferences(raw: string): Preferences {
   try {
-    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "null") as Partial<Preferences> | null;
-    if (!stored || typeof stored !== "object") return emptyPreferences;
-    const legacyText = stored.text === true ? 1 : stored.text;
-    const legacyContrast = stored.contrast === true ? "light" : stored.contrast;
+    const parsed = JSON.parse(raw || "null") as unknown;
+    if (!parsed || typeof parsed !== "object") return emptyPreferences;
+    const stored = parsed as Record<string, unknown>;
+    const text = stored.text === true ? 1 : stored.text;
+    const contrast = stored.contrast === true ? "light" : stored.contrast;
     return {
-      text: isTextLevel(legacyText) ? legacyText : 0,
+      text: isTextLevel(text) ? text : 0,
       cursor: stored.cursor === true,
       leading: stored.leading === true,
       spacing: stored.spacing === true,
@@ -85,7 +86,7 @@ function readPreferences(): Preferences {
       links: stored.links === true,
       motion: stored.motion === true,
       images: stored.images === true,
-      contrast: isContrast(legacyContrast) ? legacyContrast : "off",
+      contrast: isContrast(contrast) ? contrast : "off",
       saturation: isSaturation(stored.saturation) ? stored.saturation : "off",
       guide: stored.guide === true,
       mask: stored.mask === true,
@@ -131,6 +132,26 @@ function applyPreferences(preferences: Preferences) {
 
 function preferencesActive(preferences: Preferences) {
   return JSON.stringify(preferences) !== JSON.stringify(emptyPreferences);
+}
+
+const preferenceListeners = new Set<() => void>();
+
+function subscribePreferences(listener: () => void) {
+  preferenceListeners.add(listener);
+  return () => {
+    preferenceListeners.delete(listener);
+  };
+}
+
+function readStoredPreferences() {
+  return localStorage.getItem(STORAGE_KEY) ?? "";
+}
+
+function savePreferences(next: Preferences) {
+  if (preferencesActive(next)) localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  else localStorage.removeItem(STORAGE_KEY);
+  applyPreferences(next);
+  preferenceListeners.forEach((listener) => listener());
 }
 
 function cycle<T>(values: readonly T[], current: T) {
@@ -189,13 +210,12 @@ export function AccessibilityButton() {
   const [open, setOpen] = useState(false);
   const [headingsOpen, setHeadingsOpen] = useState(false);
   const [headings, setHeadings] = useState<{ id: string; text: string; level: number }[]>([]);
-  const [preferences, setPreferences] = useState<Preferences>(emptyPreferences);
+  const storedPreferences = useSyncExternalStore(subscribePreferences, readStoredPreferences, () => "");
+  const preferences = useMemo(() => parsePreferences(storedPreferences), [storedPreferences]);
 
   useEffect(() => {
-    const stored = readPreferences();
-    setPreferences(stored);
-    applyPreferences(stored);
-  }, []);
+    applyPreferences(preferences);
+  }, [preferences]);
 
   useEffect(() => {
     if (!open) return;
@@ -282,10 +302,7 @@ export function AccessibilityButton() {
   }, [preferences.descriptions]);
 
   function update(next: Preferences) {
-    setPreferences(next);
-    applyPreferences(next);
-    if (preferencesActive(next)) localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    else localStorage.removeItem(STORAGE_KEY);
+    savePreferences(next);
   }
 
   function toggleHeadings() {

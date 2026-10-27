@@ -497,7 +497,7 @@ function MegaMenuPanel({
                 <svg viewBox="0 0 16 16" className="relative z-10 ml-auto h-4 w-4 shrink-0 transition-transform duration-[400ms] ease-out group-hover:translate-x-1 motion-reduce:translate-x-0! motion-reduce:transition-none" fill="none" aria-hidden>
                   <path d="M3 8h9M8.5 4.5 12.5 8 8.5 11.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-              </a> : <a
+              </a> : <Link
                 href="/#our-top-3"
                 onClick={(event) => {
                   onClose();
@@ -522,7 +522,7 @@ function MegaMenuPanel({
                 <svg viewBox="0 0 16 16" className="relative z-10 ml-auto h-4 w-4 shrink-0 transition-transform duration-[400ms] ease-out group-hover:translate-x-1 motion-reduce:translate-x-0! motion-reduce:transition-none" fill="none" aria-hidden>
                   <path d="M3 8h9M8.5 4.5 12.5 8 8.5 11.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-              </a>}
+              </Link>}
             </div>
             <div className="flex w-[55%] flex-col px-5 py-6 pr-6">
               <FeatureCardView label={featureLabel} card={defaultCard} />
