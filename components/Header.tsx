@@ -830,7 +830,7 @@ export function Header() {
       <div className="lh-tablet-cart-fab fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-[55]">
         <CartButton
           onOpen={() => setTabletPanel(null)}
-          className="h-14 w-14 bg-[#331110] text-white shadow-[0_10px_28px_rgba(51,17,16,0.32)] hover:bg-[#4a221f] [&_svg]:h-6 [&_svg]:w-6"
+          className="h-14 w-14 border-0 bg-[#e33d4d] text-white shadow-[0_10px_28px_rgba(227,61,77,0.35)] hover:bg-[#c43240] [&_svg]:h-6 [&_svg]:w-6"
         />
       </div>
 
