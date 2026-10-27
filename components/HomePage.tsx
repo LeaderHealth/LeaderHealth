@@ -820,7 +820,6 @@ export function HomePage() {
             width={941}
             height={585}
             sizes="120vw"
-            quality={100}
             className="show-up-bg h-auto w-full"
           />
         </div>

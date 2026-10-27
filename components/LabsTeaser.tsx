@@ -51,9 +51,9 @@ function LabCard({ lab, reduce, fade = true }: { lab: Lab; reduce: boolean | nul
         <Image
           src={lab.image}
           alt={lab.name}
-          width={332}
-          height={415}
-          className="mx-auto h-auto w-full max-h-[415px] object-contain"
+          width={1620}
+          height={2880}
+          className="mx-auto h-auto w-auto max-h-[415px] max-w-full object-contain"
         />
         <div className="px-6 pb-6">
           <h3 className="font-sans text-[19px] font-medium uppercase leading-[22.8px] tracking-normal text-[#331110]">
