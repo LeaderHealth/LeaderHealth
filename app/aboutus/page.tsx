@@ -19,7 +19,7 @@ const collage = [
   },
   {
     src: "https://framerusercontent.com/images/eS2i5fcV2jlzXSBJTEcJGOKVqCA.png?width=1391&height=1391",
-    alt: "Clear glass vial of red Leader Health PT-141 injectable with a dark cap, labeled \"Pharmaceutical-Grade.\"",
+    alt: "Clear glass vial of compounded semaglutide injection with a dark cap.",
     badge: true,
   },
   {
@@ -216,7 +216,7 @@ export default function AboutPage() {
                         "inset 0 1px 0 rgba(255, 255, 255, 0.72), inset 0 0 0 1px rgba(255, 255, 255, 0.38)",
                     }}
                   >
-                    Pharmaceutical-grade
+                    Compounded medication
                   </span>
                 ) : null}
               </RevealItem>

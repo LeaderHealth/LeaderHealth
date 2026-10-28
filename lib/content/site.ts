@@ -41,10 +41,10 @@ export const site = {
 };
 
 export const tickerItems = [
-  "Free consultation, fast approval",
+  "Free consultation",
   "No insurance required",
-  "Free expedited delivery",
-  "Doctor-led treatment plans",
+  "Ships from a licensed pharmacy",
+  "Reviewed by licensed clinicians",
 ];
 
 export const assets = {

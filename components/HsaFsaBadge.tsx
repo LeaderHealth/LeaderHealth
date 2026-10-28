@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 
-export const HSA_FSA_LABEL = "HSA/FSA accepted";
+export const HSA_FSA_LABEL = "HSA/FSA eligible";
 
 const tones = {
   onDark: "bg-[#F7F3F5] text-[#331110]",

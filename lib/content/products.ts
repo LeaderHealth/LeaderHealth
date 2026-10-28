@@ -212,9 +212,9 @@ export const products: Product[] = [
     description:
       "Feeling the effects of low testosterone? This injectable option is for men whose symptoms and lab results point to therapy. You start with a 64-marker panel and a clearance visit, then your clinician personalizes your dose and monitoring.",
     benefits: [
-      { title: "May support libido", body: "Testosterone may improve libido; results vary." },
-      { title: "Supports monitored levels", body: "Safety labs ensure proper treatment levels." },
-      { title: "May support lean mass", body: "Normalizing low testosterone supports lean mass." },
+      { title: "May help libido", body: "Testosterone may help libido. Results vary." },
+      { title: "Labs follow your dose", body: "Follow-up labs help your clinician review your levels over time." },
+      { title: "May help lean mass", body: "Bringing low testosterone into the normal range may help lean mass. Results vary." },
     ],
   },
   {
