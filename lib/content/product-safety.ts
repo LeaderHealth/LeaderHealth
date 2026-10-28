@@ -74,13 +74,12 @@ const tirzepatideInjection = safetyBox([
   {
     heading: "Boxed Warning",
     paragraphs: [
-      "In rats, tirzepatide caused thyroid tumors, including medullary thyroid carcinoma. It is not known whether this happens in people. Do not use if you or a family member has had medullary thyroid carcinoma, or if you have Multiple Endocrine Neoplasia syndrome type 2. Tell your prescriber right away about a neck lump, trouble swallowing, or lasting hoarseness. This warning comes from the FDA approved tirzepatide products.",
+      "In rats, tirzepatide caused thyroid tumors, including medullary thyroid carcinoma. It is not known whether this happens in people. Tell your prescriber right away about a neck lump, trouble swallowing, or lasting hoarseness. This warning comes from the FDA approved tirzepatide products.",
     ],
   },
   {
     heading: "Do not use if",
     items: [
-      "You or a family member has had medullary thyroid carcinoma, or you have Multiple Endocrine Neoplasia syndrome type 2.",
       "You have had a serious allergic reaction to tirzepatide, vitamin B12, or cobalt.",
       "You are pregnant.",
     ],
@@ -120,7 +119,7 @@ const tirzepatideInjection = safetyBox([
   {
     heading: "About this medicine",
     paragraphs: [
-      "A pharmacy makes this for you. It is not FDA approved and is not a generic of any approved tirzepatide. No approved product combines tirzepatide with vitamin B12. FDA has reported dosing errors with compounded GLP-1 medicines of five to twenty times the intended dose, usually from confusing insulin syringe units with milligrams. Your dose is measured in milligrams.",
+      "A pharmacy makes this for you. No approved product combines tirzepatide with vitamin B12. FDA has reported dosing errors with compounded GLP-1 medicines of five to twenty times the intended dose, usually from confusing insulin syringe units with milligrams. Your dose is measured in milligrams.",
     ],
   },
 ]);
