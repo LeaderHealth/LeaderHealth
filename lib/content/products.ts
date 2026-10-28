@@ -100,8 +100,12 @@ export const products: Product[] = [
     compare: true,
     safety:
       "*Risk of thyroid C cell tumors. Do not use if you or a family member has had medullary thyroid cancer, or if you have MEN 2. Compounded. Not FDA approved. Not a generic of Mounjaro or Zepbound.",
+    paragraphs: [
+      "Tirzepatide acts on GIP and GLP-1 receptors involved in appetite regulation. Your clinician considers your medical history, current medicines and treatment goals when deciding whether to prescribe it. Treatment is considered alongside nutrition and physical activity.",
+      "Compounded tirzepatide is supplied in a vial for injection under the skin. Available formulations include vitamin B6 or vitamin B12. Your prescription identifies the exact ingredients and concentration. Follow the instructions for your specific vial; syringe units can change between concentrations.",
+    ],
     description:
-      "Tirzepatide works on two appetite pathways, paired with healthy eating and activity for weight management. Before any prescription, your team reviews your labs, weight history, medications, and health background. Your provider sets your dose, guides titration, and checks in as you go. A clinician-led plan around your goals and needs.",
+      "Tirzepatide acts on GIP and GLP-1 receptors involved in appetite regulation. Your clinician considers your medical history, current medicines and treatment goals when deciding whether to prescribe it. Treatment is considered alongside nutrition and physical activity. Compounded tirzepatide is supplied in a vial for injection under the skin. Available formulations include vitamin B6 or vitamin B12. Your prescription identifies the exact ingredients and concentration. Follow the instructions for your specific vial; syringe units can change between concentrations.",
     benefits: [
       { title: "Improves Metabolic Health", body: "Targets hunger hormones GLP-1 and GIP to significantly reduce appetite and promote sustained fat loss." },
       { title: "Reduces Body Weight", body: "Helps regulate blood sugar levels and supports healthier insulin response over time." },
