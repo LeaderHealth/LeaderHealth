@@ -98,10 +98,9 @@ export function ProductHero({ product }: { product: Product }) {
             {(product.paragraphs ?? [product.description]).map((p) => (
               <p key={p.slice(0, 40)}>{p}</p>
             ))}
-            {product.highlight && <p className="font-medium">{product.highlight}</p>}
             {product.safety && <p className="text-[13px] text-white/90">{product.safety}</p>}
           </div>
-          <BundledLabPanel slug={product.slug} />
+          <BundledLabPanel product={product} />
           <ProductHeroCta product={product} />
           {trigger}
         </div>
