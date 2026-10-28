@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/components/cart/CartProvider";
-import { cartItemFromSlug } from "@/lib/cart/items";
+import { cartItemFromSlug, threeMonthCartNote } from "@/lib/cart/items";
 import { cartRuleIssue, isQuantityCapped, QUANTITY_LIMIT_MESSAGE } from "@/lib/cart/rules";
 import { cartSubtotal } from "@/lib/cart/types";
 import { getProduct, labs } from "@/lib/content/products";
@@ -800,6 +800,9 @@ export function CheckoutForm({ catalog, seedProduct, seedVariant }: CheckoutForm
                     <p className="mt-1 text-xs text-white/60">
                       {isLabSlug(item.slug) ? "One-time lab panel · At-home kit" : item.priceLabel}
                     </p>
+                    {threeMonthCartNote(item.slug) ? (
+                      <p className="mt-1 text-xs text-white/60">{threeMonthCartNote(item.slug)}</p>
+                    ) : null}
                     <div className="mt-2 flex items-center gap-3">
                       <div className="flex items-center rounded-full bg-white/10">
                         <button type="button" className="h-7 w-7" onClick={() => setQuantity(item.id, item.quantity - 1)}>

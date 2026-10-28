@@ -3,6 +3,15 @@ import { cartLineId, parsePriceAmount, type CartItem } from "./types";
 
 export const UNAVAILABLE_TREATMENT = "This treatment isn't available.";
 
+const threeMonthCartNoteBySlug: Record<string, string> = {
+  "men-trt-testosterone-cypionate": "Billed $327 every 3 months",
+  "men-trt-enclomiphene": "Billed $327 every 3 months",
+};
+
+export function threeMonthCartNote(slug: string) {
+  return threeMonthCartNoteBySlug[slug] ?? null;
+}
+
 export function isSellableLine(line: { slug: string; variant?: string; clientProductId?: string }) {
   const lab = labs.find((item) => item.slug === line.slug);
   if (lab) {

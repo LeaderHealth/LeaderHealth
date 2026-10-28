@@ -4,6 +4,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { threeMonthCartNote } from "@/lib/cart/items";
 import { isQuantityCapped, cartRuleIssue, QUANTITY_LIMIT_MESSAGE } from "@/lib/cart/rules";
 import { useCart } from "./CartProvider";
 import { formatPrice } from "@/lib/genhealth/types";
@@ -140,6 +141,9 @@ export function SideCart() {
                         {item.variant ? `${item.variant} · ` : ""}
                         {item.priceLabel}
                       </p>
+                      {threeMonthCartNote(item.slug) ? (
+                        <p className="mt-1 text-sm text-taupe">{threeMonthCartNote(item.slug)}</p>
+                      ) : null}
                       <div className="mt-3 flex items-center justify-between">
                         <div className="flex items-center rounded-full bg-background">
                           <button

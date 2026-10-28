@@ -22,6 +22,11 @@ const panelSlug = {
 const labelClass =
   "shrink-0 rounded-full bg-[#F2C6C3] px-3 py-1 font-sans text-[12px] font-medium text-[#331110]";
 
+const threeMonthPrice: Record<string, string> = {
+  "men-trt-testosterone-cypionate": "$109 per month. Billed $327 every 3 months.",
+  "men-trt-enclomiphene": "$109 per month. Billed $327 every 3 months.",
+};
+
 function genderFor(slug: string) {
   const audience = getProduct(slug)?.audience;
   if (audience === "men") return "Men";
@@ -85,6 +90,15 @@ export function BundledLabPanel({ slug }: { slug: string }) {
           </div>
         </div>
       )}
+      {threeMonthPrice[slug] ? (
+        <>
+          <div className="mx-4 border-t border-dotted border-white/40" />
+          <div className="px-4 py-3.5">
+            <p className="font-sans text-[15px] font-semibold leading-tight">Medication</p>
+            <p className="mt-0.5 font-sans text-[13px] leading-snug text-white/80">{threeMonthPrice[slug]}</p>
+          </div>
+        </>
+      ) : null}
       <div className="mx-4 border-t border-dotted border-white/40" />
       <div className="flex items-center justify-between gap-4 px-4 py-3.5">
         <div className="min-w-0">
