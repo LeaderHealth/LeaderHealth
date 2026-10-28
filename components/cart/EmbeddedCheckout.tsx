@@ -109,7 +109,7 @@ export function EmbeddedCheckout({ src, frameKey }: { src: string; frameKey: str
       title="Checkout"
       src={src}
       onLoad={onLoad}
-      className="lh-checkout-frame block h-[calc(100dvh-7rem)] w-full border-0"
+      className="lh-checkout-frame block h-dvh w-full border-0"
       allow="payment"
     />
   );

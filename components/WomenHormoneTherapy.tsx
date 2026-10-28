@@ -11,7 +11,6 @@ import { SafetyInformationModal } from "@/components/SafetyInformationModal";
 import { IconHoverButton } from "@/components/IconHoverButton";
 import { IllustrationNote } from "@/components/IllustrationNote";
 import { HsaFsaBadge } from "@/components/HsaFsaBadge";
-import { BundledLabPanel } from "@/components/BundledLabPanel";
 import { ChooseTreatmentButton } from "@/components/ProductHeroCta";
 import { products } from "@/lib/content/products";
 import { cartItemFromProduct } from "@/lib/cart/items";
@@ -313,9 +312,8 @@ export function WomenHormoneTherapy() {
                 </p>
                 <p className="mt-4 text-[16px] font-semibold">Starting at just $69/Month.</p>
                 <p className="mt-3 text-[14px] leading-relaxed text-white/90">
-                  Already have results? Upload them in the patient portal after checkout. Add a panel below only if you don&apos;t.
+                  Already have results? Upload them in the patient portal after checkout.
                 </p>
-                <BundledLabPanel slug="women-hormone-therapy" />
                 <ChooseTreatmentButton href="#womenintakes" className="mt-6" />
                 {trigger}
               </div>
