@@ -31,4 +31,9 @@ export const ADMIN_ERRORS: Record<string, string> = {
   "team-inactive": "Activate this admin before sending an invitation.",
   "team-activated": "This admin has already set a password.",
   "team-session": "That sign-in was not found.",
+  "link-denied": "That email does not have an activated team admin account.",
+  "link-invalid": "This sign-in link is not valid. Request a new one from the admin sign-in page.",
+  "link-limited": "Wait a minute, then request another link.",
+  "link-owner": "The main admin signs in with the site password. Email sign-in and password reset are for team admins.",
+  "link-unavailable": "Email sign-in is unavailable right now.",
 };

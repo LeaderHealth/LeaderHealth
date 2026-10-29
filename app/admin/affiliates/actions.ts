@@ -3,8 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
+  acceptSubAdminPasswordReset,
+  clearSubAdminMagicLink,
+  clearSubAdminPasswordReset,
   deletePendingSubAdmin,
   issueSubAdminInvitation,
+  issueSubAdminMagicLink,
+  issueSubAdminPasswordReset,
   removeSubAdmin,
   resendSubAdminInvitation,
   setSubAdminActive,
@@ -12,7 +17,14 @@ import {
   acceptSubAdminInvitation,
 } from "@/lib/affiliate/admins";
 import { affiliateFirebaseConfigured } from "@/lib/affiliate/firebase";
-import { affiliateEmailConfigured, sendAdminInvitationEmail, sendAffiliateInvitationEmail, sendApplicationLinkEmail } from "@/lib/affiliate/email";
+import {
+  affiliateEmailConfigured,
+  sendAdminInvitationEmail,
+  sendAffiliateInvitationEmail,
+  sendApplicationLinkEmail,
+  sendSubAdminPasswordResetEmail,
+  sendSubAdminSignInEmail,
+} from "@/lib/affiliate/email";
 import { approvePayout, markPayoutPaid, PayoutError } from "@/lib/affiliate/payouts";
 import {
   ApplicationError,
@@ -50,8 +62,9 @@ export async function loginAffiliateAdmin(formData: FormData) {
   if (!adminLoginConfigured()) fail("unconfigured");
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
+  const rememberDevice = formData.get("remember") === "on";
   if (adminCredentialsMatch(email, password)) {
-    if (!(await setAdminSession())) fail("unavailable");
+    if (!(await setAdminSession(rememberDevice))) fail("unavailable");
     redirect("/admin/affiliates/overview");
   }
   let subAdminId: string | null = null;
@@ -61,7 +74,86 @@ export async function loginAffiliateAdmin(formData: FormData) {
     console.error("[affiliate] sub-admin sign-in failed", error instanceof Error ? error.message : "unknown");
     fail("unavailable");
   }
-  if (!subAdminId || !(await setSubAdminSession(subAdminId))) fail("password");
+  if (!subAdminId || !(await setSubAdminSession(subAdminId, rememberDevice))) fail("password");
+  redirect("/admin/affiliates/overview");
+}
+
+function signInFail(error: string, method: "link" | "reset"): never {
+  redirect(`/admin/affiliates?error=${encodeURIComponent(error)}&method=${method}`);
+}
+
+export async function requestSubAdminLink(formData: FormData) {
+  if (!adminLoginConfigured() || !affiliateFirebaseConfigured() || !affiliateEmailConfigured()) signInFail("link-unavailable", "link");
+  let issued: Awaited<ReturnType<typeof issueSubAdminMagicLink>>;
+  try {
+    issued = await issueSubAdminMagicLink(String(formData.get("email") ?? ""));
+  } catch (error) {
+    console.error("[affiliate] admin sign-in link failed", error instanceof Error ? error.message : "unknown");
+    signInFail("link-unavailable", "link");
+  }
+  if (issued.status === "limited") signInFail("link-limited", "link");
+  if (issued.status === "owner") signInFail("link-owner", "link");
+  if (issued.status === "unavailable") signInFail("link-unavailable", "link");
+  if (issued.status !== "sent") signInFail("link-denied", "link");
+  try {
+    await sendSubAdminSignInEmail(issued.email, issued.url);
+  } catch (error) {
+    try {
+      await clearSubAdminMagicLink(issued.id);
+    } catch (clearError) {
+      console.error("[affiliate] admin sign-in link clear failed", clearError instanceof Error ? clearError.message : "unknown");
+    }
+    console.error("[affiliate] admin sign-in email failed", error instanceof Error ? error.message : "unknown");
+    signInFail("link-unavailable", "link");
+  }
+  redirect("/admin/affiliates?sent=1&method=link");
+}
+
+export async function requestSubAdminPasswordReset(formData: FormData) {
+  if (!adminLoginConfigured() || !affiliateFirebaseConfigured() || !affiliateEmailConfigured()) signInFail("link-unavailable", "reset");
+  let issued: Awaited<ReturnType<typeof issueSubAdminPasswordReset>>;
+  try {
+    issued = await issueSubAdminPasswordReset(String(formData.get("email") ?? ""));
+  } catch (error) {
+    console.error("[affiliate] admin password reset failed", error instanceof Error ? error.message : "unknown");
+    signInFail("link-unavailable", "reset");
+  }
+  if (issued.status === "limited") signInFail("link-limited", "reset");
+  if (issued.status === "owner") signInFail("link-owner", "reset");
+  if (issued.status === "unavailable") signInFail("link-unavailable", "reset");
+  if (issued.status !== "sent") signInFail("link-denied", "reset");
+  try {
+    await sendSubAdminPasswordResetEmail(issued.email, issued.url);
+  } catch (error) {
+    try {
+      await clearSubAdminPasswordReset(issued.id);
+    } catch (clearError) {
+      console.error("[affiliate] admin password reset clear failed", clearError instanceof Error ? clearError.message : "unknown");
+    }
+    console.error("[affiliate] admin password reset email failed", error instanceof Error ? error.message : "unknown");
+    signInFail("link-unavailable", "reset");
+  }
+  redirect("/admin/affiliates?sent=1&method=reset");
+}
+
+function resetFail(token: string, error: string): never {
+  const params = new URLSearchParams({ error });
+  if (/^[A-Za-z0-9_-]{20,200}$/.test(token)) params.set("token", token);
+  redirect(`/admin/affiliates/reset?${params.toString()}`);
+}
+
+export async function resetSubAdminPassword(formData: FormData) {
+  const token = String(formData.get("token") ?? "");
+  if (!adminLoginConfigured() || !affiliateFirebaseConfigured()) resetFail(token, "unavailable");
+  let result: Awaited<ReturnType<typeof acceptSubAdminPasswordReset>>;
+  try {
+    result = await acceptSubAdminPasswordReset(token, String(formData.get("password") ?? ""));
+  } catch (error) {
+    console.error("[affiliate] admin password reset save failed", error instanceof Error ? error.message : "unknown");
+    resetFail(token, "unavailable");
+  }
+  if (result.status !== "ok") resetFail(token, result.status);
+  if (!(await setSubAdminSession(result.id))) resetFail(token, "signin");
   redirect("/admin/affiliates/overview");
 }
 

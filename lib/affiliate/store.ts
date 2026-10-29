@@ -716,6 +716,95 @@ export async function acceptAffiliateInvitation(token: string, passwordInput: st
   });
 }
 
+export async function issueAffiliatePasswordReset(emailInput: string) {
+  if (!affiliateFirebaseConfigured()) return { status: "unavailable" as const };
+  const email = normalizeAffiliateEmail(emailInput);
+  if (!email) return { status: "denied" as const };
+  const doc = await singleAffiliateByEmail(email);
+  if (!doc || doc.data()?.active !== true || !affiliateActivated(doc.data())) return { status: "denied" as const };
+
+  const token = randomBytes(32).toString("base64url");
+  const hash = magicLinkHash(token);
+  const expires = new Date(Date.now() + MAGIC_LINK_MS);
+  const status = await affiliateFirestore().runTransaction(async (tx) => {
+    const snap = await tx.get(doc.ref);
+    const data = snap.data();
+    if (!snap.exists || data?.active !== true || !affiliateActivated(data) || data.email !== email) return "denied" as const;
+    const last = asDate(data.lastPasswordResetAt);
+    if (last && Date.now() - last.getTime() < MAGIC_LINK_COOLDOWN_MS) return "limited" as const;
+    tx.update(doc.ref, {
+      passwordResetHash: hash,
+      passwordResetExpiresAt: expires,
+      lastPasswordResetAt: new Date(),
+    });
+    return "sent" as const;
+  });
+  if (status !== "sent") return { status };
+  return {
+    status: "sent" as const,
+    code: doc.id,
+    email,
+    url: absoluteUrl(`/affiliates/reset?token=${encodeURIComponent(token)}`),
+  };
+}
+
+export async function clearAffiliatePasswordReset(code: string) {
+  if (!affiliateFirebaseConfigured()) return;
+  const normalized = normalizeAffiliateCode(code);
+  if (!normalized) return;
+  const ref = affiliateFirestore().collection("affiliates").doc(normalized);
+  const snap = await ref.get();
+  if (!snap.exists) return;
+  await ref.update({ passwordResetHash: null, passwordResetExpiresAt: null, lastPasswordResetAt: null });
+}
+
+async function passwordResetMatch(token: string) {
+  const hash = magicLinkHash(token);
+  const matches = await affiliateFirestore().collection("affiliates").where("passwordResetHash", "==", hash).limit(2).get();
+  if (matches.size !== 1) return null;
+  return { hash, snap: matches.docs[0] };
+}
+
+function passwordResetState(data: DocumentData | undefined, hash: string) {
+  if (!data || data.passwordResetHash !== hash) return "missing" as const;
+  if (data.active !== true) return "inactive" as const;
+  const expires = asDate(data.passwordResetExpiresAt);
+  if (!expires || expires.getTime() <= Date.now()) return "expired" as const;
+  if (!affiliateActivated(data)) return "missing" as const;
+  return "valid" as const;
+}
+
+export async function readAffiliatePasswordReset(token: string | null) {
+  if (!affiliateFirebaseConfigured()) return "unavailable" as const;
+  if (!tokenShape(token)) return "missing" as const;
+  const match = await passwordResetMatch(token);
+  if (!match) return "missing" as const;
+  return passwordResetState(match.snap.data(), match.hash);
+}
+
+export async function acceptAffiliatePasswordReset(token: string, passwordInput: string) {
+  if (!affiliateFirebaseConfigured()) return { status: "unavailable" as const };
+  if (!tokenShape(token)) return { status: "missing" as const };
+  const match = await passwordResetMatch(token);
+  if (!match) return { status: "missing" as const };
+  const preview = passwordResetState(match.snap.data(), match.hash);
+  if (preview !== "valid") return { status: preview };
+  const password = normalizeAffiliatePassword(passwordInput);
+  if (!password) return { status: "weak" as const };
+  const passwordHash = await hashPassword(password);
+  return affiliateFirestore().runTransaction(async (tx) => {
+    const snap = await tx.get(match.snap.ref);
+    const state = passwordResetState(snap.data(), match.hash);
+    if (state !== "valid") return { status: state };
+    tx.update(match.snap.ref, {
+      passwordHash,
+      passwordResetHash: null,
+      passwordResetExpiresAt: null,
+    });
+    return { status: "ok" as const, code: snap.id };
+  });
+}
+
 export async function redeemAffiliateMagicLink(token: string | null) {
   if (!affiliateFirebaseConfigured() || !tokenShape(token)) return null;
   const hash = magicLinkHash(token);
