@@ -6,6 +6,23 @@ import { PORTAL_URL } from "@/lib/content/site";
 
 const CLOSE_MS = 320;
 const popupEase = "cubic-bezier(0.22,1,0.36,1)";
+const DISMISS_KEY = "lh_portal_signup_dismissed";
+
+function wasDismissedThisSession() {
+  try {
+    return sessionStorage.getItem(DISMISS_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function rememberDismissThisSession() {
+  try {
+    sessionStorage.setItem(DISMISS_KEY, "1");
+  } catch {
+    /* Private mode / blocked storage — still close for this mount. */
+  }
+}
 
 export function ProductSignupPrompt() {
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -21,6 +38,7 @@ export function ProductSignupPrompt() {
   const [entered, setEntered] = useState(false);
 
   function present() {
+    if (wasDismissedThisSession()) return;
     returnFocus.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setPhase("open");
@@ -35,7 +53,7 @@ export function ProductSignupPrompt() {
 
   useEffect(() => {
     const node = sentinelRef.current;
-    if (!node) return;
+    if (!node || wasDismissedThisSession()) return;
 
     let scrolled = false;
     let wasBelow = node.getBoundingClientRect().top >= window.innerHeight;
@@ -50,6 +68,11 @@ export function ProductSignupPrompt() {
       const crossed = wasBelow && reached;
       wasBelow = !reached;
       if (shown.current || !scrolled || !crossed || window.scrollY < 160) return;
+      if (wasDismissedThisSession()) {
+        observer.disconnect();
+        window.removeEventListener("scroll", onScroll);
+        return;
+      }
       shown.current = true;
       observer.disconnect();
       window.removeEventListener("scroll", onScroll);
@@ -122,6 +145,7 @@ export function ProductSignupPrompt() {
   }, []);
 
   function dismiss() {
+    rememberDismissThisSession();
     setEntered(false);
     returnFocus.current?.focus();
     if (closeTimer.current) window.clearTimeout(closeTimer.current);
