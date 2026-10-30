@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useState, useSyncExternalStore } from "react";
-import { isSellableLine, UNAVAILABLE_TREATMENT } from "@/lib/cart/items";
+import { isSellableLine, UNAVAILABLE_TREATMENT, withCheckoutCharge } from "@/lib/cart/items";
 import { cartRuleIssue } from "@/lib/cart/rules";
 import { cartCount, cartSubtotal, type CartItem } from "@/lib/cart/types";
 
@@ -37,7 +37,7 @@ function parseStored(raw: string | null): CartItem[] {
   try {
     const parsed = JSON.parse(raw) as CartItem[];
     return Array.isArray(parsed)
-      ? parsed.filter((item) => item?.id && item?.name && isSellableLine(item))
+      ? parsed.filter((item) => item?.id && item?.name && isSellableLine(item)).map(withCheckoutCharge)
       : EMPTY_ITEMS;
   } catch {
     return EMPTY_ITEMS;
