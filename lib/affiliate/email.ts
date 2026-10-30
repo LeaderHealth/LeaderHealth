@@ -56,8 +56,19 @@ function escapeHtml(value: string) {
   return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
 }
 
-function brandedEmailHtml(input: { preview: string; heading: string; body: string; note: string; button: string; url: string }) {
-  const href = escapeHtml(input.url);
+function emailButton(label: string, url: string) {
+  const href = escapeHtml(url);
+  return `<table role="presentation" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="border-radius:999px;background:#321110;">
+                      <a href="${href}" style="display:inline-block;padding:14px 22px;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;">${escapeHtml(label)}</a>
+                    </td>
+                  </tr>
+                </table>
+                <p style="margin:28px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;color:#7a5a56;">If the button does not open, paste this link into your browser:<br><a href="${href}" style="color:#321110;word-break:break-all;">${href}</a></p>`;
+}
+
+function affiliateEmailFrame(preview: string, bodyHtml: string) {
   return `<!DOCTYPE html>
 <html lang="en">
   <head>
@@ -78,7 +89,7 @@ function brandedEmailHtml(input: { preview: string; heading: string; body: strin
     </style>
   </head>
   <body style="margin:0;padding:0;background:#f7f3f5;">
-    <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">${escapeHtml(input.preview)}</div>
+    <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">${escapeHtml(preview)}</div>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f7f3f5;padding:32px 16px;">
       <tr>
         <td align="center">
@@ -95,17 +106,7 @@ function brandedEmailHtml(input: { preview: string; heading: string; body: strin
                     </td>
                   </tr>
                 </table>
-                <h1 class="lh-title" style="margin:0 0 16px;font-family:'Instrument Serif',Georgia,'Times New Roman',serif;font-size:36px;line-height:1.15;font-weight:400;font-style:normal;color:#321110;">${escapeHtml(input.heading)}</h1>
-                <p style="margin:0 0 12px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#4a2a26;">${escapeHtml(input.body)}</p>
-                <p style="margin:0 0 28px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#7a5a56;">${escapeHtml(input.note)}</p>
-                <table role="presentation" cellpadding="0" cellspacing="0">
-                  <tr>
-                    <td style="border-radius:999px;background:#321110;">
-                      <a href="${href}" style="display:inline-block;padding:14px 22px;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;">${escapeHtml(input.button)}</a>
-                    </td>
-                  </tr>
-                </table>
-                <p style="margin:28px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;color:#7a5a56;">If the button does not open, paste this link into your browser:<br><a href="${href}" style="color:#321110;word-break:break-all;">${href}</a></p>
+                ${bodyHtml}
               </td>
             </tr>
           </table>
@@ -115,6 +116,64 @@ function brandedEmailHtml(input: { preview: string; heading: string; body: strin
     </table>
   </body>
 </html>`;
+}
+
+function brandedEmailHtml(input: { preview: string; heading: string; body: string; note: string; button: string; url: string }) {
+  return affiliateEmailFrame(
+    input.preview,
+    `<h1 class="lh-title" style="margin:0 0 16px;font-family:'Instrument Serif',Georgia,'Times New Roman',serif;font-size:36px;line-height:1.15;font-weight:400;font-style:normal;color:#321110;">${escapeHtml(input.heading)}</h1>
+                <p style="margin:0 0 12px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#4a2a26;">${escapeHtml(input.body)}</p>
+                <p style="margin:0 0 28px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#7a5a56;">${escapeHtml(input.note)}</p>
+                ${emailButton(input.button, input.url)}`,
+  );
+}
+
+function weeklyStatCell(label: string, value: string) {
+  return `<td width="33%" style="padding:4px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f7f3f5;border-radius:16px;">
+                      <tr>
+                        <td style="padding:14px 12px;">
+                          <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;line-height:14px;text-transform:uppercase;color:#7a5a56;">${escapeHtml(label)}</p>
+                          <p class="lh-title" style="margin:6px 0 0;font-family:'Instrument Serif',Georgia,'Times New Roman',serif;font-size:22px;line-height:1.2;font-weight:400;color:#321110;">${escapeHtml(value)}</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>`;
+}
+
+function weeklySalesEmailHtml(input: { weekLabel: string; orderCount: number; sales: string; commission: string; lines: string[]; url: string }) {
+  const orders =
+    input.lines.length === 0
+      ? `<p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#7a5a56;">No paid orders this week.</p>`
+      : `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${input.lines
+          .map(
+            (line, index) => `<tr>
+                    <td style="padding:${index === 0 ? "0" : "12px"} 0 0;border-top:${index === 0 ? "0" : "1px solid #f0e4e2"};font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#321110;">${escapeHtml(line)}</td>
+                  </tr>`,
+          )
+          .join("")}</table>`;
+  return affiliateEmailFrame(
+    `Your affiliate sales for ${input.weekLabel}.`,
+    `<p style="margin:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;line-height:14px;text-transform:uppercase;color:#e33d4d;">Weekly sales</p>
+                <h1 class="lh-title" style="margin:0 0 12px;font-family:'Instrument Serif',Georgia,'Times New Roman',serif;font-size:36px;line-height:1.15;font-weight:400;font-style:normal;color:#321110;">${escapeHtml(input.weekLabel)}</h1>
+                <p style="margin:0 0 24px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#4a2a26;">Here are the paid orders and commission from your Leader Health affiliate link.</p>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 28px;">
+                  <tr>
+                    ${weeklyStatCell("Orders", String(input.orderCount))}
+                    ${weeklyStatCell("Sales", input.sales)}
+                    ${weeklyStatCell("Commission", input.commission)}
+                  </tr>
+                </table>
+                <p style="margin:0 0 12px;font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;line-height:14px;text-transform:uppercase;color:#7a5a56;">Paid orders</p>
+                <div style="margin:0 0 28px;">${orders}</div>
+                ${emailButton("View your dashboard", input.url)}`,
+  );
+}
+
+function affiliateDashboardUrl() {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, "");
+  const origin = configured || (process.env.NODE_ENV === "development" ? "http://localhost:3000" : "https://leaderhealth.clinic");
+  return `${origin}/affiliates/overview`;
 }
 
 export async function sendAffiliateSignInEmail(email: string, url: string) {
@@ -150,7 +209,9 @@ export async function sendAffiliateWeeklySalesEmail(input: {
   commissionCents: number;
   lines: string[];
 }) {
-  const sales = input.salesCents == null ? "—" : formatWeeklyMoney(input.salesCents);
+  const sales = input.orderCount === 0 ? formatWeeklyMoney(0) : input.salesCents == null ? "—" : formatWeeklyMoney(input.salesCents);
+  const commission = formatWeeklyMoney(input.commissionCents);
+  const dashboardUrl = affiliateDashboardUrl();
   await deliverAffiliateEmail(
     input.email,
     `Your Leader Health sales for ${input.weekLabel}`,
@@ -159,11 +220,22 @@ export async function sendAffiliateWeeklySalesEmail(input: {
       "",
       `Orders: ${input.orderCount}`,
       `Sales: ${sales}`,
-      `Commission: ${formatWeeklyMoney(input.commissionCents)}`,
+      `Commission: ${commission}`,
       "",
-      ...input.lines,
+      ...(input.lines.length ? input.lines : ["No paid orders this week."]),
+      "",
+      dashboardUrl,
     ].join("\n"),
     "Affiliate weekly sales email failed",
+    weeklySalesEmailHtml({
+      weekLabel: input.weekLabel,
+      orderCount: input.orderCount,
+      sales,
+      commission,
+      lines: input.lines,
+      url: dashboardUrl,
+    }),
+    [logoAttachment()],
   );
 }
 
@@ -217,6 +289,81 @@ export async function sendAdminInvitationEmail(email: string, url: string) {
       body: "You are invited to help manage Leader Health affiliates. Use the button below to choose your name, email, and password, then open the admin dashboard.",
       note: `This link expires in ${AFFILIATE_INVITE_DAYS} days and works once.`,
       button: "Set up your account",
+      url,
+    }),
+    [logoAttachment()],
+  );
+}
+
+export async function sendSubAdminSignInEmail(email: string, url: string) {
+  await deliverAffiliateEmail(
+    email,
+    "Your Leader Health admin sign-in link",
+    [
+      "Use this link to sign in to the Leader Health admin page.",
+      "It expires in 15 minutes and works once.",
+      "",
+      url,
+      "",
+      "If you did not ask for this, you can ignore this email.",
+    ].join("\n"),
+    "Admin sign-in email failed",
+    brandedEmailHtml({
+      preview: "Sign in to the Leader Health admin page.",
+      heading: "Sign in",
+      body: "Use this link to sign in to the Leader Health admin page.",
+      note: "It expires in 15 minutes and works once.",
+      button: "Sign in",
+      url,
+    }),
+    [logoAttachment()],
+  );
+}
+
+export async function sendSubAdminPasswordResetEmail(email: string, url: string) {
+  await deliverAffiliateEmail(
+    email,
+    "Reset your Leader Health admin password",
+    [
+      "Use this link to choose a new password for your Leader Health admin account.",
+      "It expires in 15 minutes and works once.",
+      "",
+      url,
+      "",
+      "If you did not ask for this, you can ignore this email. Your current password still works.",
+    ].join("\n"),
+    "Admin password reset email failed",
+    brandedEmailHtml({
+      preview: "Choose a new password for your Leader Health admin account.",
+      heading: "Reset your password",
+      body: "Use this link to choose a new password for your Leader Health admin account.",
+      note: "It expires in 15 minutes and works once. If you did not ask for this, you can ignore this email.",
+      button: "Choose a new password",
+      url,
+    }),
+    [logoAttachment()],
+  );
+}
+
+export async function sendAffiliatePasswordResetEmail(email: string, url: string) {
+  await deliverAffiliateEmail(
+    email,
+    "Reset your Leader Health affiliate password",
+    [
+      "Use this link to choose a new password for your Leader Health affiliate account.",
+      "It expires in 15 minutes and works once.",
+      "",
+      url,
+      "",
+      "If you did not ask for this, you can ignore this email. Your current password still works.",
+    ].join("\n"),
+    "Affiliate password reset email failed",
+    brandedEmailHtml({
+      preview: "Choose a new password for your Leader Health affiliate account.",
+      heading: "Reset your password",
+      body: "Use this link to choose a new password for your Leader Health affiliate account.",
+      note: "It expires in 15 minutes and works once. If you did not ask for this, you can ignore this email.",
+      button: "Choose a new password",
       url,
     }),
     [logoAttachment()],

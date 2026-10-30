@@ -233,13 +233,32 @@ export type CheckoutCatalogProduct = {
   categoryNames: string[];
 };
 
+function namedCategories(ids: unknown, categoryNames: Map<string, string>) {
+  if (!Array.isArray(ids)) return [];
+  return ids
+    .map((id) => categoryNames.get(String(id)))
+    .filter((name): name is string => Boolean(name));
+}
+
+function checkoutRow(record: Record<string, unknown>, names: string[]): CheckoutCatalogProduct {
+  const clientProductId = str(record.clientProductId);
+  const displayName = str(record.displayName);
+  const name = displayName || str(record.name) || clientProductId;
+  return {
+    clientProductId,
+    name,
+    displayName: displayName || name,
+    categoryNames: names,
+  };
+}
+
 /**
  * Products the checkout can sell.
  * That app ignores Gen Health's storefrontEligible flag, so this list keeps
  * products listCatalog() would drop for storefrontEligible or showPatient.
- * Inactive or uncategorized rows are still left out.
- * Lab panels are the records from `/v2/client/labs`. The older product-record
- * ids for those same panels are left out; checkout rewrites them to the lab id.
+ * Inactive rows are left out. Treatments also need a category.
+ * Lab panels come only from `/v2/client/labs`. A Products-tab row for the same
+ * panel is never used, even when that row is the one with a category.
  */
 export async function listCheckoutProducts(): Promise<CheckoutCatalogProduct[]> {
   const [rawProducts, rawLabs, categoryResponse] = await Promise.all([
@@ -263,30 +282,35 @@ export async function listCheckoutProducts(): Promise<CheckoutCatalogProduct[]> 
   }
   if (categoryNames.size === 0) throw new Error("Failed to load categories.");
 
-  const retiredPanelIds = new Set(Object.keys(labProductAliases));
+  const labIds = new Set<string>([...Object.keys(labProductAliases), ...Object.values(labProductAliases)]);
+  for (const raw of rawLabs) {
+    const id = str(asRecord(raw)?.clientProductId);
+    if (id) labIds.add(id);
+  }
+
   const items: CheckoutCatalogProduct[] = [];
   const seen = new Set<string>();
-  for (const raw of [...rawProducts, ...rawLabs]) {
+  for (const raw of rawLabs) {
     const record = asRecord(raw);
     if (!record) continue;
     const status = str(record.status).toLowerCase();
     if (status === "inactive" || status === "archived") continue;
     const clientProductId = str(record.clientProductId);
-    if (!clientProductId || seen.has(clientProductId) || retiredPanelIds.has(clientProductId)) continue;
-    const categoryIds = Array.isArray(record.categories) ? record.categories.map((id) => String(id)) : [];
-    const names = categoryIds
-      .map((id) => categoryNames.get(id))
-      .filter((name): name is string => Boolean(name));
+    if (!clientProductId || seen.has(clientProductId)) continue;
+    seen.add(clientProductId);
+    items.push(checkoutRow(record, namedCategories(record.categories ?? record.displayCategoryIds, categoryNames)));
+  }
+  for (const raw of rawProducts) {
+    const record = asRecord(raw);
+    if (!record) continue;
+    const status = str(record.status).toLowerCase();
+    if (status === "inactive" || status === "archived") continue;
+    const clientProductId = str(record.clientProductId);
+    if (!clientProductId || seen.has(clientProductId) || labIds.has(clientProductId)) continue;
+    const names = namedCategories(record.categories, categoryNames);
     if (names.length === 0) continue;
     seen.add(clientProductId);
-    const displayName = str(record.displayName);
-    const name = displayName || str(record.name) || clientProductId;
-    items.push({
-      clientProductId,
-      name,
-      displayName: displayName || name,
-      categoryNames: names,
-    });
+    items.push(checkoutRow(record, names));
   }
   return items;
 }

@@ -7,7 +7,12 @@ import { reportHandledAffiliateError } from "./report";
 export const ADMIN_COOKIE = "lh_aff_admin";
 export const PORTAL_COOKIE = "lh_aff_portal";
 const SESSION_SECONDS = 60 * 60 * 12;
+const REMEMBER_SECONDS = 60 * 60 * 24 * 30;
 const SESSION_ID = /^[A-Za-z0-9_-]{20,80}$/;
+
+function sessionSeconds(rememberDevice: boolean) {
+  return rememberDevice ? REMEMBER_SECONDS : SESSION_SECONDS;
+}
 
 function sessionSecret() {
   return process.env.AFFILIATE_SESSION_SECRET?.trim() ?? "";
@@ -111,10 +116,10 @@ async function browserLabel() {
   }
 }
 
-async function issueSession(role: DashboardRole, subject: string) {
+async function issueSession(role: DashboardRole, subject: string, seconds: number) {
   if (!sessionSecret() || !subject) return null;
   const id = randomBytes(18).toString("base64url");
-  const expiresAt = Date.now() + SESSION_SECONDS * 1000;
+  const expiresAt = Date.now() + seconds * 1000;
   try {
     const saved = await createDashboardSession({
       id,
@@ -132,20 +137,20 @@ async function issueSession(role: DashboardRole, subject: string) {
   return `${body}.${sign(body)}`;
 }
 
-function sessionCookieOptions() {
+function sessionCookieOptions(maxAge: number) {
   return {
     httpOnly: true,
     sameSite: "lax" as const,
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: SESSION_SECONDS,
+    maxAge,
   };
 }
 
-async function remember(name: string, token: string | null) {
+async function remember(name: string, token: string | null, maxAge: number) {
   if (!token) return false;
   const jar = await cookies();
-  jar.set(name, token, sessionCookieOptions());
+  jar.set(name, token, sessionCookieOptions(maxAge));
   return true;
 }
 
@@ -175,15 +180,17 @@ export async function adminIsSignedIn() {
   return (await adminSessionActor()) != null;
 }
 
-export async function setAdminSession() {
+export async function setAdminSession(rememberDevice = false) {
   const email = adminEmail();
   if (!email) return false;
-  return remember(ADMIN_COOKIE, await issueSession("owner", email));
+  const seconds = sessionSeconds(rememberDevice);
+  return remember(ADMIN_COOKIE, await issueSession("owner", email, seconds), seconds);
 }
 
-export async function setSubAdminSession(id: string) {
+export async function setSubAdminSession(id: string, rememberDevice = false) {
   if (!SESSION_ID.test(id)) return false;
-  return remember(ADMIN_COOKIE, await issueSession("sub", id));
+  const seconds = sessionSeconds(rememberDevice);
+  return remember(ADMIN_COOKIE, await issueSession("sub", id, seconds), seconds);
 }
 
 export async function clearAdminSession() {
@@ -205,10 +212,11 @@ export async function portalAffiliateCode() {
   }
 }
 
-export async function setPortalSession(code: string) {
+export async function setPortalSession(code: string, rememberDevice = false) {
   const normalized = normalizeAffiliateCode(code);
   if (!normalized) return false;
-  return remember(PORTAL_COOKIE, await issueSession("affiliate", normalized));
+  const seconds = sessionSeconds(rememberDevice);
+  return remember(PORTAL_COOKIE, await issueSession("affiliate", normalized, seconds), seconds);
 }
 
 export async function clearPortalSession() {

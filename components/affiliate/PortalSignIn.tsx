@@ -6,7 +6,7 @@ import { useState, type ReactNode } from "react";
 import { PortalBrand } from "./PortalBrand";
 
 type Role = "affiliate" | "admin";
-type Method = "password" | "link";
+type Method = "password" | "link" | "reset";
 
 const fieldClass =
   "h-12 w-full rounded-full border border-[#eadfe0] bg-white pl-11 text-sm text-ink placeholder:text-[#b7a6a4] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
@@ -59,6 +59,7 @@ export function PortalSignIn({
   unconfigured,
   loginAction,
   linkAction,
+  resetAction,
 }: {
   role: Role;
   ready: boolean;
@@ -71,18 +72,36 @@ export function PortalSignIn({
   unconfigured: string;
   loginAction: (formData: FormData) => void | Promise<void>;
   linkAction?: (formData: FormData) => void | Promise<void>;
+  resetAction?: (formData: FormData) => void | Promise<void>;
 }) {
   const affiliate = role === "affiliate";
   const slides = affiliate ? affiliateSlides : adminSlides;
-  const [method, setMethod] = useState<Method>(affiliate && emailLinks && initialMethod === "link" ? "link" : "password");
+  const [method, setMethod] = useState<Method>(
+    emailLinks && (initialMethod === "link" || initialMethod === "reset") ? initialMethod : "password",
+  );
+  const [editing, setEditing] = useState(false);
   const [email, setEmail] = useState("");
   const [slide, setSlide] = useState(0);
-  const linkForm = method === "link" && emailLinks && linkAction;
+  const linkForm = method === "link" && emailLinks && Boolean(linkAction);
+  const resetForm = method === "reset" && emailLinks && Boolean(resetAction);
+  const showNotice = sent && !editing && (linkForm || resetForm);
+  const textLinkClass =
+    "font-medium text-accent hover:text-brown focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
+  const primaryButtonClass =
+    "inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-ink px-5 text-sm font-medium text-white hover:bg-brown focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
+  const secondaryButtonClass =
+    "inline-flex h-12 w-full items-center justify-center rounded-full border border-[#eadfe0] bg-white px-5 text-sm font-medium text-ink hover:border-ink/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
+  const quietLinkClass =
+    "text-[#8d7370] hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
+
+  function choose(next: Method) {
+    setEditing(true);
+    setMethod(next);
+  }
   const describedBy = invalid ? errorId : undefined;
-  const supportLabel = "Contact Leader Health support";
   const other = affiliate
-    ? { href: "/admin/affiliates", label: "Admin sign-in" }
-    : { href: "/affiliates", label: "Affiliate sign-in" };
+    ? { href: "/admin/affiliates", label: "Sign in as admin" }
+    : { href: "/affiliates", label: "Sign in as an affiliate" };
 
   return (
     <div className="min-h-screen bg-[#efecee] px-3 pt-28 pb-16 text-ink sm:px-4 sm:pt-32 sm:pb-20 lg:px-5 lg:pb-24">
@@ -90,7 +109,13 @@ export function PortalSignIn({
         <section className="flex flex-col justify-center rounded-[28px] bg-[#fbf8f8] px-6 py-10 sm:px-10 lg:px-12">
           <PortalBrand badge={affiliate ? "Affiliates" : "Admin"} />
           <h1 className="mt-10 max-w-sm text-[2.65rem] leading-[1.02] font-medium tracking-[-0.035em] text-ink sm:text-5xl">
-            {affiliate ? (
+            {showNotice ? (
+              "Check your email"
+            ) : resetForm ? (
+              "Reset your password"
+            ) : linkForm ? (
+              "Sign in with email"
+            ) : affiliate ? (
               <>
                 Welcome back,
                 <br />
@@ -100,25 +125,41 @@ export function PortalSignIn({
               "Welcome back."
             )}
           </h1>
-          <p className="mt-4 max-w-sm text-sm leading-6 text-[#8d7370]">
-            {linkForm
-              ? "We'll email a one-time sign-in link to the address on your affiliate account. It expires in 15 minutes and works once."
-              : affiliate
-                ? "Log in to your affiliate dashboard to track referrals, commissions, and payouts."
-                : "Log in to manage affiliate accounts, tracking links, orders, and payouts."}
+          <p className="mt-4 max-w-sm text-sm leading-6 text-[#8d7370]" role={showNotice ? "status" : undefined}>
+            {showNotice && resetForm
+              ? "We sent a link to choose a new password. It expires in 15 minutes and works once. Your current password keeps working until you save a new one."
+              : showNotice && linkForm
+                ? "We sent a one-time sign-in link. It expires in 15 minutes and works once. Your password is unchanged."
+                : resetForm
+                  ? affiliate
+                    ? "Enter the email on your affiliate account. We'll send a link to choose a new password. It expires in 15 minutes and works once."
+                    : "Enter the email on your team admin account. We'll send a link to choose a new password. It expires in 15 minutes and works once. The main admin still uses the site password."
+                  : linkForm
+                    ? affiliate
+                      ? "Enter the email on your affiliate account. We'll send a one-time sign-in link. It expires in 15 minutes, works once, and does not change your password."
+                      : "Enter the email on your team admin account. We'll send a one-time sign-in link. It expires in 15 minutes, works once, and does not change your password. The main admin still uses the site password."
+                    : affiliate
+                      ? "Log in to your affiliate dashboard to track referrals, commissions, and payouts."
+                      : "Log in to manage affiliate accounts, tracking links, orders, and payouts."}
           </p>
           {error ? (
             <p id={errorId} role="alert" className="mt-6 rounded-2xl bg-rose px-4 py-3 text-sm text-ink">
               {error}
             </p>
           ) : null}
-          {sent && linkForm ? (
-            <p role="status" className="mt-6 rounded-2xl bg-white px-4 py-3 text-sm text-ink">
-              Check your email for a sign-in link. It expires in 15 minutes and works once.
-            </p>
-          ) : null}
           {ready ? (
-            <form action={linkForm ? linkAction : loginAction} className="mt-8 flex max-w-md flex-col gap-5">
+            showNotice ? (
+              <div className="mt-8 flex max-w-md flex-col gap-3">
+                <button type="button" onClick={() => choose("password")} className={primaryButtonClass}>
+                  Back to sign in
+                  <ArrowIcon />
+                </button>
+                <button type="button" onClick={() => setEditing(true)} className={secondaryButtonClass}>
+                  Send another link
+                </button>
+              </div>
+            ) : (
+            <form action={resetForm ? resetAction : linkForm ? linkAction : loginAction} className="mt-8 flex max-w-md flex-col gap-5">
               <Field label="Email" id={affiliate ? "portal-email" : "admin-email"}>
                 <MailIcon />
                 <input
@@ -128,84 +169,97 @@ export function PortalSignIn({
                   required
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
-                  autoComplete={linkForm ? "email" : "username"}
+                  autoComplete={linkForm || resetForm ? "email" : "username"}
                   placeholder="you@yourbrand.com"
                   aria-invalid={invalid || undefined}
                   aria-describedby={describedBy}
                   className={fieldClass}
                 />
               </Field>
-              {linkForm ? (
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setMethod("password")}
-                    className="text-sm text-accent hover:text-brown focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-                  >
-                    Sign in with password
-                  </button>
-                </div>
-              ) : (
-                <Field
-                  label="Password"
-                  id={affiliate ? "portal-password" : "password"}
-                  aside={
-                    emailLinks ? (
-                      <button
-                        type="button"
-                        onClick={() => setMethod("link")}
-                        className="text-sm text-accent hover:text-brown focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-                      >
-                        Forgot password?
-                      </button>
-                    ) : (
-                      <Link
-                        href="/contact-us"
-                        className="text-sm text-accent hover:text-brown focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-                      >
-                        Forgot password?
-                      </Link>
-                    )
-                  }
-                >
-                  <PasswordControl
+              {linkForm || resetForm ? null : (
+                <>
+                  <Field
+                    label="Password"
                     id={affiliate ? "portal-password" : "password"}
-                    invalid={invalid}
-                    describedBy={describedBy}
-                  />
-                </Field>
+                    aside={
+                      emailLinks ? (
+                        <button type="button" onClick={() => choose("reset")} className={`${textLinkClass} text-sm whitespace-nowrap`}>
+                          Forgot password?
+                        </button>
+                      ) : (
+                        <Link href="/contact-us" className={`${textLinkClass} text-sm whitespace-nowrap`}>
+                          Forgot password?
+                        </Link>
+                      )
+                    }
+                  >
+                    <PasswordControl
+                      id={affiliate ? "portal-password" : "password"}
+                      invalid={invalid}
+                      describedBy={describedBy}
+                    />
+                  </Field>
+                  <label className="flex items-center gap-2.5 text-sm text-ink">
+                    <input
+                      type="checkbox"
+                      name="remember"
+                      className="size-4 rounded border-[#d9cccb] accent-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                    />
+                    Keep me signed in on this device
+                  </label>
+                </>
               )}
-              {linkForm ? null : (
-                <label className="flex items-center gap-2.5 text-sm text-ink">
-                  <input
-                    type="checkbox"
-                    name="remember"
-                    className="size-4 rounded border-[#d9cccb] accent-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-                  />
-                  Keep me signed in on this device
-                </label>
-              )}
-              <button
-                type="submit"
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-ink px-5 text-sm font-medium text-white hover:bg-brown focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-              >
-                {linkForm ? "Email me a sign-in link" : "Log in to dashboard"}
+              <button type="submit" className={primaryButtonClass}>
+                {resetForm ? "Email me a reset link" : linkForm ? "Email me a sign-in link" : "Log in to dashboard"}
                 <ArrowIcon />
               </button>
+              {linkForm || resetForm ? (
+                <div className="-mt-1 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm">
+                  <button
+                    type="button"
+                    onClick={() => choose("password")}
+                    className="inline-flex items-center gap-2 font-medium text-ink hover:text-brown focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                  >
+                    <ArrowIcon className="rotate-180" />
+                    Back to sign in
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => choose(resetForm ? "link" : "reset")}
+                    className={`${textLinkClass} whitespace-nowrap`}
+                  >
+                    {resetForm ? "Sign in with email" : "Reset password"}
+                  </button>
+                </div>
+              ) : emailLinks ? (
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-3 text-sm text-[#8d7370]">
+                    <span className="h-px flex-1 bg-[#eadfe0]" />
+                    or
+                    <span className="h-px flex-1 bg-[#eadfe0]" />
+                  </div>
+                  <button type="button" onClick={() => choose("link")} className={secondaryButtonClass}>
+                    Email me a sign-in link
+                  </button>
+                  <p className="text-center text-sm leading-5 text-[#8d7370]">
+                    {affiliate
+                      ? "No password needed. This does not change your password."
+                      : "For team admins. This does not change your password."}
+                  </p>
+                </div>
+              ) : null}
             </form>
+            )
           ) : (
             <p className="mt-8 max-w-md text-sm leading-6 text-ink">{unconfigured}</p>
           )}
-          <p className="mt-8 text-center text-sm text-[#8d7370]">
-            Trouble logging in?{" "}
-            <Link
-              href="/contact-us"
-              className="text-accent hover:text-brown focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-            >
-              {supportLabel}
+          <p className="mt-8 flex max-w-md flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm">
+            <Link href="/contact-us" className={quietLinkClass}>
+              Contact support
             </Link>
-          </p>
-          <p className="mt-3 text-center text-sm">
+            <span aria-hidden className="text-[#d9cccb]">
+              ·
+            </span>
             <Link
               href={other.href}
               className="font-medium text-ink underline decoration-ink underline-offset-4 hover:text-brown focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
