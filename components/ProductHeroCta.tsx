@@ -4,6 +4,7 @@ import type { MouseEvent } from "react";
 import { listedVariants, type Product } from "@/lib/content/products";
 import { cartItemFromProduct } from "@/lib/cart/items";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
+import { PlanAddToCart, productOffersPlans } from "@/components/PlanAddToCart";
 
 export function ChooseTreatmentButton({
   href,
@@ -35,6 +36,7 @@ export function ChooseTreatmentButton({
 }
 
 export function ProductHeroCta({ product }: { product: Product }) {
+  if (productOffersPlans(product.slug)) return <PlanAddToCart product={product} />;
   const variants = listedVariants(product);
   if (variants.length > 1) {
     return <ChooseTreatmentButton href="#find-what-fits" className="mt-7" />;
