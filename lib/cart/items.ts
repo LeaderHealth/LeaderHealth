@@ -3,13 +3,24 @@ import { cartLineId, parsePriceAmount, type CartItem } from "./types";
 
 export const UNAVAILABLE_TREATMENT = "This treatment isn't available.";
 
-const threeMonthCartNoteBySlug: Record<string, string> = {
-  "men-trt-testosterone-cypionate": "Billed $327 every 3 months",
-  "men-trt-enclomiphene": "Billed $327 every 3 months",
+/** Amount collected at checkout. The card can still show a monthly starting price. */
+const checkoutChargeBySlug: Record<string, number> = {
+  "men-trt-testosterone-cypionate": 327,
+  "men-trt-enclomiphene": 327,
 };
 
 export function threeMonthCartNote(slug: string) {
-  return threeMonthCartNoteBySlug[slug] ?? null;
+  const charge = checkoutChargeBySlug[slug];
+  return charge == null ? null : `Billed $${charge} every 3 months`;
+}
+
+export function checkoutCharge(item: Pick<CartItem, "slug" | "amount">) {
+  return checkoutChargeBySlug[item.slug] ?? item.amount;
+}
+
+export function withCheckoutCharge(item: CartItem): CartItem {
+  const amount = checkoutCharge(item);
+  return amount === item.amount ? item : { ...item, amount };
 }
 
 export function isSellableLine(line: { slug: string; variant?: string; clientProductId?: string }) {
@@ -37,7 +48,7 @@ export function cartItemFromProduct(product: Product, variant?: Variant): CartIt
     href: `/products/${product.slug}`,
     image: variant?.image ?? product.image,
     priceLabel,
-    amount: parsePriceAmount(priceLabel),
+    amount: checkoutCharge({ slug: product.slug, amount: parsePriceAmount(priceLabel) }),
     quantity: 1,
     clientProductId: variant?.clientProductId ?? product.clientProductId,
   };

@@ -23,8 +23,8 @@ const billingNote: Record<string, string> = {
 
 const planPrices: Record<string, Array<{ label: string; price: string }>> = {
   "longevity-nad": [
-    { label: "1-month plan", price: "$149" },
-    { label: "3-month plan, paid in full", price: "$408" },
+    { label: "1-month plan", price: "$149/mo" },
+    { label: "3-month plan, paid in full", price: "$136/mo" },
   ],
 };
 
