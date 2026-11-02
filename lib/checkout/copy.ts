@@ -18,7 +18,8 @@ export const MEDICAL_CONDITIONS = [
   "Known hypersensitivity to testosterone",
 ];
 
-export const HRT_BLOCKED_STATES = ["SC"];
+/** Hormone therapy ships to every U.S. state. Add a code here to block one. */
+export const HRT_BLOCKED_STATES: string[] = [];
 
 export const INCLUDED_ITEMS = [
   "Free telehealth consult with a licensed U.S. physician",
