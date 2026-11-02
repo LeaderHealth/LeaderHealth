@@ -243,6 +243,10 @@ h3.font-sans,
   -webkit-overflow-scrolling: touch;
 }
 
+.lh-mobile-nav-scroll.lh-mobile-nav-fit {
+  overflow-y: hidden;
+}
+
 .lh-mobile-nav-scroll::-webkit-scrollbar {
   display: none;
 }

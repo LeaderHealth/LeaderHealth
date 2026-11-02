@@ -4,7 +4,7 @@ import { PortalSignIn } from "@/components/affiliate/PortalSignIn";
 import { affiliateEmailConfigured } from "@/lib/affiliate/email";
 import { affiliateAdminConfigured, adminIsSignedIn } from "@/lib/affiliate/session";
 import { loginAffiliateAdmin, requestSubAdminLink, requestSubAdminPasswordReset } from "./actions";
-import { ADMIN_ERRORS } from "./messages";
+import { ADMIN_ERRORS, ADMIN_LOCKED_MAIL } from "./messages";
 
 export const metadata: Metadata = {
   title: "Affiliates",
@@ -16,12 +16,13 @@ export const dynamic = "force-dynamic";
 export default async function AffiliatesAdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; sent?: string; method?: string }>;
+  searchParams: Promise<{ error?: string; sent?: string; method?: string; mailed?: string }>;
 }) {
   if (await adminIsSignedIn()) redirect("/admin/affiliates/overview");
 
   const query = await searchParams;
-  const error = query.error ? (ADMIN_ERRORS[query.error] ?? "") : "";
+  const error =
+    query.error === "locked" && query.mailed === "1" ? ADMIN_LOCKED_MAIL : query.error ? (ADMIN_ERRORS[query.error] ?? "") : "";
   const sent = query.sent === "1" && !error;
   const emailLinks = affiliateEmailConfigured();
   const initialMethod = !emailLinks ? "password" : query.method === "reset" ? "reset" : query.method === "link" || sent ? "link" : "password";
@@ -31,7 +32,7 @@ export default async function AffiliatesAdminPage({
       role="admin"
       ready={affiliateAdminConfigured()}
       emailLinks={emailLinks}
-      invalid={query.error === "password" || query.error === "link-denied" || query.error === "link-limited"}
+      invalid={query.error === "password" || query.error === "locked" || query.error === "link-denied" || query.error === "link-limited"}
       initialMethod={initialMethod}
       error={error}
       sent={sent}

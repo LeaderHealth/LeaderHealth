@@ -1,5 +1,9 @@
+export const ADMIN_LOCKED_MAIL =
+  "Too many tries. Wait 5 minutes, or open the email we sent to choose a new password. Saving it removes the lock right away.";
+
 export const ADMIN_ERRORS: Record<string, string> = {
   password: "That email or password is incorrect.",
+  locked: "Too many tries. Wait 5 minutes, then sign in again.",
   unconfigured: "Set AFFILIATE_ADMIN_EMAIL, AFFILIATE_ADMIN_PASSWORD, and AFFILIATE_SESSION_SECRET before signing in.",
   invalid: "Check the name, email, and commission.",
   mail: "Set RESEND_API_KEY and AFFILIATE_FROM_EMAIL before sending invitations.",

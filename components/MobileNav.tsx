@@ -356,13 +356,13 @@ function FeaturedCard({ label, card }: { label: string; card: FeatureCard }) {
     slug === "women-hormone-therapy" || slug === "weight-loss-semaglutide" || slug === "longevity-nad";
 
   return (
-    <div className="pt-5 pb-1">
-      <p className="text-[12px] leading-4 font-medium text-white/70">{label}</p>
+    <div className="flex min-h-0 flex-1 flex-col pt-4 pb-1">
+      <p className="shrink-0 text-[12px] leading-4 font-medium text-white/70">{label}</p>
       <Link
         href={card.href}
-        className={`group mt-2 block overflow-hidden rounded-[12px] bg-white p-2 text-ink ${tapFocus} focus-visible:outline-ink`}
+        className={`group mt-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-[12px] bg-white p-2 text-ink ${tapFocus} focus-visible:outline-ink`}
       >
-        <div className="relative aspect-[5/4] overflow-hidden rounded-[10px] bg-ink">
+        <div className="relative min-h-0 flex-1 overflow-hidden rounded-[10px] bg-ink">
           {card.image ? (
             <Image
               src={card.image}
@@ -374,7 +374,7 @@ function FeaturedCard({ label, card }: { label: string; card: FeatureCard }) {
             />
           ) : null}
         </div>
-        <div className="px-2 pt-3 pb-2">
+        <div className="shrink-0 px-2 pt-3 pb-2">
           <p className="text-[20px] leading-tight font-bold break-words">{card.heading}</p>
           <p className="mt-1 text-[14px] leading-snug text-ink/75 break-words">{card.subline}</p>
           <p className="mt-1.5 text-[13px] font-medium">{card.price}</p>
@@ -770,7 +770,7 @@ export function MobileNav({
             ref={scrollRef}
             data-fade={scrollFade}
             onScroll={updateFade}
-            className={`lh-mobile-nav-scroll min-h-0 min-w-0 flex-1 ${screen.name === "root" && !query.trim() ? "flex flex-col" : ""} ${menuPad} pb-10`}
+            className={`lh-mobile-nav-scroll min-h-0 min-w-0 flex-1 ${(screen.name === "root" && !query.trim()) || screen.name === "list" ? "flex flex-col" : ""} ${screen.name === "list" ? "lh-mobile-nav-fit" : ""} ${menuPad} ${screen.name === "list" ? "pb-3" : "pb-10"}`}
           >
             {showSearch ? (
               <div className="mb-3.5" style={introStyle(revealed, intro, reducedMotion, 120, 220, 8)}>
@@ -780,7 +780,7 @@ export function MobileNav({
 
             <div
               key={screenKey}
-              className={`motion-safe:transition-[opacity,transform] motion-safe:duration-200 motion-safe:ease-out [@starting-style]:translate-x-2 [@starting-style]:opacity-0 ${screen.name === "root" && !query.trim() ? "flex min-h-0 flex-1 flex-col" : ""}`}
+              className={`motion-safe:transition-[opacity,transform] motion-safe:duration-200 motion-safe:ease-out [@starting-style]:translate-x-2 [@starting-style]:opacity-0 ${(screen.name === "root" && !query.trim()) || screen.name === "list" ? "flex min-h-0 flex-1 flex-col" : ""}`}
             >
               {query.trim() && showSearch ? (
                 <div className="rounded-2xl bg-white/10">
@@ -1054,7 +1054,7 @@ function MobileScreenView({
       : category?.label ?? "Back";
 
   return (
-    <div className="min-w-0">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <button
         type="button"
         onClick={() => onBack(screen.audience)}

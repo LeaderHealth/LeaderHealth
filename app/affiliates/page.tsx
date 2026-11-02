@@ -14,8 +14,11 @@ export const metadata: Metadata = {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const LOCKED_MAIL = "Too many tries. Wait 5 minutes, or open the email we sent to choose a new password. Saving it removes the lock right away.";
+
 const ERRORS: Record<string, string> = {
   denied: "That sign-in didn't work. Check the email and password, or request a new link.",
+  locked: "Too many tries. Wait 5 minutes, then sign in again.",
   limited: "Wait a minute, then request another link.",
   unconfigured: "Affiliate sign-in is unavailable right now.",
   unavailable: "Affiliate sign-in is unavailable right now.",
@@ -24,12 +27,12 @@ const ERRORS: Record<string, string> = {
 export default async function AffiliatePortalPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; sent?: string; method?: string }>;
+  searchParams: Promise<{ error?: string; sent?: string; method?: string; mailed?: string }>;
 }) {
   if (await currentAffiliate()) redirect("/affiliates/overview");
 
   const query = await searchParams;
-  const error = query.error ? ERRORS[query.error] : "";
+  const error = query.error === "locked" && query.mailed === "1" ? LOCKED_MAIL : query.error ? ERRORS[query.error] : "";
   const sent = query.sent === "1" && !error;
   const emailLinks = affiliateEmailConfigured();
   const initialMethod = !emailLinks ? "password" : query.method === "reset" ? "reset" : query.method === "link" || sent ? "link" : "password";
@@ -39,7 +42,7 @@ export default async function AffiliatePortalPage({
       role="affiliate"
       ready={affiliateAdminConfigured() && affiliateFirebaseConfigured()}
       emailLinks={emailLinks}
-      invalid={query.error === "denied" || query.error === "limited"}
+      invalid={query.error === "denied" || query.error === "locked" || query.error === "limited"}
       initialMethod={initialMethod}
       error={error}
       sent={sent}
