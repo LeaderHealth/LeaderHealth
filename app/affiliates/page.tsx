@@ -16,6 +16,7 @@ export const dynamic = "force-dynamic";
 
 const ERRORS: Record<string, string> = {
   denied: "That sign-in didn't work. Check the email and password, or request a new link.",
+  locked: "Too many tries. Wait 5 minutes, or open the email we sent to choose a new password. Saving it removes the lock right away.",
   limited: "Wait a minute, then request another link.",
   unconfigured: "Affiliate sign-in is unavailable right now.",
   unavailable: "Affiliate sign-in is unavailable right now.",
@@ -39,7 +40,7 @@ export default async function AffiliatePortalPage({
       role="affiliate"
       ready={affiliateAdminConfigured() && affiliateFirebaseConfigured()}
       emailLinks={emailLinks}
-      invalid={query.error === "denied" || query.error === "limited"}
+      invalid={query.error === "denied" || query.error === "locked" || query.error === "limited"}
       initialMethod={initialMethod}
       error={error}
       sent={sent}

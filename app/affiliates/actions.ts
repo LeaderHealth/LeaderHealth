@@ -1,15 +1,19 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { normalizeAffiliateEmail } from "@/lib/affiliate/code";
 import { affiliateFirebaseConfigured } from "@/lib/affiliate/firebase";
-import { affiliateEmailConfigured, sendAffiliatePasswordResetEmail, sendAffiliateSignInEmail } from "@/lib/affiliate/email";
+import { affiliateEmailConfigured, sendAffiliatePasswordResetEmail, sendAffiliateSignInEmail, sendLoginLockEmail } from "@/lib/affiliate/email";
+import { clearLoginFailures, loginBlocked, recordLoginFailure } from "@/lib/affiliate/login-guard";
 import { affiliateAdminConfigured, clearPortalSession, setPortalSession } from "@/lib/affiliate/session";
+import { absoluteUrl } from "@/lib/seo/schema";
 import {
   acceptAffiliateInvitation,
   acceptAffiliatePasswordReset,
   affiliateCodeForPassword,
   clearAffiliateMagicLink,
   clearAffiliatePasswordReset,
+  getAffiliate,
   issueAffiliateMagicLink,
   issueAffiliatePasswordReset,
 } from "@/lib/affiliate/store";
@@ -21,6 +25,24 @@ function fail(error: string, method: "password" | "link" | "reset" = "password")
 
 function portalReady() {
   return affiliateAdminConfigured() && affiliateFirebaseConfigured();
+}
+
+async function notifyAffiliateLock(email: string) {
+  if (!affiliateEmailConfigured()) return;
+  const issued = await issueAffiliatePasswordReset(email);
+  if (issued.status === "sent") {
+    await sendLoginLockEmail(issued.email, { role: "affiliate", url: issued.url, changePassword: "link" });
+    return;
+  }
+  if (issued.status === "limited") {
+    const to = normalizeAffiliateEmail(email);
+    if (!to) return;
+    await sendLoginLockEmail(to, {
+      role: "affiliate",
+      url: absoluteUrl("/affiliates?method=reset"),
+      changePassword: "request",
+    });
+  }
 }
 
 const ACTIVATE_TOKEN = /^[A-Za-z0-9_-]{20,200}$/;
@@ -54,14 +76,48 @@ export async function activateAffiliateAccount(formData: FormData) {
 
 export async function loginAffiliatePortal(formData: FormData) {
   if (!portalReady()) fail("unconfigured");
+  const email = String(formData.get("email") ?? "");
+  const password = String(formData.get("password") ?? "");
+  let blocked = false;
+  try {
+    blocked = await loginBlocked("affiliate", email);
+  } catch (error) {
+    console.error("[affiliate] portal sign-in lock check failed", error instanceof Error ? error.message : "unknown");
+    fail("unavailable");
+  }
+  if (blocked) fail("locked");
   let code: string | null = null;
   try {
-    code = await affiliateCodeForPassword(String(formData.get("email") ?? ""), String(formData.get("password") ?? ""));
+    code = await affiliateCodeForPassword(email, password);
   } catch (error) {
     console.error("[affiliate] portal sign-in failed", error instanceof Error ? error.message : "unknown");
     fail("unavailable");
   }
-  if (!code || !(await setPortalSession(code, formData.get("remember") === "on"))) fail("denied");
+  if (!code) {
+    let locked = false;
+    try {
+      locked = await recordLoginFailure("affiliate", email);
+    } catch (error) {
+      console.error("[affiliate] portal sign-in lock record failed", error instanceof Error ? error.message : "unknown");
+      fail("unavailable");
+    }
+    if (locked) {
+      try {
+        await notifyAffiliateLock(email);
+      } catch (error) {
+        console.error("[affiliate] portal sign-in lock email failed", error instanceof Error ? error.message : "unknown");
+      }
+      fail("locked");
+    }
+    fail("denied");
+  }
+  try {
+    await clearLoginFailures("affiliate", email);
+  } catch (error) {
+    console.error("[affiliate] portal sign-in lock clear failed", error instanceof Error ? error.message : "unknown");
+    fail("unavailable");
+  }
+  if (!(await setPortalSession(code, formData.get("remember") === "on"))) fail("denied");
   redirect("/affiliates/overview");
 }
 
@@ -128,6 +184,12 @@ export async function resetAffiliatePassword(formData: FormData) {
     resetFail(token, "unavailable");
   }
   if (result.status !== "ok") resetFail(token, result.status);
+  try {
+    const affiliate = await getAffiliate(result.code);
+    if (affiliate?.email) await clearLoginFailures("affiliate", affiliate.email);
+  } catch (error) {
+    console.error("[affiliate] portal sign-in lock clear failed", error instanceof Error ? error.message : "unknown");
+  }
   if (!(await setPortalSession(result.code))) resetFail(token, "signin");
   redirect("/affiliates/overview");
 }

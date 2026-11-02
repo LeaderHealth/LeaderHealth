@@ -9,7 +9,7 @@ type Role = "affiliate" | "admin";
 type Method = "password" | "link" | "reset";
 
 const fieldClass =
-  "h-12 w-full rounded-full border border-[#eadfe0] bg-white pl-11 text-sm text-ink placeholder:text-[#b7a6a4] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
+  "h-12 w-full min-w-0 rounded-full border border-[#eadfe0] bg-white pl-11 text-sm text-ink placeholder:text-[#b7a6a4] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
 
 const affiliateSlides = [
   {
@@ -104,11 +104,11 @@ export function PortalSignIn({
     : { href: "/affiliates", label: "Sign in as an affiliate" };
 
   return (
-    <div className="min-h-screen bg-[#efecee] px-3 pt-28 pb-16 text-ink sm:px-4 sm:pt-32 sm:pb-20 lg:px-5 lg:pb-24">
-      <div className="mx-auto grid w-full max-w-[1180px] items-stretch gap-3 lg:min-h-[calc(100vh-9rem)] lg:grid-cols-2">
-        <section className="flex flex-col justify-center rounded-[28px] bg-[#fbf8f8] px-6 py-10 sm:px-10 lg:px-12">
+    <div className="min-h-screen overflow-x-clip bg-[#efecee] px-3 pt-28 pb-16 text-ink sm:px-4 sm:pt-32 sm:pb-20 lg:px-5 lg:pb-24">
+      <div className="mx-auto grid w-full min-w-0 max-w-[1180px] items-stretch gap-3 lg:min-h-[calc(100vh-9rem)] lg:grid-cols-2">
+        <section className="flex min-w-0 flex-col justify-center rounded-[28px] bg-[#fbf8f8] px-4 py-8 sm:px-10 sm:py-10 md:items-center lg:items-stretch lg:px-12">
           <PortalBrand badge={affiliate ? "Affiliates" : "Admin"} />
-          <h1 className="mt-10 max-w-sm text-[2.65rem] leading-[1.02] font-medium tracking-[-0.035em] text-ink sm:text-5xl">
+          <h1 className="mt-8 max-w-full text-[2rem] leading-[1.05] font-medium tracking-[-0.035em] text-balance text-ink sm:mt-10 sm:max-w-sm sm:text-[2.65rem] sm:leading-[1.02] md:text-center lg:text-left">
             {showNotice ? (
               "Check your email"
             ) : resetForm ? (
@@ -125,7 +125,7 @@ export function PortalSignIn({
               "Welcome back."
             )}
           </h1>
-          <p className="mt-4 max-w-sm text-sm leading-6 text-[#8d7370]" role={showNotice ? "status" : undefined}>
+          <p className="mt-4 max-w-sm text-sm leading-6 text-[#8d7370] md:text-center lg:text-left" role={showNotice ? "status" : undefined}>
             {showNotice && resetForm
               ? "We sent a link to choose a new password. It expires in 15 minutes and works once. Your current password keeps working until you save a new one."
               : showNotice && linkForm
@@ -143,13 +143,13 @@ export function PortalSignIn({
                       : "Log in to manage affiliate accounts, tracking links, orders, and payouts."}
           </p>
           {error ? (
-            <p id={errorId} role="alert" className="mt-6 rounded-2xl bg-rose px-4 py-3 text-sm text-ink">
+            <p id={errorId} role="alert" className="mt-6 w-full max-w-md rounded-2xl bg-rose px-4 py-3 text-sm text-ink md:text-center lg:text-left">
               {error}
             </p>
           ) : null}
           {ready ? (
             showNotice ? (
-              <div className="mt-8 flex max-w-md flex-col gap-3">
+              <div className="mt-8 flex w-full max-w-md flex-col gap-3">
                 <button type="button" onClick={() => choose("password")} className={primaryButtonClass}>
                   Back to sign in
                   <ArrowIcon />
@@ -159,7 +159,7 @@ export function PortalSignIn({
                 </button>
               </div>
             ) : (
-            <form action={resetForm ? resetAction : linkForm ? linkAction : loginAction} className="mt-8 flex max-w-md flex-col gap-5">
+            <form action={resetForm ? resetAction : linkForm ? linkAction : loginAction} className="mt-8 flex w-full min-w-0 max-w-md flex-col gap-5">
               <Field label="Email" id={affiliate ? "portal-email" : "admin-email"}>
                 <MailIcon />
                 <input
@@ -183,11 +183,11 @@ export function PortalSignIn({
                     id={affiliate ? "portal-password" : "password"}
                     aside={
                       emailLinks ? (
-                        <button type="button" onClick={() => choose("reset")} className={`${textLinkClass} text-sm whitespace-nowrap`}>
+                        <button type="button" onClick={() => choose("reset")} className={`${textLinkClass} text-sm`}>
                           Forgot password?
                         </button>
                       ) : (
-                        <Link href="/contact-us" className={`${textLinkClass} text-sm whitespace-nowrap`}>
+                        <Link href="/contact-us" className={`${textLinkClass} text-sm`}>
                           Forgot password?
                         </Link>
                       )
@@ -226,7 +226,7 @@ export function PortalSignIn({
                   <button
                     type="button"
                     onClick={() => choose(resetForm ? "link" : "reset")}
-                    className={`${textLinkClass} whitespace-nowrap`}
+                    className={textLinkClass}
                   >
                     {resetForm ? "Sign in with email" : "Reset password"}
                   </button>
@@ -251,9 +251,9 @@ export function PortalSignIn({
             </form>
             )
           ) : (
-            <p className="mt-8 max-w-md text-sm leading-6 text-ink">{unconfigured}</p>
+            <p className="mt-8 w-full max-w-md text-sm leading-6 text-ink md:text-center lg:text-left">{unconfigured}</p>
           )}
-          <p className="mt-8 flex max-w-md flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm">
+          <p className="mt-8 flex w-full max-w-md flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm">
             <Link href="/contact-us" className={quietLinkClass}>
               Contact support
             </Link>
@@ -268,16 +268,16 @@ export function PortalSignIn({
             </Link>
           </p>
         </section>
-        <aside className="flex min-h-[34rem] flex-col rounded-[28px] bg-[#f4c9c6] px-6 py-8 sm:px-10 sm:py-10 lg:min-h-0">
-          <h2 className="max-w-md text-[2rem] leading-[1.08] font-medium tracking-[-0.03em] text-ink sm:text-[2.35rem]">
+        <aside className="flex min-h-0 min-w-0 flex-col rounded-[28px] bg-[#f4c9c6] px-4 py-8 sm:min-h-[34rem] sm:px-10 sm:py-10 lg:min-h-0">
+          <h2 className="max-w-full text-[1.75rem] leading-[1.08] font-medium tracking-[-0.03em] text-balance text-ink sm:max-w-md sm:text-[2.35rem] md:mx-auto md:text-center lg:mx-0 lg:text-left">
             {affiliate
               ? "Your referrals, commissions, and payouts — all in one place."
               : "Affiliate accounts, commissions, and payouts — all in one place."}
           </h2>
           <AffiliatePhoto />
-          <div className="rounded-[24px] bg-[#fbf8f8] p-4 sm:p-5">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex flex-wrap gap-2">
+          <div className="min-w-0 rounded-[24px] bg-[#fbf8f8] p-4 sm:p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3 md:justify-center lg:justify-between">
+              <div className="flex min-w-0 flex-wrap gap-2">
                 {slides.map((item, index) => {
                   const selected = index === slide;
                   return (
@@ -314,7 +314,7 @@ export function PortalSignIn({
                 </button>
               </div>
             </div>
-            <p className="mt-4 text-sm leading-6 whitespace-nowrap text-[#6d5552]">{slides[slide].text}</p>
+            <p className="mt-4 text-sm leading-6 text-[#6d5552] md:text-center lg:text-left">{slides[slide].text}</p>
           </div>
         </aside>
       </div>
@@ -335,7 +335,7 @@ function Field({
 }) {
   return (
     <div>
-      <div className="mb-2 flex items-center justify-between gap-3">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
         <label className="text-sm font-medium text-ink" htmlFor={id}>
           {label}
         </label>

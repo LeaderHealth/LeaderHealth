@@ -345,6 +345,39 @@ export async function sendSubAdminPasswordResetEmail(email: string, url: string)
   );
 }
 
+export async function sendLoginLockEmail(
+  email: string,
+  input: { role: "affiliate" | "admin"; url: string; changePassword: "link" | "request" | "none" },
+) {
+  const place = input.role === "admin" ? "admin" : "affiliate";
+  const body =
+    input.changePassword === "none"
+      ? "The wrong password was entered 5 times for the Leader Health main admin. Sign-in is paused for 5 minutes. That account uses the site password."
+      : `The wrong password was entered 5 times for your Leader Health ${place} account. Sign-in is paused for 5 minutes. Choose a new password with the button below. Saving it removes the lock right away.`;
+  const note =
+    input.changePassword === "link"
+      ? "This link expires in 15 minutes and works once. You can also wait 5 minutes and sign in with your current password."
+      : input.changePassword === "request"
+        ? "Use the button to request a password change. Saving a new password removes the lock right away. You can also wait 5 minutes and sign in with your current password."
+        : "You can try again after 5 minutes.";
+  const button = input.changePassword === "none" ? "Back to sign in" : "Change your password";
+  await deliverAffiliateEmail(
+    email,
+    `Sign-in paused for your Leader Health ${place} account`,
+    [body, note, "", input.url].join("\n"),
+    "Login lock email failed",
+    brandedEmailHtml({
+      preview: `Sign-in is paused for 5 minutes after 5 wrong passwords.`,
+      heading: "Sign-in paused",
+      body,
+      note,
+      button,
+      url: input.url,
+    }),
+    [logoAttachment()],
+  );
+}
+
 export async function sendAffiliatePasswordResetEmail(email: string, url: string) {
   await deliverAffiliateEmail(
     email,

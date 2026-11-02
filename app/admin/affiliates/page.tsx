@@ -31,7 +31,7 @@ export default async function AffiliatesAdminPage({
       role="admin"
       ready={affiliateAdminConfigured()}
       emailLinks={emailLinks}
-      invalid={query.error === "password" || query.error === "link-denied" || query.error === "link-limited"}
+      invalid={query.error === "password" || query.error === "locked" || query.error === "link-denied" || query.error === "link-limited"}
       initialMethod={initialMethod}
       error={error}
       sent={sent}

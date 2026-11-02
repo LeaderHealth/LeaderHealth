@@ -10,6 +10,7 @@ import {
   issueSubAdminInvitation,
   issueSubAdminMagicLink,
   issueSubAdminPasswordReset,
+  readSubAdmin,
   removeSubAdmin,
   resendSubAdminInvitation,
   setSubAdminActive,
@@ -22,6 +23,7 @@ import {
   sendAdminInvitationEmail,
   sendAffiliateInvitationEmail,
   sendApplicationLinkEmail,
+  sendLoginLockEmail,
   sendSubAdminPasswordResetEmail,
   sendSubAdminSignInEmail,
 } from "@/lib/affiliate/email";
@@ -38,6 +40,7 @@ import {
   releaseAffiliateApplication,
 } from "@/lib/affiliate/applications";
 import { normalizeAffiliateEmail } from "@/lib/affiliate/code";
+import { clearLoginFailures, loginBlocked, recordLoginFailure } from "@/lib/affiliate/login-guard";
 import { formatCommissionRate } from "@/lib/affiliate/format";
 import { absoluteUrl } from "@/lib/seo/schema";
 import { AffiliateStoreError, createAffiliate, issueAffiliateInvitation, setAffiliateActive, setAffiliatePassword } from "@/lib/affiliate/store";
@@ -58,12 +61,48 @@ function fail(error: string, path = "/admin/affiliates"): never {
   redirect(`${path}?error=${encodeURIComponent(error)}`);
 }
 
+async function notifyAdminLock(email: string) {
+  if (!affiliateEmailConfigured()) return;
+  const issued = await issueSubAdminPasswordReset(email);
+  if (issued.status === "sent") {
+    await sendLoginLockEmail(issued.email, { role: "admin", url: issued.url, changePassword: "link" });
+    return;
+  }
+  const to = normalizeAffiliateEmail(email);
+  if (!to) return;
+  if (issued.status === "limited") {
+    await sendLoginLockEmail(to, {
+      role: "admin",
+      url: absoluteUrl("/admin/affiliates?method=reset"),
+      changePassword: "request",
+    });
+    return;
+  }
+  if (issued.status === "owner") {
+    await sendLoginLockEmail(to, { role: "admin", url: absoluteUrl("/admin/affiliates"), changePassword: "none" });
+  }
+}
+
 export async function loginAffiliateAdmin(formData: FormData) {
   if (!adminLoginConfigured()) fail("unconfigured");
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
   const rememberDevice = formData.get("remember") === "on";
+  let blocked = false;
+  try {
+    blocked = await loginBlocked("admin", email);
+  } catch (error) {
+    console.error("[affiliate] admin sign-in lock check failed", error instanceof Error ? error.message : "unknown");
+    fail("unavailable");
+  }
+  if (blocked) fail("locked");
   if (adminCredentialsMatch(email, password)) {
+    try {
+      await clearLoginFailures("admin", email);
+    } catch (error) {
+      console.error("[affiliate] admin sign-in lock clear failed", error instanceof Error ? error.message : "unknown");
+      fail("unavailable");
+    }
     if (!(await setAdminSession(rememberDevice))) fail("unavailable");
     redirect("/admin/affiliates/overview");
   }
@@ -74,7 +113,31 @@ export async function loginAffiliateAdmin(formData: FormData) {
     console.error("[affiliate] sub-admin sign-in failed", error instanceof Error ? error.message : "unknown");
     fail("unavailable");
   }
-  if (!subAdminId || !(await setSubAdminSession(subAdminId, rememberDevice))) fail("password");
+  if (!subAdminId) {
+    let locked = false;
+    try {
+      locked = await recordLoginFailure("admin", email);
+    } catch (error) {
+      console.error("[affiliate] admin sign-in lock record failed", error instanceof Error ? error.message : "unknown");
+      fail("unavailable");
+    }
+    if (locked) {
+      try {
+        await notifyAdminLock(email);
+      } catch (error) {
+        console.error("[affiliate] admin sign-in lock email failed", error instanceof Error ? error.message : "unknown");
+      }
+      fail("locked");
+    }
+    fail("password");
+  }
+  try {
+    await clearLoginFailures("admin", email);
+  } catch (error) {
+    console.error("[affiliate] admin sign-in lock clear failed", error instanceof Error ? error.message : "unknown");
+    fail("unavailable");
+  }
+  if (!(await setSubAdminSession(subAdminId, rememberDevice))) fail("unavailable");
   redirect("/admin/affiliates/overview");
 }
 
@@ -153,6 +216,12 @@ export async function resetSubAdminPassword(formData: FormData) {
     resetFail(token, "unavailable");
   }
   if (result.status !== "ok") resetFail(token, result.status);
+  try {
+    const admin = await readSubAdmin(result.id);
+    if (admin?.email) await clearLoginFailures("admin", admin.email);
+  } catch (error) {
+    console.error("[affiliate] admin sign-in lock clear failed", error instanceof Error ? error.message : "unknown");
+  }
   if (!(await setSubAdminSession(result.id))) resetFail(token, "signin");
   redirect("/admin/affiliates/overview");
 }

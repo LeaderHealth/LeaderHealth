@@ -834,6 +834,15 @@ export function Header() {
         />
       </div>
 
+      <div
+        className={`fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-[55] hidden transition-[opacity,transform] duration-300 ease-out motion-reduce:transition-none min-[1200px]:block ${
+          navVisible || search ? "pointer-events-none translate-y-3 opacity-0" : "translate-y-0 opacity-100"
+        }`}
+        inert={navVisible || search ? true : undefined}
+      >
+        <CartButton className="h-14 w-14 border-0 bg-[#e33d4d] text-white shadow-[0_10px_28px_rgba(227,61,77,0.35)] hover:bg-[#c43240] [&_svg]:h-6 [&_svg]:w-6" />
+      </div>
+
       <header
         ref={headerRef}
         className={`lh-site-header lh-tablet-header pointer-events-none fixed inset-x-0 top-2 z-50 hidden justify-center px-2 transition-transform duration-300 ease-out min-[765px]:flex sm:top-3 sm:px-3 md:top-4 ${
