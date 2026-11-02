@@ -104,11 +104,11 @@ export function PortalSignIn({
     : { href: "/affiliates", label: "Sign in as an affiliate" };
 
   return (
-    <div className="min-h-screen overflow-x-clip bg-[#efecee] px-3 pt-28 pb-16 text-ink sm:px-4 sm:pt-32 sm:pb-20 lg:px-5 lg:pb-24">
+    <div className="min-h-screen overflow-x-clip bg-[#efecee] px-3 pt-[4.25rem] pb-36 text-ink sm:px-4 sm:pt-32 sm:pb-20 lg:px-5 lg:pb-24">
       <div className="mx-auto grid w-full min-w-0 max-w-[1180px] items-stretch gap-3 lg:min-h-[calc(100vh-9rem)] lg:grid-cols-2">
-        <section className="flex min-w-0 flex-col justify-center rounded-[28px] bg-[#fbf8f8] px-4 py-8 sm:px-10 sm:py-10 md:items-center lg:items-stretch lg:px-12">
+        <section className="flex min-w-0 flex-col justify-center rounded-[28px] bg-[#fbf8f8] px-4 py-3 sm:px-10 sm:py-10 md:items-center lg:items-stretch lg:px-12">
           <PortalBrand badge={affiliate ? "Affiliates" : "Admin"} />
-          <h1 className="mt-8 max-w-full text-[2rem] leading-[1.05] font-medium tracking-[-0.035em] text-balance text-ink sm:mt-10 sm:max-w-sm sm:text-[2.65rem] sm:leading-[1.02] md:text-center lg:text-left">
+          <h1 className="mt-2 max-w-full text-[1.65rem] leading-[1.05] font-medium tracking-[-0.035em] text-balance text-ink sm:mt-10 sm:max-w-sm sm:text-[2.65rem] sm:leading-[1.02] md:text-center lg:text-left">
             {showNotice ? (
               "Check your email"
             ) : resetForm ? (
@@ -125,7 +125,7 @@ export function PortalSignIn({
               "Welcome back."
             )}
           </h1>
-          <p className="mt-4 max-w-sm text-sm leading-6 text-[#8d7370] md:text-center lg:text-left" role={showNotice ? "status" : undefined}>
+          <p className="mt-2 max-w-sm text-sm leading-5 text-[#8d7370] sm:mt-4 sm:leading-6 md:text-center lg:text-left" role={showNotice ? "status" : undefined}>
             {showNotice && resetForm
               ? "We sent a link to choose a new password. It expires in 15 minutes and works once. Your current password keeps working until you save a new one."
               : showNotice && linkForm
@@ -159,7 +159,7 @@ export function PortalSignIn({
                 </button>
               </div>
             ) : (
-            <form action={resetForm ? resetAction : linkForm ? linkAction : loginAction} className="mt-8 flex w-full min-w-0 max-w-md flex-col gap-5">
+            <form action={resetForm ? resetAction : linkForm ? linkAction : loginAction} className="mt-2 flex w-full min-w-0 max-w-md flex-col gap-3 sm:mt-8 sm:gap-5">
               <Field label="Email" id={affiliate ? "portal-email" : "admin-email"}>
                 <MailIcon />
                 <input

@@ -18,9 +18,10 @@ import {
   issueAffiliatePasswordReset,
 } from "@/lib/affiliate/store";
 
-function fail(error: string, method: "password" | "link" | "reset" = "password"): never {
+function fail(error: string, method: "password" | "link" | "reset" = "password", mailed = false): never {
   const methodQuery = method === "password" ? "" : `&method=${method}`;
-  redirect(`/affiliates?error=${encodeURIComponent(error)}${methodQuery}`);
+  const mailedQuery = mailed ? "&mailed=1" : "";
+  redirect(`/affiliates?error=${encodeURIComponent(error)}${methodQuery}${mailedQuery}`);
 }
 
 function portalReady() {
@@ -28,21 +29,23 @@ function portalReady() {
 }
 
 async function notifyAffiliateLock(email: string) {
-  if (!affiliateEmailConfigured()) return;
+  if (!affiliateEmailConfigured()) return false;
   const issued = await issueAffiliatePasswordReset(email);
   if (issued.status === "sent") {
     await sendLoginLockEmail(issued.email, { role: "affiliate", url: issued.url, changePassword: "link" });
-    return;
+    return true;
   }
   if (issued.status === "limited") {
     const to = normalizeAffiliateEmail(email);
-    if (!to) return;
+    if (!to) return false;
     await sendLoginLockEmail(to, {
       role: "affiliate",
       url: absoluteUrl("/affiliates?method=reset"),
       changePassword: "request",
     });
+    return true;
   }
+  return false;
 }
 
 const ACTIVATE_TOKEN = /^[A-Za-z0-9_-]{20,200}$/;
@@ -102,12 +105,13 @@ export async function loginAffiliatePortal(formData: FormData) {
       fail("unavailable");
     }
     if (locked) {
+      let mailed = false;
       try {
-        await notifyAffiliateLock(email);
+        mailed = await notifyAffiliateLock(email);
       } catch (error) {
         console.error("[affiliate] portal sign-in lock email failed", error instanceof Error ? error.message : "unknown");
       }
-      fail("locked");
+      fail("locked", "password", mailed);
     }
     fail("denied");
   }

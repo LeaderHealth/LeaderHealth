@@ -337,7 +337,7 @@ export function AccessibilityButton() {
   const active = preferencesActive(preferences);
 
   return (
-    <div className="lh-a11y fixed bottom-[max(4.75rem,calc(env(safe-area-inset-bottom)+3.75rem))] left-4 z-[65]">
+    <div className="lh-a11y fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-4 z-[65]">
       {preferences.mask ? (
         <>
           <div ref={topShadeRef} className="pointer-events-none fixed inset-x-0 top-0 z-[64] bg-black/65" aria-hidden />

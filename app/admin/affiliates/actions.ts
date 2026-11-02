@@ -57,30 +57,32 @@ import {
 } from "@/lib/affiliate/session";
 import { revokeDashboardSession } from "@/lib/affiliate/dashboard-sessions";
 
-function fail(error: string, path = "/admin/affiliates"): never {
-  redirect(`${path}?error=${encodeURIComponent(error)}`);
+function fail(error: string, path = "/admin/affiliates", mailed = false): never {
+  const mailedQuery = mailed ? "&mailed=1" : "";
+  redirect(`${path}?error=${encodeURIComponent(error)}${mailedQuery}`);
 }
 
 async function notifyAdminLock(email: string) {
-  if (!affiliateEmailConfigured()) return;
+  if (!affiliateEmailConfigured()) return false;
   const issued = await issueSubAdminPasswordReset(email);
   if (issued.status === "sent") {
     await sendLoginLockEmail(issued.email, { role: "admin", url: issued.url, changePassword: "link" });
-    return;
+    return true;
   }
   const to = normalizeAffiliateEmail(email);
-  if (!to) return;
+  if (!to) return false;
   if (issued.status === "limited") {
     await sendLoginLockEmail(to, {
       role: "admin",
       url: absoluteUrl("/admin/affiliates?method=reset"),
       changePassword: "request",
     });
-    return;
+    return true;
   }
   if (issued.status === "owner") {
     await sendLoginLockEmail(to, { role: "admin", url: absoluteUrl("/admin/affiliates"), changePassword: "none" });
   }
+  return false;
 }
 
 export async function loginAffiliateAdmin(formData: FormData) {
@@ -122,12 +124,13 @@ export async function loginAffiliateAdmin(formData: FormData) {
       fail("unavailable");
     }
     if (locked) {
+      let mailed = false;
       try {
-        await notifyAdminLock(email);
+        mailed = await notifyAdminLock(email);
       } catch (error) {
         console.error("[affiliate] admin sign-in lock email failed", error instanceof Error ? error.message : "unknown");
       }
-      fail("locked");
+      fail("locked", "/admin/affiliates", mailed);
     }
     fail("password");
   }
