@@ -107,8 +107,8 @@ export const products: Product[] = [
     description:
       "Tirzepatide acts on GIP and GLP-1 receptors involved in appetite regulation. Your clinician considers your medical history, current medicines and treatment goals when deciding whether to prescribe it. Treatment is considered alongside nutrition and physical activity. Compounded tirzepatide is supplied in a vial for injection under the skin. Available formulations include vitamin B6 or vitamin B12. Your prescription identifies the exact ingredients and concentration. Follow the instructions for your specific vial; syringe units can change between concentrations.",
     benefits: [
-      { title: "Improves Metabolic Health", body: "Targets hunger hormones GLP-1 and GIP to significantly reduce appetite and promote sustained fat loss." },
-      { title: "Reduces Body Weight", body: "Helps regulate blood sugar levels and supports healthier insulin response over time." },
+      { title: "Improves Metabolic Health", body: "Helps regulate blood sugar levels and supports healthier insulin response over time." },
+      { title: "Reduces Body Weight", body: "Targets hunger hormones GLP-1 and GIP to significantly reduce appetite and promote sustained fat loss." },
       { title: "Curbs Cravings", body: "Slows gastric emptying so you feel fuller longer and eat less without feeling deprived." },
     ],
     variants: [

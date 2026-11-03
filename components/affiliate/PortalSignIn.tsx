@@ -104,7 +104,7 @@ export function PortalSignIn({
     : { href: "/affiliates", label: "Sign in as an affiliate" };
 
   return (
-    <div className="min-h-screen overflow-x-clip bg-[#efecee] px-3 pt-[4.25rem] pb-36 text-ink sm:px-4 sm:pt-32 sm:pb-20 lg:px-5 lg:pb-24">
+    <div className="min-h-screen overflow-x-clip bg-[#efecee] px-3 pt-[calc(max(12px,env(safe-area-inset-top,0px))+78px)] pb-36 text-ink sm:px-4 sm:pt-32 sm:pb-20 lg:px-5 lg:pb-24">
       <div className="mx-auto grid w-full min-w-0 max-w-[1180px] items-stretch gap-3 lg:min-h-[calc(100vh-9rem)] lg:grid-cols-2">
         <section className="flex min-w-0 flex-col justify-center rounded-[28px] bg-[#fbf8f8] px-4 py-3 sm:px-10 sm:py-10 md:items-center lg:items-stretch lg:px-12">
           <PortalBrand badge={affiliate ? "Affiliates" : "Admin"} />
