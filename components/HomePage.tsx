@@ -185,7 +185,7 @@ const careOptions = [
     href: "/products/longevity-nad",
     name: "NAD+",
     category: "Longevity",
-    price: "Starting at $139 per month",
+    price: "Starting at $149 per month",
     image: "/images/products/nad-compounded.png?v=4",
     width: 1122,
     height: 1402,

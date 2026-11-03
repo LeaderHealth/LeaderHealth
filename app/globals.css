@@ -839,6 +839,16 @@ h3.font-sans,
 @media (min-width: 1200px) {
   .lh-tablet-logo {
     translate: -50% 0;
+    transition: scale 200ms ease-out;
+  }
+
+  .lh-tablet-logo:hover,
+  .lh-tablet-logo:focus-visible {
+    scale: 1.05;
+  }
+
+  .lh-tablet-logo:active {
+    scale: 0.96;
   }
 }
 

@@ -704,7 +704,7 @@ export function MobileNav({
         >
           <Link
             href="/"
-            className={`flex min-w-0 items-center pointer-events-auto rounded-sm ${tapFocus}`}
+            className={`pointer-events-auto flex min-w-0 items-center rounded-sm transition-transform duration-200 ease-out hover:scale-[1.05] active:scale-[0.96] motion-reduce:transition-none ${tapFocus}`}
             onClick={(event) => {
               if (busy) {
                 event.preventDefault();
