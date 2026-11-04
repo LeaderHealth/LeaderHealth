@@ -750,6 +750,33 @@ h3.font-sans,
   display: none;
 }
 
+@media (max-width: 764px) {
+  html[data-lh-nav="open"] .lh-a11y {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .lh-swipe-cue {
+    animation: lh-swipe-cue 1.15s ease-in-out 0.7s 2;
+  }
+}
+
+@keyframes lh-swipe-cue {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 5px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lh-swipe-cue {
+    animation: none;
+  }
+}
+
 @media (min-width: 765px) and (max-width: 1199px) {
   .lh-tablet-header {
     top: 12px;

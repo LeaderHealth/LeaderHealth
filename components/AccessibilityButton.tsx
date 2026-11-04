@@ -1,9 +1,29 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { CartButton } from "@/components/cart/CartButton";
 
 const STORAGE_KEY = "lh-a11y";
+const TUCK_KEY = "lh-phone-actions";
+const tuckListeners = new Set<() => void>();
+
+function tuckSnapshot() {
+  return window.sessionStorage.getItem(TUCK_KEY) === "1";
+}
+
+function subscribeTuck(onStoreChange: () => void) {
+  tuckListeners.add(onStoreChange);
+  return () => {
+    tuckListeners.delete(onStoreChange);
+  };
+}
+
+function writeTuck(next: boolean) {
+  if (next) window.sessionStorage.setItem(TUCK_KEY, "1");
+  else window.sessionStorage.removeItem(TUCK_KEY);
+  tuckListeners.forEach((listener) => listener());
+}
 
 const textLevels = [0, 1, 2, 3] as const;
 const contrasts = ["off", "light", "dark", "invert"] as const;
@@ -335,9 +355,90 @@ export function AccessibilityButton() {
   }
 
   const active = preferencesActive(preferences);
+  const rowRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{ y: number; base: number } | null>(null);
+  const offsetRef = useRef(0);
+  const skipClick = useRef(false);
+  const [phone, setPhone] = useState(false);
+  const [rowHeight, setRowHeight] = useState(72);
+  const [dragging, setDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState(0);
+  const tucked = useSyncExternalStore(subscribeTuck, tuckSnapshot, () => false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 764px)");
+    const sync = () => setPhone(media.matches);
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
+
+  useEffect(() => {
+    const row = rowRef.current;
+    if (!row) return;
+    const observer = new ResizeObserver(() => setRowHeight(row.offsetHeight || 72));
+    observer.observe(row);
+    return () => observer.disconnect();
+  }, []);
+
+  function tuckDistance() {
+    return rowRef.current?.offsetHeight ?? 72;
+  }
+
+  function rememberTuck(next: boolean) {
+    setDragOffset(0);
+    if (next) setOpen(false);
+    writeTuck(next);
+  }
+
+  function onDockPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
+    if (!phone) return;
+    if (event.button !== 0) return;
+    const target = event.target;
+    if (target instanceof Element && target.closest("[data-a11y-panel]")) return;
+    skipClick.current = false;
+    dragRef.current = { y: event.clientY, base: tucked ? tuckDistance() : 0 };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function onDockPointerMove(event: ReactPointerEvent<HTMLDivElement>) {
+    const drag = dragRef.current;
+    if (!drag) return;
+    const next = Math.min(tuckDistance(), Math.max(0, drag.base + event.clientY - drag.y));
+    if (Math.abs(event.clientY - drag.y) > 8) {
+      skipClick.current = true;
+      setDragging(true);
+    }
+    offsetRef.current = next;
+    setDragOffset(next);
+  }
+
+  function onDockPointerUp() {
+    const drag = dragRef.current;
+    dragRef.current = null;
+    setDragging(false);
+    const moved = offsetRef.current;
+    offsetRef.current = 0;
+    if (!drag || !skipClick.current) {
+      setDragOffset(0);
+      return;
+    }
+    rememberTuck(moved > tuckDistance() * 0.35);
+  }
+
+  function onDockClickCapture(event: ReactMouseEvent<HTMLDivElement>) {
+    if (!skipClick.current) return;
+    skipClick.current = false;
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  const shift = !phone ? 0 : dragging ? dragOffset : tucked ? rowHeight : 0;
 
   return (
-    <div className="lh-a11y fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-4 z-[65]">
+    <div
+      className="lh-a11y z-[65] max-[764px]:fixed max-[764px]:inset-x-0 max-[764px]:bottom-[max(0.5rem,env(safe-area-inset-bottom))] max-[764px]:flex max-[764px]:justify-center max-[764px]:px-3 min-[765px]:fixed min-[765px]:bottom-[max(1rem,env(safe-area-inset-bottom))] min-[765px]:left-4"
+    >
       {preferences.mask ? (
         <>
           <div ref={topShadeRef} className="pointer-events-none fixed inset-x-0 top-0 z-[64] bg-black/65" aria-hidden />
@@ -352,13 +453,42 @@ export function AccessibilityButton() {
         className="pointer-events-none fixed z-[66] max-w-64 rounded-xl bg-[#321110] px-3 py-2 text-sm leading-snug text-white shadow-lg"
       />
       <div
+        className="lh-phone-actions flex flex-col items-center min-[765px]:contents"
+        style={phone ? { transform: `translateY(${shift}px)`, transition: dragging ? "none" : "transform 280ms cubic-bezier(0.22,1,0.36,1)" } : undefined}
+        onPointerDown={onDockPointerDown}
+        onPointerMove={onDockPointerMove}
+        onPointerUp={onDockPointerUp}
+        onPointerCancel={onDockPointerUp}
+        onClickCapture={onDockClickCapture}
+      >
+        <button
+          type="button"
+          data-swipe-handle
+          aria-expanded={!tucked}
+          aria-controls="lh-phone-actions"
+          onClick={() => rememberTuck(!tucked)}
+          className={`${tucked ? "" : "lh-swipe-cue"} mb-1 inline-flex min-h-8 touch-none items-center gap-1 rounded-full bg-white px-3 text-xs font-medium text-[#7a5a56] shadow-[0_8px_20px_rgba(50,17,16,0.16)] min-[765px]:hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e33d4d]`}
+        >
+          <svg viewBox="0 0 24 24" className={`h-3.5 w-3.5 ${tucked ? "rotate-180" : ""}`} fill="none" aria-hidden>
+            <path d="M6 9.5 12 15.5 18 9.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          {tucked ? "Show" : "Swipe"}
+        </button>
+        <div
+          id="lh-phone-actions"
+          ref={rowRef}
+          inert={phone && tucked ? true : undefined}
+          className="flex items-end gap-2 max-[764px]:rounded-full max-[764px]:bg-white/95 max-[764px]:p-1.5 max-[764px]:shadow-[0_10px_28px_rgba(50,17,16,0.16)] min-[765px]:contents"
+        >
+      <div
         ref={panelRef}
         id={panelId}
+        data-a11y-panel
         role="dialog"
         aria-label="Accessibility options"
         tabIndex={-1}
         hidden={!open}
-        className="absolute bottom-16 left-0 z-[66] flex max-h-[min(32rem,calc(100dvh-8rem))] w-[min(22.5rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-3xl border border-[#321110]/15 bg-white text-ink shadow-[0_16px_40px_rgba(50,17,16,0.18)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e33d4d]"
+        className="absolute bottom-16 left-0 z-[66] flex max-h-[min(32rem,calc(100dvh-8rem))] w-[min(22.5rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-3xl border border-[#321110]/15 bg-white text-ink shadow-[0_16px_40px_rgba(50,17,16,0.18)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e33d4d] max-[764px]:fixed max-[764px]:inset-x-4 max-[764px]:bottom-[calc(max(0.5rem,env(safe-area-inset-bottom))+6.5rem)] max-[764px]:w-auto"
       >
         <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-2">
           <p className="font-sans text-[13px] font-semibold tracking-[0.08em] text-[#7a5a56] uppercase">Accessibility</p>
@@ -462,6 +592,11 @@ export function AccessibilityButton() {
         </svg>
         {active ? <span className="absolute top-1 right-1 h-2.5 w-2.5 rounded-full bg-[#e33d4d]" aria-hidden /> : null}
       </button>
+          <div className="min-[765px]:hidden">
+            <CartButton className="h-14 w-14 border-0 bg-[#e33d4d] text-white shadow-[0_10px_28px_rgba(227,61,77,0.35)] hover:bg-[#c43240] [&_svg]:h-6 [&_svg]:w-6" />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

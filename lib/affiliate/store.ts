@@ -581,6 +581,22 @@ export async function setAffiliatePassword(code: string, passwordInput: string) 
   });
 }
 
+export async function replaceAffiliatePassword(code: string, currentPassword: string, nextPassword: string) {
+  if (!affiliateFirebaseConfigured()) return "unavailable" as const;
+  const normalized = normalizeAffiliateCode(code);
+  const next = normalizeAffiliatePassword(nextPassword);
+  if (!normalized) return "unavailable" as const;
+  if (!next) return "weak" as const;
+  const ref = affiliateFirestore().collection("affiliates").doc(normalized);
+  const snap = await ref.get();
+  const data = snap.data();
+  if (!snap.exists || data?.active !== true) return "unavailable" as const;
+  const stored = typeof data?.passwordHash === "string" ? data.passwordHash : null;
+  if (!(await passwordMatches(currentPassword, stored))) return "current" as const;
+  await ref.update({ passwordHash: await hashPassword(next) });
+  return "ok" as const;
+}
+
 export async function affiliateCodeForPassword(emailInput: string, password: string) {
   if (!affiliateFirebaseConfigured() || !password) return null;
   const email = normalizeAffiliateEmail(emailInput);

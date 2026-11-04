@@ -7,7 +7,6 @@ import { currentPayoutPeriod, formatPayoutMonth, previousPayoutPeriod } from "@/
 import { affiliateTrackingLink } from "@/lib/affiliate/link";
 import { loadPayoutRecords, type PayoutRecord } from "@/lib/affiliate/payouts";
 import { reportHandledAffiliateError } from "@/lib/affiliate/report";
-import { syncAttributedGenHealthSales } from "@/lib/affiliate/sales";
 import {
   AffiliateStoreError,
   AFFILIATE_MAX_AGE,
@@ -109,7 +108,6 @@ export default async function AffiliateAccountsPage({
   let payouts: PayoutRecord[] = [];
   let payoutsReady = false;
   try {
-    await syncAttributedGenHealthSales();
     const overview = await loadAffiliateOverview();
     affiliates = overview.affiliates;
     conversions = overview.conversions;
@@ -269,7 +267,7 @@ export default async function AffiliateAccountsPage({
           Accounts
         </h2>
         <p className="px-4 pt-2 text-sm text-brown">
-          Unique visitors counts each person once a day. Unpaid orders are checkouts that have not been paid. Unpaid earnings are commission that has not been paid to the affiliate.
+          Visits count each person once a day. Unpaid orders are checkouts that have not been paid. Unpaid earnings are commission that has not been paid to the affiliate.
         </p>
         {affiliates.length === 0 ? (
           <p className="px-4 py-8 text-sm text-brown">No affiliates yet.</p>
@@ -326,7 +324,7 @@ export default async function AffiliateAccountsPage({
                     <th scope="col" className="px-3 py-4 align-bottom font-medium leading-snug">ID</th>
                     <th scope="col" className="px-3 py-4 align-bottom font-medium leading-snug">Name</th>
                     <th scope="col" className="px-3 py-4 align-bottom font-medium leading-snug">E-mail</th>
-                    <th scope="col" className="px-3 py-4 align-bottom font-medium leading-snug">Unique visitors</th>
+                    <th scope="col" className="px-3 py-4 align-bottom font-medium leading-snug">Visits</th>
                     <th scope="col" className="px-3 py-4 align-bottom font-medium leading-snug">Paid orders</th>
                     <th scope="col" className="px-3 py-4 align-bottom font-medium leading-snug">Unpaid orders</th>
                     <th scope="col" className="px-3 py-4 align-bottom font-medium leading-snug">Unpaid earnings</th>

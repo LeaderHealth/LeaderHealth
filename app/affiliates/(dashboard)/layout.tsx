@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { AreaNav } from "@/components/affiliate/AreaNav";
 import { PortalBrand } from "@/components/affiliate/PortalBrand";
 import { ProfileCard } from "@/components/affiliate/ProfileCard";
-import { logoutAffiliatePortal } from "../actions";
+import { changeAffiliatePassword, logoutAffiliatePortal } from "../actions";
 import { currentAffiliate } from "../current";
 
 export const runtime = "nodejs";
@@ -38,6 +38,7 @@ export default async function AffiliateDashboardLayout({ children }: { children:
               role="Affiliate"
               avatarUrl={affiliate.avatarUrl}
               signOut={logoutAffiliatePortal}
+              changePassword={changeAffiliatePassword}
             />
             <AreaNav label="Affiliate portal" items={items} />
           </div>

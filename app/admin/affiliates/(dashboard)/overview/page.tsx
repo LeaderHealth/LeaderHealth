@@ -4,8 +4,7 @@ import { ManageAffiliate } from "@/components/affiliate/ManageAffiliate";
 import { formatCents, formatCommissionRate } from "@/lib/affiliate/format";
 import { monthFigures } from "@/lib/affiliate/month-figures";
 import { currentPayoutPeriod, formatPayoutMonth, loadPayoutRecords, paidOutInRange, previousPayoutPeriod, type PayoutRecord } from "@/lib/affiliate/payouts";
-import { adjustedCommissionCents, refundStatusLabel } from "@/lib/affiliate/refunds";
-import { syncAttributedGenHealthSales } from "@/lib/affiliate/sales";
+import { adjustedCommissionCents, refundStatusLabel, remainingSalesCents } from "@/lib/affiliate/refunds";
 import { AffiliateStoreError, loadAffiliateOverview, loadClickTimes, type AffiliateSummary, type ConversionSummary } from "@/lib/affiliate/store";
 import { listPromoCodes, promoCodesForAffiliate, type PromoCodeRow } from "@/lib/genhealth/promocodes";
 
@@ -111,7 +110,6 @@ export default async function AffiliateOverviewPage({
   let payouts: PayoutRecord[] = [];
   let loadError = "";
   try {
-    await syncAttributedGenHealthSales();
     const overview = await loadAffiliateOverview();
     affiliates = overview.affiliates;
     conversions = overview.conversions;
@@ -133,13 +131,15 @@ export default async function AffiliateOverviewPage({
   for (const affiliate of affiliates) byCode.set(affiliate.code, { orders: 0, salesCents: 0, commissionCents: 0 });
   for (const conversion of paid) {
     const current = byCode.get(conversion.code) ?? { orders: 0, salesCents: 0, commissionCents: 0 };
-    current.orders += 1;
-    current.salesCents += conversion.amountCents ?? 0;
+    const remaining = remainingSalesCents(conversion.amountCents, conversion.refundedAmountCents);
+    if (remaining > 0) current.orders += 1;
+    current.salesCents += remaining;
     current.commissionCents += netCommission(conversion);
     byCode.set(conversion.code, current);
   }
 
-  const salesCents = paid.reduce((sum, conversion) => sum + (conversion.amountCents ?? 0), 0);
+  const salesCents = paid.reduce((sum, conversion) => sum + remainingSalesCents(conversion.amountCents, conversion.refundedAmountCents), 0);
+  const paidOrderCount = paid.filter((conversion) => remainingSalesCents(conversion.amountCents, conversion.refundedAmountCents) > 0).length;
   const commissionCents = paid.reduce((sum, conversion) => sum + netCommission(conversion), 0);
   const paidOutCents = paidOutInRange(payouts, range);
   const unpaidCents =
@@ -233,7 +233,7 @@ export default async function AffiliateOverviewPage({
         </section>
         <section className="rounded-[28px] bg-white p-6">
           <h3 className="text-sm text-brown">Paid orders</h3>
-          <p className="mt-2 text-3xl">{paid.length}</p>
+          <p className="mt-2 text-3xl">{paidOrderCount}</p>
           <p className="mt-2 text-sm text-brown">Paid orders in this period</p>
         </section>
         <section className="rounded-[28px] bg-white p-6">
@@ -279,7 +279,7 @@ export default async function AffiliateOverviewPage({
           </section>
           <section className="rounded-[28px] bg-white px-6 py-4" aria-labelledby="total-visitors-title">
             <h3 id="total-visitors-title" className="text-sm text-brown">
-              Total visitors
+              Visits
             </h3>
             <p className="mt-1 text-3xl">{visitorCount}</p>
             <p className="mt-1 text-sm text-brown">Each person counts once a day</p>

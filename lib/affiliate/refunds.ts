@@ -30,6 +30,10 @@ export function adjustedCommissionCents(originalCommissionCents: number, commiss
   return Math.max(0, whole(originalCommissionCents) - whole(commissionRefundedCents));
 }
 
+export function remainingSalesCents(amountCents: number | null, refundedAmountCents: number) {
+  return Math.max(0, whole(amountCents ?? 0) - whole(refundedAmountCents));
+}
+
 export function commissionRefundTarget(input: {
   originalAmountCents: number | null;
   originalCommissionCents: number;

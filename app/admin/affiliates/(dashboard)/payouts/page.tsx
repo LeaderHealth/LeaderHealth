@@ -15,7 +15,6 @@ import {
   type PayoutLine,
   type PayoutStatus,
 } from "@/lib/affiliate/payouts";
-import { syncAttributedGenHealthSales } from "@/lib/affiliate/sales";
 import { AffiliateStoreError, loadAffiliateOverview } from "@/lib/affiliate/store";
 import { approvePayoutAction } from "../../actions";
 import { ADMIN_ERRORS } from "../../messages";
@@ -98,7 +97,6 @@ export default async function AffiliatePayoutsPage({
   let loadError = "";
   const month = normalizePayoutPeriod(query.month) ?? currentPayoutPeriod();
   try {
-    await syncAttributedGenHealthSales();
     const overview = await loadAffiliateOverview();
     const payouts = await loadPayoutRecords();
     months = [...new Set([month, ...payoutMonths(overview.conversions, payouts)])].sort((left, right) => right.localeCompare(left));
