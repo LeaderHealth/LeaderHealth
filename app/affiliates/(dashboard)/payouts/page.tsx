@@ -11,7 +11,6 @@ import {
   type PayoutLine,
   type PayoutStatus,
 } from "@/lib/affiliate/payouts";
-import { syncAttributedGenHealthSales } from "@/lib/affiliate/sales";
 import { AffiliateStoreError, loadAffiliateActivity } from "@/lib/affiliate/store";
 import { currentAffiliate } from "../../current";
 
@@ -71,7 +70,6 @@ export default async function AffiliatePayoutHistoryPage() {
   let lines: PayoutLine[] = [];
   let loadError = "";
   try {
-    await syncAttributedGenHealthSales();
     const activity = await loadAffiliateActivity(affiliate.code);
     const payouts = await loadPayoutRecords(affiliate.code);
     lines = payoutLines({

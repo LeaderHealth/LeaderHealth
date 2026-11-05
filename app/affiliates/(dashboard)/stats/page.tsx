@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { formatCents } from "@/lib/affiliate/format";
-import { syncAttributedGenHealthSales } from "@/lib/affiliate/sales";
 import { conversionLabel, dailyAffiliateStats, earningsPerClickCents } from "@/lib/affiliate/stats";
 import { AffiliateStoreError, loadAffiliateActivity } from "@/lib/affiliate/store";
 import { currentAffiliate } from "../../current";
@@ -39,7 +38,6 @@ export default async function AffiliateStatsPage() {
   let loadError = "";
   let rows = dailyAffiliateStats([], []);
   try {
-    await syncAttributedGenHealthSales();
     const activity = await loadAffiliateActivity(affiliate.code);
     rows = dailyAffiliateStats(activity.clicks, activity.conversions);
   } catch (error) {

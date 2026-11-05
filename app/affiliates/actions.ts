@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { currentAffiliate } from "@/app/affiliates/current";
 import { normalizeAffiliateEmail } from "@/lib/affiliate/code";
 import { affiliateFirebaseConfigured } from "@/lib/affiliate/firebase";
 import { affiliateEmailConfigured, sendAffiliatePasswordResetEmail, sendAffiliateSignInEmail, sendLoginLockEmail } from "@/lib/affiliate/email";
@@ -16,7 +17,32 @@ import {
   getAffiliate,
   issueAffiliateMagicLink,
   issueAffiliatePasswordReset,
+  replaceAffiliatePassword,
 } from "@/lib/affiliate/store";
+
+export type PasswordChangeState = { status: "saved" | "current" | "weak" | "unavailable" } | null;
+
+export async function changeAffiliatePassword(_previous: PasswordChangeState, formData: FormData): Promise<PasswordChangeState> {
+  const affiliate = await currentAffiliate();
+  if (!affiliate || !portalReady()) return { status: "unavailable" };
+  try {
+    const status = await replaceAffiliatePassword(
+      affiliate.code,
+      String(formData.get("current") ?? ""),
+      String(formData.get("password") ?? ""),
+    );
+    if (status !== "ok") return { status };
+  } catch (error) {
+    console.error("[affiliate] password change failed", error instanceof Error ? error.message : "unknown");
+    return { status: "unavailable" };
+  }
+  try {
+    if (affiliate.email) await clearLoginFailures("affiliate", affiliate.email);
+  } catch (error) {
+    console.error("[affiliate] portal sign-in lock clear failed", error instanceof Error ? error.message : "unknown");
+  }
+  return { status: "saved" };
+}
 
 function fail(error: string, method: "password" | "link" | "reset" = "password", mailed = false): never {
   const methodQuery = method === "password" ? "" : `&method=${method}`;

@@ -4,8 +4,7 @@ import { redirect } from "next/navigation";
 import { CopyTrackingLink } from "@/components/affiliate/CopyTrackingLink";
 import { formatCents, formatCommissionRate } from "@/lib/affiliate/format";
 import { loadPayoutRecords, paidOutInRange, type PayoutRecord } from "@/lib/affiliate/payouts";
-import { adjustedCommissionCents, refundStatusLabel } from "@/lib/affiliate/refunds";
-import { syncAttributedGenHealthSales } from "@/lib/affiliate/sales";
+import { adjustedCommissionCents, refundStatusLabel, remainingSalesCents } from "@/lib/affiliate/refunds";
 import { AffiliateStoreError, loadAffiliateActivity, type ConversionSummary } from "@/lib/affiliate/store";
 import { listPromoCodes, personalPromoForAffiliate } from "@/lib/genhealth/promocodes";
 import { currentAffiliate } from "../../current";
@@ -70,7 +69,6 @@ export default async function AffiliatePortalOverviewPage({
   let payouts: PayoutRecord[] = [];
   let loadError = "";
   try {
-    await syncAttributedGenHealthSales();
     const activity = await loadAffiliateActivity(affiliate.code);
     conversions = activity.conversions;
     clickTimes = activity.clickTimes;
@@ -88,11 +86,13 @@ export default async function AffiliatePortalOverviewPage({
   }
 
   const paid = conversions.filter((conversion) => !conversion.dryRun && inRange(conversion.createdAt, range));
-  const salesCents = paid.reduce((sum, conversion) => sum + (conversion.amountCents ?? 0), 0);
+  const salesCents = paid.reduce((sum, conversion) => sum + remainingSalesCents(conversion.amountCents, conversion.refundedAmountCents), 0);
+  const paidOrderCount = paid.filter((conversion) => remainingSalesCents(conversion.amountCents, conversion.refundedAmountCents) > 0).length;
   const commissionCents = paid.reduce((sum, conversion) => sum + netCommission(conversion), 0);
   const unpaidCents =
     conversions.filter((conversion) => !conversion.dryRun).reduce((sum, conversion) => sum + netCommission(conversion), 0) -
     paidOutInRange(payouts, "all");
+  const paidOutCents = paidOutInRange(payouts, range);
   const clicks = clickTimes.filter((createdAt) => inRange(createdAt, range)).length;
   const recent = [...paid].sort((left, right) => (right.createdAt ?? "").localeCompare(left.createdAt ?? "")).slice(0, 5);
   const commission =
@@ -155,11 +155,11 @@ export default async function AffiliatePortalOverviewPage({
         </section>
         <section className="rounded-[28px] bg-white p-6">
           <h3 className="text-sm text-brown">Paid orders</h3>
-          <p className="mt-2 text-3xl">{paid.length}</p>
+          <p className="mt-2 text-3xl">{paidOrderCount}</p>
           <p className="mt-2 text-sm text-brown">Paid orders in this period</p>
         </section>
         <section className="rounded-[28px] bg-white p-6">
-          <h3 className="text-sm text-brown">Unique visitors</h3>
+          <h3 className="text-sm text-brown">Visits</h3>
           <p className="mt-2 text-3xl">{clicks}</p>
           <p className="mt-2 text-sm text-brown">Each person counts once a day</p>
         </section>
@@ -173,16 +173,16 @@ export default async function AffiliatePortalOverviewPage({
           <div className="sm:pr-8">
             <h4 className="text-sm text-brown">Unpaid earnings</h4>
             <p className="mt-2 text-3xl">{formatCents(unpaidCents)}</p>
-            <p className="mt-2 text-sm text-brown">Commission not paid out yet</p>
+            <p className="mt-2 text-sm text-brown">All-time balance. Commission not paid out yet.</p>
           </div>
           <div className="mt-6 border-t border-rose/60 pt-6 sm:mt-0 sm:border-0 sm:pt-0 sm:pl-8">
             <h4 className="text-sm text-brown">Total earnings</h4>
             <p className="mt-2 text-3xl">{formatCents(commissionCents)}</p>
-            <p className="mt-2 text-sm text-brown">Commission from paid orders</p>
+            <p className="mt-2 text-sm text-brown">Commission from paid orders in this period.</p>
           </div>
         </div>
         <p className="mt-6 border-t border-rose/60 pt-4 text-sm text-brown">
-          A refund can leave unpaid earnings negative until a later sale covers it. Order details are on the Orders page.
+          Paid out {formatCents(paidOutCents)} in this period. A refund can leave unpaid earnings negative until a later sale covers it. Order details are on the Orders page.
         </p>
       </section>
 
@@ -213,9 +213,7 @@ export default async function AffiliatePortalOverviewPage({
                     <p className="text-brown">{formatCents(netCommission(conversion))} commission</p>
                     {conversion.refundStatus === "none" ? null : (
                       <p className="text-brown">
-                        {refundStatusLabel(conversion.refundStatus)}
-                        {conversion.refundedAmountCents > 0 ? ` · ${formatCents(conversion.refundedAmountCents)} refunded` : ""}
-                        {" · "}
+                        {conversion.refundedAmountCents > 0 ? `${formatCents(conversion.refundedAmountCents)} refunded · ` : ""}
                         {formatCents(conversion.commissionCents)} original
                       </p>
                     )}
