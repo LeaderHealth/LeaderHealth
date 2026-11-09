@@ -2,20 +2,43 @@
 
 import Script from "next/script";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useEffect, useLayoutEffect, useRef } from "react";
-import posthog from "posthog-js";
+import { useEffect, useLayoutEffect, useState } from "react";
+
+type PostHogClient = {
+  __loaded: boolean;
+  init: (key: string, options: Record<string, unknown>) => void;
+  register: (properties: Record<string, unknown>) => void;
+  capture: (event: string, properties?: Record<string, unknown>) => void;
+  opt_in_capturing: () => void;
+  opt_out_capturing: () => void;
+  has_opted_in_capturing: () => boolean;
+};
 
 const POSTHOG_KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY;
 const POSTHOG_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST;
 const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+const COOKIEYES_ID = process.env.NEXT_PUBLIC_COOKIEYES_CLIENT_ID;
 const INTERNAL_HOST = "leaderhealth-platform.vercel.app";
-let posthogStarted = false;
+let posthogClient: PostHogClient | null = null;
 let lastPosthogUrl = "";
 let lastGaPage = "";
+
+async function loadPosthog() {
+  if (!posthogClient) {
+    posthogClient = (await import("posthog-js")).default as PostHogClient;
+  }
+  return posthogClient;
+}
+
+type ConsentDetail = {
+  accepted?: string[];
+  categories?: { analytics?: boolean };
+};
 
 declare global {
   interface Window {
     gtag?: (...args: unknown[]) => void;
+    getCkyConsent?: () => { categories?: { analytics?: boolean } };
     [key: `ga-disable-${string}`]: boolean | undefined;
   }
 }
@@ -39,54 +62,95 @@ function posthogUiHost() {
   return "https://us.posthog.com";
 }
 
+function analyticsFromDetail(detail: ConsentDetail | undefined) {
+  if (!detail) return null;
+  if (Array.isArray(detail.accepted)) return detail.accepted.includes("analytics");
+  if (detail.categories) return Boolean(detail.categories.analytics);
+  return null;
+}
+
+function analyticsFromCookieYes() {
+  try {
+    const consent = window.getCkyConsent?.();
+    if (!consent?.categories) return null;
+    return Boolean(consent.categories.analytics);
+  } catch {
+    return null;
+  }
+}
+
 export function Analytics() {
   const pathname = usePathname();
   const query = useSearchParams().toString();
   const blocked = isExcluded(pathname);
-  const optedOut = useRef(false);
   const gaId = measurementId();
+  const [analyticsAllowed, setAnalyticsAllowed] = useState(false);
+  const track = Boolean(COOKIEYES_ID) && analyticsAllowed && !blocked;
+
+  useEffect(() => {
+    if (!COOKIEYES_ID) return;
+
+    const apply = (value: boolean | null) => {
+      if (value !== null) setAnalyticsAllowed(value);
+    };
+
+    const onConsent = (event: Event) => {
+      apply(analyticsFromDetail((event as CustomEvent<ConsentDetail>).detail));
+    };
+
+    apply(analyticsFromCookieYes());
+    document.addEventListener("cookieyes_banner_load", onConsent);
+    document.addEventListener("cookieyes_consent_update", onConsent);
+    return () => {
+      document.removeEventListener("cookieyes_banner_load", onConsent);
+      document.removeEventListener("cookieyes_consent_update", onConsent);
+    };
+  }, []);
 
   useLayoutEffect(() => {
     if (!gaId) return;
-    window[`ga-disable-${gaId}`] = blocked;
-  }, [blocked, gaId]);
+    window[`ga-disable-${gaId}`] = !track;
+  }, [gaId, track]);
 
   useEffect(() => {
     if (!POSTHOG_KEY) return;
 
-    if (blocked) {
+    if (!track) {
       lastPosthogUrl = "";
-      if (posthogStarted) {
-        posthog.opt_out_capturing();
-        optedOut.current = true;
-      }
+      posthogClient?.opt_out_capturing();
       return;
     }
 
-    if (!posthogStarted) {
-      posthog.init(POSTHOG_KEY, {
-        api_host: "/ingest",
-        ui_host: posthogUiHost(),
-        capture_pageview: false,
-        persistence: "localStorage+cookie",
-      });
-      posthog.register({ site: "cursor" });
-      posthogStarted = true;
-    } else if (optedOut.current) {
-      posthog.opt_in_capturing();
-      optedOut.current = false;
-    }
+    let cancelled = false;
+    loadPosthog().then((posthog) => {
+      if (cancelled) return;
+      if (!posthog.__loaded) {
+        posthog.init(POSTHOG_KEY, {
+          api_host: "/ingest",
+          ui_host: posthogUiHost(),
+          capture_pageview: false,
+          persistence: "localStorage+cookie",
+        });
+        posthog.register({ site: "cursor" });
+      } else if (!posthog.has_opted_in_capturing()) {
+        posthog.opt_in_capturing();
+      }
 
-    const url = `${window.location.origin}${pathname}${query ? `?${query}` : ""}`;
-    if (lastPosthogUrl !== url) {
-      lastPosthogUrl = url;
-      posthog.capture("$pageview", { $current_url: url });
-    }
-  }, [blocked, pathname, query]);
+      const url = `${window.location.origin}${pathname}${query ? `?${query}` : ""}`;
+      if (lastPosthogUrl !== url) {
+        lastPosthogUrl = url;
+        posthog.capture("$pageview", { $current_url: url });
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname, query, track]);
 
   useEffect(() => {
-    if (!gaId || blocked) {
-      if (blocked) lastGaPage = "";
+    if (!gaId || !track) {
+      if (!track) lastGaPage = "";
       return;
     }
 
@@ -114,9 +178,9 @@ export function Analytics() {
       cancelled = true;
       window.clearInterval(id);
     };
-  }, [blocked, gaId, pathname, query]);
+  }, [gaId, pathname, query, track]);
 
-  if (blocked || !gaId) return null;
+  if (!track || !gaId) return null;
 
   const configScript = `
 window.dataLayer = window.dataLayer || [];
@@ -130,10 +194,7 @@ gtag('config', '${gaId}', config);
 
   return (
     <>
-      <Script
-        src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
-        strategy="afterInteractive"
-      />
+      <Script src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} strategy="afterInteractive" />
       <Script id="ga4" strategy="afterInteractive">
         {configScript}
       </Script>

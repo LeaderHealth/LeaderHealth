@@ -3,9 +3,9 @@ import { test } from "node:test";
 import { accountColumnTotals } from "./account-figures";
 
 const orders = [
-  { code: "88h4dcji", dryRun: false, commissionCents: 4905 },
-  { code: "88h4dcji", dryRun: true, commissionCents: 4905 },
-  { code: "shalaka-testcode", dryRun: false, commissionCents: 1000 },
+  { code: "88h4dcji", dryRun: false, commissionCents: 4905, amountCents: 32700, refundedAmountCents: 0 },
+  { code: "88h4dcji", dryRun: true, commissionCents: 4905, amountCents: 32700, refundedAmountCents: 0 },
+  { code: "shalaka-testcode", dryRun: false, commissionCents: 1000, amountCents: 10000, refundedAmountCents: 0 },
 ];
 
 test("account columns use paid order records and subtract payouts already sent", () => {
@@ -58,4 +58,19 @@ test("missing payout records leave earnings blank", () => {
   assert.equal(totals.unpaidOrders, null);
   assert.equal(totals.unpaidEarnings, null);
   assert.equal(totals.paidEarnings, null);
+});
+
+test("a full refund stays out of the paid-order count and still counts toward earnings", () => {
+  const totals = accountColumnTotals({
+    code: "88h4dcji",
+    clicks: 1,
+    orders: [
+      { code: "88h4dcji", dryRun: false, commissionCents: 4905, amountCents: 32700, refundedAmountCents: 32700 },
+      { code: "88h4dcji", dryRun: false, commissionCents: 2000, amountCents: 10000, refundedAmountCents: 0 },
+    ],
+    unpaidOrders: 0,
+    paidOutCents: 0,
+  });
+  assert.equal(totals.paidOrders, 1);
+  assert.equal(totals.earnedCents, 6905);
 });

@@ -756,23 +756,27 @@ h3.font-sans,
     pointer-events: none;
   }
 
-  .lh-swipe-cue {
-    animation: lh-swipe-cue 1.15s ease-in-out 0.7s 2;
+  .lh-swipe-chevron {
+    animation: lh-swipe-chevron 1.15s ease-in 0.45s 3;
   }
 }
 
-@keyframes lh-swipe-cue {
-  0%,
-  100% {
-    translate: 0 0;
+@keyframes lh-swipe-chevron {
+  0% {
+    translate: 0 -9px;
+    opacity: 0;
   }
-  50% {
-    translate: 0 5px;
+  25% {
+    opacity: 1;
+  }
+  100% {
+    translate: 0 11px;
+    opacity: 0;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .lh-swipe-cue {
+  .lh-swipe-chevron {
     animation: none;
   }
 }

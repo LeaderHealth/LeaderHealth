@@ -17,14 +17,18 @@ const panelSlug = {
 } as const;
 
 const billingNote: Record<string, string> = {
-  "men-trt-testosterone-cypionate": "Billed $327 every 3 months. Three-month start, then cancel anytime.",
-  "men-trt-enclomiphene": "Billed $327 every 3 months. Three-month start, then cancel anytime.",
+  "men-trt-testosterone-cypionate": "Billed $357 every 3 months ($119 monthly × 3). Three-month start, then cancel anytime.",
+  "men-trt-enclomiphene": "Billed $357 every 3 months. Three-month start, then cancel anytime.",
 };
 
 const planPrices: Record<string, Array<{ label: string; price: string }>> = {
   "longevity-nad": [
     { label: "1-month plan", price: "$149/mo" },
     { label: "3-month plan, paid in full", price: "$136/mo" },
+  ],
+  "men-trt-enclomiphene": [
+    { label: "3 months paid in full", price: "$357" },
+    { label: "Monthly", price: "$119" },
   ],
 };
 
@@ -78,6 +82,7 @@ export function BundledLabPanel({ product }: { product: Product }) {
   });
   const note = pricingNote(product);
   const plans = planPrices[product.slug];
+  const planNote = billingNote[product.slug];
 
   return (
     <div className="mt-5 space-y-3 text-white">
@@ -140,6 +145,7 @@ export function BundledLabPanel({ product }: { product: Product }) {
                 <p className="shrink-0 font-sans text-[24px] font-semibold leading-none tracking-[-0.02em]">{plan.price}</p>
               </div>
             ))}
+            {planNote ? <p className="font-sans text-[16px] leading-snug text-white/85">{planNote}</p> : null}
           </div>
         ) : (
           <div className="mt-3 flex items-start justify-between gap-4 border-b border-white/25 pb-3">

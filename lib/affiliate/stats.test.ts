@@ -10,8 +10,8 @@ test("groups visits, pages, and paid orders by day", () => {
       { path: "/", referrer: null, createdAt: "2026-10-20T12:00:00.000Z" },
     ],
     [
-      { createdAt: "2026-10-21T20:00:00.000Z", commissionCents: 3000, dryRun: false },
-      { createdAt: "2026-10-21T21:00:00.000Z", commissionCents: 5000, dryRun: true },
+      { createdAt: "2026-10-21T20:00:00.000Z", commissionCents: 3000, amountCents: 10000, refundedAmountCents: 0, dryRun: false },
+      { createdAt: "2026-10-21T21:00:00.000Z", commissionCents: 5000, amountCents: 20000, refundedAmountCents: 0, dryRun: true },
     ],
   );
 
@@ -39,16 +39,24 @@ test("groups visits, pages, and paid orders by day", () => {
 
 test("daily earnings use the commission left after a refund", () => {
   const [row] = dailyAffiliateStats([], [
-    { createdAt: "2026-09-16T12:00:00.000Z", commissionCents: 4905, commissionRefundedCents: 1635, dryRun: false },
+    { createdAt: "2026-09-16T12:00:00.000Z", commissionCents: 4905, commissionRefundedCents: 1635, amountCents: 32700, refundedAmountCents: 16350, dryRun: false },
   ]);
   assert.equal(row.commissionCents, 3270);
   assert.equal(earningsPerClickCents(row.commissionCents, 3), 1090);
 });
 
 test("leaves conversion blank when a paid order has no visits", () => {
-  const [row] = dailyAffiliateStats([], [{ createdAt: "2026-09-16T12:00:00.000Z", commissionCents: 4905, dryRun: false }]);
+  const [row] = dailyAffiliateStats([], [{ createdAt: "2026-09-16T12:00:00.000Z", commissionCents: 4905, amountCents: 32700, refundedAmountCents: 0, dryRun: false }]);
   assert.equal(row.orders, 1);
   assert.equal(row.visits, 0);
   assert.equal(conversionLabel(row.orders, row.visits), "—");
   assert.equal(earningsPerClickCents(row.commissionCents, row.visits), null);
+});
+
+test("a full refund stays out of the order count and still keeps its commission", () => {
+  const [row] = dailyAffiliateStats([], [
+    { createdAt: "2026-09-16T12:00:00.000Z", commissionCents: 4905, amountCents: 32700, refundedAmountCents: 32700, dryRun: false },
+  ]);
+  assert.equal(row.orders, 0);
+  assert.equal(row.commissionCents, 4905);
 });

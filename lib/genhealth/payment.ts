@@ -182,9 +182,10 @@ function mapClientOrder(order: Record<string, unknown>): ClientOrder | null {
 export async function listClientOrders(): Promise<ClientOrder[]> {
   const rows: ClientOrder[] = [];
   const seen = new Set<string>();
+  const cursors = new Set<string>();
   let cursor: string | undefined;
 
-  for (let page = 0; page < 20; page += 1) {
+  for (;;) {
     const response = await genHealthRequest<Record<string, unknown>>("/v2/client/orders", {
       query: { limit: "200", startAfter: cursor },
     });
@@ -208,7 +209,8 @@ export async function listClientOrders(): Promise<ClientOrder[]> {
     const pagination = asRecord(response.data.pagination);
     const next = asString(pagination?.nextCursor || pagination?.nextStartAfter || pagination?.startAfter);
     const hasMore = pagination?.hasMore === true || (pagination?.hasMore == null && Boolean(next));
-    if (!hasMore || !next || orders.length === 0) break;
+    if (!hasMore || !next || orders.length === 0 || cursors.has(next)) break;
+    cursors.add(next);
     cursor = next;
   }
 

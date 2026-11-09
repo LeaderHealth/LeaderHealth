@@ -1,10 +1,17 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Suspense } from "react";
 import { Geist, Instrument_Sans, Instrument_Serif, Lexend } from "next/font/google";
 import { Analytics } from "@/components/analytics/Analytics";
 import { SiteShell } from "@/components/SiteShell";
 import { site } from "@/lib/content/site";
 import "./globals.css";
+
+const cookieYesId = process.env.NEXT_PUBLIC_COOKIEYES_CLIENT_ID;
+const cookieYesSrc =
+  cookieYesId && /^[a-f0-9]{32}$/i.test(cookieYesId)
+    ? `https://cdn-cookieyes.com/client_data/${cookieYesId}/script.js`
+    : null;
 
 const geist = Geist({
   variable: "--font-geist",
@@ -73,6 +80,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geist.variable} ${instrumentSans.variable} ${instrumentSerif.variable} ${lexend.variable} h-full antialiased`}
     >
       <body id="top" className="flex min-h-full flex-col bg-background text-foreground">
+        {cookieYesSrc ? (
+          <Script id="cookieyes" src={cookieYesSrc} strategy="beforeInteractive" />
+        ) : null}
         <script
           dangerouslySetInnerHTML={{
             __html:

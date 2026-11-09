@@ -202,11 +202,11 @@ export const products: Product[] = [
     category: "hormone",
     clientProductId: "lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_9e90b3a402901fa3eaa65d7b",
     audience: "men",
-    price: "Starting at $109/month",
+    price: "Starting at $119/month",
     labRequired: true,
     image: "/images/products/testosterone-cypionate.png",
     tagline: "Clinician-led TRT after labs, history, and a real plan for follow-up.",
-    highlight: "Medication and provider access for $109/month, billed $327 every 3 months. Three-month start, then cancel anytime.",
+    highlight: "Medication and provider access for $119/month, billed $357 every 3 months. Three-month start, then cancel anytime.",
     safety:
       "*Do not use if you have breast cancer or known or suspected prostate cancer, or if you are pregnant. FDA approved medication. Schedule III controlled substance; federal law limits refills to five within six months.",
     description:
@@ -223,11 +223,11 @@ export const products: Product[] = [
     category: "hormone",
     clientProductId: "lqC1jqTPT4qpYeqJY6Xf_fBrgIaNDrv1dZunwCWUg_prod_e3bf281c42eef9b1907037e2",
     audience: "men",
-    price: "Starting at $109/month",
+    price: "Starting at $119/month",
     labRequired: true,
     image: "/images/products/enclomiphene.png",
     tagline: "A fertility-minded option for men who need testosterone support.",
-    highlight: "$109/month, billed $327 every 3 months. Three-month start, then cancel anytime.",
+    highlight: "$119/month, or $357 for 3 months paid in full. Billed $357 every 3 months. Three-month start, then cancel anytime.",
     description:
       "Want to support your own testosterone instead of replacing it? This daily pill may help your body make more naturally, and can fit if you'd rather avoid injections or keep fertility in mind. You start with labs and a clearance visit, then your clinician tracks your progress.",
     benefits: [

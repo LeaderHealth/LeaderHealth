@@ -51,6 +51,7 @@ export default async function AffiliateStatsPage() {
       <h2 id="portal-stats-title" className="px-4 pt-4 text-2xl sm:px-6">
         Stats
       </h2>
+      <p className="px-4 pt-2 text-sm text-brown sm:px-6">All time. Each person counts once a day.</p>
       {rows.length === 0 ? <p className="px-4 py-6 text-sm text-brown sm:px-6">No visits or paid orders yet.</p> : null}
       {rows.length > 0 ? (
         <ul className="xl:hidden" aria-labelledby="portal-stats-title">
