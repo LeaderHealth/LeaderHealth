@@ -136,18 +136,19 @@ test("a refund can make unpaid earnings negative and a later commission reduces 
   const refunded = accountColumnTotals({
     code: "88h4dcji",
     clicks: 1,
-    orders: [{ code: "88h4dcji", dryRun: false, commissionCents: 4905, commissionRefundedCents: 4905 }],
+    orders: [{ code: "88h4dcji", dryRun: false, commissionCents: 4905, commissionRefundedCents: 4905, amountCents: 32700, refundedAmountCents: 32700 }],
     unpaidOrders: 0,
     paidOutCents: 4905,
   });
   assert.equal(refunded.earnedCents, 0);
+  assert.equal(refunded.paidOrders, 0);
   assert.equal(refunded.unpaidEarnings, -4905);
   const recovered = accountColumnTotals({
     code: "88h4dcji",
     clicks: 1,
     orders: [
-      { code: "88h4dcji", dryRun: false, commissionCents: 4905, commissionRefundedCents: 4905 },
-      { code: "88h4dcji", dryRun: false, commissionCents: 2000, commissionRefundedCents: 0 },
+      { code: "88h4dcji", dryRun: false, commissionCents: 4905, commissionRefundedCents: 4905, amountCents: 32700, refundedAmountCents: 32700 },
+      { code: "88h4dcji", dryRun: false, commissionCents: 2000, commissionRefundedCents: 0, amountCents: 10000, refundedAmountCents: 0 },
     ],
     unpaidOrders: 0,
     paidOutCents: 4905,

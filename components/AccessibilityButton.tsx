@@ -360,7 +360,7 @@ export function AccessibilityButton() {
   const offsetRef = useRef(0);
   const skipClick = useRef(false);
   const [phone, setPhone] = useState(false);
-  const [rowHeight, setRowHeight] = useState(72);
+  const [rowHeight, setRowHeight] = useState(68);
   const [dragging, setDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
   const tucked = useSyncExternalStore(subscribeTuck, tuckSnapshot, () => false);
@@ -376,13 +376,13 @@ export function AccessibilityButton() {
   useEffect(() => {
     const row = rowRef.current;
     if (!row) return;
-    const observer = new ResizeObserver(() => setRowHeight(row.offsetHeight || 72));
+    const observer = new ResizeObserver(() => setRowHeight((row.offsetHeight || 56) + 12));
     observer.observe(row);
     return () => observer.disconnect();
   }, []);
 
   function tuckDistance() {
-    return rowRef.current?.offsetHeight ?? 72;
+    return (rowRef.current?.offsetHeight ?? 56) + 12;
   }
 
   function rememberTuck(next: boolean) {
@@ -453,7 +453,7 @@ export function AccessibilityButton() {
         className="pointer-events-none fixed z-[66] max-w-64 rounded-xl bg-[#321110] px-3 py-2 text-sm leading-snug text-white shadow-lg"
       />
       <div
-        className="lh-phone-actions flex flex-col items-center min-[765px]:contents"
+        className="lh-phone-actions flex w-full flex-col items-center min-[765px]:contents"
         style={phone ? { transform: `translateY(${shift}px)`, transition: dragging ? "none" : "transform 280ms cubic-bezier(0.22,1,0.36,1)" } : undefined}
         onPointerDown={onDockPointerDown}
         onPointerMove={onDockPointerMove}
@@ -466,19 +466,22 @@ export function AccessibilityButton() {
           data-swipe-handle
           aria-expanded={!tucked}
           aria-controls="lh-phone-actions"
+          aria-label={tucked ? "Show accessibility and cart" : "Swipe down to hide these buttons"}
           onClick={() => rememberTuck(!tucked)}
-          className={`${tucked ? "" : "lh-swipe-cue"} mb-1 inline-flex min-h-8 touch-none items-center gap-1 rounded-full bg-white px-3 text-xs font-medium text-[#7a5a56] shadow-[0_8px_20px_rgba(50,17,16,0.16)] min-[765px]:hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e33d4d]`}
+          className="mb-1 inline-flex min-h-9 touch-none items-center gap-2 rounded-full bg-white py-1 pr-3 pl-1 text-xs font-medium text-[#321110] shadow-[0_8px_20px_rgba(50,17,16,0.16)] min-[765px]:hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e33d4d]"
         >
-          <svg viewBox="0 0 24 24" className={`h-3.5 w-3.5 ${tucked ? "rotate-180" : ""}`} fill="none" aria-hidden>
-            <path d="M6 9.5 12 15.5 18 9.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          {tucked ? "Show" : "Swipe"}
+          <span className="grid size-7 place-items-center overflow-hidden rounded-full bg-[#e33d4d] text-white" aria-hidden>
+            <svg viewBox="0 0 24 24" className={`h-4 w-4 ${tucked ? "rotate-180" : "lh-swipe-chevron"}`} fill="none">
+              <path d="M6 9.5 12 15.5 18 9.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+          {tucked ? "Show" : "Swipe down"}
         </button>
         <div
           id="lh-phone-actions"
           ref={rowRef}
           inert={phone && tucked ? true : undefined}
-          className="flex items-end gap-2 max-[764px]:rounded-full max-[764px]:bg-white/95 max-[764px]:p-1.5 max-[764px]:shadow-[0_10px_28px_rgba(50,17,16,0.16)] min-[765px]:contents"
+          className="flex w-full items-end justify-between min-[765px]:contents"
         >
       <div
         ref={panelRef}

@@ -22,7 +22,7 @@ export default async function AffiliateDashboardLayout({ children }: { children:
   if (!affiliate) redirect("/affiliates");
 
   return (
-    <section className="bg-background px-4 pb-20 pt-32 text-ink sm:px-6">
+    <section className="bg-background px-4 pt-32 pb-[calc(max(0.5rem,env(safe-area-inset-bottom))+7.5rem)] text-ink sm:px-6 min-[765px]:pb-20">
       <div className="mx-auto max-w-6xl">
         <h1>
           <PortalBrand badge="Affiliates" />

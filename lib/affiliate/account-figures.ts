@@ -1,10 +1,12 @@
-import { adjustedCommissionCents } from "./refunds";
+import { adjustedCommissionCents, remainingSalesCents } from "./refunds";
 
 export type AccountEarningOrder = {
   code: string;
   dryRun: boolean;
   commissionCents: number;
   commissionRefundedCents?: number;
+  amountCents: number | null;
+  refundedAmountCents: number;
 };
 
 export function accountColumnTotals(input: {
@@ -23,7 +25,7 @@ export function accountColumnTotals(input: {
   const balance = input.paidOutCents == null ? null : earned - input.paidOutCents;
   return {
     visitors: input.clicks,
-    paidOrders: paid.length,
+    paidOrders: paid.filter((order) => remainingSalesCents(order.amountCents, order.refundedAmountCents) > 0).length,
     unpaidOrders: input.unpaidOrders,
     earnedCents: earned,
     unpaidEarnings: balance == null ? null : refunded > 0 ? balance : Math.max(0, balance),

@@ -1,4 +1,4 @@
-import { adjustedCommissionCents } from "./refunds";
+import { adjustedCommissionCents, remainingSalesCents } from "./refunds";
 
 export type StatClick = {
   path: string;
@@ -10,6 +10,8 @@ export type StatOrder = {
   createdAt: string | null;
   commissionCents: number;
   commissionRefundedCents?: number;
+  amountCents: number | null;
+  refundedAmountCents: number;
   dryRun: boolean;
 };
 
@@ -65,7 +67,7 @@ export function dailyAffiliateStats(clicks: readonly StatClick[], orders: readon
     const date = dayKey(order.createdAt);
     if (!date) continue;
     const row = rowFor(date);
-    row.orders += 1;
+    if (remainingSalesCents(order.amountCents, order.refundedAmountCents) > 0) row.orders += 1;
     row.commissionCents += adjustedCommissionCents(order.commissionCents, order.commissionRefundedCents ?? 0);
   }
 

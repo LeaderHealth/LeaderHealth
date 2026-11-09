@@ -94,7 +94,10 @@ export default async function AffiliatePortalOverviewPage({
     paidOutInRange(payouts, "all");
   const paidOutCents = paidOutInRange(payouts, range);
   const clicks = clickTimes.filter((createdAt) => inRange(createdAt, range)).length;
-  const recent = [...paid].sort((left, right) => (right.createdAt ?? "").localeCompare(left.createdAt ?? "")).slice(0, 5);
+  const recent = paid
+    .filter((conversion) => remainingSalesCents(conversion.amountCents, conversion.refundedAmountCents) > 0)
+    .sort((left, right) => (right.createdAt ?? "").localeCompare(left.createdAt ?? ""))
+    .slice(0, 5);
   const commission =
     affiliate.commissionMode === "fixed" ? `${formatCommissionRate(affiliate)} per order` : `${formatCommissionRate(affiliate)} commission`;
 
@@ -151,7 +154,7 @@ export default async function AffiliatePortalOverviewPage({
         <section className="rounded-[28px] bg-white p-6">
           <h3 className="text-sm text-brown">Sales</h3>
           <p className="mt-2 text-3xl">{formatCents(salesCents)}</p>
-          <p className="mt-2 text-sm text-brown">From paid orders</p>
+          <p className="mt-2 text-sm text-brown">From paid orders in this period</p>
         </section>
         <section className="rounded-[28px] bg-white p-6">
           <h3 className="text-sm text-brown">Paid orders</h3>
@@ -161,7 +164,7 @@ export default async function AffiliatePortalOverviewPage({
         <section className="rounded-[28px] bg-white p-6">
           <h3 className="text-sm text-brown">Visits</h3>
           <p className="mt-2 text-3xl">{clicks}</p>
-          <p className="mt-2 text-sm text-brown">Each person counts once a day</p>
+          <p className="mt-2 text-sm text-brown">Each person counts once a day in this period</p>
         </section>
       </div>
 
@@ -209,7 +212,7 @@ export default async function AffiliatePortalOverviewPage({
                     <span className="inline-flex rounded-full bg-rose px-3 py-1 text-xs font-medium text-ink">
                       {refundStatusLabel(conversion.refundStatus) || "Paid"}
                     </span>
-                    <p className="mt-2 font-medium">{conversion.amountCents == null ? "—" : formatCents(conversion.amountCents)}</p>
+                    <p className="mt-2 font-medium">{formatCents(remainingSalesCents(conversion.amountCents, conversion.refundedAmountCents))}</p>
                     <p className="text-brown">{formatCents(netCommission(conversion))} commission</p>
                     {conversion.refundStatus === "none" ? null : (
                       <p className="text-brown">

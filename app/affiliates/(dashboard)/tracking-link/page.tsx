@@ -9,7 +9,7 @@ import { listPromoCodes, personalPromoForAffiliate, type PromoCodeRow } from "@/
 import { currentAffiliate } from "../../current";
 
 export const metadata: Metadata = {
-  title: "Tracking link",
+  title: "Referral link",
   robots: { index: false, follow: false },
 };
 export const runtime = "nodejs";

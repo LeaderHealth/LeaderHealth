@@ -157,7 +157,8 @@ export default async function AffiliateOverviewPage({
   const topSales = top[0]?.stats.salesCents ?? 0;
 
   const names = new Map(affiliates.map((affiliate) => [affiliate.code, affiliate.name]));
-  const recent = [...paid]
+  const recent = paid
+    .filter((conversion) => remainingSalesCents(conversion.amountCents, conversion.refundedAmountCents) > 0)
     .sort((left, right) => (right.createdAt ?? "").localeCompare(left.createdAt ?? ""))
     .slice(0, 5);
   const newAffiliateCount = affiliates.filter((affiliate) => inRange(affiliate.createdAt, range)).length;
@@ -229,7 +230,7 @@ export default async function AffiliateOverviewPage({
         <section className="rounded-[28px] bg-white p-6">
           <h3 className="text-sm text-brown">Sales</h3>
           <p className="mt-2 text-3xl">{formatCents(salesCents)}</p>
-          <p className="mt-2 text-sm text-brown">From paid orders</p>
+          <p className="mt-2 text-sm text-brown">From paid orders in this period</p>
         </section>
         <section className="rounded-[28px] bg-white p-6">
           <h3 className="text-sm text-brown">Paid orders</h3>
@@ -242,7 +243,7 @@ export default async function AffiliateOverviewPage({
             {activeCount} <span className="text-lg text-brown">of {affiliates.length}</span>
           </p>
           <p className="mt-2 text-sm text-brown">
-            {inactiveCount} inactive · {sellers} have made a sale
+            {inactiveCount} inactive · {sellers === 1 ? "1 has made a sale" : `${sellers} have made a sale`}
           </p>
         </section>
       </div>
@@ -256,12 +257,12 @@ export default async function AffiliateOverviewPage({
             <div className="sm:pr-8">
               <h4 className="text-sm text-brown">Unpaid earnings</h4>
               <p className="mt-2 text-3xl">{formatCents(unpaidCents)}</p>
-              <p className="mt-2 text-sm text-brown">Commission not paid out yet</p>
+              <p className="mt-2 text-sm text-brown">All-time balance. Commission not paid out yet.</p>
             </div>
             <div className="mt-6 border-t border-rose/60 pt-6 sm:mt-0 sm:border-0 sm:pt-0 sm:pl-8">
               <h4 className="text-sm text-brown">Total earnings</h4>
               <p className="mt-2 text-3xl">{formatCents(commissionCents)}</p>
-              <p className="mt-2 text-sm text-brown">Commission from paid orders</p>
+              <p className="mt-2 text-sm text-brown">Commission from paid orders in this period.</p>
             </div>
           </div>
           <p className="mt-6 border-t border-rose/60 pt-4 text-sm text-brown">
@@ -282,7 +283,7 @@ export default async function AffiliateOverviewPage({
               Visits
             </h3>
             <p className="mt-1 text-3xl">{visitorCount}</p>
-            <p className="mt-1 text-sm text-brown">Each person counts once a day</p>
+            <p className="mt-1 text-sm text-brown">Each person counts once a day in this period</p>
           </section>
         </div>
       </div>
@@ -344,7 +345,7 @@ export default async function AffiliateOverviewPage({
                     <span className="inline-flex rounded-full bg-rose px-3 py-1 text-xs font-medium text-ink">
                       {refundStatusLabel(conversion.refundStatus) || "Paid"}
                     </span>
-                    <p className="mt-2 font-medium">{conversion.amountCents == null ? "—" : formatCents(conversion.amountCents)}</p>
+                    <p className="mt-2 font-medium">{formatCents(remainingSalesCents(conversion.amountCents, conversion.refundedAmountCents))}</p>
                     {conversion.refundStatus === "none" ? null : (
                       <p className="text-brown">
                         {formatCents(netCommission(conversion))} adjusted

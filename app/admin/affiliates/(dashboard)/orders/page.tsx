@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { OrderCommission } from "@/components/affiliate/OrderCommission";
 import { formatCents, formatWhen } from "@/lib/affiliate/format";
-import { AffiliateStoreError, loadAffiliateDashboard, type ConversionSummary } from "@/lib/affiliate/store";
+import { remainingSalesCents } from "@/lib/affiliate/refunds";
+import { AffiliateStoreError, loadAffiliateOverview, type ConversionSummary } from "@/lib/affiliate/store";
 
 export const metadata: Metadata = {
-  title: "Affiliate orders",
+  title: "Orders",
   robots: { index: false, follow: false },
 };
 export const runtime = "nodejs";
@@ -14,7 +15,9 @@ export default async function AffiliateOrdersPage() {
   let conversions: ConversionSummary[] = [];
   let loadError = "";
   try {
-    conversions = (await loadAffiliateDashboard()).conversions.filter((conversion) => !conversion.dryRun);
+    conversions = (await loadAffiliateOverview()).conversions
+      .filter((conversion) => !conversion.dryRun && remainingSalesCents(conversion.amountCents, conversion.refundedAmountCents) > 0)
+      .sort((left, right) => (right.createdAt ?? "").localeCompare(left.createdAt ?? ""));
   } catch (error) {
     loadError = error instanceof AffiliateStoreError ? error.message : "Could not load affiliate records.";
   }
@@ -45,7 +48,7 @@ export default async function AffiliateOrdersPage() {
                 </div>
                 <div>
                   <dt className="text-xs text-brown">Amount</dt>
-                  <dd className="mt-1">{conversion.amountCents == null ? "—" : formatCents(conversion.amountCents)}</dd>
+                  <dd className="mt-1">{formatCents(remainingSalesCents(conversion.amountCents, conversion.refundedAmountCents))}</dd>
                 </div>
                 <div>
                   <dt className="text-xs text-brown">Commission</dt>
@@ -85,7 +88,7 @@ export default async function AffiliateOrdersPage() {
                 <td className="break-all px-4 py-5 align-top">{conversion.code}</td>
                 <td className="break-all px-4 py-5 align-top">{conversion.orderId}</td>
                 <td className="break-words px-4 py-5 align-top">{conversion.productName}</td>
-                <td className="px-4 py-5 align-top">{conversion.amountCents == null ? "—" : formatCents(conversion.amountCents)}</td>
+                <td className="px-4 py-5 align-top">{formatCents(remainingSalesCents(conversion.amountCents, conversion.refundedAmountCents))}</td>
                 <td className="px-4 py-5 align-top">
                   <OrderCommission conversion={conversion} />
                 </td>

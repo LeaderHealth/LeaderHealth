@@ -870,8 +870,7 @@ export async function loadAffiliateConversions(code: string) {
   const snap = await affiliateFirestore().collection("conversions").where("code", "==", normalized).get();
   return snap.docs
     .map((doc) => conversionFrom(doc.id, doc.data()))
-    .sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""))
-    .slice(0, 20);
+    .sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
 }
 
 export async function loadClickCounts() {
