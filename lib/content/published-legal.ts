@@ -2816,7 +2816,7 @@ export const doNotSell: LegalPage = {
         },
         {
           "kind": "p",
-          "text": "• Global Privacy Control (GPC). We are implementing GPC opt-out-signal handling. Until live, exercise your opt-out via this page or by emailing privacy@myleaderhealth.com."
+          "text": "• Global Privacy Control (GPC). We honor the GPC opt-out signal. A browser sending GPC is treated as an opt-out of sale and sharing. You can also use the button on this page or email privacy@myleaderhealth.com."
         },
         {
           "kind": "p",

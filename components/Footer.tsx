@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useId, useState } from "react";
+import { CookiePreferencesButton } from "@/components/consent/CookiePreferencesButton";
 import { assets, PORTAL_URL, site } from "@/lib/content/site";
 import { isPublicHref } from "@/lib/content/visibility";
 
@@ -558,6 +559,9 @@ export function Footer() {
                   <FooterAnchor link={link} className={textLink} />
                 </li>
               ))}
+              <li>
+                <CookiePreferencesButton label="Cookie Preferences" className={`${textLink} text-left`} />
+              </li>
             </ul>
             <div className="mt-4">
               <AccordionList

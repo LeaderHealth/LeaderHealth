@@ -103,6 +103,10 @@ export const cookiesPolicy: LegalPage = {
         {
           "kind": "p",
           "text": "Some Cookies are set by third parties (analytics providers, advertising partners, video providers). Those third parties may receive limited, non-PHI information about your interaction with the Site, subject to their own privacy policies. We list our principal cookie partners on this page and update the list as it changes."
+        },
+        {
+          "kind": "p",
+          "text": "On public pages, after you accept analytics Cookies, Google Analytics 4 and PostHog may set performance and analytics Cookies. Checkout and admin pages do not load those tools."
         }
       ]
     },
@@ -138,21 +142,21 @@ export const cookiesPolicy: LegalPage = {
         },
         {
           "kind": "p",
-          "text": "c. Global Privacy Control (GPC). We are implementing support for the Global Privacy Control (GPC) opt-out preference signal in accordance with California Civil Code §1798.135 and the corresponding regulations. Until GPC support is live, California residents may opt out of \"sale\" and \"sharing\" by visiting Do Not Sell or Share My Personal Information or by emailing privacy@myleaderhealth.com. This Policy and the Do Not Sell or Share page will be updated when GPC support is live.",
+          "text": "c. Global Privacy Control (GPC). We honor the Global Privacy Control (GPC) opt-out preference signal in accordance with California Civil Code §1798.135 and the corresponding regulations. A browser sending GPC is treated as a request to opt out of sale and sharing, including analytics and advertising Cookies. You can also opt out by visiting Do Not Sell or Share My Personal Information or by emailing privacy@myleaderhealth.com.",
           "runs": [
             {
               "text": "c. Global Privacy Control (GPC).",
               "bold": true
             },
             {
-              "text": " We are implementing support for the "
+              "text": " We honor the "
             },
             {
               "text": "Global Privacy Control (GPC)",
               "bold": true
             },
             {
-              "text": " opt-out preference signal in accordance with California Civil Code §1798.135 and the corresponding regulations. Until GPC support is live, California residents may opt out of \"sale\" and \"sharing\" by visiting "
+              "text": " opt-out preference signal in accordance with California Civil Code §1798.135 and the corresponding regulations. A browser sending GPC is treated as a request to opt out of sale and sharing, including analytics and advertising Cookies. You can also opt out by visiting "
             },
             {
               "text": "Do Not Sell or Share My Personal Information",
@@ -167,7 +171,7 @@ export const cookiesPolicy: LegalPage = {
               "bold": true
             },
             {
-              "text": ". This Policy and the Do Not Sell or Share page will be updated when GPC support is live."
+              "text": "."
             }
           ]
         },

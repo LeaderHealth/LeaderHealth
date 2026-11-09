@@ -6,6 +6,12 @@ import { SiteShell } from "@/components/SiteShell";
 import { site } from "@/lib/content/site";
 import "./globals.css";
 
+const cookieYesId = process.env.NEXT_PUBLIC_COOKIEYES_CLIENT_ID;
+const cookieYesSrc =
+  cookieYesId && /^[a-f0-9]{32}$/i.test(cookieYesId)
+    ? `https://cdn-cookieyes.com/client_data/${cookieYesId}/script.js`
+    : null;
+
 const geist = Geist({
   variable: "--font-geist",
   subsets: ["latin"],
@@ -72,6 +78,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       data-scroll-behavior="smooth"
       className={`${geist.variable} ${instrumentSans.variable} ${instrumentSerif.variable} ${lexend.variable} h-full antialiased`}
     >
+      <head>{cookieYesSrc ? <script id="cookieyes" src={cookieYesSrc} /> : null}</head>
       <body id="top" className="flex min-h-full flex-col bg-background text-foreground">
         <script
           dangerouslySetInnerHTML={{
