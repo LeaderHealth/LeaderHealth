@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Suspense } from "react";
 import { Geist, Instrument_Sans, Instrument_Serif, Lexend } from "next/font/google";
 import { Analytics } from "@/components/analytics/Analytics";
@@ -78,8 +79,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       data-scroll-behavior="smooth"
       className={`${geist.variable} ${instrumentSans.variable} ${instrumentSerif.variable} ${lexend.variable} h-full antialiased`}
     >
-      <head>{cookieYesSrc ? <script id="cookieyes" src={cookieYesSrc} /> : null}</head>
       <body id="top" className="flex min-h-full flex-col bg-background text-foreground">
+        {cookieYesSrc ? (
+          <Script id="cookieyes" src={cookieYesSrc} strategy="beforeInteractive" />
+        ) : null}
         <script
           dangerouslySetInnerHTML={{
             __html:

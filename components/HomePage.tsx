@@ -164,7 +164,7 @@ const careOptions = [
     href: "/products/men-trt-testosterone-cypionate",
     name: "Testosterone Cypionate",
     category: "Hormone Therapy",
-    price: "Starting at $109 per month",
+    price: "Starting at $119 per month",
     image: "/images/products/testosterone-cypionate.png",
     width: 461,
     height: 984,

@@ -5,8 +5,8 @@ export const UNAVAILABLE_TREATMENT = "This treatment isn't available.";
 
 /** Amount collected at checkout. The card can still show a monthly starting price. */
 const checkoutChargeBySlug: Record<string, number> = {
-  "men-trt-testosterone-cypionate": 327,
-  "men-trt-enclomiphene": 327,
+  "men-trt-testosterone-cypionate": 357,
+  "men-trt-enclomiphene": 357,
 };
 
 export function threeMonthCartNote(slug: string) {
