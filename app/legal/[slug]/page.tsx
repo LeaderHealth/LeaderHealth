@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import { CookiePreferencesButton } from "@/components/consent/CookiePreferencesButton";
 import { getLegal, legalPages, type LegalBlock, type LegalRun } from "@/lib/content/legal";
 import type { Metadata } from "next";
 
@@ -129,6 +130,17 @@ export default async function LegalPage({ params }: Props) {
         {page.sections.map((section, index) => (
           <section key={`${section.heading}-${index}`}>
             <h2 className="text-2xl">{section.heading}</h2>
+            {slug === "do-not-sell" && section.heading === "3. How to opt out" ? (
+              <div className="mt-4">
+                <CookiePreferencesButton
+                  label="Opt out of sale or sharing"
+                  className="text-accent underline decoration-1 underline-offset-2"
+                />
+                <p className="mt-2 leading-relaxed text-brown">
+                  This opens cookie preferences. Turn off Analytics and Advertisement, then save. Email is still the path for an authorized agent or a request to limit sensitive personal information.
+                </p>
+              </div>
+            ) : null}
             {section.blocks ? (
               <LegalBlocks blocks={section.blocks} />
             ) : (
