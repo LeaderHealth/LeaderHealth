@@ -2,10 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CopyTrackingLink } from "@/components/affiliate/CopyTrackingLink";
+import { AgreementSummary } from "@/components/affiliate/AgreementSummary";
 import { formatCents, formatCommissionRate } from "@/lib/affiliate/format";
+import { loadAffiliateAgreements } from "@/lib/affiliate/agreements";
+import { presentAgreement } from "@/lib/affiliate/agreement-view";
 import { loadPayoutRecords, paidOutInRange, type PayoutRecord } from "@/lib/affiliate/payouts";
 import { adjustedCommissionCents, refundStatusLabel, remainingSalesCents } from "@/lib/affiliate/refunds";
-import { AffiliateStoreError, loadAffiliateActivity, type ConversionSummary } from "@/lib/affiliate/store";
+import { toAffiliateOrder, type AffiliateOrderView } from "@/lib/affiliate/order-view";
+import { AffiliateStoreError, loadAffiliateActivity } from "@/lib/affiliate/store";
+import { disclosureAcknowledged } from "@/lib/affiliate/disclosures";
 import { listPromoCodes, personalPromoForAffiliate } from "@/lib/genhealth/promocodes";
 import { currentAffiliate } from "../../current";
 
@@ -37,7 +42,7 @@ function overviewHref(range: Range) {
   return range === "all" ? "/affiliates/overview" : `/affiliates/overview?range=${range}`;
 }
 
-function netCommission(conversion: ConversionSummary) {
+function netCommission(conversion: AffiliateOrderView) {
   return adjustedCommissionCents(conversion.commissionCents, conversion.commissionRefundedCents);
 }
 
@@ -64,13 +69,13 @@ export default async function AffiliatePortalOverviewPage({
   if (!affiliate) redirect("/affiliates");
 
   const range = rangeOf((await searchParams).range);
-  let conversions: ConversionSummary[] = [];
+  let conversions: AffiliateOrderView[] = [];
   let clickTimes: string[] = [];
   let payouts: PayoutRecord[] = [];
   let loadError = "";
   try {
     const activity = await loadAffiliateActivity(affiliate.code);
-    conversions = activity.conversions;
+    conversions = activity.conversions.map(toAffiliateOrder);
     clickTimes = activity.clickTimes;
     payouts = await loadPayoutRecords(affiliate.code);
   } catch (caught) {
@@ -79,10 +84,24 @@ export default async function AffiliatePortalOverviewPage({
 
   let promosUnavailable = false;
   let personalCode: string | null = null;
+  let acknowledged = false;
   try {
     personalCode = personalPromoForAffiliate(await listPromoCodes(), affiliate.code)?.code ?? null;
   } catch {
     promosUnavailable = true;
+  }
+  try {
+    acknowledged = await disclosureAcknowledged(affiliate.code);
+  } catch {
+    acknowledged = false;
+  }
+
+  let agreementViews: ReturnType<typeof presentAgreement>[] = [];
+  let agreementsUnavailable = false;
+  try {
+    agreementViews = (await loadAffiliateAgreements(affiliate.code)).map((agreement) => presentAgreement(agreement));
+  } catch {
+    agreementsUnavailable = true;
   }
 
   const paid = conversions.filter((conversion) => !conversion.dryRun && inRange(conversion.createdAt, range));
@@ -139,15 +158,39 @@ export default async function AffiliatePortalOverviewPage({
             Referral link
           </Link>
         </div>
-        {personalCode ? (
+        {acknowledged && personalCode ? (
           <div className="mt-3 inline-flex max-w-full items-center gap-2 rounded-[24px] bg-background py-2 pl-4 pr-2">
             <p className="min-w-0 break-all text-lg text-ink">{personalCode}</p>
             <CopyTrackingLink url={personalCode} label="Copy" quiet accessibleName="Copy code" copiedNotice="Code copied." failedNotice="Couldn't copy the code." />
           </div>
         ) : (
-          <p className="mt-3 break-all text-lg text-ink">{promosUnavailable ? "Promo codes are unavailable right now." : "No personal code is assigned yet."}</p>
+          <p className="mt-3 break-all text-lg text-ink">
+            {acknowledged ? (promosUnavailable ? "Promo codes are unavailable right now." : "No personal code is assigned yet.") : "Acknowledge the sponsorship disclosure on the referral link page before using your code."}
+          </p>
         )}
         <p className="mt-2 text-sm text-brown">Customers enter this code at checkout. Your promo link and tracking link are on the referral link page.</p>
+      </section>
+
+      <section className="rounded-[28px] bg-white p-4 sm:p-6" aria-labelledby="portal-agreement-title">
+        <h3 id="portal-agreement-title" className="text-xl">
+          Your agreement
+        </h3>
+        <p className="mt-3 text-sm">
+          <span className="text-brown">Referral rate already used for orders</span>
+          <span className="mt-1 block">{formatCommissionRate(affiliate)}</span>
+        </p>
+        {agreementsUnavailable ? <p className="mt-4 text-sm text-ink">Agreements are unavailable right now.</p> : null}
+        {!agreementsUnavailable && agreementViews.length === 0 ? <p className="mt-4 text-sm text-brown">No agreement on file.</p> : null}
+        {agreementViews.map((agreement, index) => (
+          <div key={agreement.id} className={index === 0 ? "mt-6" : "mt-6 border-t border-rose/60 pt-6"}>
+            {index > 0 ? <h4 className="mb-3 text-base">Older agreement</h4> : null}
+            <AgreementSummary
+              agreement={agreement}
+              commission={formatCommissionRate(affiliate)}
+              pdfHref={agreement.file ? `/affiliates/agreement-file?agreement=${encodeURIComponent(agreement.id)}` : null}
+            />
+          </div>
+        ))}
       </section>
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -203,9 +246,9 @@ export default async function AffiliatePortalOverviewPage({
           ) : (
             <ul className="mt-4 divide-y divide-rose/60">
               {recent.map((conversion) => (
-                <li key={conversion.orderId} className="flex items-start justify-between gap-3 py-3 text-sm">
+                <li key={conversion.ref} className="flex items-start justify-between gap-3 py-3 text-sm">
                   <div className="min-w-0">
-                    <div className="break-words font-medium">{conversion.productName}</div>
+                    <div className="break-words font-medium">Paid order</div>
                     <p className="mt-1 text-brown">{formatDay(conversion.createdAt)}</p>
                   </div>
                   <div className="shrink-0 text-right">

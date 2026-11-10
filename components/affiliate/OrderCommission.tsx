@@ -1,8 +1,8 @@
 import { formatCents, formatCommissionRate } from "@/lib/affiliate/format";
+import type { AffiliateOrderView } from "@/lib/affiliate/order-view";
 import { adjustedCommissionCents, refundStatusLabel } from "@/lib/affiliate/refunds";
-import type { ConversionSummary } from "@/lib/affiliate/store";
 
-export function OrderCommission({ conversion }: { conversion: ConversionSummary }) {
+export function OrderCommission({ conversion }: { conversion: AffiliateOrderView }) {
   const adjusted = adjustedCommissionCents(conversion.commissionCents, conversion.commissionRefundedCents);
   const label = refundStatusLabel(conversion.refundStatus);
   if (!label) {

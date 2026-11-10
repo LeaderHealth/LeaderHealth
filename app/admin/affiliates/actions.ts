@@ -27,6 +27,7 @@ import {
   sendSubAdminPasswordResetEmail,
   sendSubAdminSignInEmail,
 } from "@/lib/affiliate/email";
+import { noteComplianceEvent } from "@/lib/affiliate/compliance-log";
 import { approvePayout, markPayoutPaid, PayoutError } from "@/lib/affiliate/payouts";
 import {
   ApplicationError,
@@ -46,16 +47,18 @@ import { absoluteUrl } from "@/lib/seo/schema";
 import { AffiliateStoreError, createAffiliate, issueAffiliateInvitation, setAffiliateActive, setAffiliatePassword } from "@/lib/affiliate/store";
 import { PromoCodeError, assignPromoCode, unassignPromoCode } from "@/lib/genhealth/promocodes";
 import {
+  adminAccountEmail,
   adminCredentialsMatch,
   adminIsSignedIn,
   adminLoginConfigured,
+  adminHasFullAccess,
   adminSessionActor,
   clearAdminSession,
   currentAdminSessionId,
   setAdminSession,
-  setSubAdminSession,
+  setStoredAdminSession,
 } from "@/lib/affiliate/session";
-import { revokeDashboardSession } from "@/lib/affiliate/dashboard-sessions";
+import { revokeDashboardSession, revokeDashboardSessionsForSubject } from "@/lib/affiliate/dashboard-sessions";
 
 function fail(error: string, path = "/admin/affiliates", mailed = false): never {
   const mailedQuery = mailed ? "&mailed=1" : "";
@@ -108,14 +111,14 @@ export async function loginAffiliateAdmin(formData: FormData) {
     if (!(await setAdminSession(rememberDevice))) fail("unavailable");
     redirect("/admin/affiliates/overview");
   }
-  let subAdminId: string | null = null;
+  let storedAdmin: Awaited<ReturnType<typeof subAdminIdForPassword>> = null;
   try {
-    subAdminId = await subAdminIdForPassword(email, password);
+    storedAdmin = await subAdminIdForPassword(email, password);
   } catch (error) {
     console.error("[affiliate] sub-admin sign-in failed", error instanceof Error ? error.message : "unknown");
     fail("unavailable");
   }
-  if (!subAdminId) {
+  if (!storedAdmin) {
     let locked = false;
     try {
       locked = await recordLoginFailure("admin", email);
@@ -140,7 +143,7 @@ export async function loginAffiliateAdmin(formData: FormData) {
     console.error("[affiliate] admin sign-in lock clear failed", error instanceof Error ? error.message : "unknown");
     fail("unavailable");
   }
-  if (!(await setSubAdminSession(subAdminId, rememberDevice))) fail("unavailable");
+  if (!(await setStoredAdminSession(storedAdmin.id, storedAdmin.role, rememberDevice))) fail("unavailable");
   redirect("/admin/affiliates/overview");
 }
 
@@ -225,7 +228,7 @@ export async function resetSubAdminPassword(formData: FormData) {
   } catch (error) {
     console.error("[affiliate] admin sign-in lock clear failed", error instanceof Error ? error.message : "unknown");
   }
-  if (!(await setSubAdminSession(result.id))) resetFail(token, "signin");
+  if (!(await setStoredAdminSession(result.id, result.role))) resetFail(token, "signin");
   redirect("/admin/affiliates/overview");
 }
 
@@ -238,10 +241,27 @@ async function requireAdmin() {
   if (!(await adminIsSignedIn())) redirect("/admin/affiliates");
 }
 
-async function requireOwner() {
+async function complianceActor() {
+  const actor = await adminSessionActor();
+  if (actor && "id" in actor) return actor.id;
+  return adminAccountEmail() ?? "owner";
+}
+
+function actingOnSelf(id: string) {
+  return adminSessionActor().then((actor) => Boolean(actor && "id" in actor && actor.id === id));
+}
+
+async function requireFullAdmin(path?: string) {
   const actor = await adminSessionActor();
   if (!actor) redirect("/admin/affiliates");
-  if (actor.role !== "owner") redirect("/admin/affiliates/overview");
+  if (!adminHasFullAccess(actor)) {
+    if (path) fail("restricted", path);
+    redirect("/admin/affiliates/overview");
+  }
+}
+
+async function requireOwner() {
+  await requireFullAdmin();
 }
 
 export async function setAffiliatePasswordAction(formData: FormData) {
@@ -253,6 +273,12 @@ export async function setAffiliatePasswordAction(formData: FormData) {
     console.error("[affiliate] password update failed", error instanceof Error ? error.message : "unknown");
     fail("unavailable", "/admin/affiliates/accounts");
   }
+  await noteComplianceEvent({
+    actor: await complianceActor(),
+    action: "password-set",
+    code: formData.get("code"),
+    detail: "Password changed.",
+  });
   redirect("/admin/affiliates/accounts");
 }
 
@@ -266,6 +292,12 @@ export async function setAffiliateActiveAction(formData: FormData) {
     console.error("[affiliate] status update failed", error instanceof Error ? error.message : "unknown");
     fail("unavailable", "/admin/affiliates/accounts");
   }
+  await noteComplianceEvent({
+    actor: await complianceActor(),
+    action: active ? "account-activated" : "account-deactivated",
+    code: formData.get("code"),
+    detail: active ? "Account activated." : "Account deactivated.",
+  });
   redirect("/admin/affiliates/accounts");
 }
 
@@ -273,7 +305,7 @@ const PROMO_PATH = "/admin/affiliates/promo-codes";
 const ACCOUNTS_PATH = "/admin/affiliates/accounts";
 
 export async function resendAffiliateInvitationAction(formData: FormData) {
-  await requireAdmin();
+  await requireFullAdmin(ACCOUNTS_PATH);
   if (!affiliateEmailConfigured()) fail("mail", ACCOUNTS_PATH);
   let issued: Awaited<ReturnType<typeof issueAffiliateInvitation>>;
   try {
@@ -292,6 +324,12 @@ export async function resendAffiliateInvitationAction(formData: FormData) {
     console.error("[affiliate] invitation resend failed", error instanceof Error ? error.message : "unknown");
     fail("invite", ACCOUNTS_PATH);
   }
+  await noteComplianceEvent({
+    actor: await complianceActor(),
+    action: "invitation-resent",
+    code: formData.get("code"),
+    detail: "Invitation resent.",
+  });
   redirect(`${ACCOUNTS_PATH}?resent=1`);
 }
 
@@ -315,6 +353,12 @@ export async function assignPromoCodeAction(formData: FormData) {
     fail("assign", PROMO_PATH);
   }
   refreshAssignments();
+  await noteComplianceEvent({
+    actor: await complianceActor(),
+    action: "promo-assigned",
+    code: affiliate,
+    detail: `Assigned promo ${code} to ${affiliate}.`,
+  });
   redirect(`${PROMO_PATH}?assigned=${encodeURIComponent(code)}`);
 }
 
@@ -330,6 +374,12 @@ export async function unassignPromoCodeAction(formData: FormData) {
     fail("assign", PROMO_PATH);
   }
   refreshAssignments();
+  await noteComplianceEvent({
+    actor: await complianceActor(),
+    action: "promo-unassigned",
+    code: affiliate,
+    detail: `Removed promo ${code} from ${affiliate}.`,
+  });
   redirect(`${PROMO_PATH}?removed=${encodeURIComponent(code)}`);
 }
 
@@ -355,7 +405,7 @@ function payoutDone(period: string, notice: string): never {
 }
 
 export async function approvePayoutAction(formData: FormData) {
-  await requireAdmin();
+  await requireFullAdmin(PAYOUT_PATH);
   const period = String(formData.get("period") ?? "");
   try {
     await approvePayout(String(formData.get("code") ?? ""), period);
@@ -364,12 +414,18 @@ export async function approvePayoutAction(formData: FormData) {
     console.error("[affiliate] payout approve failed", error instanceof Error ? error.message : "unknown");
     payoutFail("unavailable", period);
   }
+  await noteComplianceEvent({
+    actor: await complianceActor(),
+    action: "payout-approved",
+    code: formData.get("code"),
+    detail: `Approved the ${period} payout.`,
+  });
   refreshPayouts();
   payoutDone(period, "approved");
 }
 
 export async function markPayoutPaidAction(formData: FormData) {
-  await requireAdmin();
+  await requireFullAdmin(PAYOUT_PATH);
   const period = String(formData.get("period") ?? "");
   try {
     await markPayoutPaid({
@@ -384,6 +440,12 @@ export async function markPayoutPaidAction(formData: FormData) {
     console.error("[affiliate] payout payment failed", error instanceof Error ? error.message : "unknown");
     payoutFail("unavailable", period);
   }
+  await noteComplianceEvent({
+    actor: await complianceActor(),
+    action: "payout-paid",
+    code: formData.get("code"),
+    detail: `Marked the ${period} payout paid.`,
+  });
   refreshPayouts();
   payoutDone(period, "paid");
 }
@@ -403,7 +465,7 @@ function applicationFail(error: unknown): never {
 }
 
 export async function createApplicationLinkAction(formData: FormData) {
-  await requireAdmin();
+  await requireFullAdmin(APPLY_PATH);
   const input = {
     commissionMode: formData.get("commissionMode"),
     commissionPercent: formData.get("commissionPercent"),
@@ -428,7 +490,7 @@ export async function createApplicationLinkAction(formData: FormData) {
 }
 
 export async function sendApplicationLinkAction(formData: FormData) {
-  await requireAdmin();
+  await requireFullAdmin(APPLY_PATH);
   const email = normalizeAffiliateEmail(formData.get("email"));
   if (!email) return { error: "Check the email address." };
   if (!affiliateEmailConfigured()) return { error: "Email is not set up. Copy the link instead." };
@@ -445,7 +507,7 @@ export async function sendApplicationLinkAction(formData: FormData) {
 }
 
 export async function approveAffiliateApplicationAction(formData: FormData) {
-  await requireAdmin();
+  await requireFullAdmin(APPLY_PATH);
   if (!affiliateEmailConfigured()) fail("mail", APPLY_PATH);
   let claimed: Awaited<ReturnType<typeof claimAffiliateApplication>>;
   try {
@@ -480,6 +542,12 @@ export async function approveAffiliateApplicationAction(formData: FormData) {
   } catch (error) {
     console.error("[affiliate] application finish failed", error instanceof Error ? error.message : "unknown");
   }
+  await noteComplianceEvent({
+    actor: await complianceActor(),
+    action: "application-approved",
+    code,
+    detail: `Approved ${claimed.name} at ${formatCommissionRate(claimed)}.`,
+  });
   const created = `/admin/affiliates/accounts?created=${encodeURIComponent(code)}`;
   let issued: Awaited<ReturnType<typeof issueAffiliateInvitation>>;
   try {
@@ -502,11 +570,19 @@ export async function approveAffiliateApplicationAction(formData: FormData) {
 }
 
 export async function declineAffiliateApplicationAction(formData: FormData) {
-  await requireAdmin();
+  await requireFullAdmin(APPLY_PATH);
   try {
     await declineAffiliateApplication(formData.get("email"));
   } catch (error) {
     applicationFail(error);
+  }
+  const email = normalizeAffiliateEmail(formData.get("email"));
+  if (email) {
+    await noteComplianceEvent({
+      actor: await complianceActor(),
+      action: "application-declined",
+      detail: `Declined application for ${email}.`,
+    });
   }
   redirect(`${APPLY_PATH}?declined=1`);
 }
@@ -529,7 +605,7 @@ export async function inviteSubAdminAction(formData: FormData) {
   if (!affiliateEmailConfigured()) teamFail("mail");
   let issued: Awaited<ReturnType<typeof issueSubAdminInvitation>>;
   try {
-    issued = await issueSubAdminInvitation(formData.get("email"));
+    issued = await issueSubAdminInvitation(formData.get("email"), formData.get("role"));
   } catch (error) {
     console.error("[affiliate] sub-admin invite failed", error instanceof Error ? error.message : "unknown");
     teamFail("unavailable");
@@ -577,27 +653,61 @@ export async function resendSubAdminInvitationAction(formData: FormData) {
 
 export async function setSubAdminActiveAction(formData: FormData) {
   await requireOwner();
+  const id = String(formData.get("id") ?? "");
   const active = String(formData.get("active") ?? "") === "true";
+  if (!active && (await actingOnSelf(id))) teamFail("team-self");
+  let existing: Awaited<ReturnType<typeof readSubAdmin>> = null;
   try {
-    const result = await setSubAdminActive(String(formData.get("id") ?? ""), active);
-    if (result.status === "missing") teamFail("team-missing");
-    if (result.status !== "ok") teamFail("unavailable");
+    existing = await readSubAdmin(id);
   } catch (error) {
     console.error("[affiliate] sub-admin status failed", error instanceof Error ? error.message : "unknown");
     teamFail("unavailable");
+  }
+  if (!existing) teamFail("team-missing");
+  let result: Awaited<ReturnType<typeof setSubAdminActive>>;
+  try {
+    result = await setSubAdminActive(id, active);
+  } catch (error) {
+    console.error("[affiliate] sub-admin status failed", error instanceof Error ? error.message : "unknown");
+    teamFail("unavailable");
+  }
+  if (result.status === "missing") teamFail("team-missing");
+  if (result.status !== "ok") teamFail("unavailable");
+  if (!active) {
+    try {
+      await revokeDashboardSessionsForSubject(id);
+    } catch (error) {
+      console.error("[affiliate] admin session revoke failed", error instanceof Error ? error.message : "unknown");
+    }
   }
   redirect(`${TEAM_PATH}?updated=1`);
 }
 
 export async function removeSubAdminAction(formData: FormData) {
   await requireOwner();
+  const id = String(formData.get("id") ?? "");
+  if (await actingOnSelf(id)) teamFail("team-self");
+  let existing: Awaited<ReturnType<typeof readSubAdmin>> = null;
   try {
-    const result = await removeSubAdmin(String(formData.get("id") ?? ""));
-    if (result.status === "missing") teamFail("team-missing");
-    if (result.status !== "ok") teamFail("unavailable");
+    existing = await readSubAdmin(id);
   } catch (error) {
     console.error("[affiliate] sub-admin remove failed", error instanceof Error ? error.message : "unknown");
     teamFail("unavailable");
+  }
+  if (!existing) teamFail("team-missing");
+  let result: Awaited<ReturnType<typeof removeSubAdmin>>;
+  try {
+    result = await removeSubAdmin(id);
+  } catch (error) {
+    console.error("[affiliate] sub-admin remove failed", error instanceof Error ? error.message : "unknown");
+    teamFail("unavailable");
+  }
+  if (result.status === "missing") teamFail("team-missing");
+  if (result.status !== "ok") teamFail("unavailable");
+  try {
+    await revokeDashboardSessionsForSubject(id);
+  } catch (error) {
+    console.error("[affiliate] admin session revoke failed", error instanceof Error ? error.message : "unknown");
   }
   redirect(`${TEAM_PATH}?removed=1`);
 }
@@ -635,6 +745,6 @@ export async function activateSubAdminAccount(formData: FormData) {
   if (result.status === "owner") activateFail(token, "team-owner");
   if (result.status === "exists") activateFail(token, "email");
   if (result.status !== "ok") activateFail(token, result.status);
-  if (!(await setSubAdminSession(result.id))) activateFail(token, "signin");
+  if (!(await setStoredAdminSession(result.id, result.role))) activateFail(token, "signin");
   redirect("/admin/affiliates/overview");
 }

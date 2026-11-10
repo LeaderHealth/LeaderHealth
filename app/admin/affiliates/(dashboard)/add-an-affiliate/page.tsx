@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { ApplicationLinkForm } from "@/components/affiliate/ApplicationLinkForm";
 import { PendingApplications } from "@/components/affiliate/PendingApplications";
 import { listOpenApplications, type AffiliateApplication } from "@/lib/affiliate/applications";
 import { reportHandledAffiliateError } from "@/lib/affiliate/report";
+import { adminHasFullAccess, adminSessionActor } from "@/lib/affiliate/session";
 import { approveAffiliateApplicationAction, createApplicationLinkAction, declineAffiliateApplicationAction, sendApplicationLinkAction } from "../../actions";
 import { ADMIN_ERRORS } from "../../messages";
 
@@ -18,6 +20,8 @@ export default async function AddAffiliatePage({
 }: {
   searchParams: Promise<{ error?: string; declined?: string }>;
 }) {
+  const actor = await adminSessionActor();
+  if (!actor || !adminHasFullAccess(actor)) redirect("/admin/affiliates/overview");
   const query = await searchParams;
   const error = query.error ? ADMIN_ERRORS[query.error] : "";
   let applications: AffiliateApplication[] = [];

@@ -2,7 +2,7 @@ import type { DocumentData } from "firebase-admin/firestore";
 import { normalizeAffiliateCode, normalizeAffiliateEmail } from "./code";
 import { affiliateEmailConfigured, sendAffiliateWeeklySalesEmail } from "./email";
 import { affiliateFirebaseConfigured, affiliateFirestore } from "./firebase";
-import { formatCents } from "./format";
+import { weeklySaleLine } from "./order-view";
 import { adjustedCommissionCents } from "./refunds";
 import { instantInWeek, previousUtcWeek } from "./week";
 
@@ -33,14 +33,6 @@ function saleFrom(data: DocumentData): { code: string; sale: WeekSale } | null {
   const refundedCommission = typeof data.commissionRefundedCents === "number" && Number.isFinite(data.commissionRefundedCents) ? data.commissionRefundedCents : 0;
   const commissionCents = adjustedCommissionCents(originalCommission, refundedCommission);
   return { code, sale: { amountCents, commissionCents, createdAt: createdAtIso(data.createdAt) } };
-}
-
-function saleLine(sale: WeekSale) {
-  const when = sale.createdAt
-    ? new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: "UTC" }).format(new Date(sale.createdAt))
-    : "Unknown date";
-  const amount = sale.amountCents == null ? "—" : formatCents(sale.amountCents);
-  return `${when}: ${amount} sale, ${formatCents(sale.commissionCents)} commission`;
 }
 
 async function claimNotice(code: string, weekId: string) {
@@ -94,7 +86,7 @@ export async function deliverPreviousWeekSalesNotices(now = new Date()) {
         orderCount: rows.length,
         salesCents,
         commissionCents: rows.reduce((sum, row) => sum + row.commissionCents, 0),
-        lines: rows.map(saleLine),
+        lines: rows.map(weeklySaleLine),
       });
     } catch (error) {
       await notice.ref.delete().catch(() => undefined);

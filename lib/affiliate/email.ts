@@ -170,10 +170,23 @@ function weeklySalesEmailHtml(input: { weekLabel: string; orderCount: number; sa
   );
 }
 
-function affiliateDashboardUrl() {
+function affiliateSiteOrigin() {
   const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, "");
-  const origin = configured || (process.env.NODE_ENV === "development" ? "http://localhost:3000" : "https://leaderhealth.clinic");
-  return `${origin}/affiliates/overview`;
+  return configured || (process.env.NODE_ENV === "development" ? "http://localhost:3000" : "https://leaderhealth.clinic");
+}
+
+function affiliateDashboardUrl() {
+  return `${affiliateSiteOrigin()}/affiliates/overview`;
+}
+
+function affiliatePostsUrl() {
+  return `${affiliateSiteOrigin()}/affiliates/posts`;
+}
+
+export function postApprovalExcerpt(caption: string) {
+  const excerpt = caption.replace(/\s+/g, " ").trim();
+  if (excerpt.length <= 140) return excerpt;
+  return `${excerpt.slice(0, 137)}...`;
 }
 
 export async function sendAffiliateSignInEmail(email: string, url: string) {
@@ -241,6 +254,36 @@ export async function sendAffiliateWeeklySalesEmail(input: {
 
 function formatWeeklyMoney(cents: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
+}
+
+export async function sendPostApprovedEmail(email: string, caption: string) {
+  const excerpt = postApprovalExcerpt(caption);
+  const url = affiliatePostsUrl();
+  const note = excerpt
+    ? `Caption: ${excerpt}`
+    : "Keep “Paid partnership with Leader Health” and your tracking link in the caption.";
+  await deliverAffiliateEmail(
+    email,
+    "Your Leader Health post was approved",
+    [
+      "A post you sent for review was approved.",
+      "Publish it, then paste the Instagram link on your posts page.",
+      "",
+      note,
+      "",
+      url,
+    ].join("\n"),
+    "Post approval email failed",
+    brandedEmailHtml({
+      preview: "A post you sent for review was approved.",
+      heading: "Your post was approved",
+      body: "A post you sent for review was approved. Publish it, then paste the Instagram link on your posts page.",
+      note,
+      button: "Open your posts",
+      url,
+    }),
+    [logoAttachment()],
+  );
 }
 
 export async function sendApplicationLinkEmail(email: string, url: string, rate: string) {

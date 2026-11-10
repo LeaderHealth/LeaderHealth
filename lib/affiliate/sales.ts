@@ -27,7 +27,6 @@ async function recordPaidOrder(order: PaidOrder, code: string) {
     code,
     orderId: order.orderId,
     amount: order.amountCents == null ? null : order.amountCents / 100,
-    productName: order.productName,
     dryRun: false,
     createdAt: order.createdAt,
     promoCode: order.promoCode,
@@ -111,7 +110,6 @@ export async function attributeWebhookPaidOrder(input: { orderId: string; amount
     code: pending,
     orderId: id,
     amount,
-    productName: "Order",
     dryRun: false,
     createdAt: input.occurredAt,
   });

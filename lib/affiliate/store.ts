@@ -85,7 +85,10 @@ export type ClickSummary = {
   path: string;
   referrer: string | null;
   createdAt: string | null;
+  promoCode: string | null;
 };
+
+export { toAffiliateOrder, type AffiliateOrderView } from "./order-view";
 
 export type ConversionSummary = {
   orderId: string;
@@ -101,7 +104,14 @@ export type ConversionSummary = {
   refundStatus: RefundStatus;
   dryRun: boolean;
   createdAt: string | null;
+  promoCode: string | null;
 };
+
+function textOrNull(value: unknown) {
+  if (typeof value !== "string") return null;
+  const text = value.trim();
+  return text ? text.slice(0, 80) : null;
+}
 
 function asNumber(value: unknown, fallback = 0) {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
@@ -210,11 +220,6 @@ function amountToCents(amount: number | null) {
   return Math.round(amount * 100);
 }
 
-function productLabel(value: string) {
-  const cleaned = value.replace(/[\u0000-\u001f]/g, "").trim();
-  return (cleaned || "Order").slice(0, 160);
-}
-
 function orderDocId(orderId: string) {
   const id = orderId.trim();
   if (!id || id.length > 200 || id.includes("/")) return null;
@@ -226,6 +231,7 @@ function clickFrom(data: DocumentData): ClickSummary {
     path: typeof data.path === "string" ? data.path : "",
     referrer: typeof data.referrer === "string" ? data.referrer : null,
     createdAt: asTimestamp(data.createdAt),
+    promoCode: textOrNull(data.campaign),
   };
 }
 
@@ -244,6 +250,7 @@ function conversionFrom(id: string, data: DocumentData): ConversionSummary {
     refundStatus: data.refundStatus === "full" || data.refundStatus === "partial" ? data.refundStatus : "none",
     dryRun: data.dryRun === true,
     createdAt: asTimestamp(data.createdAt),
+    promoCode: textOrNull(data.promoCode),
   };
 }
 
@@ -297,7 +304,6 @@ export async function recordAffiliateConversion(input: {
   code: string;
   orderId: string;
   amount: number | null;
-  productName: string;
   dryRun: boolean;
   createdAt?: Date;
   promoCode?: string | null;
@@ -332,7 +338,7 @@ export async function recordAffiliateConversion(input: {
       code,
       orderId,
       amountCents,
-      productName: productLabel(input.productName),
+      productName: "Order",
       commissionMode,
       commissionPercent,
       commissionFixedCents,

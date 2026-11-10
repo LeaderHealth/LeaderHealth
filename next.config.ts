@@ -16,6 +16,11 @@ function posthogAssetsHost(host: string) {
 }
 
 const nextConfig: NextConfig = {
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "220mb",
+    },
+  },
   // PostHog's ingest paths use a trailing slash. Next would redirect those
   // POSTs and drop the event body. Public links on this site have no slash.
   skipTrailingSlashRedirect: true,

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { OrderCommission } from "@/components/affiliate/OrderCommission";
 import { formatCents, formatWhen } from "@/lib/affiliate/format";
+import { toAffiliateOrder } from "@/lib/affiliate/order-view";
 import { remainingSalesCents } from "@/lib/affiliate/refunds";
 import { AffiliateStoreError, loadAffiliateOverview, type ConversionSummary } from "@/lib/affiliate/store";
 
@@ -53,7 +54,7 @@ export default async function AffiliateOrdersPage() {
                 <div>
                   <dt className="text-xs text-brown">Commission</dt>
                   <dd className="mt-1">
-                    <OrderCommission conversion={conversion} />
+                    <OrderCommission conversion={toAffiliateOrder(conversion)} />
                   </dd>
                 </div>
               </dl>
@@ -90,7 +91,7 @@ export default async function AffiliateOrdersPage() {
                 <td className="break-words px-4 py-5 align-top">{conversion.productName}</td>
                 <td className="px-4 py-5 align-top">{formatCents(remainingSalesCents(conversion.amountCents, conversion.refundedAmountCents))}</td>
                 <td className="px-4 py-5 align-top">
-                  <OrderCommission conversion={conversion} />
+                  <OrderCommission conversion={toAffiliateOrder(conversion)} />
                 </td>
               </tr>
             ))}

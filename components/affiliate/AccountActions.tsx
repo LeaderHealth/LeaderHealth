@@ -16,12 +16,14 @@ export function AccountActions({
   name,
   active,
   pendingInvite = false,
+  canInvite = true,
   layout = "inline",
 }: {
   code: string;
   name: string;
   active: boolean;
   pendingInvite?: boolean;
+  canInvite?: boolean;
   layout?: "inline" | "stack";
 }) {
   const titleId = useId();
@@ -91,7 +93,7 @@ export function AccountActions({
         >
           Set password
         </button>
-        {pendingInvite ? (
+        {pendingInvite && canInvite ? (
           <form action={resendAffiliateInvitationAction} className={layout === "stack" ? undefined : "min-[420px]:col-span-2"}>
             <input type="hidden" name="code" value={code} />
             <button type="submit" className={`${actionClass} w-full`}>

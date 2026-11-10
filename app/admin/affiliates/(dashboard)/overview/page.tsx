@@ -2,11 +2,18 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ManageAffiliate } from "@/components/affiliate/ManageAffiliate";
 import { formatCents, formatCommissionRate } from "@/lib/affiliate/format";
+import { visibleReportSections } from "@/lib/affiliate/marketing";
+import { loadMarketingReports, type MarketingReport } from "@/lib/affiliate/marketing-store";
 import { monthFigures } from "@/lib/affiliate/month-figures";
+import { loadSocialAccounts, type SocialAccountView } from "@/lib/affiliate/social-store";
+import { loadWebsiteEvents, websiteReportMonths, type WebsiteOrder, type WebsiteVisit } from "@/lib/affiliate/website-report";
+import { loadContentSubmissions, metricLines, refreshDueMetrics, type ContentSubmission } from "@/lib/affiliate/post-review";
+import type { TrackedPostCard } from "@/components/affiliate/TrackedPosts";
 import { currentPayoutPeriod, formatPayoutMonth, loadPayoutRecords, paidOutInRange, previousPayoutPeriod, type PayoutRecord } from "@/lib/affiliate/payouts";
 import { adjustedCommissionCents, refundStatusLabel, remainingSalesCents } from "@/lib/affiliate/refunds";
 import { AffiliateStoreError, loadAffiliateOverview, loadClickTimes, type AffiliateSummary, type ConversionSummary } from "@/lib/affiliate/store";
 import { listPromoCodes, promoCodesForAffiliate, type PromoCodeRow } from "@/lib/genhealth/promocodes";
+import { adminHasFullAccess, adminSessionActor } from "@/lib/affiliate/session";
 
 export const metadata: Metadata = {
   title: "Affiliate overview",
@@ -100,6 +107,8 @@ export default async function AffiliateOverviewPage({
   searchParams: Promise<{ range?: string; status?: string; q?: string }>;
 }) {
   const query = await searchParams;
+  const actor = await adminSessionActor();
+  const canInvite = Boolean(actor && adminHasFullAccess(actor));
   const range = rangeOf(query.range);
   const status = statusOf(query.status);
   const search = searchOf(query.q);
@@ -125,6 +134,22 @@ export default async function AffiliateOverviewPage({
   } catch {
     catalog = null;
   }
+
+  let marketingReports: MarketingReport[] = [];
+  let socialAccounts: SocialAccountView[] = [];
+  let websiteVisits: WebsiteVisit[] = [];
+  let websiteOrders: WebsiteOrder[] = [];
+  let reportsUnavailable = false;
+  try {
+    const [saved, connected, website] = await Promise.all([loadMarketingReports(), loadSocialAccounts(), loadWebsiteEvents()]);
+    marketingReports = saved;
+    socialAccounts = connected;
+    websiteVisits = website.visits;
+    websiteOrders = website.orders;
+  } catch {
+    reportsUnavailable = true;
+  }
+  const reportSections = visibleReportSections(marketingReports, socialAccounts);
 
   const paid = paidInRange(conversions, range);
   const byCode = new Map<string, { orders: number; salesCents: number; commissionCents: number }>();
@@ -179,6 +204,14 @@ export default async function AffiliateOverviewPage({
   const currentPeriod = currentPayoutPeriod();
   const priorPeriod = previousPayoutPeriod(currentPeriod) ?? currentPeriod;
 
+  function manageReports(code: string) {
+    return {
+      unavailable: reportsUnavailable,
+      months: websiteReportMonths({ code, visits: websiteVisits, orders: websiteOrders }),
+      sections: reportSections.filter((section) => section.code === code),
+    };
+  }
+
   function manageMonths(code: string) {
     const prior = monthFigures({ code, period: priorPeriod, orders: conversions });
     const current = monthFigures({ code, period: currentPeriod, orders: conversions });
@@ -218,9 +251,11 @@ export default async function AffiliateOverviewPage({
               </Link>
             ))}
           </div>
-          <Link href="/admin/affiliates/add-an-affiliate" className={`${pillClass} bg-ink text-white hover:bg-brown`}>
-            Add an affiliate
-          </Link>
+          {canInvite ? (
+            <Link href="/admin/affiliates/add-an-affiliate" className={`${pillClass} bg-ink text-white hover:bg-brown`}>
+              Add an affiliate
+            </Link>
+          ) : null}
         </div>
       </div>
 
@@ -453,6 +488,7 @@ export default async function AffiliateOverviewPage({
                     name={affiliate.name}
                     email={affiliate.email}
                     {...manageMonths(affiliate.code)}
+                    reports={manageReports(affiliate.code)}
                     className="mt-5 inline-flex font-medium text-ink underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                   />
                 </li>
@@ -524,6 +560,7 @@ export default async function AffiliateOverviewPage({
                         name={affiliate.name}
                         email={affiliate.email}
                         {...manageMonths(affiliate.code)}
+                        reports={manageReports(affiliate.code)}
                         className="font-medium text-ink underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                       />
                     </td>

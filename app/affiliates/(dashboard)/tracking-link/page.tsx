@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { acknowledgeDisclosureAction } from "../../compliance-actions";
 import { CopyTrackingLink } from "@/components/affiliate/CopyTrackingLink";
 import { EligibleProducts } from "@/components/affiliate/EligibleProducts";
 import { eligibleProductGroups } from "@/lib/affiliate/eligibleProducts";
 import { formatCommissionRate } from "@/lib/affiliate/format";
 import { affiliateTrackingLink } from "@/lib/affiliate/link";
+import { disclosureAcknowledged } from "@/lib/affiliate/disclosures";
 import { listPromoCodes, personalPromoForAffiliate, type PromoCodeRow } from "@/lib/genhealth/promocodes";
 import { currentAffiliate } from "../../current";
 
@@ -16,10 +18,24 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const badgeClass = "inline-flex max-w-full items-center rounded-full bg-rose px-3 py-1 text-xs font-medium leading-5 text-ink";
+const buttonClass =
+  "inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-5 text-sm font-medium text-white hover:bg-brown focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
 
-export default async function TrackingLinkPage() {
+const linkErrors: Record<string, string> = {
+  acknowledge: "Confirm the sponsorship disclosure before continuing.",
+  unavailable: "That could not be saved right now.",
+};
+
+export default async function TrackingLinkPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; notice?: string }>;
+}) {
   const affiliate = await currentAffiliate();
   if (!affiliate) redirect("/affiliates");
+  const query = await searchParams;
+  const acknowledged = await disclosureAcknowledged(affiliate.code).catch(() => false);
+  const error = query.error ? linkErrors[query.error] ?? "" : "";
   let personal: PromoCodeRow | null = null;
   let unavailable = false;
   try {
@@ -44,6 +60,32 @@ export default async function TrackingLinkPage() {
         </span>
         <span className={badgeClass}>{commission}</span>
       </div>
+      {error ? (
+        <p role="alert" className="mt-4 rounded-2xl bg-rose px-4 py-3 text-sm text-ink">
+          {error}
+        </p>
+      ) : null}
+      {query.notice === "acknowledged" ? (
+        <p role="status" className="mt-4 rounded-2xl bg-background px-4 py-3 text-sm text-ink">
+          Disclosure acknowledged.
+        </p>
+      ) : null}
+      {acknowledged ? null : (
+        <form action={acknowledgeDisclosureAction} className="mt-6 border-t border-rose/70 pt-6">
+          <h3 className="text-lg">Sponsorship disclosure</h3>
+          <p className="mt-2 max-w-2xl text-sm text-brown">
+            Send each new post from Posts before you publish it. Put “Paid partnership with Leader Health” and your tracking link in the caption. A link in your bio is not enough.
+          </p>
+          <label className="mt-4 flex items-start gap-3 text-sm text-ink">
+            <input name="acknowledge" type="checkbox" required className="mt-1 size-4 accent-ink" />
+            <span>I will include a clear sponsorship disclosure on posts and videos I publish for Leader Health, and I will send each new post for review before I publish it, with my tracking link in the caption.</span>
+          </label>
+          <button type="submit" className={`${buttonClass} mt-4`}>
+            Acknowledge
+          </button>
+        </form>
+      )}
+      {acknowledged ? (
       <div className="mt-6">
         <p className="text-sm font-medium text-ink">Your code</p>
         <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -82,6 +124,7 @@ export default async function TrackingLinkPage() {
         <p className="mt-2 text-sm text-brown">Stores the visitor for 30 days.</p>
         <p className="mt-4 border-t border-rose/70 pt-4 text-sm text-brown">One paid order pays commission once, even if the customer uses your code and a link.</p>
       </div>
+      ) : null}
     </div>
   );
 }

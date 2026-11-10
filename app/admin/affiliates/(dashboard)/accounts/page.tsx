@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { accountColumnTotals } from "@/lib/affiliate/account-figures";
 import { normalizeAffiliateCode } from "@/lib/affiliate/code";
-import { formatCents, formatCommissionRate } from "@/lib/affiliate/format";
+import { formatCents, formatCommissionRate, formatWhen } from "@/lib/affiliate/format";
 import { monthFigures } from "@/lib/affiliate/month-figures";
 import { currentPayoutPeriod, formatPayoutMonth, previousPayoutPeriod } from "@/lib/affiliate/payouts";
 import { affiliateTrackingLink } from "@/lib/affiliate/link";
@@ -17,11 +17,33 @@ import {
   type AffiliateSummary,
   type ConversionSummary,
 } from "@/lib/affiliate/store";
+import { AccountCompliance, type AccountComplianceFlag, type AccountCompliancePost, type AccountComplianceProof } from "@/components/affiliate/AccountCompliance";
+import { AccountAgreement } from "@/components/affiliate/AccountAgreement";
+import { AccountReports } from "@/components/affiliate/AccountReports";
 import { AccountSettings } from "@/components/affiliate/AccountSettings";
 import { AccountTracking } from "@/components/affiliate/AccountTracking";
+import { loadComplianceFlags, type ComplianceFlag } from "@/lib/affiliate/compliance-flags";
+import { flagReasonLabel, flagStatusLabel } from "@/lib/affiliate/compliance-rules";
+import { loadAffiliateAgreements, type AffiliateAgreement } from "@/lib/affiliate/agreements";
+import { agreementEditorState, agreementSeed, presentAgreement } from "@/lib/affiliate/agreement-view";
+import { disclosureAcknowledged, loadDisclosureProofs, type DisclosureProof } from "@/lib/affiliate/disclosures";
+import { visibleReportSections } from "@/lib/affiliate/marketing";
+import { loadMarketingReports, type MarketingReport } from "@/lib/affiliate/marketing-store";
+import {
+  contentStatusLabel,
+  loadContentSubmissions,
+  metricLines,
+  publicationStatusLabel,
+  refreshDueMetrics,
+  type ContentSubmission,
+} from "@/lib/affiliate/post-review";
+import type { TrackedPostCard } from "@/components/affiliate/TrackedPosts";
+import { loadSocialAccounts, type SocialAccountView } from "@/lib/affiliate/social-store";
+import { loadWebsiteEvents, websiteReportMonths, type WebsiteOrder, type WebsiteVisit } from "@/lib/affiliate/website-report";
 import type { AffiliatePromoDetail } from "@/components/affiliate/AffiliatePromoCodes";
 import { listPromoCodes, promoRowsForAffiliate, type PromoCodeRow } from "@/lib/genhealth/promocodes";
 import { AccountActions } from "@/components/affiliate/AccountActions";
+import { adminHasFullAccess, adminSessionActor } from "@/lib/affiliate/session";
 import { ADMIN_ERRORS } from "../../messages";
 
 export const metadata: Metadata = {
@@ -89,13 +111,82 @@ function countText(value: number | null) {
   return value == null ? "—" : String(value);
 }
 
+function editableAgreement(current: AffiliateAgreement | null, editable: boolean) {
+  return editable ? current : null;
+}
+
+const complianceNotices: Record<string, string> = {
+  flagged: "Flag opened.",
+  correction: "Correction requested.",
+  resolved: "Flag resolved.",
+  accepted: "Disclosure proof accepted.",
+  "agreement-saved": "Agreement saved.",
+  "agreement-waiting": "Agreement is awaiting a signature.",
+  "agreement-signed": "Signed agreement stored.",
+  "agreement-ended": "Agreement ended.",
+  "agreement-replaced": "A new agreement draft was started. The previous agreement is still on file.",
+  "post-approved": "Post approved. The affiliate can paste the Instagram link.",
+  "post-change": "Asked for a change.",
+  "post-rejected": "Post rejected.",
+  "post-checked": "Link marked as checked. Metrics stay blank until Instagram can be read.",
+};
+
+function complianceFlagView(flag: ComplianceFlag): AccountComplianceFlag {
+  return {
+    id: flag.id,
+    reasonLabel: flagReasonLabel(flag.reason),
+    status: flag.status,
+    statusLabel: flagStatusLabel(flag.status),
+    note: flag.note,
+    reply: flag.reply,
+    when: formatWhen(flag.createdAt),
+  };
+}
+
+function compliancePostView(post: ContentSubmission): AccountCompliancePost {
+  return {
+    id: post.id,
+    contentLabel: contentStatusLabel(post.contentStatus),
+    publicationLabel: publicationStatusLabel(post.publicationStatus),
+    caption: post.caption,
+    reviewNote: post.reviewNote,
+    verificationNote: post.verificationNote,
+    postUrl: post.postUrl,
+    when: formatWhen(post.createdAt),
+    inReview: post.contentStatus === "submitted",
+    canMarkChecked: post.publicationStatus === "verification_failed",
+    tracking: post.publicationStatus === "tracking_active",
+    metrics: metricLines(post),
+    fileCount: post.files.length || (post.filePath ? 1 : 0),
+  };
+}
+
+function trackedCards(posts: ContentSubmission[]): TrackedPostCard[] {
+  return posts
+    .filter((post) => post.publicationStatus === "tracking_active")
+    .map((post) => ({ id: post.id, caption: post.caption, postUrl: post.postUrl, metrics: metricLines(post) }));
+}
+
+function complianceProofView(proof: DisclosureProof): AccountComplianceProof {
+  return {
+    id: proof.id,
+    status: proof.status,
+    when: formatWhen(proof.submittedAt),
+    postUrl: proof.postUrl,
+    screenshot: Boolean(proof.screenshotPath),
+  };
+}
+
 export default async function AffiliateAccountsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; created?: string; invited?: string; resent?: string; code?: string }>;
+  searchParams: Promise<{ error?: string; notice?: string; created?: string; invited?: string; resent?: string; code?: string }>;
 }) {
   const query = await searchParams;
+  const actor = await adminSessionActor();
+  const canInvite = Boolean(actor && adminHasFullAccess(actor));
   const error = query.error ? ADMIN_ERRORS[query.error] : "";
+  const complianceNotice = complianceNotices[query.notice ?? ""] ?? "";
   const created = normalizeAffiliateCode(query.created);
   const requestedCode = normalizeAffiliateCode(query.code);
 
@@ -197,6 +288,78 @@ export default async function AffiliateAccountsPage({
     );
   }
 
+  let complianceFlags: ComplianceFlag[] = [];
+  let complianceProofs: DisclosureProof[] = [];
+  const acknowledged = new Map<string, boolean>();
+  let marketingReports: MarketingReport[] = [];
+  let socialAccounts: SocialAccountView[] = [];
+  let websiteVisits: WebsiteVisit[] = [];
+  let websiteOrders: WebsiteOrder[] = [];
+  let reportsUnavailable = false;
+  let agreements: AffiliateAgreement[] = [];
+  let agreementsUnavailable = false;
+  let contentPosts: ContentSubmission[] = [];
+  let postsUnavailable = false;
+  if (!loadError) {
+    try {
+      [complianceFlags, complianceProofs] = await Promise.all([loadComplianceFlags(), loadDisclosureProofs()]);
+      await Promise.all(
+        affiliates.map(async (affiliate) => {
+          acknowledged.set(affiliate.code, await disclosureAcknowledged(affiliate.code).catch(() => false));
+        }),
+      );
+    } catch (caught) {
+      reportHandledAffiliateError("[affiliate] compliance load failed", caught);
+    }
+    try {
+      const [saved, connected, website] = await Promise.all([loadMarketingReports(), loadSocialAccounts(), loadWebsiteEvents()]);
+      marketingReports = saved;
+      socialAccounts = connected;
+      websiteVisits = website.visits;
+      websiteOrders = website.orders;
+    } catch (caught) {
+      reportsUnavailable = true;
+      reportHandledAffiliateError("[affiliate] marketing report load failed", caught);
+    }
+    try {
+      agreements = await loadAffiliateAgreements();
+    } catch (caught) {
+      agreementsUnavailable = true;
+      reportHandledAffiliateError("[affiliate] agreement load failed", caught);
+    }
+    try {
+      await refreshDueMetrics(undefined, 8);
+    } catch (caught) {
+      reportHandledAffiliateError("[affiliate] post metrics refresh failed", caught);
+    }
+    try {
+      contentPosts = await loadContentSubmissions();
+    } catch (caught) {
+      postsUnavailable = true;
+      reportHandledAffiliateError("[affiliate] post load failed", caught);
+    }
+  }
+  const reportSections = visibleReportSections(marketingReports, socialAccounts);
+
+  function agreementProps(affiliate: AffiliateSummary) {
+    const own = agreements.filter((agreement) => agreement.code === affiliate.code);
+    const current = own.find((agreement) => agreement.current) ?? null;
+    const history = own.filter((agreement) => agreement.id !== current?.id);
+    const editor = agreementEditorState(current, history, agreementsUnavailable);
+    const leadAgreement = current ?? history[0] ?? null;
+    const older = (current ? history : history.slice(1)).map((agreement) => presentAgreement(agreement));
+    return {
+      name: affiliate.name,
+      code: affiliate.code,
+      commission: formatCommissionRate(affiliate),
+      unavailable: agreementsUnavailable,
+      lead: leadAgreement ? presentAgreement(leadAgreement) : null,
+      older,
+      seed: agreementSeed(editableAgreement(current, editor.editable)),
+      ...editor,
+    };
+  }
+
   function settings(affiliate: AffiliateSummary) {
     return (
       <AccountSettings name={affiliate.name}>
@@ -209,7 +372,25 @@ export default async function AffiliateAccountsPage({
           promos={trackingPromos(affiliate)}
           unavailable={Boolean(promoError)}
         />
-        <AccountActions code={affiliate.code} name={affiliate.name} active={affiliate.active} pendingInvite={affiliate.pendingInvite && affiliate.active} />
+        <AccountCompliance
+          name={affiliate.name}
+          code={affiliate.code}
+          acknowledged={acknowledged.get(affiliate.code) ?? false}
+          flags={complianceFlags.filter((flag) => flag.code === affiliate.code).map(complianceFlagView)}
+          proofs={complianceProofs.filter((proof) => proof.code === affiliate.code).map(complianceProofView)}
+          posts={contentPosts.filter((post) => post.code === affiliate.code && post.contentStatus !== "draft").map(compliancePostView)}
+          postsUnavailable={postsUnavailable}
+        />
+        <AccountAgreement {...agreementProps(affiliate)} />
+        <AccountReports
+          name={affiliate.name}
+          code={affiliate.code}
+          unavailable={reportsUnavailable}
+          months={websiteReportMonths({ code: affiliate.code, visits: websiteVisits, orders: websiteOrders })}
+          sections={reportSections.filter((section) => section.code === affiliate.code)}
+          tracked={trackedCards(contentPosts.filter((post) => post.code === affiliate.code))}
+        />
+        <AccountActions code={affiliate.code} name={affiliate.name} active={affiliate.active} pendingInvite={affiliate.pendingInvite && affiliate.active} canInvite={canInvite} />
       </AccountSettings>
     );
   }
@@ -247,6 +428,11 @@ export default async function AffiliateAccountsPage({
       {error ? (
         <p role="alert" className="rounded-2xl bg-rose px-4 py-3 text-sm text-ink">
           {error}
+        </p>
+      ) : null}
+      {complianceNotice ? (
+        <p role="status" className="rounded-2xl bg-white px-4 py-3 text-sm text-ink">
+          {complianceNotice}
         </p>
       ) : null}
       {loadError ? <p className="text-ink">{loadError}</p> : null}

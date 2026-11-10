@@ -16,6 +16,7 @@ import {
   type PayoutStatus,
 } from "@/lib/affiliate/payouts";
 import { AffiliateStoreError, loadAffiliateOverview } from "@/lib/affiliate/store";
+import { adminHasFullAccess, adminSessionActor } from "@/lib/affiliate/session";
 import { approvePayoutAction } from "../../actions";
 import { ADMIN_ERRORS } from "../../messages";
 
@@ -55,7 +56,8 @@ function PayoutStatusBadge({ status }: { status: PayoutStatus }) {
   );
 }
 
-function PayoutAction({ line, updated, paidOn }: { line: PayoutLine; updated: boolean; paidOn: string }) {
+function PayoutAction({ line, updated, paidOn, canPay }: { line: PayoutLine; updated: boolean; paidOn: string; canPay: boolean }) {
+  if (!canPay) return line.status === "paid" ? <span className="text-brown">Recorded</span> : null;
   if (line.status === "pending") {
     return (
       <form action={approvePayoutAction}>
@@ -88,6 +90,8 @@ export default async function AffiliatePayoutsPage({
   searchParams: Promise<{ month?: string; error?: string; notice?: string }>;
 }) {
   const query = await searchParams;
+  const actor = await adminSessionActor();
+  const canPay = Boolean(actor && adminHasFullAccess(actor));
   const notice = notices[query.notice ?? ""] ?? "";
   const error = query.error ? ADMIN_ERRORS[query.error] ?? "" : "";
   const paidOn = new Date().toISOString().slice(0, 10);
@@ -121,7 +125,9 @@ export default async function AffiliatePayoutsPage({
       <div>
         <h2 className="text-2xl">Payouts</h2>
         <p className="mt-2 max-w-2xl text-sm text-brown">
-          Review total earnings, approve a month, then record the payment. Mark paid only records a payment that was already made somewhere else.
+          {canPay
+            ? "Review total earnings, approve a month, then record the payment. Mark paid only records a payment that was already made somewhere else."
+            : "Review total earnings. Approving a month and recording a payment is limited to main admins and admins."}
         </p>
       </div>
 
@@ -190,7 +196,7 @@ export default async function AffiliatePayoutsPage({
                   </div>
                 </dl>
                 <div className="mt-5">
-                  <PayoutAction line={line} updated={approvedCodes.has(line.code)} paidOn={paidOn} />
+                  <PayoutAction line={line} updated={approvedCodes.has(line.code)} paidOn={paidOn} canPay={canPay} />
                 </div>
               </li>
             ))}
@@ -230,7 +236,7 @@ export default async function AffiliatePayoutsPage({
                   <td className="px-4 py-5 align-top">{payoutPaidOn(line)}</td>
                   <td className="break-words px-4 py-5 align-top">{payoutReferenceText(line)}</td>
                   <td className="px-4 py-5 align-top">
-                    <PayoutAction line={line} updated={approvedCodes.has(line.code)} paidOn={paidOn} />
+                    <PayoutAction line={line} updated={approvedCodes.has(line.code)} paidOn={paidOn} canPay={canPay} />
                   </td>
                 </tr>
               ))}

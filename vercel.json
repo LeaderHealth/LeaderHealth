@@ -7,6 +7,10 @@
     {
       "path": "/api/affiliate/sales-sync",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/affiliate/post-metrics",
+      "schedule": "0 7 * * *"
     }
   ]
 }
