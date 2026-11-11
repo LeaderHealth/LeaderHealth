@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ApprovedPostsNotice } from "@/components/affiliate/ApprovedPostsNotice";
 import { AreaNav } from "@/components/affiliate/AreaNav";
 import { PortalBrand } from "@/components/affiliate/PortalBrand";
 import { ProfileCard } from "@/components/affiliate/ProfileCard";
@@ -29,14 +29,14 @@ function needsPostAction(post: { contentStatus: string; publicationStatus: strin
 export default async function AffiliateDashboardLayout({ children }: { children: ReactNode }) {
   const affiliate = await currentAffiliate();
   if (!affiliate) redirect("/affiliates");
-  let approvedWaiting = 0;
+  let approvedIds: string[] = [];
   let postsNeedingAction = 0;
   try {
     const posts = await loadContentSubmissions(affiliate.code);
-    approvedWaiting = posts.filter((post) => post.contentStatus === "approved" && post.publicationStatus === "awaiting_publication").length;
+    approvedIds = posts.filter((post) => post.contentStatus === "approved" && post.publicationStatus === "awaiting_publication").map((post) => post.id);
     postsNeedingAction = posts.filter(needsPostAction).length;
   } catch {
-    approvedWaiting = 0;
+    approvedIds = [];
     postsNeedingAction = 0;
   }
 
@@ -49,15 +49,16 @@ export default async function AffiliateDashboardLayout({ children }: { children:
         <p className="mt-4 max-w-2xl text-taupe">
           See your referral link, promo code, orders, earnings, and payouts.
         </p>
-        {approvedWaiting > 0 ? (
-          <p role="status" className="mt-4 max-w-2xl rounded-2xl bg-white px-4 py-3 text-sm text-ink">
-            {approvedWaiting === 1
-              ? "A post was approved. Publish it, then paste the Instagram link."
-              : `${approvedWaiting} posts were approved. Publish each one, then paste the Instagram link.`}{" "}
-            <Link href="/affiliates/posts" className="font-medium underline underline-offset-4">
-              Open posts
-            </Link>
-          </p>
+        {approvedIds.length > 0 ? (
+          <ApprovedPostsNotice
+            code={affiliate.code}
+            ids={approvedIds}
+            message={
+              approvedIds.length === 1
+                ? "A post was approved. Publish it, then paste the Instagram link."
+                : `${approvedIds.length} posts were approved. Publish each one, then paste the Instagram link.`
+            }
+          />
         ) : null}
         <div className="mt-8 xl:grid xl:grid-cols-[minmax(18rem,max-content)_minmax(0,1fr)] xl:items-start xl:gap-8">
           <div className="z-20 flex flex-col gap-4 xl:sticky xl:top-28 xl:self-start">
