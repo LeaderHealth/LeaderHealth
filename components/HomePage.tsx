@@ -195,7 +195,7 @@ const careOptions = [
     href: "/products/weight-loss-semaglutide",
     name: "Semaglutide",
     category: "Weight",
-    price: "Starting at $159 per month",
+    price: "Starting at $179 per month",
     image: "/images/products/semaglutide-injectable.png?v=4",
     width: 1122,
     height: 1402,
