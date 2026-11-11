@@ -1,27 +1,36 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
+
+const changeEvent = "lh-approved-notice";
 
 function storageKey(code: string) {
   return `lh-dismissed-approved-posts:${code}`;
 }
 
+function subscribe(onStoreChange: () => void) {
+  window.addEventListener("storage", onStoreChange);
+  window.addEventListener(changeEvent, onStoreChange);
+  return () => {
+    window.removeEventListener("storage", onStoreChange);
+    window.removeEventListener(changeEvent, onStoreChange);
+  };
+}
+
 export function ApprovedPostsNotice({ code, ids, message }: { code: string; ids: string[]; message: string }) {
   const signature = [...ids].sort().join(",");
-  const [dismissed, setDismissed] = useState<string | null>(null);
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    setDismissed(window.localStorage.getItem(storageKey(code)));
-    setReady(true);
-  }, [code]);
-
-  if (!ready || dismissed === signature) return null;
+  const key = storageKey(code);
+  const dismissed = useSyncExternalStore(
+    subscribe,
+    () => window.localStorage.getItem(key),
+    () => null,
+  );
+  if (dismissed === signature) return null;
 
   function deleteNotice() {
-    window.localStorage.setItem(storageKey(code), signature);
-    setDismissed(signature);
+    window.localStorage.setItem(key, signature);
+    window.dispatchEvent(new Event(changeEvent));
   }
 
   return (
