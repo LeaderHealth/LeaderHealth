@@ -168,7 +168,7 @@ export function ProfileCard({
 }: {
   name: string;
   email: string;
-  role: "Admin" | "Affiliate";
+  role: "Admin" | "Main admin" | "Sub admin" | "Affiliate";
   avatarUrl: string | null;
   signOut: () => Promise<void>;
   changePassword?: (previous: PasswordChangeState, formData: FormData) => Promise<PasswordChangeState>;

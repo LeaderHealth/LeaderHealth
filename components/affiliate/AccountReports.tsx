@@ -31,12 +31,14 @@ export function AccountReports({
   unavailable,
   months,
   sections,
+  tracked,
 }: {
   name: string;
   code: string;
   unavailable: boolean;
   months: WebsiteMonthReport[];
   sections: ReportSection[];
+  tracked: TrackedPostCard[];
 }) {
   const titleId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -108,6 +110,7 @@ export function AccountReports({
                     <>
                       <WebsiteReportSection months={months} />
                       <MarketingAccountSections sections={sections} />
+                      <TrackedPosts posts={tracked} />
                     </>
                   )}
                 </div>

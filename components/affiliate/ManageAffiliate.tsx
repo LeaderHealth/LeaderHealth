@@ -3,7 +3,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MarketingAccountSections, WebsiteReportSection } from "@/components/affiliate/MarketingSections";
-import { TrackedPosts, type TrackedPostCard } from "@/components/affiliate/TrackedPosts";
 import type { SocialNetwork } from "@/lib/affiliate/marketing";
 import type { WebsiteMonthReport } from "@/lib/affiliate/website-report";
 

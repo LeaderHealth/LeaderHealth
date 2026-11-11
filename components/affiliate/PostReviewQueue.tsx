@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useMemo, useState, type ReactNode } from "react";
 import { approvePostAction, markPostCheckedAction, rejectPostAction, requestPostChangeAction } from "@/app/admin/affiliates/post-actions";
 
@@ -378,7 +379,7 @@ function SlideMedia({ slide, onFail }: { slide: ReviewSlide; onFail: () => void 
         />
       ) : (
         <a href={slide.href} target="_blank" rel="noopener noreferrer" className="absolute inset-0">
-          <img src={slide.href} alt={`Slide ${slide.index}`} className="h-full w-full object-contain" onError={onFail} />
+          <Image src={slide.href} alt={`Slide ${slide.index}`} fill className="object-contain" onError={onFail} />
         </a>
       )}
       <span className="pointer-events-none absolute left-2 top-2 grid size-6 place-items-center rounded-full bg-ink text-[11px] font-semibold text-white">{slide.index}</span>
@@ -390,5 +391,5 @@ function Thumb({ post }: { post: ReviewPost }) {
   const cover = post.slides[0];
   if (!cover) return <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-[#E8DEDC] text-[10px] text-brown">File</span>;
   if (cover.video) return <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-[#E8DEDC] text-[10px] text-brown">Video</span>;
-  return <img src={cover.href} alt="" className="size-12 shrink-0 rounded-xl object-cover" />;
+  return <Image src={cover.href} alt="" width={48} height={48} className="size-12 shrink-0 rounded-xl object-cover" />;
 }

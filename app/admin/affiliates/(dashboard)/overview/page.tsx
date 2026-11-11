@@ -7,10 +7,9 @@ import { loadMarketingReports, type MarketingReport } from "@/lib/affiliate/mark
 import { monthFigures } from "@/lib/affiliate/month-figures";
 import { loadSocialAccounts, type SocialAccountView } from "@/lib/affiliate/social-store";
 import { loadWebsiteEvents, websiteReportMonths, type WebsiteOrder, type WebsiteVisit } from "@/lib/affiliate/website-report";
-import { loadContentSubmissions, metricLines, refreshDueMetrics, type ContentSubmission } from "@/lib/affiliate/post-review";
-import type { TrackedPostCard } from "@/components/affiliate/TrackedPosts";
 import { currentPayoutPeriod, formatPayoutMonth, loadPayoutRecords, paidOutInRange, previousPayoutPeriod, type PayoutRecord } from "@/lib/affiliate/payouts";
-import { adjustedCommissionCents, refundStatusLabel, remainingSalesCents } from "@/lib/affiliate/refunds";
+import { periodReferralSummaries } from "@/lib/affiliate/order-view";
+import { adjustedCommissionCents, remainingSalesCents } from "@/lib/affiliate/refunds";
 import { AffiliateStoreError, loadAffiliateOverview, loadClickTimes, type AffiliateSummary, type ConversionSummary } from "@/lib/affiliate/store";
 import { listPromoCodes, promoCodesForAffiliate, type PromoCodeRow } from "@/lib/genhealth/promocodes";
 import { adminHasFullAccess, adminSessionActor } from "@/lib/affiliate/session";
@@ -86,13 +85,6 @@ function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   const letters = `${parts[0]?.[0] ?? ""}${parts[1]?.[0] ?? ""}`;
   return (letters || name.slice(0, 1) || "?").toUpperCase();
-}
-
-function formatDay(value: string | null) {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(date);
 }
 
 function promoLabel(count: number | null) {
@@ -181,11 +173,17 @@ export default async function AffiliateOverviewPage({
   const top = ranked.slice(0, 5);
   const topSales = top[0]?.stats.salesCents ?? 0;
 
-  const names = new Map(affiliates.map((affiliate) => [affiliate.code, affiliate.name]));
-  const recent = paid
-    .filter((conversion) => remainingSalesCents(conversion.amountCents, conversion.refundedAmountCents) > 0)
-    .sort((left, right) => (right.createdAt ?? "").localeCompare(left.createdAt ?? ""))
-    .slice(0, 5);
+  const recent = periodReferralSummaries(
+    paid.map((conversion) => ({
+      code: conversion.code,
+      dryRun: conversion.dryRun,
+      amountCents: conversion.amountCents,
+      refundedAmountCents: conversion.refundedAmountCents,
+      commissionCents: conversion.commissionCents,
+      commissionRefundedCents: conversion.commissionRefundedCents,
+      createdAt: conversion.createdAt,
+    })),
+  );
   const newAffiliateCount = affiliates.filter((affiliate) => inRange(affiliate.createdAt, range)).length;
   const visitorCount = clickTimes.filter((createdAt) => inRange(createdAt, range)).length;
 
@@ -301,7 +299,7 @@ export default async function AffiliateOverviewPage({
             </div>
           </div>
           <p className="mt-6 border-t border-rose/60 pt-4 text-sm text-brown">
-            Paid out {formatCents(paidOutCents)} in this period. A refund can leave unpaid earnings negative until a later sale covers it. Order details are on the Orders page.
+            Paid out {formatCents(paidOutCents)} in this period. A refund can leave unpaid earnings negative until a later sale covers it. Pay-period totals are on the Orders page.
           </p>
         </section>
 
@@ -367,28 +365,15 @@ export default async function AffiliateOverviewPage({
             <p className="mt-6 text-sm text-brown">No paid orders in this period.</p>
           ) : (
             <ul className="mt-4 divide-y divide-rose/60">
-              {recent.map((conversion) => (
-                <li key={conversion.orderId} className="flex items-start justify-between gap-3 py-3 text-sm">
+              {recent.map((row) => (
+                <li key={`${row.period}:${row.code}`} className="flex items-start justify-between gap-3 py-3 text-sm">
                   <div className="min-w-0">
-                    <div className="truncate font-medium">{names.get(conversion.code) || conversion.code}</div>
-                    <p className="mt-1 break-words text-brown">
-                      {formatDay(conversion.createdAt)}
-                      {conversion.productName ? ` · ${conversion.productName}` : ""}
-                    </p>
+                    <div className="break-words font-medium">{formatPayoutMonth(row.period)}</div>
+                    <p className="mt-1 break-all text-brown">{row.code}</p>
                   </div>
                   <div className="shrink-0 text-right">
-                    <span className="inline-flex rounded-full bg-rose px-3 py-1 text-xs font-medium text-ink">
-                      {refundStatusLabel(conversion.refundStatus) || "Paid"}
-                    </span>
-                    <p className="mt-2 font-medium">{formatCents(remainingSalesCents(conversion.amountCents, conversion.refundedAmountCents))}</p>
-                    {conversion.refundStatus === "none" ? null : (
-                      <p className="text-brown">
-                        {formatCents(netCommission(conversion))} adjusted
-                        {conversion.refundedAmountCents > 0 ? ` · ${formatCents(conversion.refundedAmountCents)} refunded` : ""}
-                        {" · "}
-                        {formatCents(conversion.commissionCents)} original
-                      </p>
-                    )}
+                    <p className="font-medium">{formatCents(row.commissionCents)}</p>
+                    <p className="text-brown">{row.conversions === 1 ? "1 conversion" : `${row.conversions} conversions`}</p>
                   </div>
                 </li>
               ))}

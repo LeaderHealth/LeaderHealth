@@ -6,9 +6,9 @@ import { AgreementSummary } from "@/components/affiliate/AgreementSummary";
 import { formatCents, formatCommissionRate } from "@/lib/affiliate/format";
 import { loadAffiliateAgreements } from "@/lib/affiliate/agreements";
 import { presentAgreement } from "@/lib/affiliate/agreement-view";
-import { loadPayoutRecords, paidOutInRange, type PayoutRecord } from "@/lib/affiliate/payouts";
-import { adjustedCommissionCents, refundStatusLabel, remainingSalesCents } from "@/lib/affiliate/refunds";
-import { toAffiliateOrder, type AffiliateOrderView } from "@/lib/affiliate/order-view";
+import { formatPayoutMonth, loadPayoutRecords, paidOutInRange, type PayoutRecord } from "@/lib/affiliate/payouts";
+import { adjustedCommissionCents, remainingSalesCents } from "@/lib/affiliate/refunds";
+import { periodReferralSummaries, toAffiliateOrder, type AffiliateOrderView } from "@/lib/affiliate/order-view";
 import { AffiliateStoreError, loadAffiliateActivity } from "@/lib/affiliate/store";
 import { disclosureAcknowledged } from "@/lib/affiliate/disclosures";
 import { listPromoCodes, personalPromoForAffiliate } from "@/lib/genhealth/promocodes";
@@ -51,13 +51,6 @@ function inRange(createdAt: string | null, range: Range) {
   if (!createdAt) return false;
   const days = range === "30" ? 30 : 90;
   return new Date(createdAt).getTime() >= Date.now() - days * 24 * 60 * 60 * 1000;
-}
-
-function formatDay(value: string | null) {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(date);
 }
 
 export default async function AffiliatePortalOverviewPage({
@@ -113,10 +106,17 @@ export default async function AffiliatePortalOverviewPage({
     paidOutInRange(payouts, "all");
   const paidOutCents = paidOutInRange(payouts, range);
   const clicks = clickTimes.filter((createdAt) => inRange(createdAt, range)).length;
-  const recent = paid
-    .filter((conversion) => remainingSalesCents(conversion.amountCents, conversion.refundedAmountCents) > 0)
-    .sort((left, right) => (right.createdAt ?? "").localeCompare(left.createdAt ?? ""))
-    .slice(0, 5);
+  const recent = periodReferralSummaries(
+    paid.map((conversion) => ({
+      code: affiliate.code,
+      dryRun: conversion.dryRun,
+      amountCents: conversion.amountCents,
+      refundedAmountCents: conversion.refundedAmountCents,
+      commissionCents: conversion.commissionCents,
+      commissionRefundedCents: conversion.commissionRefundedCents,
+      createdAt: conversion.createdAt,
+    })),
+  );
   const commission =
     affiliate.commissionMode === "fixed" ? `${formatCommissionRate(affiliate)} per order` : `${formatCommissionRate(affiliate)} commission`;
 
@@ -228,7 +228,7 @@ export default async function AffiliatePortalOverviewPage({
           </div>
         </div>
         <p className="mt-6 border-t border-rose/60 pt-4 text-sm text-brown">
-          Paid out {formatCents(paidOutCents)} in this period. A refund can leave unpaid earnings negative until a later sale covers it. Order details are on the Orders page.
+          Paid out {formatCents(paidOutCents)} in this period. A refund can leave unpaid earnings negative until a later sale covers it. Pay-period totals are on the Orders page.
         </p>
       </section>
 
@@ -245,25 +245,13 @@ export default async function AffiliatePortalOverviewPage({
             <p className="mt-6 text-sm text-brown">No paid orders in this period.</p>
           ) : (
             <ul className="mt-4 divide-y divide-rose/60">
-              {recent.map((conversion) => (
-                <li key={conversion.ref} className="flex items-start justify-between gap-3 py-3 text-sm">
+              {recent.map((row) => (
+                <li key={row.period} className="flex items-start justify-between gap-3 py-3 text-sm">
                   <div className="min-w-0">
-                    <div className="break-words font-medium">Paid order</div>
-                    <p className="mt-1 text-brown">{formatDay(conversion.createdAt)}</p>
+                    <div className="break-words font-medium">{formatPayoutMonth(row.period)}</div>
+                    <p className="mt-1 text-brown">{row.conversions === 1 ? "1 conversion" : `${row.conversions} conversions`}</p>
                   </div>
-                  <div className="shrink-0 text-right">
-                    <span className="inline-flex rounded-full bg-rose px-3 py-1 text-xs font-medium text-ink">
-                      {refundStatusLabel(conversion.refundStatus) || "Paid"}
-                    </span>
-                    <p className="mt-2 font-medium">{formatCents(remainingSalesCents(conversion.amountCents, conversion.refundedAmountCents))}</p>
-                    <p className="text-brown">{formatCents(netCommission(conversion))} commission</p>
-                    {conversion.refundStatus === "none" ? null : (
-                      <p className="text-brown">
-                        {conversion.refundedAmountCents > 0 ? `${formatCents(conversion.refundedAmountCents)} refunded · ` : ""}
-                        {formatCents(conversion.commissionCents)} original
-                      </p>
-                    )}
-                  </div>
+                  <p className="shrink-0 font-medium">{formatCents(row.commissionCents)}</p>
                 </li>
               ))}
             </ul>

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -315,7 +316,7 @@ function Progress({ current, live }: { current: number; live?: boolean }) {
 }
 
 function Thumb({ post }: { post: HubPost }) {
-  if (post.hasFile && post.media === "photo") return <img src={post.fileHref} alt="" className="size-11 shrink-0 rounded-[10px] object-cover" />;
+  if (post.hasFile && post.media === "photo") return <Image src={post.fileHref} alt="" width={44} height={44} className="size-11 shrink-0 rounded-[10px] object-cover" />;
   return <span className="grid size-11 shrink-0 place-items-center rounded-[10px] bg-[#E8DEDC] text-[10px] text-brown">{post.hasFile ? "Video" : "File"}</span>;
 }
 
@@ -681,7 +682,7 @@ function Composer({
                         <div className="flex items-center gap-2.5">
                           <span className="grid size-6 shrink-0 place-items-center rounded-full bg-ink text-xs font-semibold text-white">{slideIndex + 1}</span>
                           {slide.previewUrl ? (
-                            <img src={slide.previewUrl} alt="" className="size-10 shrink-0 rounded-lg object-cover" />
+                            <Image src={slide.previewUrl} alt="" width={40} height={40} className="size-10 shrink-0 rounded-lg object-cover" />
                           ) : (
                             <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#E8DEDC] text-[10px] text-brown">{slideIsVideo(slide) ? "Video" : "File"}</span>
                           )}
@@ -713,7 +714,7 @@ function Composer({
               ) : card.slides[0] ? (
                 <div className="flex items-center gap-2.5 rounded-2xl border border-[#E8DEDC] bg-white p-3">
                   {card.slides[0].previewUrl ? (
-                    <img src={card.slides[0].previewUrl} alt="" className="size-10 shrink-0 rounded-lg object-cover" />
+                    <Image src={card.slides[0].previewUrl} alt="" width={40} height={40} className="size-10 shrink-0 rounded-lg object-cover" />
                   ) : (
                     <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#E8DEDC] text-[10px] text-brown">{slideIsVideo(card.slides[0]) ? "Video" : "File"}</span>
                   )}
@@ -1076,7 +1077,7 @@ function PostDetail({
 
       {contentVisible ? (
         <section className="flex flex-wrap items-start gap-4">
-          {post.hasFile && post.media === "photo" ? <img src={post.fileHref} alt="" className="size-[120px] rounded-[14px] object-cover" /> : <div className="grid size-[120px] place-items-center rounded-[14px] bg-[#E8DEDC] px-2 text-center text-[11px] text-[#5E4E4B]">{fileLabel(post)}</div>}
+          {post.hasFile && post.media === "photo" ? <Image src={post.fileHref} alt="" width={120} height={120} className="size-[120px] rounded-[14px] object-cover" /> : <div className="grid size-[120px] place-items-center rounded-[14px] bg-[#E8DEDC] px-2 text-center text-[11px] text-[#5E4E4B]">{fileLabel(post)}</div>}
           <div className="min-w-0 flex-1 basis-[260px]">
             {post.slides.length > 1 ? <p className="mb-1 text-[13px] text-brown">Carousel · {post.slides.length}</p> : null}
             <p className="text-sm leading-relaxed whitespace-pre-line">{post.caption || "No caption yet."}</p>

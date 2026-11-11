@@ -466,10 +466,10 @@ function fileRecord(files: StoredPostFile[]) {
   };
 }
 
-function knownFiles(post: ContentSubmission | null) {
+function knownFiles(post: ContentSubmission | null): StoredPostFile[] {
   if (!post) return [];
   if (post.files.length) return post.files;
-  return post.filePath ? [{ path: post.filePath, contentType: post.contentType }] : [];
+  return post.filePath ? [{ path: post.filePath, contentType: post.contentType, name: safeFileName("", post.filePath) }] : [];
 }
 
 function filesAfterLegacyUpload(existing: ContentSubmission | null, stored: StoredPostFile) {
