@@ -89,14 +89,10 @@ function MonthBlock({
   return (
     <div className="rounded-[24px] bg-background px-4 py-5">
       <h3 className="text-lg">{label}</h3>
-      <dl className="mt-4 grid grid-cols-3 gap-3 text-sm leading-6">
+      <dl className="mt-4 grid grid-cols-2 gap-3 text-sm leading-6">
         <div>
           <dt className="text-xs text-brown">Paid orders</dt>
           <dd className="mt-1">{figures.orders}</dd>
-        </div>
-        <div>
-          <dt className="text-xs text-brown">Sales</dt>
-          <dd className="mt-1">{formatCents(figures.salesCents)}</dd>
         </div>
         <div>
           <dt className="text-xs text-brown">Earnings</dt>

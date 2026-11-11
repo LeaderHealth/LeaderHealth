@@ -24,7 +24,7 @@ const postErrors: Record<string, string> = {
   disclosure: "Include “Paid partnership with Leader Health” in the caption.",
   link: "Put your tracking link in the caption. A link in your bio is not enough.",
   url: "Paste a full https://www.instagram.com/p/ or /reel/ link.",
-  file: "Use a PNG, JPEG, or WebP image under 8 MB, or an MP4, WebM, or QuickTime video under 10 MB.",
+  file: "Use a PNG, JPEG, or WebP image under 8 MB, or an MP4, MOV, or WebM reel under 100 MB.",
   storage: "Post storage is not set up. Set FIREBASE_STORAGE_BUCKET.",
   status: "That post can no longer be changed that way.",
   unavailable: "That could not be saved right now.",
@@ -78,8 +78,18 @@ function historyFor(post: ContentSubmission): HubPost["history"] {
   return events;
 }
 
+function captionsForSlides(post: ContentSubmission, count: number) {
+  if (post.slideCaptions.length === count) return post.slideCaptions;
+  const split = post.caption.split(/\n\n/).map((item) => item.trim()).filter(Boolean);
+  if (count > 1 && split.length === count) return split;
+  if (count <= 1) return [post.caption];
+  return [post.caption, ...Array.from({ length: Math.max(count - 1, 0) }, () => "")];
+}
+
 function hubPost(post: ContentSubmission): HubPost {
   const copy = instagramCheckCopy(post.publicationStatus, post.verificationNote);
+  const files = post.files.length ? post.files : post.filePath ? [{ path: post.filePath, contentType: post.contentType }] : [];
+  const captions = captionsForSlides(post, files.length);
   return {
     id: post.id,
     title: titleOf(post.caption),
@@ -94,16 +104,19 @@ function hubPost(post: ContentSubmission): HubPost {
     downloadHref: `/affiliates/post-file?post=${encodeURIComponent(post.id)}&download=1`,
     hasFile: Boolean(post.filePath),
     media: post.contentType.startsWith("video/") ? "video" : "photo",
-    slides: (post.files.length ? post.files : post.filePath ? [{ path: post.filePath, contentType: post.contentType }] : []).map((file, index) => ({
+    slides: files.map((file, index) => ({
       href: `/affiliates/post-file?post=${encodeURIComponent(post.id)}&slide=${index + 1}`,
       downloadHref: `/affiliates/post-file?post=${encodeURIComponent(post.id)}&slide=${index + 1}&download=1`,
       media: file.contentType.startsWith("video/") ? "video" as const : "photo" as const,
+      caption: captions[index] ?? "",
     })),
     checks: instagramLinkChecks(post.publicationStatus, post.verificationNote),
     headline: copy.headline,
     detail: copy.detail,
     metrics: post.publicationStatus === "tracking_active" ? metricLines(post) : [],
     history: historyFor(post),
+    batchId: post.batchId,
+    mediaKey: (post.files.length ? post.files : []).map((file) => file.name || file.path).join("\n"),
   };
 }
 
@@ -141,7 +154,7 @@ export default async function AffiliatePostsPage({
           {notice ? <p role="status" className="mt-4 rounded-2xl bg-background px-4 py-3 text-sm text-ink">{notice}</p> : null}
         <form action={acknowledgeDisclosureAction} className="mt-6">
           <input type="hidden" name="next" value="posts" />
-          <h3 className="text-lg">Sponsorship disclosure</h3>
+          <h3 className="text-lg">Sponsorship agreement</h3>
           <p className="mt-2 max-w-2xl text-sm text-brown">Put “Paid partnership with Leader Health” and your tracking link in the caption. A link in your bio is not enough.</p>
           <label className="mt-4 flex items-start gap-3 text-sm text-ink">
             <input name="acknowledge" type="checkbox" required className="mt-1 size-4 accent-ink" />

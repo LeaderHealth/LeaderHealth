@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import { useMemo, useState, type ReactNode } from "react";
 import { approvePostAction, markPostCheckedAction, rejectPostAction, requestPostChangeAction } from "@/app/admin/affiliates/post-actions";
+import { MediaExpand, MediaPreview } from "@/components/affiliate/MediaExpand";
 
 export type ReviewSlide = {
   index: number;
@@ -180,8 +180,9 @@ export function PostReviewQueue({ posts, initialId, notice }: { posts: ReviewPos
               const current = selected?.id === post.id;
               return (
                 <li key={post.id}>
-                  <button type="button" onClick={() => choose(post.id)} className={`flex w-full gap-3 rounded-2xl p-2 text-left ${current ? "bg-background" : "hover:bg-background"}`}>
+                  <div className={`flex w-full items-start gap-3 rounded-2xl p-2 ${current ? "bg-background" : "hover:bg-background"}`}>
                     <Thumb post={post} />
+                    <button type="button" onClick={() => choose(post.id)} className="min-w-0 flex-1 text-left">
                     <span className="min-w-0 flex-1">
                       <span className="flex items-baseline justify-between gap-2">
                         <span className="truncate text-sm font-medium">{post.name}</span>
@@ -196,7 +197,8 @@ export function PostReviewQueue({ posts, initialId, notice }: { posts: ReviewPos
                         {post.version > 1 ? <span className="rounded-full bg-[#EFEAE9] px-2 py-0.5 text-[11px] text-[#4A3A37]">Resubmitted · v{post.version}</span> : null}
                       </span>
                     </span>
-                  </button>
+                    </button>
+                  </div>
                 </li>
               );
             }) : <li className="px-2 py-6 text-sm text-brown">No posts in this list.</li>}
@@ -339,9 +341,7 @@ function SlideCard({ slide, canDecide, onAdd }: { slide: ReviewSlide; canDecide:
       {failed ? null : <SlideMedia slide={slide} onFail={() => setFailed(true)} />}
       <div className="flex min-h-0 min-w-0 flex-col gap-2">
         {failed ? (
-          <a href={slide.href} target="_blank" rel="noopener noreferrer" className="text-sm text-brown underline underline-offset-4">
-            This {slide.video ? "video" : "photo"} isn’t available. Open the file.
-          </a>
+          <p className="text-sm text-brown">This {slide.video ? "reel" : "photo"} was not saved with the post. Ask the affiliate to send it again.</p>
         ) : null}
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-medium">Slide {slide.index}</span>
@@ -366,30 +366,36 @@ function SlideCard({ slide, canDecide, onAdd }: { slide: ReviewSlide; canDecide:
 
 function SlideMedia({ slide, onFail }: { slide: ReviewSlide; onFail: () => void }) {
   return (
-    <div className="relative aspect-[4/5] w-full overflow-hidden rounded-xl bg-[#E8DEDC]">
+    <MediaExpand
+      src={slide.href}
+      media={slide.video ? "video" : "photo"}
+      label={`Slide ${slide.index}`}
+      className="relative block aspect-[4/5] w-full cursor-zoom-in overflow-hidden rounded-xl bg-[#E8DEDC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+    >
       {slide.video ? (
         <video
           src={slide.href}
-          controls
+          muted
           playsInline
           preload="metadata"
-          aria-label={`Slide ${slide.index} video`}
-          className="absolute inset-0 h-full w-full object-contain"
+          className="pointer-events-none absolute inset-0 h-full w-full object-contain"
           onError={onFail}
         />
       ) : (
-        <a href={slide.href} target="_blank" rel="noopener noreferrer" className="absolute inset-0">
-          <Image src={slide.href} alt={`Slide ${slide.index}`} fill className="object-contain" onError={onFail} />
-        </a>
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={slide.href} alt="" className="absolute inset-0 h-full w-full object-contain" onError={onFail} />
       )}
       <span className="pointer-events-none absolute left-2 top-2 grid size-6 place-items-center rounded-full bg-ink text-[11px] font-semibold text-white">{slide.index}</span>
-    </div>
+    </MediaExpand>
   );
 }
 
 function Thumb({ post }: { post: ReviewPost }) {
   const cover = post.slides[0];
   if (!cover) return <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-[#E8DEDC] text-[10px] text-brown">File</span>;
-  if (cover.video) return <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-[#E8DEDC] text-[10px] text-brown">Video</span>;
-  return <Image src={cover.href} alt="" width={48} height={48} className="size-12 shrink-0 rounded-xl object-cover" />;
+  return (
+    <MediaExpand src={cover.href} media={cover.video ? "video" : "photo"} label={post.excerpt || "Post"}>
+      <MediaPreview src={cover.href} media={cover.video ? "video" : "photo"} className="size-12 shrink-0 rounded-xl object-cover" />
+    </MediaExpand>
+  );
 }

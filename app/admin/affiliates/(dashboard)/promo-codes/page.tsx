@@ -286,8 +286,8 @@ function RemovedPromoCodes({ rows, accounts }: { rows: RemovedPromoRow[]; accoun
       </h2>
       <p className="px-4 pt-2 text-sm text-brown">
         {empty
-          ? "No recorded sales or clicks for a removed code yet."
-          : "These codes are no longer active in Gen Health. Orders, sales, commission, and clicks were recorded on this site. Gen Health usage is not available after a code is removed."}
+          ? "No recorded orders or clicks for a removed code yet."
+          : "These codes are no longer active in Gen Health. Orders, commission, and clicks were recorded on this site. Gen Health usage is not available after a code is removed."}
       </p>
       <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-5 border-t border-ink/10 px-4 py-5 text-sm leading-6 xl:hidden" aria-labelledby="removed-promo-codes-title">
         {empty ? (
@@ -302,10 +302,6 @@ function RemovedPromoCodes({ rows, accounts }: { rows: RemovedPromoRow[]; accoun
             </div>
             <div>
               <dt className="text-xs text-brown">Orders</dt>
-              <dd className="mt-1">—</dd>
-            </div>
-            <div>
-              <dt className="text-xs text-brown">Sales</dt>
               <dd className="mt-1">—</dd>
             </div>
             <div>
@@ -332,10 +328,6 @@ function RemovedPromoCodes({ rows, accounts }: { rows: RemovedPromoRow[]; accoun
                   <dd className="mt-1">{promo.orders}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-brown">Sales</dt>
-                  <dd className="mt-1">{promo.salesCents == null ? "—" : formatCents(promo.salesCents)}</dd>
-                </div>
-                <div>
                   <dt className="text-xs text-brown">Commission</dt>
                   <dd className="mt-1">{formatCents(promo.commissionCents)}</dd>
                 </div>
@@ -358,7 +350,6 @@ function RemovedPromoCodes({ rows, accounts }: { rows: RemovedPromoRow[]; accoun
             <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Promo code</th>
             <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Affiliate</th>
             <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Orders</th>
-            <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Sales</th>
             <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Commission</th>
             <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Clicks</th>
             <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Usage</th>
@@ -373,7 +364,6 @@ function RemovedPromoCodes({ rows, accounts }: { rows: RemovedPromoRow[]; accoun
               <td className="px-4 py-5 align-top">—</td>
               <td className="px-4 py-5 align-top">—</td>
               <td className="px-4 py-5 align-top">—</td>
-              <td className="px-4 py-5 align-top">—</td>
             </tr>
           ) : (
             rows.map((promo) => (
@@ -381,7 +371,6 @@ function RemovedPromoCodes({ rows, accounts }: { rows: RemovedPromoRow[]; accoun
                 <td className="break-all px-4 py-5 align-top font-medium">{promo.code}</td>
                 <td className="px-4 py-5 align-top">{affiliateLabels(promo.affiliateCodes, accounts)}</td>
                 <td className="px-4 py-5 align-top">{promo.orders}</td>
-                <td className="px-4 py-5 align-top">{promo.salesCents == null ? "—" : formatCents(promo.salesCents)}</td>
                 <td className="px-4 py-5 align-top">{formatCents(promo.commissionCents)}</td>
                 <td className="px-4 py-5 align-top">{promo.clicks}</td>
                 <td className="px-4 py-5 align-top">—</td>

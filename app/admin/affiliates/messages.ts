@@ -45,7 +45,7 @@ export const ADMIN_ERRORS: Record<string, string> = {
   "agreement-note": "Write a note.",
   "agreement-signer": "Enter the name of the person who signed.",
   "post-invalid": "Add a caption and a picture or video.",
-  "post-file": "Use a PNG, JPEG, or WebP image under 8 MB, or an MP4, WebM, or QuickTime video under 10 MB.",
+  "post-file": "Use a PNG, JPEG, or WebP image under 8 MB, or an MP4, MOV, or WebM reel under 100 MB.",
   "post-storage": "Post storage is not set up. Set FIREBASE_STORAGE_BUCKET.",
   "post-missing": "That post was not found.",
   "post-unavailable": "That post could not be saved right now.",

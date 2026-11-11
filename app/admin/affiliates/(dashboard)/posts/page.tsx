@@ -105,23 +105,38 @@ function suggestedNote(slides: ReviewSlide[]) {
     .join("\n\n");
 }
 
-function reviewPost(post: ContentSubmission, affiliate: AffiliateSummary | undefined, batchLabel: string): ReviewPost | null {
+function queueRank(post: ContentSubmission) {
   const queue = queueOf(post);
-  if (!queue) return null;
-  const slides = slidesOf(post);
+  if (queue === "changes") return 0;
+  if (queue === "waiting") return 1;
+  if (queue === "link") return 2;
+  if (queue === "approved") return 3;
+  if (queue === "live") return 4;
+  return 5;
+}
+
+function reviewGroup(group: ContentSubmission[], affiliate: AffiliateSummary | undefined): ReviewPost | null {
+  const reviewable = group.filter((post) => queueOf(post));
+  if (!reviewable.length) return null;
+  const source = [...reviewable].sort((left, right) => right.files.length - left.files.length)[0];
+  const numbered = slidesOf(source);
+  const slides = numbered.map((slide, index) => ({ ...slide, index: index + 1, cover: index === 0 && numbered.length > 1 }));
   if (!slides.length) return null;
+  const primary = [...reviewable].sort((left, right) => queueRank(left) - queueRank(right) || whenStamp(left).localeCompare(whenStamp(right)))[0];
+  const queue = queueOf(primary);
+  if (!queue) return null;
   const checks = checksFor(slides);
   const video = slides.length === 1 && slides[0]?.video;
-  const excerptSource = slides.find((slide) => slide.caption.trim())?.caption ?? post.caption;
+  const excerptSource = slides.find((slide) => slide.caption.trim())?.caption ?? primary.caption;
   return {
-    id: post.id,
-    name: affiliate?.name || post.code,
+    id: primary.id,
+    name: affiliate?.name || primary.code,
     email: affiliate?.email || "",
-    code: post.code,
-    sent: formatWhen(whenStamp(post)),
-    waiting: waitingLabel(whenStamp(post)),
-    version: post.version,
-    batchLabel,
+    code: primary.code,
+    sent: formatWhen(whenStamp(primary)),
+    waiting: waitingLabel(whenStamp(primary)),
+    version: primary.version,
+    batchLabel: "",
     kind: slides.length > 1 ? `Carousel, ${slides.length} slides` : video ? "Single video" : "Single photo",
     kindShort: slides.length > 1 ? `Carousel · ${slides.length}` : video ? "Single video" : "Single photo",
     excerpt: excerptSource.replace(/\s+/g, " ").trim().slice(0, 72),
@@ -130,9 +145,9 @@ function reviewPost(post: ContentSubmission, affiliate: AffiliateSummary | undef
     slides,
     checks,
     queue,
-    canDecide: queue === "waiting",
+    canDecide: queue === "waiting" || reviewable.some((post) => post.contentStatus === "submitted"),
     canMark: queue === "link",
-    pastHref: `/admin/affiliates/accounts?code=${encodeURIComponent(post.code)}`,
+    pastHref: `/admin/affiliates/accounts?code=${encodeURIComponent(primary.code)}`,
     suggestedNote: suggestedNote(slides),
   };
 }
@@ -154,24 +169,26 @@ export default async function AdminPostReviewPage({
     unavailable = true;
   }
   const byCode = new Map(affiliates.map((affiliate) => [affiliate.code, affiliate]));
-  const batches = new Map<string, ContentSubmission[]>();
-  for (const post of posts) {
-    if (!post.batchId || post.contentStatus === "draft") continue;
-    const group = batches.get(post.batchId) ?? [];
-    group.push(post);
-    batches.set(post.batchId, group);
+  const groups: ContentSubmission[][] = [];
+  const seenCarousels = new Map<string, number>();
+  for (const post of posts.slice().sort((left, right) => whenStamp(left).localeCompare(whenStamp(right)))) {
+    const open = post.contentStatus === "submitted" || post.contentStatus === "revision_requested";
+    const names = post.files.length > 1 ? post.files.map((file) => file.name || file.path).join("\n") : "";
+    const signature = names && open ? `${post.code}\n${post.caption}\n${names}` : "";
+    if (signature) {
+      const index = seenCarousels.get(signature);
+      if (index != null) {
+        groups[index].push(post);
+        continue;
+      }
+      seenCarousels.set(signature, groups.length);
+    }
+    groups.push([post]);
   }
-  for (const group of batches.values()) group.sort((left, right) => whenStamp(left).localeCompare(whenStamp(right)));
-  const reviewPosts = posts
-    .slice()
-    .sort((left, right) => whenStamp(left).localeCompare(whenStamp(right)))
-    .flatMap((post) => {
-      const group = post.batchId ? batches.get(post.batchId) ?? [] : [];
-      const place = group.findIndex((item) => item.id === post.id);
-      const batchLabel = group.length > 1 && place >= 0 ? `${place + 1} of ${group.length} sent together` : "";
-      const view = reviewPost(post, byCode.get(post.code), batchLabel);
-      return view ? [view] : [];
-    });
+  const reviewPosts = groups.flatMap((group) => {
+    const view = reviewGroup(group, byCode.get(group[0].code));
+    return view ? [view] : [];
+  });
   const notice = NOTICES[query.notice ?? ""] ?? ADMIN_ERRORS[query.error ?? ""] ?? "";
   return (
     <div className="flex flex-1 flex-col">

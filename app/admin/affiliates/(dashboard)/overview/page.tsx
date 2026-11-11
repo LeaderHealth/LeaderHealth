@@ -155,7 +155,6 @@ export default async function AffiliateOverviewPage({
     byCode.set(conversion.code, current);
   }
 
-  const salesCents = paid.reduce((sum, conversion) => sum + remainingSalesCents(conversion.amountCents, conversion.refundedAmountCents), 0);
   const paidOrderCount = paid.filter((conversion) => remainingSalesCents(conversion.amountCents, conversion.refundedAmountCents) > 0).length;
   const commissionCents = paid.reduce((sum, conversion) => sum + netCommission(conversion), 0);
   const paidOutCents = paidOutInRange(payouts, range);
@@ -168,10 +167,10 @@ export default async function AffiliateOverviewPage({
 
   const ranked = [...affiliates]
     .map((affiliate) => ({ affiliate, stats: byCode.get(affiliate.code) ?? { orders: 0, salesCents: 0, commissionCents: 0 } }))
-    .filter((row) => row.stats.salesCents > 0)
-    .sort((left, right) => right.stats.salesCents - left.stats.salesCents || left.affiliate.name.localeCompare(right.affiliate.name));
+    .filter((row) => row.stats.orders > 0)
+    .sort((left, right) => right.stats.orders - left.stats.orders || left.affiliate.name.localeCompare(right.affiliate.name));
   const top = ranked.slice(0, 5);
-  const topSales = top[0]?.stats.salesCents ?? 0;
+  const topOrders = top[0]?.stats.orders ?? 0;
 
   const recent = periodReferralSummaries(
     paid.map((conversion) => ({
@@ -197,7 +196,7 @@ export default async function AffiliateOverviewPage({
       if (!needle) return true;
       return [affiliate.name, affiliate.email, affiliate.code].some((value) => value.toLowerCase().includes(needle));
     })
-    .sort((left, right) => (byCode.get(right.code)?.salesCents ?? 0) - (byCode.get(left.code)?.salesCents ?? 0) || left.name.localeCompare(right.name));
+    .sort((left, right) => (byCode.get(right.code)?.orders ?? 0) - (byCode.get(left.code)?.orders ?? 0) || left.name.localeCompare(right.name));
 
   const currentPeriod = currentPayoutPeriod();
   const priorPeriod = previousPayoutPeriod(currentPeriod) ?? currentPeriod;
@@ -217,13 +216,11 @@ export default async function AffiliateOverviewPage({
       prior: {
         label: formatPayoutMonth(priorPeriod),
         orders: prior.orders,
-        sales: formatCents(prior.salesCents),
         earnings: formatCents(prior.earningsCents),
       },
       current: {
         label: formatPayoutMonth(currentPeriod),
         orders: current.orders,
-        sales: formatCents(current.salesCents),
         earnings: formatCents(current.earningsCents),
       },
     };
@@ -234,7 +231,7 @@ export default async function AffiliateOverviewPage({
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h2 className="text-2xl">Overview</h2>
-          <p className="mt-2 max-w-2xl text-sm text-brown">Sales and commission for every affiliate.</p>
+          <p className="mt-2 max-w-2xl text-sm text-brown">Conversions and commission for every affiliate. Sale amounts and treatment details stay off this dashboard.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex flex-wrap gap-2" role="group" aria-label="Time range">
@@ -259,16 +256,11 @@ export default async function AffiliateOverviewPage({
 
       {loadError ? <p className="text-ink">{loadError}</p> : null}
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <section className="rounded-[28px] bg-white p-6">
-          <h3 className="text-sm text-brown">Sales</h3>
-          <p className="mt-2 text-3xl">{formatCents(salesCents)}</p>
-          <p className="mt-2 text-sm text-brown">From paid orders in this period</p>
-        </section>
+      <div className="grid gap-4 sm:grid-cols-2">
         <section className="rounded-[28px] bg-white p-6">
           <h3 className="text-sm text-brown">Paid orders</h3>
           <p className="mt-2 text-3xl">{paidOrderCount}</p>
-          <p className="mt-2 text-sm text-brown">Paid orders in this period</p>
+          <p className="mt-2 text-sm text-brown">Conversions in this period</p>
         </section>
         <section className="rounded-[28px] bg-white p-6">
           <h3 className="text-sm text-brown">Active affiliates</h3>
@@ -327,10 +319,10 @@ export default async function AffiliateOverviewPage({
             <h3 id="top-affiliates-title" className="text-xl">
               Top affiliates
             </h3>
-            <p className="text-sm text-brown">By sales</p>
+            <p className="text-sm text-brown">By conversions</p>
           </div>
           {top.length === 0 ? (
-            <p className="mt-6 text-sm text-brown">No sales in this period.</p>
+            <p className="mt-6 text-sm text-brown">No conversions in this period.</p>
           ) : (
             <ol className="mt-4 space-y-4">
               {top.map((row, index) => (
@@ -341,11 +333,11 @@ export default async function AffiliateOverviewPage({
                     <div className="mt-2 h-2 rounded-full bg-background" aria-hidden="true">
                       <div
                         className="h-2 rounded-full bg-rose"
-                        style={{ width: `${topSales === 0 ? 0 : Math.max(8, Math.round((row.stats.salesCents / topSales) * 100))}%` }}
+                        style={{ width: `${topOrders === 0 ? 0 : Math.max(8, Math.round((row.stats.orders / topOrders) * 100))}%` }}
                       />
                     </div>
                   </div>
-                  <span className="text-sm font-medium">{formatCents(row.stats.salesCents)}</span>
+                  <span className="text-sm font-medium">{row.stats.orders === 1 ? "1 conversion" : `${row.stats.orders} conversions`}</span>
                 </li>
               ))}
             </ol>
@@ -460,10 +452,6 @@ export default async function AffiliateOverviewPage({
                       <dt className="text-xs text-brown">Paid orders</dt>
                       <dd className="mt-1">{stats.orders}</dd>
                     </div>
-                    <div>
-                      <dt className="text-xs text-brown">Sales</dt>
-                      <dd className="mt-1">{formatCents(stats.salesCents)}</dd>
-                    </div>
                     <div className="col-span-2">
                       <dt className="text-xs text-brown">Total earnings</dt>
                       <dd className="mt-1">{formatCents(stats.commissionCents)}</dd>
@@ -485,11 +473,10 @@ export default async function AffiliateOverviewPage({
         {visible.length > 0 ? (
           <table className="mt-4 hidden w-full table-fixed border-collapse text-left text-sm leading-6 xl:table" aria-labelledby="all-affiliates-title">
             <colgroup>
-              <col className="w-[24%]" />
+              <col className="w-[32%]" />
+              <col className="w-[18%]" />
+              <col className="w-[12%]" />
               <col className="w-[16%]" />
-              <col className="w-[10%]" />
-              <col className="w-[14%]" />
-              <col className="w-[14%]" />
               <col className="w-[10%]" />
               <col className="w-[12%]" />
             </colgroup>
@@ -498,7 +485,6 @@ export default async function AffiliateOverviewPage({
                 <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Affiliate</th>
                 <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Affiliate ID</th>
                 <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Paid orders</th>
-                <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Sales</th>
                 <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Total earnings</th>
                 <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Status</th>
                 <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">
@@ -529,7 +515,6 @@ export default async function AffiliateOverviewPage({
                       {promos ? <div className="text-brown">{promos}</div> : null}
                     </td>
                     <td className="px-4 py-5 align-top">{stats.orders}</td>
-                    <td className="px-4 py-5 align-top">{formatCents(stats.salesCents)}</td>
                     <td className="px-4 py-5 align-top">{formatCents(stats.commissionCents)}</td>
                     <td className="px-4 py-5 align-top">
                       <span

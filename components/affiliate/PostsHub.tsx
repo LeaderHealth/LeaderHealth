@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { submitLiveLinkAction, submitPostsAction, withdrawPostAction } from "@/app/affiliates/post-actions";
+import { MediaExpand, MediaPreview } from "@/components/affiliate/MediaExpand";
+import { POST_FILE_ACCEPT, postUploadIssue } from "@/lib/affiliate/post-files";
 
 const POST_BATCH_LIMIT = 10;
 const SLIDE_LIMIT = 20;
@@ -47,7 +49,9 @@ export type HubPost = {
   detail: string;
   metrics: { label: string; value: string }[];
   history: HistoryEvent[];
-  slides: { href: string; downloadHref: string; media: "photo" | "video" }[];
+  slides: { href: string; downloadHref: string; media: "photo" | "video"; caption: string }[];
+  batchId: string;
+  mediaKey: string;
 };
 
 type Slide = {
@@ -100,6 +104,53 @@ function stageOf(post: HubPost): Stage {
   return "closed";
 }
 
+function stageRank(stage: Stage) {
+  if (stage === "action") return 0;
+  if (stage === "review") return 1;
+  if (stage === "checking") return 2;
+  if (stage === "live") return 3;
+  if (stage === "draft") return 5;
+  return 4;
+}
+
+function carouselKey(post: HubPost) {
+  if (post.status !== "submitted" && post.status !== "revision_requested") return "";
+  if (post.slides.length < 2 || !post.mediaKey) return "";
+  return `${post.mediaKey}\n${post.caption}`;
+}
+
+function submissionGroups(posts: HubPost[]) {
+  const groups: HubPost[][] = [];
+  const seen = new Map<string, number>();
+  for (const post of posts) {
+    const key = carouselKey(post);
+    if (!key) {
+      groups.push([post]);
+      continue;
+    }
+    const index = seen.get(key);
+    if (index == null) {
+      seen.set(key, groups.length);
+      groups.push([post]);
+    } else {
+      groups[index].push(post);
+    }
+  }
+  return groups;
+}
+
+function groupLead(group: HubPost[]) {
+  return [...group].sort((left, right) => stageRank(stageOf(left)) - stageRank(stageOf(right)))[0];
+}
+
+function slideTotal(group: HubPost[]) {
+  return Math.max(...group.map((post) => Math.max(post.slides.length, post.hasFile ? 1 : 0)));
+}
+
+function asOnePost(group: HubPost[]): HubPost {
+  return groupLead(group);
+}
+
 function statusMark(post: HubPost) {
   const stage = stageOf(post);
   if (stage === "live") return { label: "Live", bg: "#DDF0E4", fg: "#1D6340" };
@@ -139,17 +190,8 @@ function fileLabel(post: HubPost) {
   return post.media === "video" ? "Approved video" : "Approved photo";
 }
 
-const IMAGE_BYTES = 8 * 1024 * 1024;
-const VIDEO_BYTES = 10 * 1024 * 1024;
-
 function fileIssue(file: File) {
-  if (file.type === "video/mp4" || file.type === "video/webm" || file.type === "video/quicktime") {
-    return file.size > VIDEO_BYTES ? "This video needs to be under 10 MB." : "";
-  }
-  if (file.type === "image/png" || file.type === "image/jpeg" || file.type === "image/webp") {
-    return file.size > IMAGE_BYTES ? "This photo needs to be under 8 MB." : "";
-  }
-  return "Use a PNG, JPEG, or WebP photo, or an MP4, WebM, or QuickTime video.";
+  return postUploadIssue(file);
 }
 
 function blankCard(partial?: Partial<Card>): Card {
@@ -172,7 +214,7 @@ function makeSlide(file: File): Slide {
     fileName: file.name,
     fileIssue: fileIssue(file),
     caption: "",
-    previewUrl: file.type.startsWith("image/") ? URL.createObjectURL(file) : "",
+    previewUrl: URL.createObjectURL(file),
     storedIndex: null,
   };
 }
@@ -316,8 +358,15 @@ function Progress({ current, live }: { current: number; live?: boolean }) {
 }
 
 function Thumb({ post }: { post: HubPost }) {
-  if (post.hasFile && post.media === "photo") return <Image src={post.fileHref} alt="" width={44} height={44} className="size-11 shrink-0 rounded-[10px] object-cover" />;
-  return <span className="grid size-11 shrink-0 place-items-center rounded-[10px] bg-[#E8DEDC] text-[10px] text-brown">{post.hasFile ? "Video" : "File"}</span>;
+  const slide = post.slides[0];
+  const src = slide?.href || (post.hasFile ? post.fileHref : "");
+  const media = slide?.media ?? post.media;
+  if (!src) return <span className="grid size-11 shrink-0 place-items-center rounded-[10px] bg-[#E8DEDC] text-[10px] text-brown">File</span>;
+  return (
+    <MediaExpand src={src} media={media} label={post.title || "Post"}>
+      <MediaPreview src={src} media={media} className="size-11 shrink-0 rounded-[10px] object-cover" />
+    </MediaExpand>
+  );
 }
 
 function CopyControl({ value, label, copiedLabel = "Copied" }: { value: string; label: string; copiedLabel?: string }) {
@@ -366,8 +415,12 @@ export function PostsHub({
     setToastHidden(false);
   }
   const toast = toastHidden ? "" : notice;
-  const selected = posts.find((post) => post.id === selectedId) ?? null;
-  const actionPosts = posts.filter((post) => stageOf(post) === "action");
+  const groups = submissionGroups(posts);
+  const selected = (() => {
+    const group = groups.find((item) => item.some((post) => post.id === selectedId));
+    return group ? asOnePost(group) : null;
+  })();
+  const actionPosts = groups.filter((group) => stageOf(groupLead(group)) === "action").map(asOnePost);
 
   function openCompose(seed?: HubPost) {
     setCards((current) => {
@@ -439,12 +492,13 @@ export function PostsHub({
               <h3 className="text-base font-semibold">Needs your action</h3>
               {actionPosts.map((post) => {
                 const action = actionCopy(post);
+                const slides = post.slides.length;
                 return (
                   <div key={post.id} className="flex flex-wrap items-center gap-3.5 rounded-2xl bg-background px-4 py-3.5">
                     <Thumb post={post} />
                     <div className="min-w-0 flex-1 basis-60">
                       <p className="truncate text-sm">{post.title}</p>
-                      <p className="mt-1 text-xs font-medium" style={{ color: action.color }}>{action.hint}</p>
+                      <p className="mt-1 text-xs font-medium" style={{ color: action.color }}>{slides > 1 ? `Carousel · ${slides} · ${action.hint}` : action.hint}</p>
                     </div>
                     <button type="button" onClick={() => openDetail(post.id)} className="inline-flex h-10 items-center rounded-full bg-ink px-[18px] text-sm font-medium text-white transition-colors duration-200 hover:bg-brown motion-reduce:transition-none">
                       {action.cta}
@@ -459,7 +513,7 @@ export function PostsHub({
             <h3 className="text-base font-semibold">All submissions</h3>
             <div role="group" aria-label="Filter by status" className="flex flex-wrap gap-2">
               {FILTERS.map((item) => {
-                const count = item.id === "all" ? posts.length : posts.filter((post) => stageOf(post) === item.id).length;
+                const count = item.id === "all" ? groups.length : groups.filter((group) => stageOf(groupLead(group)) === item.id).length;
                 const current = filter === item.id;
                 return (
                   <button key={item.id} type="button" aria-pressed={current} onClick={() => setFilter(item.id)} className={`inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-medium transition-colors duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${current ? "border-ink bg-ink text-white" : "border-[#CDBDBA] bg-white text-ink hover:bg-background"}`}>
@@ -471,24 +525,30 @@ export function PostsHub({
             </div>
             <div className="flex flex-col">
               <AnimatePresence initial={false}>
-                {posts.filter((post) => filter === "all" || stageOf(post) === filter).map((post) => {
+                {groups.filter((group) => filter === "all" || stageOf(groupLead(group)) === filter).map((group) => {
+                  const post = asOnePost(group);
                   const mark = statusMark(post);
+                  const slides = slideTotal(group);
+                  const sent = post.status === "draft" ? "Not sent yet" : post.sent ? `Sent ${post.sent}` : "";
+                  const meta = slides > 1 ? `Carousel · ${slides}${sent ? ` · ${sent}` : ""}` : sent;
                   return (
-                    <motion.div key={post.id} layout initial={motionEase.reduced ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={motionEase.fade}>
-                      <button type="button" onClick={() => (post.status === "draft" ? openCompose(post) : openDetail(post.id))} className="flex min-h-11 w-full items-center gap-3.5 border-t border-[#F0E8E6] px-1 py-3 text-left text-ink transition-colors duration-200 hover:bg-background motion-reduce:transition-none">
+                    <motion.div key={post.batchId || post.id} layout initial={motionEase.reduced ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={motionEase.fade}>
+                      <div className="flex min-h-11 w-full items-center gap-3.5 border-t border-[#F0E8E6] px-1 py-3 text-left text-ink">
                         <Thumb post={post} />
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm">{post.title}</span>
-                          <span className="mt-0.5 block text-xs text-brown">{post.status === "draft" ? "Not sent yet" : post.sent ? `Sent ${post.sent}` : ""}</span>
-                        </span>
-                        <span className="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap" style={{ background: mark.bg, color: mark.fg }}>{mark.label}</span>
-                        <Chevron direction="right" />
-                      </button>
+                        <button type="button" onClick={() => (post.status === "draft" ? openCompose(post) : openDetail(post.id))} className="flex min-w-0 flex-1 items-center gap-3.5 text-left transition-colors duration-200 hover:opacity-80 motion-reduce:transition-none">
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm">{post.title}</span>
+                            <span className="mt-0.5 block text-xs text-brown">{meta}</span>
+                          </span>
+                          <span className="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap" style={{ background: mark.bg, color: mark.fg }}>{mark.label}</span>
+                          <Chevron direction="right" />
+                        </button>
+                      </div>
                     </motion.div>
                   );
                 })}
               </AnimatePresence>
-              {posts.filter((post) => filter === "all" || stageOf(post) === filter).length === 0 ? <p className="border-t border-[#F0E8E6] px-1 py-7 text-sm text-brown">Nothing here yet.</p> : null}
+              {groups.filter((group) => filter === "all" || stageOf(groupLead(group)) === filter).length === 0 ? <p className="border-t border-[#F0E8E6] px-1 py-7 text-sm text-brown">Nothing here yet.</p> : null}
             </div>
           </section>
         </motion.div>
@@ -635,7 +695,7 @@ function Composer({
       <BackButton onClick={onBack} />
       <div className="flex flex-col gap-1.5">
         <h2 className="text-[28px] font-medium tracking-tight">New posts</h2>
-        <p className="text-sm leading-normal text-brown">Add one post or several, each with one photo or a carousel. Each post is reviewed on its own, so you can publish them as they’re approved. A link in your bio doesn’t count: both lines below go in every caption.</p>
+        <p className="text-sm leading-normal text-brown">Add one post or several. A post can be photos, a carousel, or a reel. Each post is reviewed on its own, so you can publish them as they’re approved. A link in your bio doesn’t count: both lines below go in every caption.</p>
       </div>
       <Progress current={0} />
       {cards.map((card, index) => {
@@ -682,7 +742,13 @@ function Composer({
                         <div className="flex items-center gap-2.5">
                           <span className="grid size-6 shrink-0 place-items-center rounded-full bg-ink text-xs font-semibold text-white">{slideIndex + 1}</span>
                           {slide.previewUrl ? (
-                            <Image src={slide.previewUrl} alt="" width={40} height={40} className="size-10 shrink-0 rounded-lg object-cover" />
+                            <MediaExpand src={slide.previewUrl} media={slideIsVideo(slide) ? "video" : "photo"} label={`Slide ${slideIndex + 1}`}>
+                              {slideIsVideo(slide) ? (
+                                <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#E8DEDC] text-[10px] text-brown">Video</span>
+                              ) : (
+                                <Image src={slide.previewUrl} alt="" width={40} height={40} className="size-10 shrink-0 rounded-lg object-cover" />
+                              )}
+                            </MediaExpand>
                           ) : (
                             <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#E8DEDC] text-[10px] text-brown">{slideIsVideo(slide) ? "Video" : "File"}</span>
                           )}
@@ -714,7 +780,13 @@ function Composer({
               ) : card.slides[0] ? (
                 <div className="flex items-center gap-2.5 rounded-2xl border border-[#E8DEDC] bg-white p-3">
                   {card.slides[0].previewUrl ? (
-                    <Image src={card.slides[0].previewUrl} alt="" width={40} height={40} className="size-10 shrink-0 rounded-lg object-cover" />
+                    <MediaExpand src={card.slides[0].previewUrl} media={slideIsVideo(card.slides[0]) ? "video" : "photo"} label="Photo or video">
+                      {slideIsVideo(card.slides[0]) ? (
+                        <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#E8DEDC] text-[10px] text-brown">Video</span>
+                      ) : (
+                        <Image src={card.slides[0].previewUrl} alt="" width={40} height={40} className="size-10 shrink-0 rounded-lg object-cover" />
+                      )}
+                    </MediaExpand>
                   ) : (
                     <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#E8DEDC] text-[10px] text-brown">{slideIsVideo(card.slides[0]) ? "Video" : "File"}</span>
                   )}
@@ -732,7 +804,7 @@ function Composer({
                   <input
                     type="file"
                     multiple
-                    accept="image/png,image/jpeg,image/webp,video/mp4,video/webm,video/quicktime"
+                    accept={POST_FILE_ACCEPT}
                     className="sr-only"
                     onChange={(event) => {
                       addFiles(card.key, Array.from(event.target.files ?? []));
@@ -741,12 +813,12 @@ function Composer({
                   />
                   <span className="inline-flex items-center gap-2 text-sm font-medium text-ink">
                     <UploadIcon />
-                    {card.slides.length ? "Add more to this post" : "Add photos or videos"}
+                    {card.slides.length ? "Add more to this post" : "Add photos or a reel"}
                   </span>
-                  <span className="text-[13px] text-brown">Select several at once for a carousel · up to 20 · the first one is the cover</span>
+                  <span className="text-[13px] text-brown">Select several photos for a carousel, or one video for a reel · up to 20 · the first one is the cover</span>
                 </label>
               ) : null}
-              <p className="text-[13px] leading-relaxed text-brown">Photos need to be under 8 MB. Video works best at 1080×1920, vertical, H.264 in an MP4 or MOV, 30 fps, with AAC audio.</p>
+              <p className="text-[13px] leading-relaxed text-brown">Photos need to be under 8 MB. A reel can be an MP4, MOV, or WebM up to 100 MB, vertical, H.264, 30 fps, with AAC audio.</p>
               {!carousel && card.slides[0]?.fileIssue ? <p className="text-[13px] text-[#9B2C1F]">{card.slides[0].fileIssue}</p> : null}
               {carousel ? (
                 <p className="text-[13px] leading-relaxed text-brown">Each slide has its own caption, and every slide caption is reviewed. The disclosure line and tracking link have to appear in your slide captions. Slide 1 is best, since the cover is seen first.</p>
@@ -865,6 +937,18 @@ function UploadIcon() {
   );
 }
 
+type EditSlide = { caption: string; file: File | null; previewUrl: string; issue: string };
+
+function editSlidesFrom(post: HubPost): EditSlide[] {
+  return post.slides.map((slide) => ({ caption: slide.caption, file: null, previewUrl: "", issue: "" }));
+}
+
+function releaseEditSlides(slides: EditSlide[]) {
+  for (const slide of slides) {
+    if (slide.previewUrl) URL.revokeObjectURL(slide.previewUrl);
+  }
+}
+
 function PostDetail({
   post,
   email,
@@ -885,27 +969,78 @@ function PostDetail({
   const mark = statusMark(post);
   const stage = stageOf(post);
   const closed = stage === "closed";
+  const carousel = post.slides.length > 1;
   const [editing, setEditing] = useState(false);
   const [editCaption, setEditCaption] = useState(post.caption);
   const [editFile, setEditFile] = useState<File | null>(null);
+  const [editSlides, setEditSlides] = useState<EditSlide[]>(() => editSlidesFrom(post));
   const [pending, setPending] = useState(false);
   const [linkError, setLinkError] = useState("");
   const history = [...post.history].reverse();
-  const disclosed = hasDisclosure(editCaption, disclosureLine);
-  const linked = hasTracking(editCaption, trackingUrl, affiliateCode);
-  const changed = editCaption !== post.caption || Boolean(editFile);
-  const canResubmit = disclosed && linked && changed && !pending;
-  const editHint = !disclosed || !linked ? "Keep the disclosure line and your tracking link in the caption." : changed ? "Ready to resubmit." : "Make the requested change before resubmitting.";
+  const joinedEdit = carousel ? editSlides.map((slide) => slide.caption.trim()).filter(Boolean).join("\n\n") : editCaption;
+  const disclosed = hasDisclosure(joinedEdit, disclosureLine);
+  const linked = hasTracking(joinedEdit, trackingUrl, affiliateCode);
+  const fileProblem = carousel ? editSlides.find((slide) => slide.issue)?.issue ?? "" : "";
+  const changed = carousel
+    ? editSlides.some((slide, index) => slide.caption !== (post.slides[index]?.caption ?? "") || Boolean(slide.file))
+    : editCaption !== post.caption || Boolean(editFile);
+  const canResubmit = disclosed && linked && changed && !pending && !fileProblem && joinedEdit.length <= CAPTION_LIMIT;
+  const editHint = fileProblem
+    ? fileProblem
+    : joinedEdit.length > CAPTION_LIMIT
+      ? "These captions together need to stay under 2,200 characters."
+      : !disclosed || !linked
+        ? carousel
+          ? "Keep the disclosure line and your tracking link in the slide captions."
+          : "Keep the disclosure line and your tracking link in the caption."
+        : changed
+          ? "Ready to resubmit."
+          : "Make the requested change before resubmitting.";
   const waitingToPublish = post.status === "approved" && (post.publication === "awaiting_publication" || post.publication === null);
   const contentVisible = !waitingToPublish && !(post.status === "revision_requested" && editing);
+
+  function replaceSlide(index: number, file: File | null) {
+    setEditSlides((current) => current.map((slide, place) => {
+      if (place !== index) return slide;
+      if (slide.previewUrl) URL.revokeObjectURL(slide.previewUrl);
+      if (!file) return { ...slide, file: null, previewUrl: "", issue: "" };
+      return {
+        ...slide,
+        file,
+        issue: fileIssue(file),
+        previewUrl: URL.createObjectURL(file),
+      };
+    }));
+  }
+
+  function cancelEdit() {
+    setEditSlides((current) => {
+      releaseEditSlides(current);
+      return editSlidesFrom(post);
+    });
+    setEditCaption(post.caption);
+    setEditFile(null);
+    setEditing(false);
+  }
 
   async function resubmit() {
     if (!canResubmit) return;
     const data = new FormData();
     data.set("count", "1");
-    data.set("caption0", editCaption);
     data.set("id0", post.id);
-    if (editFile) data.set("file0", editFile);
+    if (carousel) {
+      data.set("caption0", joinedEdit);
+      data.set("slots0", String(editSlides.length));
+      data.set("slideCount0", String(editSlides.length));
+      editSlides.forEach((slide, index) => {
+        data.set(`slideCaption0_${index}`, slide.caption);
+        if (slide.file) data.set(`file0_${index}`, slide.file);
+        else data.set(`slot0_${index}`, `existing:${index}`);
+      });
+    } else {
+      data.set("caption0", editCaption);
+      if (editFile) data.set("file0", editFile);
+    }
     setPending(true);
     try {
       await submitPostsAction(data);
@@ -951,16 +1086,54 @@ function PostDetail({
           {post.reviewNote ? <blockquote className="rounded-xl bg-white px-3.5 py-3 text-sm leading-normal text-[#4A3A37]">{post.reviewNote}</blockquote> : null}
           {editing ? (
             <div className="flex flex-col gap-2.5">
-              <label htmlFor="editcap" className="text-sm font-medium">Caption</label>
-              <textarea id="editcap" rows={6} value={editCaption} onChange={(event) => setEditCaption(event.target.value)} className={`${fieldClass} resize-y`} />
-              <label htmlFor="editfile" className="text-sm font-medium">Replace photo or video</label>
-              <input id="editfile" type="file" accept="image/png,image/jpeg,image/webp,video/mp4,video/webm,video/quicktime" className={fieldClass} onChange={(event) => setEditFile(event.target.files?.[0] ?? null)} />
+              {carousel ? (
+                <div className="flex flex-col gap-3">
+                  {editSlides.map((slide, index) => {
+                    const source = post.slides[index];
+                    const media = slide.file ? (slide.file.type.startsWith("video/") ? "video" : "photo") : (source?.media ?? "photo");
+                    const preview = slide.file ? slide.previewUrl : (source?.href ?? "");
+                    const label = includesLabel(slide.caption, disclosureLine, trackingUrl, affiliateCode);
+                    return (
+                      <div key={source?.href ?? index} className="flex flex-col gap-3 rounded-2xl border border-[#E8DEDC] bg-white p-3">
+                        <div className="flex items-center gap-2.5">
+                          <span className="grid size-6 shrink-0 place-items-center rounded-full bg-ink text-xs font-semibold text-white">{index + 1}</span>
+                          {preview ? (
+                            <MediaExpand src={preview} media={media} label={`Slide ${index + 1}`}>
+                              <MediaPreview src={preview} media={media} className="size-10 shrink-0 rounded-lg object-cover" />
+                            </MediaExpand>
+                          ) : (
+                            <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#E8DEDC] text-[10px] text-brown">File</span>
+                          )}
+                          <span className="min-w-0 flex-1 text-sm">Slide {index + 1}{index === 0 ? " · cover" : ""}{slide.file ? ` · ${slide.file.name}` : ""}</span>
+                        </div>
+                        <label className="flex flex-col gap-2 text-sm font-medium" htmlFor={`edit-slide-${index}`}>
+                          Caption for slide {index + 1}
+                          <textarea id={`edit-slide-${index}`} rows={4} value={slide.caption} onChange={(event) => setEditSlides((current) => current.map((item, place) => place === index ? { ...item, caption: event.target.value } : item))} className={`${fieldClass} resize-y`} />
+                        </label>
+                        {label ? <p className="text-[13px] text-brown">{label}</p> : null}
+                        <label className="flex flex-col gap-2 text-sm font-medium" htmlFor={`edit-file-${index}`}>
+                          Replace photo or video on slide {index + 1}
+                          <input id={`edit-file-${index}`} type="file" accept={POST_FILE_ACCEPT} className={fieldClass} onChange={(event) => replaceSlide(index, event.target.files?.[0] ?? null)} />
+                        </label>
+                        {slide.issue ? <p className="text-[13px] text-[#9B2C1F]">{slide.issue}</p> : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <>
+                  <label htmlFor="editcap" className="text-sm font-medium">Caption</label>
+                  <textarea id="editcap" rows={6} value={editCaption} onChange={(event) => setEditCaption(event.target.value)} className={`${fieldClass} resize-y`} />
+                  <label htmlFor="editfile" className="text-sm font-medium">Replace photo or video</label>
+                  <input id="editfile" type="file" accept={POST_FILE_ACCEPT} className={fieldClass} onChange={(event) => setEditFile(event.target.files?.[0] ?? null)} />
+                </>
+              )}
               <span className={`text-[13px] ${canResubmit ? "text-[#1D6340]" : "text-brown"}`}>{editHint}</span>
               <div className="flex flex-wrap gap-2.5">
                 <button type="button" onClick={resubmit} disabled={!canResubmit} className={`inline-flex h-11 items-center rounded-full px-[22px] text-sm font-medium ${canResubmit ? "bg-ink text-white" : "cursor-not-allowed bg-[#E8DEDC] text-[#5E4E4B]"}`}>
                   {pending ? "Sending…" : "Resubmit for review"}
                 </button>
-                <button type="button" onClick={() => { setEditing(false); setEditCaption(post.caption); setEditFile(null); }} className={`${quietButtonClass} h-11 px-5`}>Cancel</button>
+                <button type="button" onClick={cancelEdit} className={`${quietButtonClass} h-11 px-5`}>Cancel</button>
               </div>
             </div>
           ) : (
@@ -977,11 +1150,29 @@ function PostDetail({
           </div>
           <div className="flex gap-3.5 rounded-[14px] bg-white p-4">
             <StepNumber n={1} />
-            <div className="flex min-w-0 flex-1 flex-col gap-2.5">
-              <span className="text-[15px] font-semibold">Copy the approved caption</span>
-              <p className="rounded-[10px] bg-background px-3.5 py-3 text-sm leading-relaxed whitespace-pre-line">{post.caption}</p>
-              <CopyControl value={post.caption} label="Copy caption" />
-            </div>
+            {carousel ? (
+              <div className="flex min-w-0 flex-1 flex-col gap-3">
+                <span className="text-[15px] font-semibold">Copy the caption for each slide</span>
+                {post.slides.map((slide, index) => (
+                  <div key={slide.href} className="flex items-start gap-3">
+                    <MediaExpand src={slide.href} media={slide.media} label={`Slide ${index + 1}`}>
+                      <MediaPreview src={slide.href} media={slide.media} className="size-10 shrink-0 rounded-lg object-cover" />
+                    </MediaExpand>
+                    <div className="flex min-w-0 flex-1 flex-col gap-2">
+                      <span className="text-sm font-medium">Caption for slide {index + 1}{index === 0 ? " · cover" : ""}</span>
+                      <p className="rounded-[10px] bg-background px-3.5 py-3 text-sm leading-relaxed whitespace-pre-line">{slide.caption || "No caption on this slide."}</p>
+                      {slide.caption ? <CopyControl value={slide.caption} label={`Copy slide ${index + 1} caption`} /> : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex min-w-0 flex-1 flex-col gap-2.5">
+                <span className="text-[15px] font-semibold">Copy the approved caption</span>
+                <p className="rounded-[10px] bg-background px-3.5 py-3 text-sm leading-relaxed whitespace-pre-line">{post.caption}</p>
+                <CopyControl value={post.caption} label="Copy caption" />
+              </div>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-3.5 rounded-[14px] bg-white p-4">
             <StepNumber n={2} />
@@ -1076,13 +1267,34 @@ function PostDetail({
       ) : null}
 
       {contentVisible ? (
-        <section className="flex flex-wrap items-start gap-4">
-          {post.hasFile && post.media === "photo" ? <Image src={post.fileHref} alt="" width={120} height={120} className="size-[120px] rounded-[14px] object-cover" /> : <div className="grid size-[120px] place-items-center rounded-[14px] bg-[#E8DEDC] px-2 text-center text-[11px] text-[#5E4E4B]">{fileLabel(post)}</div>}
-          <div className="min-w-0 flex-1 basis-[260px]">
-            {post.slides.length > 1 ? <p className="mb-1 text-[13px] text-brown">Carousel · {post.slides.length}</p> : null}
-            <p className="text-sm leading-relaxed whitespace-pre-line">{post.caption || "No caption yet."}</p>
-          </div>
-        </section>
+        carousel ? (
+          <section className="flex flex-col gap-3">
+            {post.slides.map((slide, index) => (
+              <div key={slide.href} className="flex items-start gap-3 rounded-[14px] bg-background p-3">
+                <MediaExpand src={slide.href} media={slide.media} label={`Slide ${index + 1}`}>
+                  <MediaPreview src={slide.href} media={slide.media} className="size-[72px] shrink-0 rounded-lg object-cover" />
+                </MediaExpand>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13px] font-medium text-brown">Slide {index + 1}{index === 0 ? " · cover" : ""}</p>
+                  <p className="mt-1 text-sm leading-relaxed whitespace-pre-line">{slide.caption || "No caption on this slide."}</p>
+                </div>
+              </div>
+            ))}
+          </section>
+        ) : (
+          <section className="flex flex-wrap items-start gap-4">
+            {post.hasFile ? (
+              <MediaExpand src={post.fileHref} media={post.media} label={post.title || "Post"}>
+                <MediaPreview src={post.fileHref} media={post.media} className="size-[120px] rounded-[14px] object-cover" />
+              </MediaExpand>
+            ) : (
+              <div className="grid size-[120px] place-items-center rounded-[14px] bg-[#E8DEDC] px-2 text-center text-[11px] text-[#5E4E4B]">{fileLabel(post)}</div>
+            )}
+            <div className="min-w-0 flex-1 basis-[260px]">
+              <p className="text-sm leading-relaxed whitespace-pre-line">{post.caption || "No caption yet."}</p>
+            </div>
+          </section>
+        )
       ) : null}
 
       <section className="flex flex-col gap-3">

@@ -4,6 +4,7 @@ import { ApprovedPostsNotice } from "@/components/affiliate/ApprovedPostsNotice"
 import { AreaNav } from "@/components/affiliate/AreaNav";
 import { PortalBrand } from "@/components/affiliate/PortalBrand";
 import { ProfileCard } from "@/components/affiliate/ProfileCard";
+import { disclosureAcknowledged } from "@/lib/affiliate/disclosures";
 import { loadContentSubmissions } from "@/lib/affiliate/post-review";
 import { changeAffiliatePassword, logoutAffiliatePortal } from "../actions";
 import { currentAffiliate } from "../current";
@@ -29,16 +30,24 @@ function needsPostAction(post: { contentStatus: string; publicationStatus: strin
 export default async function AffiliateDashboardLayout({ children }: { children: ReactNode }) {
   const affiliate = await currentAffiliate();
   if (!affiliate) redirect("/affiliates");
+  const postsOpen = await disclosureAcknowledged(affiliate.code).catch(() => false);
   let approvedIds: string[] = [];
   let postsNeedingAction = 0;
-  try {
-    const posts = await loadContentSubmissions(affiliate.code);
-    approvedIds = posts.filter((post) => post.contentStatus === "approved" && post.publicationStatus === "awaiting_publication").map((post) => post.id);
-    postsNeedingAction = posts.filter(needsPostAction).length;
-  } catch {
-    approvedIds = [];
-    postsNeedingAction = 0;
+  if (postsOpen) {
+    try {
+      const posts = await loadContentSubmissions(affiliate.code);
+      approvedIds = posts.filter((post) => post.contentStatus === "approved" && post.publicationStatus === "awaiting_publication").map((post) => post.id);
+      postsNeedingAction = posts.filter(needsPostAction).length;
+    } catch {
+      approvedIds = [];
+      postsNeedingAction = 0;
+    }
   }
+  const nav = items.map((item) => {
+    if (item.href !== "/affiliates/posts") return item;
+    if (!postsOpen) return { ...item, disabled: true, hint: "Accept the sponsorship agreement on Referral link" };
+    return postsNeedingAction > 0 ? { ...item, badge: postsNeedingAction } : item;
+  });
 
   return (
     <section className="bg-background px-4 pt-32 pb-[calc(max(0.5rem,env(safe-area-inset-bottom))+7.5rem)] text-ink sm:px-6 min-[765px]:pb-20">
@@ -70,7 +79,7 @@ export default async function AffiliateDashboardLayout({ children }: { children:
               signOut={logoutAffiliatePortal}
               changePassword={changeAffiliatePassword}
             />
-            <AreaNav label="Affiliate portal" items={items.map((item) => (item.href === "/affiliates/posts" && postsNeedingAction > 0 ? { ...item, badge: postsNeedingAction } : item))} />
+            <AreaNav label="Affiliate portal" items={nav} />
           </div>
           <div className="mt-8 min-w-0 xl:mt-0">{children}</div>
         </div>

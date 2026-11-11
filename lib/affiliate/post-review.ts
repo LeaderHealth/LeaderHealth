@@ -3,26 +3,16 @@ import type { DocumentData, Timestamp } from "firebase-admin/firestore";
 import { normalizeAffiliateCode } from "./code";
 import { disclosureAcknowledged } from "./disclosures";
 import { affiliateFirebaseConfigured, affiliateFirestore } from "./firebase";
+import { IMAGE_BYTES, VIDEO_BYTES, postUploadKind } from "./post-files";
 import { canonicalPostUrl, textHasTrackingCode } from "./social-match";
 import { fetchInstagramMedia, readInstagramMedia, type InstagramMediaSnapshot } from "./social-fetch";
 import { SocialError, loadConnectionSecrets } from "./social-store";
 
-const IMAGE_BYTES = 8 * 1024 * 1024;
-const VIDEO_BYTES = 10 * 1024 * 1024;
 const CAPTION_LIMIT = 2200;
 const SLIDE_LIMIT = 20;
 const NOTE_LIMIT = 500;
 export const DISCLOSURE_LINE = "Paid partnership with Leader Health";
 export const METRICS_STALE_MS = 6 * 60 * 60 * 1000;
-
-const FILE_TYPES = {
-  "image/png": { ext: "png", video: false },
-  "image/jpeg": { ext: "jpg", video: false },
-  "image/webp": { ext: "webp", video: false },
-  "video/mp4": { ext: "mp4", video: true },
-  "video/webm": { ext: "webm", video: true },
-  "video/quicktime": { ext: "mov", video: true },
-} as const;
 
 const CONTENT_STATUSES = ["draft", "submitted", "revision_requested", "rejected", "approved", "withdrawn"] as const;
 export const POST_BATCH_LIMIT = 10;
@@ -440,7 +430,7 @@ async function requireOwned(id: string, code: string) {
 async function savePostFile(code: string, id: string, file: File, slide = 1) {
   const bucketName = storageBucket();
   if (!bucketName) throw new PostReviewError("storage");
-  const kind = FILE_TYPES[file.type as keyof typeof FILE_TYPES];
+  const kind = postUploadKind(file);
   if (!kind) throw new PostReviewError("file");
   const bytes = Buffer.from(await file.arrayBuffer());
   const limit = kind.video ? VIDEO_BYTES : IMAGE_BYTES;
@@ -454,8 +444,8 @@ async function savePostFile(code: string, id: string, file: File, slide = 1) {
   const stored = bucket.file(path);
   const [exists] = await stored.exists();
   if (exists || !contentFilePath(path)) throw new PostReviewError("storage");
-  await stored.save(bytes, { contentType: file.type, resumable: false, metadata: { contentType: file.type } });
-  return { path, contentType: file.type, name: safeFileName(file.name, path) };
+  await stored.save(bytes, { contentType: kind.contentType, resumable: false, metadata: { contentType: kind.contentType } });
+  return { path, contentType: kind.contentType, name: safeFileName(file.name, path) };
 }
 
 function fileRecord(files: StoredPostFile[]) {
@@ -693,27 +683,45 @@ export async function withdrawContentPost(input: { id: string; code: string }) {
   const code = normalizeAffiliateCode(input.code);
   if (!code) throw new PostReviewError("invalid");
   const post = await requireOwned(input.id, code);
-  if (post.contentStatus !== "submitted") throw new PostReviewError("status");
-  await requireDb().collection("contentSubmissions").doc(post.id).update({
+  const mates = (await carouselMates(post)).filter((item) => item.code === code && item.contentStatus === "submitted");
+  if (!mates.length) throw new PostReviewError("status");
+  const reviewedAt = new Date();
+  await Promise.all(mates.map((item) => requireDb().collection("contentSubmissions").doc(item.id).update({
     contentStatus: "withdrawn",
-    reviewedAt: new Date(),
-  });
+    reviewedAt,
+  })));
   return post;
+}
+
+function carouselSignature(post: ContentSubmission) {
+  if (post.files.length < 2) return "";
+  const names = post.files.map((file) => file.name || file.path).join("\n");
+  return names ? `${post.caption}\n${names}` : "";
+}
+
+async function carouselMates(post: ContentSubmission) {
+  const signature = carouselSignature(post);
+  if (!signature) return [post];
+  const posts = await loadContentSubmissions(post.code);
+  const mates = posts.filter((item) => carouselSignature(item) === signature);
+  return mates.length ? mates : [post];
 }
 
 async function review(id: string, step: "approve" | "request" | "reject", note: unknown) {
   const post = await loadContentSubmission(id);
   if (!post) throw new PostReviewError("missing");
-  const status = nextContentStatus(post.contentStatus, step);
-  if (!status) throw new PostReviewError("status");
   const reviewNote = step === "approve" ? null : reviewNoteText(note);
   if (step !== "approve" && !reviewNote) throw new PostReviewError("note");
-  await requireDb().collection("contentSubmissions").doc(post.id).update({
+  const status = step === "approve" ? "approved" : step === "request" ? "revision_requested" : "rejected";
+  const mates = (await carouselMates(post)).filter((item) => item.contentStatus === "submitted" || item.contentStatus === "revision_requested");
+  if (!mates.length) throw new PostReviewError("status");
+  const reviewedAt = new Date();
+  await Promise.all(mates.map((item) => requireDb().collection("contentSubmissions").doc(item.id).update({
     contentStatus: status,
-    publicationStatus: step === "approve" ? publicationAfterApproval(post.contentStatus) : null,
+    publicationStatus: step === "approve" ? "awaiting_publication" : null,
     reviewNote,
-    reviewedAt: new Date(),
-  });
+    reviewedAt,
+  })));
   return post;
 }
 
@@ -848,17 +856,19 @@ export async function refreshDueMetrics(code?: string, limit = 8) {
   return updated;
 }
 
-const READABLE_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "video/mp4", "video/webm", "video/quicktime"]);
-
-export async function readContentFile(path: string) {
+export async function signedContentReadUrl(path: string, filename: string, download = false) {
   const bucketName = storageBucket();
   if (!bucketName || !contentFilePath(path)) throw new PostReviewError("missing");
   affiliateFirestore();
   const file = getStorage().bucket(bucketName).file(path);
   const [exists] = await file.exists();
   if (!exists) throw new PostReviewError("missing");
-  const [bytes] = await file.download();
-  const [metadata] = await file.getMetadata();
-  const stored = typeof metadata.contentType === "string" ? metadata.contentType : "";
-  return { bytes, contentType: READABLE_TYPES.has(stored) ? stored : "application/octet-stream" };
+  const safeName = filename.replace(/[^\w.\-]+/g, "") || "post";
+  const [url] = await file.getSignedUrl({
+    version: "v4",
+    action: "read",
+    expires: Date.now() + 60 * 60 * 1000,
+    responseDisposition: `${download ? "attachment" : "inline"}; filename="${safeName}"`,
+  });
+  return url;
 }

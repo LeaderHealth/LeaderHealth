@@ -72,9 +72,9 @@ export default async function TrackingLinkPage({
       ) : null}
       {acknowledged ? null : (
         <form action={acknowledgeDisclosureAction} className="mt-6 border-t border-rose/70 pt-6">
-          <h3 className="text-lg">Sponsorship disclosure</h3>
+          <h3 className="text-lg">Sponsorship agreement</h3>
           <p className="mt-2 max-w-2xl text-sm text-brown">
-            Send each new post from Posts before you publish it. Put “Paid partnership with Leader Health” and your tracking link in the caption. A link in your bio is not enough.
+            Posts stays closed until you accept this. Then send each new post, including reels, for review before you publish it. Put “Paid partnership with Leader Health” and your tracking link in the caption. A link in your bio is not enough.
           </p>
           <label className="mt-4 flex items-start gap-3 text-sm text-ink">
             <input name="acknowledge" type="checkbox" required className="mt-1 size-4 accent-ink" />

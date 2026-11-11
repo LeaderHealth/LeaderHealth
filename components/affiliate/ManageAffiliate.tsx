@@ -9,7 +9,6 @@ import type { WebsiteMonthReport } from "@/lib/affiliate/website-report";
 type MonthView = {
   label: string;
   orders: number;
-  sales: string;
   earnings: string;
 };
 
@@ -20,14 +19,10 @@ function MonthBlock({ month }: { month: MonthView }) {
   return (
     <div className="rounded-[24px] bg-background px-4 py-5">
       <h3 className="text-lg">{month.label}</h3>
-      <dl className="mt-4 grid grid-cols-3 gap-3 text-sm leading-6">
+      <dl className="mt-4 grid grid-cols-2 gap-3 text-sm leading-6">
         <div>
           <dt className="text-xs text-brown">Paid orders</dt>
           <dd className="mt-1">{month.orders}</dd>
-        </div>
-        <div>
-          <dt className="text-xs text-brown">Sales</dt>
-          <dd className="mt-1">{month.sales}</dd>
         </div>
         <div>
           <dt className="text-xs text-brown">Earnings</dt>

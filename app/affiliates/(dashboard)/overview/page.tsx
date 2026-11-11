@@ -165,7 +165,7 @@ export default async function AffiliatePortalOverviewPage({
           </div>
         ) : (
           <p className="mt-3 break-all text-lg text-ink">
-            {acknowledged ? (promosUnavailable ? "Promo codes are unavailable right now." : "No personal code is assigned yet.") : "Acknowledge the sponsorship disclosure on the referral link page before using your code."}
+            {acknowledged ? (promosUnavailable ? "Promo codes are unavailable right now." : "No personal code is assigned yet.") : "Accept the sponsorship agreement on the referral link page. Your code and Posts stay closed until then."}
           </p>
         )}
         <p className="mt-2 text-sm text-brown">Customers enter this code at checkout. Your promo link and tracking link are on the referral link page.</p>
