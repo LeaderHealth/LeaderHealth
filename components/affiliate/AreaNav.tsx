@@ -8,18 +8,16 @@ export function AreaNav({
   label,
   items,
   children,
-  fill = false,
 }: {
   label: string;
   items: { href: string; label: string; badge?: number }[];
   children?: ReactNode;
-  fill?: boolean;
 }) {
   const pathname = usePathname();
 
   return (
-    <nav aria-label={label} className={fill ? "flex min-h-0 flex-1 flex-col" : undefined}>
-      <div className={`flex flex-col gap-4 rounded-[28px] bg-white p-3 sm:p-4 ${fill ? "min-h-full flex-1" : ""}`}>
+    <nav aria-label={label}>
+      <div className="flex flex-col gap-4 rounded-[28px] bg-white p-3 sm:p-4">
         <div className="grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-2 xl:flex xl:flex-col">
           {items.map((item) => {
             const current = pathname === item.href;

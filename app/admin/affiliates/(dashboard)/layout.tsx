@@ -51,17 +51,19 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
         </p>
         {affiliateFirebaseConfigured() ? (
           <div className="mt-8 xl:grid xl:grid-cols-[minmax(18rem,max-content)_minmax(0,1fr)] xl:gap-8">
-            <div className="z-20 flex flex-col gap-4 xl:sticky xl:top-28 xl:h-full">
-              {admin ? (
-                <ProfileCard
-                  name={admin.name}
-                  email={admin.email}
-                  role={profileRole}
-                  avatarUrl={admin.avatarUrl}
-                  signOut={logoutAffiliateAdmin}
-                />
-              ) : null}
-              <AreaNav label="Affiliate admin" items={nav} fill />
+            <div className="z-20 xl:self-stretch">
+              <div className="flex flex-col gap-4 xl:sticky xl:top-28">
+                {admin ? (
+                  <ProfileCard
+                    name={admin.name}
+                    email={admin.email}
+                    role={profileRole}
+                    avatarUrl={admin.avatarUrl}
+                    signOut={logoutAffiliateAdmin}
+                  />
+                ) : null}
+                <AreaNav label="Affiliate admin" items={nav} />
+              </div>
             </div>
             <div className="mt-8 flex min-w-0 flex-col xl:mt-0">{children}</div>
           </div>
