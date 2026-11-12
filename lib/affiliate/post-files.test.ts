@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { postUploadIssue, postUploadKind } from "./post-files.ts";
+import { postUploadIssue, postUploadKind } from "./post-files";
 
 test("a reel is accepted from an mp4 or mov, including when the browser omits the type", () => {
   assert.equal(postUploadKind({ type: "", name: "summer-reel.mp4" })?.contentType, "video/mp4");
