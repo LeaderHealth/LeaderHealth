@@ -29,6 +29,8 @@ import {
 } from "@/lib/affiliate/email";
 import { noteComplianceEvent } from "@/lib/affiliate/compliance-log";
 import { approvePayout, markPayoutPaid, PayoutError } from "@/lib/affiliate/payouts";
+import { RoiStoreError, saveMarketingCost } from "@/lib/affiliate/roi-store";
+import { roiRange } from "@/lib/affiliate/roi";
 import {
   ApplicationError,
   applicationCommission,
@@ -448,6 +450,33 @@ export async function markPayoutPaidAction(formData: FormData) {
   });
   refreshPayouts();
   payoutDone(period, "paid");
+}
+
+const ROI_PATH = "/admin/affiliates/roi";
+
+function roiQuery(range: string, values: Record<string, string>) {
+  const params = new URLSearchParams(values);
+  if (range === "30" || range === "90") params.set("range", range);
+  const search = params.toString();
+  return search ? `${ROI_PATH}?${search}` : ROI_PATH;
+}
+
+export async function saveMarketingCostAction(formData: FormData) {
+  await requireAdmin();
+  const range = roiRange(formData.get("range"));
+  try {
+    await saveMarketingCost({
+      campaign: formData.get("campaign"),
+      amount: formData.get("amount"),
+      spentOn: formData.get("spentOn"),
+    });
+  } catch (error) {
+    if (error instanceof RoiStoreError) redirect(roiQuery(range, { error: `roi-${error.code}` }));
+    console.error("[affiliate] marketing cost failed", error instanceof Error ? error.message : "unknown");
+    redirect(roiQuery(range, { error: "roi-unavailable" }));
+  }
+  revalidatePath(ROI_PATH);
+  redirect(roiQuery(range, { notice: "saved" }));
 }
 
 const APPLY_PATH = "/admin/affiliates/add-an-affiliate";

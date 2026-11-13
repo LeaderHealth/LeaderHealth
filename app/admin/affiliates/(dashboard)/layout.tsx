@@ -21,6 +21,7 @@ const items = [
   { href: "/admin/affiliates/orders", label: "Orders" },
   { href: "/admin/affiliates/payouts", label: "Payouts" },
   { href: "/admin/affiliates/records", label: "Records" },
+  { href: "/admin/affiliates/roi", label: "ROI" },
 ];
 
 export default async function AdminDashboardLayout({ children }: { children: ReactNode }) {
@@ -47,7 +48,7 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
           <PortalBrand badge="Admin" />
         </h1>
         <p className="mt-4 max-w-2xl text-taupe">
-          Manage affiliate accounts, referral links, promo codes, orders, and payouts.
+          Manage affiliate accounts, referral links, promo codes, orders, payouts, and campaign ROI.
         </p>
         {affiliateFirebaseConfigured() ? (
           <div className="mt-8 xl:grid xl:grid-cols-[minmax(18rem,max-content)_minmax(0,1fr)] xl:gap-8">
