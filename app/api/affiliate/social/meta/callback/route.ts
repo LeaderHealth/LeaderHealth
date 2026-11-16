@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { absoluteUrl } from "@/lib/seo/schema";
 import { portalAffiliateCode } from "@/lib/affiliate/session";
 import { exchangeMetaCode, readSocialState } from "@/lib/affiliate/social-oauth";
+import { setSocialOnboarding } from "@/lib/affiliate/social-onboarding";
 import { saveFacebookConnection, SocialError } from "@/lib/affiliate/social-store";
 
 export const runtime = "nodejs";
@@ -20,7 +21,13 @@ export async function GET(request: Request) {
   const oauthCode = cleanCode(url.searchParams.get("code"));
   if (!state || state.network !== "facebook" || state.code !== code || !oauthCode) return stats("error=social");
   try {
-    await saveFacebookConnection(code, await exchangeMetaCode(oauthCode));
+    const connection = await exchangeMetaCode(oauthCode);
+    await saveFacebookConnection(code, connection);
+    try {
+      await setSocialOnboarding(code, "done");
+    } catch (error) {
+      console.error("[affiliate] social onboarding update failed", error instanceof Error ? error.message : "unknown");
+    }
   } catch (error) {
     if (error instanceof SocialError && error.code === "page") return stats("error=social-page");
     if (error instanceof SocialError && error.code === "setup") return stats("error=social-setup");

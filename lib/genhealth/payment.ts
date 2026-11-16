@@ -35,6 +35,7 @@ export type PaidOrder = {
   orderId: string;
   amountCents: number | null;
   productName: string;
+  productIds: string[];
   createdAt: Date;
   source: string;
   promoCode: string;
@@ -93,6 +94,27 @@ function orderPromoCode(order: Record<string, unknown>) {
 function amountCents(value: unknown) {
   if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return null;
   return Number.isInteger(value) ? value : Math.round(value * 100);
+}
+
+function addProductId(ids: Set<string>, value: unknown) {
+  const id = asString(value);
+  if (id) ids.add(id);
+}
+
+function productIds(order: Record<string, unknown>) {
+  const ids = new Set<string>();
+  addProductId(ids, order.clientProductId);
+  addProductId(ids, order.productId);
+  addProductId(ids, order.sourceProductId);
+  const items = Array.isArray(order.items) ? order.items : [];
+  for (const item of items) {
+    const record = asRecord(item);
+    if (!record) continue;
+    addProductId(ids, record.clientProductId);
+    addProductId(ids, record.productId);
+    addProductId(ids, record.sourceProductId);
+  }
+  return [...ids];
 }
 
 function productName(order: Record<string, unknown>) {
@@ -169,6 +191,7 @@ function mapClientOrder(order: Record<string, unknown>): ClientOrder | null {
     orderId,
     amountCents: amount,
     productName: productName(order),
+    productIds: productIds(order),
     createdAt,
     source: fallbackSource(order),
     promoCode: orderPromoCode(order),

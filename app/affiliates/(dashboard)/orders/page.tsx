@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { LAB_COMMISSIONS_ENABLED } from "@/lib/affiliate/code";
 import { formatCents } from "@/lib/affiliate/format";
 import { periodReferralSummaries, type PeriodReferralSource } from "@/lib/affiliate/order-view";
 import { formatPayoutMonth } from "@/lib/affiliate/payouts";
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function periodSource(code: string, conversion: { dryRun: boolean; amountCents: number | null; refundedAmountCents: number; commissionCents: number; commissionRefundedCents: number; createdAt: string | null }): PeriodReferralSource {
+function periodSource(code: string, conversion: { dryRun: boolean; amountCents: number | null; refundedAmountCents: number; commissionCents: number; commissionRefundedCents: number; createdAt: string | null; orderKind: "lab" | "treatment" }): PeriodReferralSource {
   return {
     code,
     dryRun: conversion.dryRun,
@@ -22,7 +23,12 @@ function periodSource(code: string, conversion: { dryRun: boolean; amountCents: 
     commissionCents: conversion.commissionCents,
     commissionRefundedCents: conversion.commissionRefundedCents,
     createdAt: conversion.createdAt,
+    orderKind: conversion.orderKind,
   };
+}
+
+function labCommission(cents: number) {
+  return LAB_COMMISSIONS_ENABLED ? formatCents(cents) : "Not active";
 }
 
 export default async function AffiliateOrdersPage() {
@@ -45,7 +51,7 @@ export default async function AffiliateOrdersPage() {
         Orders
       </h2>
       <p className="px-4 pt-2 text-sm text-brown">
-        Referral ID <span className="break-all text-ink">{affiliate.code}</span>
+        Referral ID <span className="break-all text-ink">{affiliate.code}</span>. {LAB_COMMISSIONS_ENABLED ? "Lab commission is listed by period." : "Lab commission is not active."}
       </p>
       {rows.length === 0 ? (
         <p className="px-4 py-6 text-sm text-brown">No paid orders yet.</p>
@@ -60,8 +66,8 @@ export default async function AffiliateOrdersPage() {
                   <dd className="mt-1">{row.conversions}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-brown">Commission</dt>
-                  <dd className="mt-1">{formatCents(row.commissionCents)}</dd>
+                  <dt className="text-xs text-brown">Lab commission</dt>
+                  <dd className="mt-1">{labCommission(row.commissionCents)}</dd>
                 </div>
               </dl>
             </li>
@@ -79,7 +85,7 @@ export default async function AffiliateOrdersPage() {
             <tr>
               <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Period</th>
               <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Conversions</th>
-              <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Commission</th>
+              <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Lab commission</th>
             </tr>
           </thead>
           <tbody>
@@ -87,7 +93,7 @@ export default async function AffiliateOrdersPage() {
               <tr key={row.period} className="border-t border-rose/60">
                 <td className="break-words px-4 py-5 align-top">{formatPayoutMonth(row.period)}</td>
                 <td className="px-4 py-5 align-top">{row.conversions}</td>
-                <td className="px-4 py-5 align-top">{formatCents(row.commissionCents)}</td>
+                <td className="px-4 py-5 align-top">{labCommission(row.commissionCents)}</td>
               </tr>
             ))}
           </tbody>

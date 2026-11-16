@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { SocialConnections } from "@/components/affiliate/MarketingSections";
+import { TikTokVideos } from "@/components/affiliate/TikTokVideos";
 import { TrackedPosts, type TrackedPostCard } from "@/components/affiliate/TrackedPosts";
+import { loadTikTokReviewList, type TikTokReviewList } from "@/lib/affiliate/tiktok-review";
 import { formatCents } from "@/lib/affiliate/format";
-import { metaConfigured, tiktokConfigured } from "@/lib/affiliate/social-oauth";
+import { metaConfigured, tiktokConfigured, youtubeConfigured } from "@/lib/affiliate/social-oauth";
 import { loadSocialAccounts, type SocialAccountView } from "@/lib/affiliate/social-store";
-import { loadContentSubmissions, metricLines, refreshDueMetrics } from "@/lib/affiliate/post-review";
+import { loadContentSubmissions, metricLines, metricsOriginLabel, refreshDueMetrics } from "@/lib/affiliate/post-review";
 import { conversionLabel, dailyAffiliateStats, earningsPerClickCents } from "@/lib/affiliate/stats";
 import { AffiliateStoreError, loadAffiliateActivity } from "@/lib/affiliate/store";
 import { currentAffiliate } from "../../current";
@@ -58,6 +60,7 @@ export default async function AffiliateStatsPage({
   let accounts: SocialAccountView[] = [];
   let tracked: TrackedPostCard[] = [];
   let trackedUnavailable = false;
+  let tiktokVideos: TikTokReviewList | null = null;
   try {
     const activity = await loadAffiliateActivity(affiliate.code);
     rows = dailyAffiliateStats(activity.clicks, activity.conversions);
@@ -70,11 +73,24 @@ export default async function AffiliateStatsPage({
     } catch {
       accounts = [];
     }
+    if (accounts.some((account) => account.network === "tiktok")) {
+      try {
+        tiktokVideos = await loadTikTokReviewList(affiliate.code);
+      } catch {
+        tiktokVideos = { accountName: "TikTok", status: "unavailable", videos: [] };
+      }
+    }
     try {
       await refreshDueMetrics(affiliate.code, 8);
       tracked = (await loadContentSubmissions(affiliate.code))
         .filter((post) => post.publicationStatus === "tracking_active")
-        .map((post) => ({ id: post.id, caption: post.caption, postUrl: post.postUrl, metrics: metricLines(post) }));
+        .map((post) => ({
+          id: post.id,
+          caption: post.caption,
+          postUrl: post.postUrl,
+          metrics: metricLines(post, post.format === "tiktok" ? "Not available yet" : undefined),
+          note: metricsOriginLabel(post.metricsSource, post.metricsRecordedAt),
+        }));
     } catch {
       trackedUnavailable = true;
     }
@@ -106,9 +122,20 @@ export default async function AffiliateStatsPage({
             Account disconnected.
           </p>
         ) : null}
+        {query.notice === "disconnected-facebook" ? (
+          <p role="status" className="mt-4 rounded-2xl bg-background px-4 py-3 text-sm text-ink">
+            Leader Health is disconnected. You can also remove Leader Health in Facebook under Settings, Security, Apps and websites.
+          </p>
+        ) : null}
+        {query.notice === "disconnected-tiktok" ? (
+          <p role="status" className="mt-4 rounded-2xl bg-background px-4 py-3 text-sm text-ink">
+            Leader Health is disconnected. You can also remove Leader Health in TikTok under Settings, Security, Manage app permissions.
+          </p>
+        ) : null}
         <div className="mt-4">
-          <SocialConnections metaReady={metaConfigured()} tiktokReady={tiktokConfigured()} accounts={accounts} />
+          <SocialConnections metaReady={metaConfigured()} tiktokReady={tiktokConfigured()} youtubeReady={youtubeConfigured()} accounts={accounts} />
         </div>
+        {tiktokVideos ? <TikTokVideos list={tiktokVideos} /> : null}
         {trackedUnavailable ? <p className="mt-6 text-sm text-ink">Tracked posts are unavailable right now.</p> : <TrackedPosts posts={tracked} />}
       </div>
       {rows.length === 0 ? <p className="px-4 py-6 text-sm text-brown sm:px-6">No visits or paid orders yet.</p> : null}

@@ -54,6 +54,17 @@ export function canonicalPostUrl(value: string) {
   return `${host}${path}`;
 }
 
+export function samePublishedPost(left: string | null, right: string | null) {
+  if (!left || !right) return false;
+  const a = canonicalPostUrl(left);
+  const b = canonicalPostUrl(right);
+  if (a && b && a === b) return true;
+  const videoId = (value: string) => value.match(/\/video\/(\d{8,30})/)?.[1] ?? null;
+  const leftId = videoId(left);
+  const rightId = videoId(right);
+  return Boolean(leftId && leftId === rightId);
+}
+
 export function textHasTrackingCode(text: string, code: string) {
   const normalized = normalizeAffiliateCode(code);
   if (!normalized || !text) return false;

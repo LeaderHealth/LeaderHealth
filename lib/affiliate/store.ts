@@ -8,7 +8,6 @@ import { absoluteUrl } from "@/lib/seo/schema";
 import {
   type CommissionMode,
   DEFAULT_COMMISSION_PERCENT,
-  commissionForOrder,
   normalizeAffiliateCode,
   normalizeAffiliateEmail,
   normalizeAffiliateName,
@@ -17,7 +16,11 @@ import {
   normalizeCommissionPercent,
   normalizeFixedCommissionCents,
 } from "./code";
+import { deliverableFeeCents } from "./deliverable-payments";
+import { DEFAULT_TRACKING_DAYS, trackingDaysOf } from "./manual-checkpoint";
 import { affiliateFirebaseConfigured, affiliateFirestore } from "./firebase";
+import { commissionForRecordedOrder } from "./order-kind";
+import { payoutAmountCents } from "./payouts";
 import {
   type RefundObservation,
   type RefundStatus,
@@ -78,6 +81,9 @@ export type AffiliateSummary = {
   clickCount: number;
   paidConversionCount: number;
   commissionCents: number;
+  deliverableFeeCents: number | null;
+  deliverableMaxPayCents: number | null;
+  deliverableTrackingDays: number;
   createdAt: string | null;
 };
 
@@ -105,6 +111,7 @@ export type ConversionSummary = {
   dryRun: boolean;
   createdAt: string | null;
   promoCode: string | null;
+  orderKind: "lab" | "treatment";
 };
 
 function textOrNull(value: unknown) {
@@ -211,6 +218,9 @@ function affiliateFrom(code: string, data: DocumentData | undefined): AffiliateS
     clickCount: asNumber(data.clickCount),
     paidConversionCount: asNumber(data.paidConversionCount),
     commissionCents: asNumber(data.commissionCents),
+    deliverableFeeCents: deliverableFeeCents(data.deliverableFeeCents),
+    deliverableMaxPayCents: deliverableFeeCents(data.deliverableMaxPayCents),
+    deliverableTrackingDays: trackingDaysOf(data.deliverableTrackingDays) ?? DEFAULT_TRACKING_DAYS,
     createdAt: asTimestamp(data.createdAt),
   };
 }
@@ -251,6 +261,7 @@ function conversionFrom(id: string, data: DocumentData): ConversionSummary {
     dryRun: data.dryRun === true,
     createdAt: asTimestamp(data.createdAt),
     promoCode: textOrNull(data.promoCode),
+    orderKind: data.orderKind === "lab" ? "lab" : "treatment",
   };
 }
 
@@ -264,6 +275,17 @@ export async function getAffiliate(code: string) {
   if (!affiliateFirebaseConfigured()) return null;
   const snap = await affiliateFirestore().collection("affiliates").doc(code).get();
   return affiliateFrom(code, snap.data());
+}
+
+export async function setDeliverableFee(code: string, amount: unknown) {
+  if (!affiliateFirebaseConfigured()) throw new AffiliateStoreError("unavailable", "Affiliate tracking is unavailable right now.");
+  const normalized = normalizeAffiliateCode(code);
+  const cents = payoutAmountCents(amount);
+  if (!normalized || cents == null) throw new AffiliateStoreError("invalid", "Enter a rate from $0 to $100,000 per 1,000 views.");
+  const ref = affiliateFirestore().collection("affiliates").doc(normalized);
+  const snap = await ref.get();
+  if (!snap.exists) throw new AffiliateStoreError("missing", "That affiliate code was not found.");
+  await ref.update({ deliverableFeeCents: cents });
 }
 
 function storedCampaign(value: string | null | undefined, affiliateCode: string) {
@@ -307,6 +329,7 @@ export async function recordAffiliateConversion(input: {
   dryRun: boolean;
   createdAt?: Date;
   promoCode?: string | null;
+  productIds?: readonly string[];
 }) {
   if (!affiliateFirebaseConfigured()) return false;
   const code = normalizeAffiliateCode(input.code);
@@ -327,18 +350,21 @@ export async function recordAffiliateConversion(input: {
     const commissionMode = commissionModeFrom(affiliateData?.commissionMode);
     const commissionPercent = asNumber(affiliateData?.commissionPercent);
     const commissionFixedCents = asNumber(affiliateData?.commissionFixedCents);
-    const commissionCents = commissionForOrder({
+    const recorded = commissionForRecordedOrder({
+      productIds: input.productIds ?? [],
       mode: commissionMode,
       percent: commissionPercent,
       fixedCents: commissionFixedCents,
       amountCents,
     });
+    const commissionCents = recorded.commissionCents;
     const promoCode = storedCampaign(input.promoCode, "");
     tx.set(conversionRef, {
       code,
       orderId,
       amountCents,
       productName: "Order",
+      orderKind: recorded.orderKind,
       commissionMode,
       commissionPercent,
       commissionFixedCents,
@@ -733,6 +759,7 @@ export async function acceptAffiliateInvitation(token: string, passwordInput: st
       invitePending: false,
       activatedAt: new Date(),
       inviteUsedAt: new Date(),
+      socialOnboarding: "pending",
     });
     return { status: "ok" as const, code: snap.id };
   });

@@ -25,7 +25,7 @@ function MonthBlock({ month }: { month: MonthView }) {
           <dd className="mt-1">{month.orders}</dd>
         </div>
         <div>
-          <dt className="text-xs text-brown">Earnings</dt>
+          <dt className="text-xs text-brown">Lab commission</dt>
           <dd className="mt-1">{month.earnings}</dd>
         </div>
       </dl>
@@ -124,7 +124,7 @@ export function ManageAffiliate({
                 aria-modal="true"
                 aria-labelledby={titleId}
                 tabIndex={-1}
-                className="relative max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-[28px] bg-white p-6 text-ink shadow-[0_24px_80px_rgba(51,17,16,0.22)]"
+                className="relative max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-[28px] bg-white p-6 text-ink shadow-[0_24px_80px_rgba(51,17,16,0.22)] lg:h-[calc(100dvh-3rem)] lg:max-h-none lg:max-w-6xl"
               >
                 <h2 id={titleId} className="text-2xl">
                   {name}

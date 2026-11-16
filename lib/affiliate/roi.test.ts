@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { ROI_UNASSIGNED, roiCostCents, roiFigures, roiInRange, roiSpentOn } from "./roi";
+import { ROI_UNASSIGNED, campaignDirectoryName, roiCostCents, roiFigures, roiInRange, roiSpentOn } from "./roi";
 
 const now = Date.parse("2026-11-10T18:00:00.000Z");
 
@@ -52,6 +52,24 @@ test("the date window applies to sales and costs", () => {
   assert.equal(roiInRange("2026-08-01T12:00:00.000Z", "90", now), false);
   assert.equal(roiInRange("2026-11-01T12:00:00.000Z", "30", now), true);
   assert.equal(roiInRange(null, "all", now), false);
+});
+
+test("a saved campaign stays on the list before it has spend or sales", () => {
+  const report = roiFigures({
+    now,
+    range: "30",
+    orders: [],
+    costs: [{ campaign: "spring", costCents: 2500, spentOn: "2026-01-01" }],
+    campaigns: ["Spring", "spring", "Launch"],
+  });
+
+  assert.deepEqual(report.rows, [
+    { campaign: "Launch", orders: 0, costCents: 0, revenueCents: 0, profitCents: 0 },
+    { campaign: "Spring", orders: 0, costCents: 0, revenueCents: 0, profitCents: 0 },
+  ]);
+  assert.equal(campaignDirectoryName("  Spring sale "), "Spring sale");
+  assert.equal(campaignDirectoryName("No promo code"), null);
+  assert.equal(campaignDirectoryName(""), null);
 });
 
 test("cost amount and date must be usable before they are saved", () => {

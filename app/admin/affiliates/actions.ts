@@ -28,8 +28,9 @@ import {
   sendSubAdminSignInEmail,
 } from "@/lib/affiliate/email";
 import { noteComplianceEvent } from "@/lib/affiliate/compliance-log";
+import { adjustDeliverablePayment, approveDeliverablePayment, canReleaseDeliverablePayment, DeliverablePaymentError, forfeitDeliverable, markDeliverablePaid, recheckDeliverable, reinstateDeliverable } from "@/lib/affiliate/deliverable-payments";
 import { approvePayout, markPayoutPaid, PayoutError } from "@/lib/affiliate/payouts";
-import { RoiStoreError, saveMarketingCost } from "@/lib/affiliate/roi-store";
+import { RoiStoreError, saveMarketingCampaign, saveMarketingCost } from "@/lib/affiliate/roi-store";
 import { roiRange } from "@/lib/affiliate/roi";
 import {
   ApplicationError,
@@ -46,6 +47,7 @@ import { normalizeAffiliateEmail } from "@/lib/affiliate/code";
 import { clearLoginFailures, loginBlocked, recordLoginFailure } from "@/lib/affiliate/login-guard";
 import { formatCommissionRate } from "@/lib/affiliate/format";
 import { absoluteUrl } from "@/lib/seo/schema";
+import { acceptMarketingCounter, declineMarketingOffer, MarketingOfferError, saveMarketingOffer, withdrawMarketingOffer } from "@/lib/affiliate/marketing-offers";
 import { AffiliateStoreError, createAffiliate, issueAffiliateInvitation, setAffiliateActive, setAffiliatePassword } from "@/lib/affiliate/store";
 import { PromoCodeError, assignPromoCode, unassignPromoCode } from "@/lib/genhealth/promocodes";
 import {
@@ -452,13 +454,264 @@ export async function markPayoutPaidAction(formData: FormData) {
   payoutDone(period, "paid");
 }
 
+function deliverableFail(code: string): never {
+  fail(`deliverable-${code}`, PAYOUT_PATH);
+}
+
+async function requirePaymentAdmin() {
+  const actor = await adminSessionActor();
+  if (!actor || !canReleaseDeliverablePayment(actor.role)) fail("restricted", PAYOUT_PATH);
+}
+
+const OFFER_PATH = "/admin/affiliates/offers";
+
+function offerFail(code: string, id = ""): never {
+  const params = new URLSearchParams({ error: code === "status" ? "offer-status" : code });
+  if (id) params.set("offer", id);
+  redirect(`${OFFER_PATH}?${params.toString()}`);
+}
+
+function offerDone(id: string, notice: string): never {
+  const params = new URLSearchParams({ notice, offer: id });
+  redirect(`${OFFER_PATH}?${params.toString()}`);
+}
+
+export async function saveMarketingOfferAction(formData: FormData) {
+  const actor = await adminSessionActor();
+  if (!actor || !canReleaseDeliverablePayment(actor.role)) fail("restricted", OFFER_PATH);
+  const code = String(formData.get("code") ?? "");
+  const offerId = String(formData.get("offerId") ?? "");
+  let id = offerId;
+  try {
+    id = await saveMarketingOffer({
+      code,
+      kind: formData.get("kind"),
+      amount: formData.get("amount"),
+      maxPay: formData.get("maxPay"),
+      trackingDays: formData.get("trackingDays"),
+      publishBy: formData.get("publishBy"),
+      campaign: formData.get("campaign"),
+      brief: formData.get("brief"),
+      offerId,
+    });
+  } catch (error) {
+    if (error instanceof MarketingOfferError) offerFail(error.code, offerId);
+    console.error("[affiliate] marketing offer failed", error instanceof Error ? error.message : "unknown");
+    fail("unavailable", OFFER_PATH);
+  }
+  await noteComplianceEvent({
+    actor: await complianceActor(),
+    action: "deliverable-fee",
+    code,
+    detail: offerId ? "Revised a marketing offer." : "Sent a marketing offer.",
+  });
+  revalidatePath(OFFER_PATH);
+  revalidatePath("/affiliates/overview");
+  offerDone(id, offerId ? "revised" : "sent");
+}
+
+async function offerStep(formData: FormData, run: (id: string) => Promise<void>, notice: string, detail: string) {
+  const actor = await adminSessionActor();
+  if (!actor || !canReleaseDeliverablePayment(actor.role)) fail("restricted", OFFER_PATH);
+  const id = String(formData.get("offerId") ?? "");
+  try {
+    await run(id);
+  } catch (error) {
+    if (error instanceof MarketingOfferError) offerFail(error.code, id);
+    console.error("[affiliate] marketing offer update failed", error instanceof Error ? error.message : "unknown");
+    fail("unavailable", OFFER_PATH);
+  }
+  await noteComplianceEvent({
+    actor: await complianceActor(),
+    action: "deliverable-fee",
+    code: formData.get("code"),
+    detail,
+  });
+  revalidatePath(OFFER_PATH);
+  revalidatePath("/affiliates/overview");
+  offerDone(id, notice);
+}
+
+export async function acceptMarketingCounterAction(formData: FormData) {
+  await offerStep(formData, acceptMarketingCounter, "accepted", "Accepted a marketing counter.");
+}
+
+export async function declineMarketingOfferAction(formData: FormData) {
+  await offerStep(formData, declineMarketingOffer, "declined", "Declined a marketing counter.");
+}
+
+export async function withdrawMarketingOfferAction(formData: FormData) {
+  await offerStep(formData, withdrawMarketingOffer, "withdrawn", "Withdrew a marketing offer.");
+}
+
+export async function approveDeliverablePaymentAction(formData: FormData) {
+  await requirePaymentAdmin();
+  const postId = String(formData.get("postId") ?? "");
+  try {
+    await approveDeliverablePayment(postId);
+  } catch (error) {
+    if (error instanceof DeliverablePaymentError) deliverableFail(error.code);
+    console.error("[affiliate] deliverable approve failed", error instanceof Error ? error.message : "unknown");
+    deliverableFail("unavailable");
+  }
+  await noteComplianceEvent({
+    actor: await complianceActor(),
+    action: "payout-approved",
+    code: formData.get("code"),
+    detail: "Approved the calculated view payment for a live post.",
+  });
+  refreshPayouts();
+  payoutDone("", "deliverable-approved");
+}
+
+export async function markDeliverablePaidAction(formData: FormData) {
+  await requirePaymentAdmin();
+  try {
+    await markDeliverablePaid({
+      postId: String(formData.get("postId") ?? ""),
+      amount: formData.get("amount"),
+      paidOn: formData.get("paidOn"),
+      reference: formData.get("reference"),
+    });
+  } catch (error) {
+    if (error instanceof DeliverablePaymentError) deliverableFail(error.code);
+    console.error("[affiliate] deliverable payment failed", error instanceof Error ? error.message : "unknown");
+    deliverableFail("unavailable");
+  }
+  await noteComplianceEvent({
+    actor: await complianceActor(),
+    action: "payout-paid",
+    code: formData.get("code"),
+    detail: "Marked a marketing payment paid.",
+  });
+  refreshPayouts();
+  payoutDone("", "deliverable-paid");
+}
+
+export async function recheckDeliverableAction(formData: FormData) {
+  await requirePaymentAdmin();
+  try {
+    await recheckDeliverable(String(formData.get("postId") ?? ""));
+  } catch (error) {
+    if (error instanceof DeliverablePaymentError) deliverableFail(error.code);
+    console.error("[affiliate] deliverable recheck failed", error instanceof Error ? error.message : "unknown");
+    deliverableFail("unavailable");
+  }
+  await noteComplianceEvent({
+    actor: await complianceActor(),
+    action: "deliverable-rechecked",
+    code: formData.get("code"),
+    detail: "Re-checked a live post after the hold.",
+  });
+  refreshPayouts();
+  payoutDone("", "deliverable-rechecked");
+}
+
+export async function forfeitDeliverableAction(formData: FormData) {
+  await requirePaymentAdmin();
+  try {
+    await forfeitDeliverable(String(formData.get("postId") ?? ""), formData.get("note"));
+  } catch (error) {
+    if (error instanceof DeliverablePaymentError) deliverableFail(error.code);
+    console.error("[affiliate] deliverable forfeit failed", error instanceof Error ? error.message : "unknown");
+    deliverableFail("unavailable");
+  }
+  await noteComplianceEvent({
+    actor: await complianceActor(),
+    action: "deliverable-forfeited",
+    code: formData.get("code"),
+    detail: "Forfeited a marketing fee during the hold.",
+  });
+  refreshPayouts();
+  payoutDone("", "deliverable-forfeited");
+}
+
+export async function reinstateDeliverableAction(formData: FormData) {
+  await requirePaymentAdmin();
+  try {
+    await reinstateDeliverable(String(formData.get("postId") ?? ""));
+  } catch (error) {
+    if (error instanceof DeliverablePaymentError) deliverableFail(error.code);
+    console.error("[affiliate] deliverable reinstate failed", error instanceof Error ? error.message : "unknown");
+    deliverableFail("unavailable");
+  }
+  await noteComplianceEvent({
+    actor: await complianceActor(),
+    action: "deliverable-reinstated",
+    code: formData.get("code"),
+    detail: "Reinstated a forfeited marketing fee.",
+  });
+  refreshPayouts();
+  payoutDone("", "deliverable-reinstated");
+}
+
+export async function adjustDeliverableAction(formData: FormData) {
+  await requirePaymentAdmin();
+  try {
+    await adjustDeliverablePayment({
+      postId: String(formData.get("postId") ?? ""),
+      amount: formData.get("amount"),
+      reason: formData.get("note"),
+    });
+  } catch (error) {
+    if (error instanceof DeliverablePaymentError) deliverableFail(error.code);
+    console.error("[affiliate] deliverable adjustment failed", error instanceof Error ? error.message : "unknown");
+    deliverableFail("unavailable");
+  }
+  await noteComplianceEvent({
+    actor: await complianceActor(),
+    action: "deliverable-adjusted",
+    code: formData.get("code"),
+    detail: "Recorded a bonus or clawback on a marketing fee.",
+  });
+  refreshPayouts();
+  payoutDone("", "deliverable-adjusted");
+}
+
 const ROI_PATH = "/admin/affiliates/roi";
+const CAMPAIGNS_PATH = "/admin/affiliates/campaigns";
 
 function roiQuery(range: string, values: Record<string, string>) {
   const params = new URLSearchParams(values);
   if (range === "30" || range === "90") params.set("range", range);
   const search = params.toString();
   return search ? `${ROI_PATH}?${search}` : ROI_PATH;
+}
+
+function campaignDestination(formData: FormData, range: string, values: Record<string, string>) {
+  if (formData.get("return") !== "campaigns") return roiQuery(range, values);
+  const params = new URLSearchParams(values);
+  const search = params.toString();
+  return search ? `${CAMPAIGNS_PATH}?${search}` : CAMPAIGNS_PATH;
+}
+
+export async function saveMarketingCampaignAction(formData: FormData) {
+  await requireAdmin();
+  const range = roiRange(formData.get("range"));
+  let notice = "created";
+  try {
+    notice = await saveMarketingCampaign(
+      formData.get("details") === "yes"
+        ? {
+            name: formData.get("name"),
+            description: formData.get("description"),
+            startsOn: formData.get("startsOn"),
+            endsOn: formData.get("endsOn"),
+            goals: formData.get("goals"),
+            assignedCodes: formData.getAll("assigned"),
+          }
+        : { name: formData.get("name") },
+    );
+  } catch (error) {
+    if (error instanceof RoiStoreError) redirect(campaignDestination(formData, range, { error: `roi-${error.code}` }));
+    console.error("[affiliate] marketing campaign failed", error instanceof Error ? error.message : "unknown");
+    redirect(campaignDestination(formData, range, { error: "roi-unavailable" }));
+  }
+  revalidatePath(ROI_PATH);
+  revalidatePath(CAMPAIGNS_PATH);
+  revalidatePath("/admin/affiliates/offers");
+  revalidatePath("/affiliates/campaigns");
+  redirect(campaignDestination(formData, range, { notice }));
 }
 
 export async function saveMarketingCostAction(formData: FormData) {

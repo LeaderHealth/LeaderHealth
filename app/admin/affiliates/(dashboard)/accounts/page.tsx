@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { accountColumnTotals } from "@/lib/affiliate/account-figures";
 import { normalizeAffiliateCode } from "@/lib/affiliate/code";
-import { formatCents, formatCommissionRate, formatWhen } from "@/lib/affiliate/format";
+import { LAB_COMMISSIONS_ENABLED } from "@/lib/affiliate/code";
+import { deliverableLines, loadDeliverablePayments, marketingTotals, type DeliverablePayment } from "@/lib/affiliate/deliverable-payments";
+import { formatCents, formatCommissionRate } from "@/lib/affiliate/format";
 import { monthFigures } from "@/lib/affiliate/month-figures";
 import { currentPayoutPeriod, formatPayoutMonth, previousPayoutPeriod } from "@/lib/affiliate/payouts";
 import { affiliateTrackingLink } from "@/lib/affiliate/link";
@@ -17,23 +20,17 @@ import {
   type AffiliateSummary,
   type ConversionSummary,
 } from "@/lib/affiliate/store";
-import { AccountCompliance, type AccountComplianceFlag, type AccountCompliancePost, type AccountComplianceProof } from "@/components/affiliate/AccountCompliance";
 import { AccountAgreement } from "@/components/affiliate/AccountAgreement";
 import { AccountReports } from "@/components/affiliate/AccountReports";
 import { AccountSettings } from "@/components/affiliate/AccountSettings";
 import { AccountTracking } from "@/components/affiliate/AccountTracking";
-import { loadComplianceFlags, type ComplianceFlag } from "@/lib/affiliate/compliance-flags";
-import { flagReasonLabel, flagStatusLabel } from "@/lib/affiliate/compliance-rules";
 import { loadAffiliateAgreements, type AffiliateAgreement } from "@/lib/affiliate/agreements";
 import { agreementEditorState, agreementSeed, presentAgreement } from "@/lib/affiliate/agreement-view";
-import { disclosureAcknowledged, loadDisclosureProofs, type DisclosureProof } from "@/lib/affiliate/disclosures";
 import { visibleReportSections } from "@/lib/affiliate/marketing";
 import { loadMarketingReports, type MarketingReport } from "@/lib/affiliate/marketing-store";
 import {
-  contentStatusLabel,
   loadContentSubmissions,
   metricLines,
-  publicationStatusLabel,
   refreshDueMetrics,
   type ContentSubmission,
 } from "@/lib/affiliate/post-review";
@@ -77,6 +74,11 @@ function paidEarningsCents(code: string, payouts: PayoutRecord[]) {
 
 function money(cents: number | null) {
   return cents == null ? "—" : formatCents(cents);
+}
+
+function marketingPayText(affiliate: AffiliateSummary) {
+  const fee = affiliate.deliverableFeeCents == null ? "Not set" : `${formatCents(affiliate.deliverableFeeCents)} per 1,000 views`;
+  return LAB_COMMISSIONS_ENABLED ? `${fee}. Lab commission applies to lab orders.` : `${fee}. Lab commission is not active.`;
 }
 
 function MonthBlock({
@@ -125,52 +127,14 @@ const complianceNotices: Record<string, string> = {
   "post-change": "Asked for a change.",
   "post-rejected": "Post rejected.",
   "post-checked": "Link marked as checked. Metrics stay blank until Instagram can be read.",
+  "counts-updated": "Post numbers updated.",
+  fee: "View rate saved.",
 };
-
-function complianceFlagView(flag: ComplianceFlag): AccountComplianceFlag {
-  return {
-    id: flag.id,
-    reasonLabel: flagReasonLabel(flag.reason),
-    status: flag.status,
-    statusLabel: flagStatusLabel(flag.status),
-    note: flag.note,
-    reply: flag.reply,
-    when: formatWhen(flag.createdAt),
-  };
-}
-
-function compliancePostView(post: ContentSubmission): AccountCompliancePost {
-  return {
-    id: post.id,
-    contentLabel: contentStatusLabel(post.contentStatus),
-    publicationLabel: publicationStatusLabel(post.publicationStatus),
-    caption: post.caption,
-    reviewNote: post.reviewNote,
-    verificationNote: post.verificationNote,
-    postUrl: post.postUrl,
-    when: formatWhen(post.createdAt),
-    inReview: post.contentStatus === "submitted",
-    canMarkChecked: post.publicationStatus === "verification_failed",
-    tracking: post.publicationStatus === "tracking_active",
-    metrics: metricLines(post),
-    fileCount: post.files.length || (post.filePath ? 1 : 0),
-  };
-}
 
 function trackedCards(posts: ContentSubmission[]): TrackedPostCard[] {
   return posts
     .filter((post) => post.publicationStatus === "tracking_active")
     .map((post) => ({ id: post.id, caption: post.caption, postUrl: post.postUrl, metrics: metricLines(post) }));
-}
-
-function complianceProofView(proof: DisclosureProof): AccountComplianceProof {
-  return {
-    id: proof.id,
-    status: proof.status,
-    when: formatWhen(proof.submittedAt),
-    postUrl: proof.postUrl,
-    screenshot: Boolean(proof.screenshotPath),
-  };
 }
 
 export default async function AffiliateAccountsPage({
@@ -284,9 +248,6 @@ export default async function AffiliateAccountsPage({
     );
   }
 
-  let complianceFlags: ComplianceFlag[] = [];
-  let complianceProofs: DisclosureProof[] = [];
-  const acknowledged = new Map<string, boolean>();
   let marketingReports: MarketingReport[] = [];
   let socialAccounts: SocialAccountView[] = [];
   let websiteVisits: WebsiteVisit[] = [];
@@ -295,18 +256,9 @@ export default async function AffiliateAccountsPage({
   let agreements: AffiliateAgreement[] = [];
   let agreementsUnavailable = false;
   let contentPosts: ContentSubmission[] = [];
+  let deliverablePayments: DeliverablePayment[] = [];
   let postsUnavailable = false;
   if (!loadError) {
-    try {
-      [complianceFlags, complianceProofs] = await Promise.all([loadComplianceFlags(), loadDisclosureProofs()]);
-      await Promise.all(
-        affiliates.map(async (affiliate) => {
-          acknowledged.set(affiliate.code, await disclosureAcknowledged(affiliate.code).catch(() => false));
-        }),
-      );
-    } catch (caught) {
-      reportHandledAffiliateError("[affiliate] compliance load failed", caught);
-    }
     try {
       const [saved, connected, website] = await Promise.all([loadMarketingReports(), loadSocialAccounts(), loadWebsiteEvents()]);
       marketingReports = saved;
@@ -329,12 +281,22 @@ export default async function AffiliateAccountsPage({
       reportHandledAffiliateError("[affiliate] post metrics refresh failed", caught);
     }
     try {
-      contentPosts = await loadContentSubmissions();
+      [contentPosts, deliverablePayments] = await Promise.all([loadContentSubmissions(), loadDeliverablePayments()]);
     } catch (caught) {
       postsUnavailable = true;
       reportHandledAffiliateError("[affiliate] post load failed", caught);
     }
   }
+  function marketingFor(code: string) {
+    return marketingTotals(
+      deliverableLines({
+        affiliates: [{ code, name: code }],
+        posts: contentPosts.filter((post) => post.code === code),
+        payments: deliverablePayments.filter((payment) => payment.code === code),
+      }),
+    );
+  }
+
   const reportSections = visibleReportSections(marketingReports, socialAccounts);
 
   function agreementProps(affiliate: AffiliateSummary) {
@@ -347,7 +309,7 @@ export default async function AffiliateAccountsPage({
     return {
       name: affiliate.name,
       code: affiliate.code,
-      commission: formatCommissionRate(affiliate),
+      commission: marketingPayText(affiliate),
       unavailable: agreementsUnavailable,
       lead: leadAgreement ? presentAgreement(leadAgreement) : null,
       older,
@@ -363,19 +325,11 @@ export default async function AffiliateAccountsPage({
           name={affiliate.name}
           code={affiliate.code}
           commission={formatCommissionRate(affiliate)}
+          viewRate={marketingPayText(affiliate)}
           cookieDays={cookieDays}
           trackingLink={affiliateTrackingLink(affiliate.code)}
           promos={trackingPromos(affiliate)}
           unavailable={Boolean(promoError)}
-        />
-        <AccountCompliance
-          name={affiliate.name}
-          code={affiliate.code}
-          acknowledged={acknowledged.get(affiliate.code) ?? false}
-          flags={complianceFlags.filter((flag) => flag.code === affiliate.code).map(complianceFlagView)}
-          proofs={complianceProofs.filter((proof) => proof.code === affiliate.code).map(complianceProofView)}
-          posts={contentPosts.filter((post) => post.code === affiliate.code && post.contentStatus !== "draft").map(compliancePostView)}
-          postsUnavailable={postsUnavailable}
         />
         <AccountAgreement {...agreementProps(affiliate)} />
         <AccountReports
@@ -386,6 +340,10 @@ export default async function AffiliateAccountsPage({
           sections={reportSections.filter((section) => section.code === affiliate.code)}
           tracked={trackedCards(contentPosts.filter((post) => post.code === affiliate.code))}
         />
+        <p className="mt-6 border-t border-rose/60 pt-6 text-sm text-brown">{marketingPayText(affiliate)}</p>
+        <Link href={`/admin/affiliates/offers?code=${encodeURIComponent(affiliate.code)}`} className="mt-3 inline-flex text-sm font-medium text-ink underline underline-offset-4">
+          Monthly plan
+        </Link>
         <AccountActions code={affiliate.code} name={affiliate.name} active={affiliate.active} pendingInvite={affiliate.pendingInvite && affiliate.active} canInvite={canInvite} />
       </AccountSettings>
     );
@@ -449,7 +407,7 @@ export default async function AffiliateAccountsPage({
           Accounts
         </h2>
         <p className="px-4 pt-2 text-sm text-brown">
-          Visits count each person once a day. Unpaid orders are checkouts that have not been paid. Unpaid earnings are commission that has not been paid to the affiliate.
+          Visits count each person once a day. Unpaid orders are checkouts that have not been paid. A rate per 1,000 views, a maximum, and a tracking period lock when a post is sent. Pay is calculated from recorded views after that period. {LAB_COMMISSIONS_ENABLED ? "Lab commission is separate and follows lab orders." : "Lab commission is not active."}
         </p>
         {affiliates.length === 0 ? (
           <p className="px-4 py-8 text-sm text-brown">No affiliates yet.</p>
@@ -487,12 +445,12 @@ export default async function AffiliateAccountsPage({
                         <dd className="mt-1">{countText(stats.unpaidOrders)}</dd>
                       </div>
                       <div>
-                        <dt className="text-xs text-brown">Unpaid earnings</dt>
-                        <dd className="mt-1">{money(stats.unpaidEarnings)}</dd>
+                        <dt className="text-xs text-brown">Marketing earned</dt>
+                        <dd className="mt-1">{postsUnavailable ? "—" : money(marketingFor(affiliate.code).pendingCents)}</dd>
                       </div>
                       <div>
-                        <dt className="text-xs text-brown">Paid earnings</dt>
-                        <dd className="mt-1">{money(stats.paidEarnings)}</dd>
+                        <dt className="text-xs text-brown">Marketing paid</dt>
+                        <dd className="mt-1">{postsUnavailable ? "—" : money(marketingFor(affiliate.code).paidCents)}</dd>
                       </div>
                     </dl>
                   </li>
@@ -509,8 +467,8 @@ export default async function AffiliateAccountsPage({
                     <th scope="col" className="px-3 py-4 align-bottom font-medium leading-snug">Visits</th>
                     <th scope="col" className="px-3 py-4 align-bottom font-medium leading-snug">Paid orders</th>
                     <th scope="col" className="px-3 py-4 align-bottom font-medium leading-snug">Unpaid orders</th>
-                    <th scope="col" className="px-3 py-4 align-bottom font-medium leading-snug">Unpaid earnings</th>
-                    <th scope="col" className="px-3 py-4 align-bottom font-medium leading-snug">Paid earnings</th>
+                    <th scope="col" className="px-3 py-4 align-bottom font-medium leading-snug">Marketing earned</th>
+                    <th scope="col" className="px-3 py-4 align-bottom font-medium leading-snug">Marketing paid</th>
                     <th scope="col" className="px-3 py-4 align-bottom">
                       <span className="sr-only">Settings</span>
                     </th>
@@ -536,8 +494,8 @@ export default async function AffiliateAccountsPage({
                         <td className="whitespace-nowrap px-3 py-5 align-middle">{stats.visitors}</td>
                         <td className="whitespace-nowrap px-3 py-5 align-middle">{stats.paidOrders}</td>
                         <td className="whitespace-nowrap px-3 py-5 align-middle">{countText(stats.unpaidOrders)}</td>
-                        <td className="whitespace-nowrap px-3 py-5 align-middle">{money(stats.unpaidEarnings)}</td>
-                        <td className="whitespace-nowrap px-3 py-5 align-middle">{money(stats.paidEarnings)}</td>
+                        <td className="whitespace-nowrap px-3 py-5 align-middle">{postsUnavailable ? "—" : money(marketingFor(affiliate.code).pendingCents)}</td>
+                        <td className="whitespace-nowrap px-3 py-5 align-middle">{postsUnavailable ? "—" : money(marketingFor(affiliate.code).paidCents)}</td>
                         <td className="px-3 py-5 align-middle">{settings(affiliate)}</td>
                       </tr>
                     );

@@ -11,6 +11,7 @@ import {
 } from "@/app/admin/affiliates/agreement-actions";
 import type { AgreementDraftSeed, AgreementView } from "./agreement-types";
 import { AgreementSummary } from "./AgreementSummary";
+import { STANDARD_DELIVERABLE_DESCRIPTION, STANDARD_PAYMENT_CONDITIONS } from "@/lib/affiliate/agreement-pay";
 
 const actionClass =
   "inline-flex min-h-11 w-full items-center justify-center whitespace-nowrap rounded-full border border-ink/20 bg-white px-4 text-sm font-medium text-ink hover:bg-background focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
@@ -113,7 +114,7 @@ export function AccountAgreement({
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby={titleId}
-                className="relative flex max-h-[min(40rem,calc(100dvh-2rem))] w-full max-w-3xl flex-col rounded-[28px] bg-white p-4 text-ink shadow-[0_24px_80px_rgba(51,17,16,0.22)] sm:p-8"
+                className="relative flex max-h-[min(40rem,calc(100dvh-2rem))] w-full max-w-3xl flex-col rounded-[28px] bg-white p-4 text-ink shadow-[0_24px_80px_rgba(51,17,16,0.22)] sm:p-8 lg:h-[min(52rem,calc(100dvh-3rem))] lg:max-h-none lg:max-w-6xl"
               >
                 <h2 id={titleId} className="text-2xl">
                   Agreement
@@ -124,7 +125,7 @@ export function AccountAgreement({
                 <div className="mt-6 min-h-0 flex-1 space-y-8 overflow-y-auto">
                   <p className="text-sm text-brown">This stores the terms and the PDF that was uploaded. Uploading a PDF does not by itself sign anything, and it does not change pay.</p>
                   <p className="text-sm">
-                    <span className="text-brown">Referral rate already used for orders</span>
+                    <span className="text-brown">Rate per 1,000 views</span>
                     <span className="mt-1 block">{commission}</span>
                   </p>
                   {unavailable ? <p className="text-sm text-ink">Agreements are unavailable right now.</p> : null}
@@ -145,20 +146,21 @@ export function AccountAgreement({
                       </div>
                       <fieldset className="grid gap-3">
                         <legend className="text-sm font-medium text-ink">Deliverables</legend>
-                        <p className="text-sm text-brown">A stated amount is only what the agreement says. It is not added to payouts.</p>
+                        <p className="text-sm text-brown">{STANDARD_DELIVERABLE_DESCRIPTION}</p>
+                        <p className="text-sm text-brown">{STANDARD_PAYMENT_CONDITIONS} A rate typed on a line below is that line’s locked rate. Leave it blank to use the standing rate.</p>
                         {rows.map((row) => (
                           <div key={row.key} className="grid gap-3 rounded-[24px] bg-background p-3 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,0.8fr)_minmax(0,0.7fr)_auto] sm:items-end">
                             <label className="block text-sm font-medium text-ink">
                               Description
-                              <input name="deliverableDescription" defaultValue={row.description} className={fieldClass} />
+                              <textarea name="deliverableDescription" rows={3} defaultValue={row.description} className={`${fieldClass} min-h-24`} />
                             </label>
                             <label className="block text-sm font-medium text-ink">
-                              Deadline
+                              Publish by
                               <input name="deliverableDue" type="date" defaultValue={row.dueOn} className={fieldClass} />
                             </label>
                             <label className="block text-sm font-medium text-ink">
-                              Stated amount
-                              <input name="deliverableAmount" inputMode="decimal" defaultValue={row.amount} className={fieldClass} />
+                              Locked rate
+                              <input name="deliverableAmount" inputMode="decimal" defaultValue={row.amount} placeholder="Standing rate" className={fieldClass} />
                             </label>
                             <button
                               type="button"
@@ -192,8 +194,8 @@ export function AccountAgreement({
                         <textarea name="licensing" rows={3} defaultValue={seed.licensing} className={fieldClass} />
                       </label>
                       <label className="block text-sm font-medium text-ink">
-                        Payment conditions
-                        <textarea name="paymentConditions" rows={3} defaultValue={seed.paymentConditions} className={fieldClass} />
+                        Extra payment conditions
+                        <textarea name="paymentConditions" rows={3} defaultValue={seed.paymentConditions} placeholder="Optional. The deliverable terms above already apply." className={fieldClass} />
                       </label>
                       <div className="flex flex-wrap gap-2">
                         <button type="submit" className={buttonClass}>

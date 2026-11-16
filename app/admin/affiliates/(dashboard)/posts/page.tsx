@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import { PostReviewQueue, type ReviewCheck, type ReviewPost, type ReviewQueue, type ReviewSlide } from "@/components/affiliate/PostReviewQueue";
-import { formatWhen } from "@/lib/affiliate/format";
+import { formatPublishDate, formatWhen, publishDateValue } from "@/lib/affiliate/format";
 import { DISCLOSURE_LINE, loadContentSubmissions, treatmentClaims, type ContentSubmission } from "@/lib/affiliate/post-review";
+import { postSourceLabel } from "@/lib/affiliate/offer-post";
 import { textHasTrackingCode } from "@/lib/affiliate/social-match";
 import { loadAffiliateOverview, type AffiliateSummary } from "@/lib/affiliate/store";
 import { ADMIN_ERRORS } from "../../messages";
 
 export const metadata: Metadata = {
-  title: "Post review",
+  title: "All submissions",
   robots: { index: false, follow: false },
 };
 export const runtime = "nodejs";
@@ -21,12 +22,13 @@ const NOTICES: Record<string, string> = {
 };
 
 function queueOf(post: ContentSubmission): ReviewQueue | null {
-  if (post.contentStatus === "draft" || post.contentStatus === "withdrawn") return null;
+  if (post.contentStatus === "draft") return null;
+  if (post.contentStatus === "withdrawn") return "withdrawn";
   if (post.contentStatus === "submitted") return "waiting";
   if (post.contentStatus === "revision_requested") return "changes";
   if (post.contentStatus === "rejected") return "declined";
   if (post.publicationStatus === "tracking_active") return "live";
-  if (post.publicationStatus === "verification_failed") return "link";
+  if (post.publicationStatus === "verification_failed" || (post.format === "tiktok" && post.publicationStatus === "verification_pending")) return "link";
   if (post.contentStatus === "approved") return "approved";
   return null;
 }
@@ -112,7 +114,23 @@ function queueRank(post: ContentSubmission) {
   if (queue === "link") return 2;
   if (queue === "approved") return 3;
   if (queue === "live") return 4;
+  if (queue === "withdrawn") return 6;
   return 5;
+}
+
+function submittedDay(iso: string) {
+  const time = Date.parse(iso);
+  if (Number.isNaN(time)) return "";
+  const date = new Date(time);
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+function inView(queue: ReviewQueue, view: "all" | "pending" | "published") {
+  if (view === "pending") return queue === "waiting";
+  if (view === "published") return queue === "live" || queue === "link";
+  return true;
 }
 
 function reviewGroup(group: ContentSubmission[], affiliate: AffiliateSummary | undefined): ReviewPost | null {
@@ -123,10 +141,25 @@ function reviewGroup(group: ContentSubmission[], affiliate: AffiliateSummary | u
   const slides = numbered.map((slide, index) => ({ ...slide, index: index + 1, cover: index === 0 && numbered.length > 1 }));
   if (!slides.length) return null;
   const primary = [...reviewable].sort((left, right) => queueRank(left) - queueRank(right) || whenStamp(left).localeCompare(whenStamp(right)))[0];
-  const queue = queueOf(primary);
+  const waiting = reviewable.some((post) => post.contentStatus === "submitted");
+  const queue = waiting ? "waiting" : queueOf(primary);
   if (!queue) return null;
   const checks = checksFor(slides);
   const video = slides.length === 1 && slides[0]?.video;
+  const kind = source.format === "tiktok"
+    ? "TikTok"
+    : source.format === "instagram_reel"
+      ? "Instagram reel"
+      : source.format === "instagram_post"
+        ? slides.length > 1 ? `Instagram carousel, ${slides.length} slides` : "Instagram post"
+        : slides.length > 1 ? `Carousel, ${slides.length} slides` : video ? "Single video" : "Single photo";
+  const kindShort = source.format === "tiktok"
+    ? "TikTok"
+    : source.format === "instagram_reel"
+      ? "Instagram reel"
+      : source.format === "instagram_post"
+        ? slides.length > 1 ? `Carousel · ${slides.length}` : "Instagram post"
+        : slides.length > 1 ? `Carousel · ${slides.length}` : video ? "Single video" : "Single photo";
   const excerptSource = slides.find((slide) => slide.caption.trim())?.caption ?? primary.caption;
   return {
     id: primary.id,
@@ -137,8 +170,9 @@ function reviewGroup(group: ContentSubmission[], affiliate: AffiliateSummary | u
     waiting: waitingLabel(whenStamp(primary)),
     version: primary.version,
     batchLabel: "",
-    kind: slides.length > 1 ? `Carousel, ${slides.length} slides` : video ? "Single video" : "Single photo",
-    kindShort: slides.length > 1 ? `Carousel · ${slides.length}` : video ? "Single video" : "Single photo",
+    kind,
+    kindShort,
+    source: postSourceLabel(primary.offerId),
     excerpt: excerptSource.replace(/\s+/g, " ").trim().slice(0, 72),
     flagCount: checks.filter((check) => check.tone === "warn").length,
     checksPass: checks.every((check) => check.tone === "pass"),
@@ -149,12 +183,27 @@ function reviewGroup(group: ContentSubmission[], affiliate: AffiliateSummary | u
     canMark: queue === "link",
     pastHref: `/admin/affiliates/accounts?code=${encodeURIComponent(primary.code)}`,
     suggestedNote: suggestedNote(slides),
+    campaign: primary.campaign,
+    platform: kindShort,
+    submittedOn: submittedDay(whenStamp(primary)),
+    dateLabel: primary.proposedPublishOn ? "Proposed" : primary.publishBy ? "Publish by" : "",
+    dateValue: primary.proposedPublishOn ? formatPublishDate(primary.proposedPublishOn) : primary.publishBy && publishDateValue(primary.publishBy) ? formatPublishDate(primary.publishBy) : "",
+    reviewedBy: primary.reviewedBy,
+    postUrl: primary.postUrl,
+    views: primary.views,
+    revisions: primary.revisions.map((revision) => ({
+      version: revision.version,
+      note: revision.reviewNote,
+      when: revision.reviewedAt ? formatWhen(revision.reviewedAt) : "",
+    })),
   };
 }
 
-export default async function AdminPostReviewPage({
+export async function AdminSubmissions({
+  view,
   searchParams,
 }: {
+  view: "all" | "pending" | "published";
   searchParams: Promise<{ error?: string; notice?: string; post?: string }>;
 }) {
   const query = await searchParams;
@@ -186,14 +235,22 @@ export default async function AdminPostReviewPage({
     groups.push([post]);
   }
   const reviewPosts = groups.flatMap((group) => {
-    const view = reviewGroup(group, byCode.get(group[0].code));
-    return view ? [view] : [];
+    const item = reviewGroup(group, byCode.get(group[0].code));
+    return item && inView(item.queue, view) ? [item] : [];
   });
   const notice = NOTICES[query.notice ?? ""] ?? ADMIN_ERRORS[query.error ?? ""] ?? "";
   return (
     <div className="flex flex-1 flex-col">
       {unavailable ? <p className="mb-4 text-sm text-ink">Posts are unavailable right now.</p> : null}
-      <PostReviewQueue posts={reviewPosts} initialId={query.post ?? ""} notice={notice} />
+      <PostReviewQueue posts={reviewPosts} initialId={query.post ?? ""} notice={notice} view={view} />
     </div>
   );
+}
+
+export default function AdminPostReviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; notice?: string; post?: string }>;
+}) {
+  return <AdminSubmissions view="all" searchParams={searchParams} />;
 }

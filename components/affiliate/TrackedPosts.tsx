@@ -3,13 +3,14 @@ export type TrackedPostCard = {
   caption: string;
   postUrl: string | null;
   metrics: { label: string; value: string }[];
+  note?: string;
 };
 
 export function TrackedPosts({ posts }: { posts: TrackedPostCard[] }) {
   return (
     <section className="mt-6 border-t border-rose/60 pt-6">
       <h3 className="text-lg">Tracked posts</h3>
-      <p className="mt-1 text-sm text-brown">These numbers come from Instagram and do not change commission or payouts.</p>
+      <p className="mt-1 text-sm text-brown">These numbers are from posts you submitted. They do not change commission or payouts.</p>
       {posts.length === 0 ? <p className="mt-4 text-sm text-brown">No tracked posts yet.</p> : null}
       {posts.length > 0 ? (
         <ul className="mt-4 divide-y divide-rose/60">
@@ -31,6 +32,7 @@ export function TrackedPosts({ posts }: { posts: TrackedPostCard[] }) {
                   </div>
                 ))}
               </dl>
+              {post.note ? <p className="mt-3 text-brown">{post.note}</p> : null}
             </li>
           ))}
         </ul>

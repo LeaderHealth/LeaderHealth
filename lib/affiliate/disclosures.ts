@@ -50,10 +50,16 @@ function requireDb() {
 }
 
 export async function disclosureAcknowledged(code: string) {
+  const record = await loadDisclosureAcknowledgement(code);
+  return record != null;
+}
+
+export async function loadDisclosureAcknowledgement(code: string) {
   const normalized = normalizeAffiliateCode(code);
-  if (!normalized || !affiliateFirebaseConfigured()) return false;
+  if (!normalized || !affiliateFirebaseConfigured()) return null;
   const snap = await affiliateFirestore().collection("disclosureAcknowledgements").doc(normalized).get();
-  return snap.exists;
+  if (!snap.exists) return null;
+  return { acknowledgedAt: asDate(snap.data()?.acknowledgedAt)?.toISOString() ?? null };
 }
 
 export async function acknowledgeDisclosure(code: string) {

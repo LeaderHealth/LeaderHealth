@@ -141,31 +141,18 @@ function weeklyStatCell(label: string, value: string) {
                   </td>`;
 }
 
-function weeklySalesEmailHtml(input: { weekLabel: string; orderCount: number; sales: string; commission: string; lines: string[]; url: string }) {
-  const orders =
-    input.lines.length === 0
-      ? `<p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#7a5a56;">No paid orders this week.</p>`
-      : `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${input.lines
-          .map(
-            (line, index) => `<tr>
-                    <td style="padding:${index === 0 ? "0" : "12px"} 0 0;border-top:${index === 0 ? "0" : "1px solid #f0e4e2"};font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#321110;">${escapeHtml(line)}</td>
-                  </tr>`,
-          )
-          .join("")}</table>`;
+function weeklySalesEmailHtml(input: { weekLabel: string; orderCount: number; labCommission: string; url: string }) {
   return affiliateEmailFrame(
-    `Your affiliate sales for ${input.weekLabel}.`,
-    `<p style="margin:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;line-height:14px;text-transform:uppercase;color:#e33d4d;">Weekly sales</p>
+    `Your affiliate activity for ${input.weekLabel}.`,
+    `<p style="margin:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;line-height:14px;text-transform:uppercase;color:#e33d4d;">Weekly activity</p>
                 <h1 class="lh-title" style="margin:0 0 12px;font-family:'Instrument Serif',Georgia,'Times New Roman',serif;font-size:36px;line-height:1.15;font-weight:400;font-style:normal;color:#321110;">${escapeHtml(input.weekLabel)}</h1>
-                <p style="margin:0 0 24px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#4a2a26;">Here are the paid orders and commission from your Leader Health affiliate link.</p>
+                <p style="margin:0 0 24px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#4a2a26;">Here is your affiliate activity. Marketing payments are listed on your payouts page. This email does not include sale amounts.</p>
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 28px;">
                   <tr>
-                    ${weeklyStatCell("Orders", String(input.orderCount))}
-                    ${weeklyStatCell("Sales", input.sales)}
-                    ${weeklyStatCell("Commission", input.commission)}
+                    ${weeklyStatCell("Conversions", String(input.orderCount))}
+                    ${weeklyStatCell("Lab commission", input.labCommission)}
                   </tr>
                 </table>
-                <p style="margin:0 0 12px;font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;line-height:14px;text-transform:uppercase;color:#7a5a56;">Paid orders</p>
-                <div style="margin:0 0 28px;">${orders}</div>
                 ${emailButton("View your dashboard", input.url)}`,
   );
 }
@@ -218,24 +205,19 @@ export async function sendAffiliateWeeklySalesEmail(input: {
   email: string;
   weekLabel: string;
   orderCount: number;
-  salesCents: number | null;
-  commissionCents: number;
-  lines: string[];
+  labCommissionCents: number | null;
 }) {
-  const sales = input.orderCount === 0 ? formatWeeklyMoney(0) : input.salesCents == null ? "—" : formatWeeklyMoney(input.salesCents);
-  const commission = formatWeeklyMoney(input.commissionCents);
+  const labCommission = input.labCommissionCents == null ? "Not active" : formatWeeklyMoney(input.labCommissionCents);
   const dashboardUrl = affiliateDashboardUrl();
   await deliverAffiliateEmail(
     input.email,
-    `Your Leader Health sales for ${input.weekLabel}`,
+    `Your Leader Health activity for ${input.weekLabel}`,
     [
-      `Here are your affiliate sales for ${input.weekLabel}.`,
+      `Here is your affiliate activity for ${input.weekLabel}.`,
+      "Marketing payments are listed on your payouts page.",
       "",
-      `Orders: ${input.orderCount}`,
-      `Sales: ${sales}`,
-      `Commission: ${commission}`,
-      "",
-      ...(input.lines.length ? input.lines : ["No paid orders this week."]),
+      `Conversions: ${input.orderCount}`,
+      `Lab commission: ${labCommission}`,
       "",
       dashboardUrl,
     ].join("\n"),
@@ -243,9 +225,7 @@ export async function sendAffiliateWeeklySalesEmail(input: {
     weeklySalesEmailHtml({
       weekLabel: input.weekLabel,
       orderCount: input.orderCount,
-      sales,
-      commission,
-      lines: input.lines,
+      labCommission,
       url: dashboardUrl,
     }),
     [logoAttachment()],
@@ -280,6 +260,32 @@ export async function sendPostApprovedEmail(email: string, caption: string) {
       body: "A post you sent for review was approved. Publish it, then paste the Instagram link on your posts page.",
       note,
       button: "Open your posts",
+      url,
+    }),
+    [logoAttachment()],
+  );
+}
+
+export async function sendManualReportEmail(email: string, postUrl: string | null, kind: "first" | "update" = "first") {
+  const url = affiliatePostsUrl();
+  const live = postUrl?.trim() ?? "";
+  const note = live ? `Post: ${live}` : "Open your posts and enter the views, likes, comments, and shares.";
+  const first = kind === "first";
+  const subject = first ? "Add the numbers for your Leader Health post" : "Check the numbers for your Leader Health post";
+  const body = first
+    ? "A promotional post has been live for a week, and its account is not connected. Enter the views, likes, comments, and shares on your posts page."
+    : "A promotional post needs this week's check. Confirm the numbers are unchanged, or request a change. A sub-admin or admin updates the numbers.";
+  await deliverAffiliateEmail(
+    email,
+    subject,
+    [body, "", note, "", url].join("\n"),
+    "Manual report email failed",
+    brandedEmailHtml({
+      preview: first ? "Enter the numbers for a promotional post." : "Confirm this week's post numbers.",
+      heading: first ? "Add the post numbers" : "Check the post numbers",
+      body,
+      note,
+      button: first ? "Enter the numbers" : "Open your posts",
       url,
     }),
     [logoAttachment()],

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { DEFAULT_COMMISSION_PERCENT, type CommissionMode } from "@/lib/affiliate/code";
+import { DEFAULT_COMMISSION_PERCENT, LAB_COMMISSIONS_ENABLED, type CommissionMode } from "@/lib/affiliate/code";
 
 const buttonClass =
   "inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-5 text-sm font-medium text-white hover:bg-brown focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60";
@@ -9,9 +9,9 @@ const quietButtonClass =
   "inline-flex min-h-11 items-center justify-center rounded-full border border-ink/20 bg-white px-5 text-sm font-medium text-ink hover:border-ink/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60";
 
 const modes: { id: CommissionMode; title: string; detail: string }[] = [
-  { id: "default", title: "Standard", detail: `${DEFAULT_COMMISSION_PERCENT}% of each order, the default rate` },
-  { id: "percent", title: "Custom rate", detail: "Set a different percentage" },
-  { id: "fixed", title: "Flat fee", detail: "A fixed dollar amount per order" },
+  { id: "default", title: "Standard", detail: `${DEFAULT_COMMISSION_PERCENT}% of each lab order, the default rate` },
+  { id: "percent", title: "Custom rate", detail: "Set a different percentage for lab orders" },
+  { id: "fixed", title: "Flat fee", detail: "A fixed dollar amount per lab order" },
 ];
 
 type CreatedLink = {
@@ -221,8 +221,11 @@ export function ApplicationLinkForm({
       <div className="rounded-[28px] bg-background px-4 py-5 sm:px-6">
         <div className="flex items-center gap-3">
           <StepBadge n={1} />
-          <h3 className="text-base font-semibold">Commission</h3>
+          <h3 className="text-base font-semibold">Lab rate</h3>
         </div>
+        <p className="mt-2 text-sm text-brown">
+          Stored for lab orders only. {LAB_COMMISSIONS_ENABLED ? "Lab commission applies to lab orders." : "Lab commission is not active."} The rate per 1,000 views is set on the affiliate account before a post is sent.
+        </p>
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3" role="radiogroup" aria-label="Commission">
           {modes.map((option) => {
             const selected = mode === option.id;

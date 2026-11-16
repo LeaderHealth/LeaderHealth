@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ComplianceRecordLinks } from "@/components/affiliate/ComplianceRecordLinks";
 import {
   acceptDisclosureProofAction,
   openComplianceFlagAction,
@@ -68,6 +69,7 @@ export default async function AdminCompliancePage({
       {loadError ? <p className="text-ink">{loadError}</p> : null}
       <section className="rounded-[28px] bg-white p-4 sm:p-8">
         <h2 className="text-2xl">Flag content</h2>
+        <ComplianceRecordLinks current="compliance" />
         <p className="mt-2 max-w-2xl text-sm text-brown">
           Flag a missing sponsorship disclosure, a misleading medical claim, or unauthorized promotional content. Request a correction when the affiliate should respond.
         </p>

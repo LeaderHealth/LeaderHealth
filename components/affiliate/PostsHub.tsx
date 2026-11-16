@@ -2,11 +2,14 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { submitLiveLinkAction, submitPostsAction, withdrawPostAction } from "@/app/affiliates/post-actions";
+import { assignPostCampaignAction, cancelMetricChangeAction, confirmManualMetricsAction, requestMetricChangeAction, saveManualMetricsAction, submitLiveLinkAction, submitPostsAction, withdrawPostAction } from "@/app/affiliates/post-actions";
 import { MediaExpand, MediaPreview } from "@/components/affiliate/MediaExpand";
-import { POST_FILE_ACCEPT, postUploadIssue } from "@/lib/affiliate/post-files";
+import { viewPayTerms } from "@/lib/affiliate/format";
+import { POST_FILE_ACCEPT, VIDEO_FILE_ACCEPT, postUploadIssue } from "@/lib/affiliate/post-files";
+import { formatTitle, formatUploadIssue, liveLinkFor, type PostFormat } from "@/lib/affiliate/post-format";
 
 const POST_BATCH_LIMIT = 10;
 const SLIDE_LIMIT = 20;
@@ -24,6 +27,112 @@ const quietButtonClass =
   "inline-flex h-10 items-center justify-center rounded-full border border-[#CDBDBA] bg-white px-4 text-sm font-medium text-ink transition-colors duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-background focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink motion-reduce:transition-none";
 const fieldClass =
   "w-full rounded-xl border border-[#DCCFCC] bg-white px-3.5 py-3 text-sm leading-relaxed text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
+
+function CampaignField({ id, value, campaigns, onChange, readOnly = false }: { id: string; value: string; campaigns: string[]; onChange?: (value: string) => void; readOnly?: boolean }) {
+  const names = readOnly && value && !campaigns.includes(value) ? [value, ...campaigns] : campaigns;
+  return (
+    <label className="flex min-w-0 flex-col gap-2 text-sm font-medium" htmlFor={id}>
+      Campaign
+      <select
+        id={id}
+        name="campaign"
+        value={onChange ? value : undefined}
+        defaultValue={onChange ? undefined : value}
+        disabled={readOnly}
+        onChange={onChange ? (event) => onChange(event.target.value) : undefined}
+        className={fieldClass}
+      >
+        <option value="">No campaign</option>
+        {names.map((name) => <option key={name} value={name}>{name}</option>)}
+      </select>
+    </label>
+  );
+}
+
+function CountField({ name, label, value, onChange }: { name: string; label: string; value: string; onChange: (value: string) => void }) {
+  return (
+    <label className="block text-sm font-medium text-ink">
+      {label}
+      <input name={name} inputMode="numeric" autoComplete="off" value={value} onChange={(event) => onChange(event.target.value)} className={`${fieldClass} mt-1`} />
+    </label>
+  );
+}
+
+function countText(value: string) {
+  return value.trim() ? value.trim() : "Blank";
+}
+
+type ChangeDraft = { views: string; likes: string; comments: string; shares: string; note: string };
+
+function countFieldValue(value: number | null) {
+  return value == null ? "" : String(value);
+}
+
+function MetricChangeForm({ post }: { post: HubPost }) {
+  const [values, setValues] = useState<ChangeDraft>(() => ({
+    views: countFieldValue(post.changeRequest?.views ?? post.counts.views),
+    likes: countFieldValue(post.changeRequest?.likes ?? post.counts.likes),
+    comments: countFieldValue(post.changeRequest?.comments ?? post.counts.comments),
+    shares: countFieldValue(post.changeRequest?.shares ?? post.counts.shares),
+    note: post.changeRequest?.note ?? "",
+  }));
+  const [draft, setDraft] = useState<ChangeDraft | null>(null);
+  if (draft) {
+    return (
+      <div className="flex flex-col gap-3 rounded-2xl bg-white p-4" role="dialog" aria-labelledby="confirm-change-title">
+        <h4 id="confirm-change-title" className="text-base font-semibold">Are you sure?</h4>
+        <p className="text-sm leading-relaxed text-[#4A3A37]">This sends a change request. The numbers stay as entered until a sub-admin or admin updates them.</p>
+        <dl className="grid grid-cols-2 gap-3 text-sm">
+          <div><dt className="text-[#7A5C58]">Views</dt><dd className="mt-1">{countText(draft.views)}</dd></div>
+          <div><dt className="text-[#7A5C58]">Likes</dt><dd className="mt-1">{countText(draft.likes)}</dd></div>
+          <div><dt className="text-[#7A5C58]">Comments</dt><dd className="mt-1">{countText(draft.comments)}</dd></div>
+          <div><dt className="text-[#7A5C58]">Shares</dt><dd className="mt-1">{countText(draft.shares)}</dd></div>
+        </dl>
+        {draft.note.trim() ? <p className="text-sm text-[#4A3A37]">{draft.note.trim()}</p> : null}
+        <form action={requestMetricChangeAction} className="flex flex-col gap-2.5 sm:flex-row">
+          <input type="hidden" name="id" value={post.id} />
+          <input type="hidden" name="views" value={draft.views} />
+          <input type="hidden" name="likes" value={draft.likes} />
+          <input type="hidden" name="comments" value={draft.comments} />
+          <input type="hidden" name="shares" value={draft.shares} />
+          <input type="hidden" name="note" value={draft.note} />
+          <button type="submit" className="inline-flex h-11 items-center justify-center rounded-full bg-ink px-[22px] text-sm font-medium text-white">Confirm</button>
+          <button type="button" onClick={() => setDraft(null)} className="inline-flex h-11 items-center justify-center rounded-full border border-[#CDBDBA] bg-white px-[22px] text-sm font-medium text-ink">Cancel</button>
+        </form>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-3">
+      {post.changeRequest ? <p className="text-sm leading-relaxed text-[#4A3A37]">A change is waiting for a sub-admin or admin. The numbers on this post stay as entered until then.</p> : null}
+      <form
+        className="flex flex-col gap-3"
+        onSubmit={(event) => {
+          event.preventDefault();
+          setDraft(values);
+        }}
+      >
+        <div className="grid grid-cols-2 gap-3">
+          <CountField name="views" label="Views" value={values.views} onChange={(value) => setValues((current) => ({ ...current, views: value }))} />
+          <CountField name="likes" label="Likes" value={values.likes} onChange={(value) => setValues((current) => ({ ...current, likes: value }))} />
+          <CountField name="comments" label="Comments" value={values.comments} onChange={(value) => setValues((current) => ({ ...current, comments: value }))} />
+          <CountField name="shares" label="Shares" value={values.shares} onChange={(value) => setValues((current) => ({ ...current, shares: value }))} />
+        </div>
+        <label className="block text-sm font-medium text-ink">
+          Note
+          <textarea name="note" value={values.note} onChange={(event) => setValues((current) => ({ ...current, note: event.target.value }))} rows={3} className={`${fieldClass} mt-1`} />
+        </label>
+        <button type="submit" className="inline-flex h-11 w-full items-center justify-center rounded-full border border-[#CDBDBA] bg-white px-[22px] text-sm font-medium text-ink sm:w-auto sm:self-start">Request a change</button>
+      </form>
+      {post.changeRequest ? (
+        <form action={cancelMetricChangeAction}>
+          <input type="hidden" name="id" value={post.id} />
+          <button type="submit" className="inline-flex h-11 w-full items-center justify-center rounded-full border border-[#CDBDBA] bg-white px-[22px] text-sm font-medium text-ink sm:w-auto">Cancel request</button>
+        </form>
+      ) : null}
+    </div>
+  );
+}
 
 type LinkCheck = { label: string; state: "pass" | "fail" | "unknown" };
 type HistoryEvent = { label: string; when: string; note: string; tone: "good" | "bad" | "neutral" };
@@ -48,10 +157,27 @@ export type HubPost = {
   headline: string;
   detail: string;
   metrics: { label: string; value: string }[];
+  metricsNote: string;
+  counts: { views: number | null; likes: number | null; comments: number | null; shares: number | null };
+  hasManual: boolean;
+  changeRequest: { views: number | null; likes: number | null; comments: number | null; shares: number | null; note: string } | null;
+  askManual: boolean;
+  connectHref: string | null;
   history: HistoryEvent[];
   slides: { href: string; downloadHref: string; media: "photo" | "video"; caption: string }[];
   batchId: string;
+  campaign: string;
   mediaKey: string;
+  format: PostFormat | null;
+  payLabel: string;
+  payDetail: string;
+  payAmount: string;
+  trackingDays: number;
+  source: string;
+  offerId: string;
+  offerBrief: string;
+  publishBy: string;
+  proposedOn: string;
 };
 
 type Slide = {
@@ -69,13 +195,14 @@ type Card = {
   id: string;
   caption: string;
   slides: Slide[];
+  format: PostFormat | null;
 };
 
 const FILTERS: { id: Filter; label: string }[] = [
   { id: "all", label: "All" },
   { id: "action", label: "Action needed" },
   { id: "review", label: "In review" },
-  { id: "live", label: "Live" },
+  { id: "live", label: "Published" },
   { id: "closed", label: "Closed" },
 ];
 
@@ -153,7 +280,7 @@ function asOnePost(group: HubPost[]): HubPost {
 
 function statusMark(post: HubPost) {
   const stage = stageOf(post);
-  if (stage === "live") return { label: "Live", bg: "#DDF0E4", fg: "#1D6340" };
+  if (stage === "live") return { label: "Published", bg: "#DDF0E4", fg: "#1D6340" };
   if (post.publication === "verification_failed") return { label: "Needs a fix", bg: "#FBE3DF", fg: "#9B2C1F" };
   if (post.status === "revision_requested") return { label: "Changes requested", bg: "#FBE3DF", fg: "#9B2C1F" };
   if (post.status === "approved") return { label: "Approved · add link", bg: "#33130F", fg: "#FFFFFF" };
@@ -174,7 +301,7 @@ function actionCopy(post: HubPost) {
         : "Link check failed · see what to fix";
     return { hint, cta: "Fix and check again", color: "#9B2C1F" };
   }
-  return { hint: "Approved · publish it, then add the link", cta: "Add Instagram link", color: "#4A3A37" };
+  return { hint: "Approved · publish it, then add the link", cta: publishGuide(post.format).cta, color: "#4A3A37" };
 }
 
 function stepIndex(post: HubPost) {
@@ -187,6 +314,9 @@ function stepIndex(post: HubPost) {
 
 function fileLabel(post: HubPost) {
   if (!post.hasFile) return "No file yet";
+  if (post.format === "tiktok") return "TikTok video";
+  if (post.format === "instagram_reel") return "Instagram reel";
+  if (post.format === "instagram_post") return post.slides.length > 1 ? "Carousel" : post.media === "video" ? "Instagram video" : "Instagram photo";
   return post.media === "video" ? "Approved video" : "Approved photo";
 }
 
@@ -195,7 +325,7 @@ function fileIssue(file: File) {
 }
 
 function blankCard(partial?: Partial<Card>): Card {
-  return { key: `card-${Math.random().toString(36).slice(2, 10)}`, id: "", caption: "", slides: [], ...partial };
+  return { key: `card-${Math.random().toString(36).slice(2, 10)}`, id: "", caption: "", slides: [], format: null, ...partial };
 }
 
 function isCarousel(card: Card) {
@@ -250,18 +380,20 @@ function includesLabel(text: string, disclosureLine: string, trackingUrl: string
 
 function slideIsVideo(slide: Slide) {
   if (slide.file?.type.startsWith("video/")) return true;
-  return /\.(mp4|webm|mov)$/i.test(slide.fileName) || /video/i.test(slide.fileName);
+  return /\.(mp4|m4v|webm|mov)$/i.test(slide.fileName) || /video/i.test(slide.fileName);
 }
 
 function cardProblem(card: Card, disclosureLine: string, trackingUrl: string, code: string) {
+  if (!card.format) return "needs a type";
   const issue = card.slides.find((slide) => slide.fileIssue)?.fileIssue ?? "";
   if (issue) return issue;
+  if (card.format !== "instagram_post" && card.slides.length > 1) return "needs to be one video";
   const joined = joinedCaption(card);
   if (joined.length > CAPTION_LIMIT) return "These captions together need to stay under 2,200 characters.";
   const missing: string[] = [];
   if (!hasDisclosure(joined, disclosureLine)) missing.push("the disclosure line");
   if (!hasTracking(joined, trackingUrl, code)) missing.push("your tracking link");
-  if (card.slides.length === 0) missing.push("at least one photo or video");
+  if (card.slides.length === 0) missing.push(card.format === "instagram_post" ? "at least one photo or video" : "a video");
   return missing.length ? `needs ${joinList(missing)}` : "";
 }
 
@@ -292,8 +424,66 @@ async function copyText(value: string) {
   }
 }
 
-function looksLikeInstagramPost(value: string) {
-  return /instagram\.com\/(p|reel)\/[A-Za-z0-9_-]+/i.test(value.trim());
+function looksLikePublishedLink(format: PostFormat | null, value: string) {
+  return Boolean(liveLinkFor(format, value));
+}
+
+const FORMAT_CHOICES: { id: PostFormat; title: string; detail: string }[] = [
+  { id: "tiktok", title: "TikTok", detail: "One video you’ll post on TikTok." },
+  { id: "instagram_post", title: "Instagram post or carousel", detail: "One photo or video, or several together in a carousel." },
+  { id: "instagram_reel", title: "Instagram reel", detail: "One video you’ll post as a reel." },
+];
+
+function publishGuide(format: PostFormat | null) {
+  if (format === "tiktok") {
+    return {
+      step: "Publish it on TikTok",
+      href: "https://www.tiktok.com/upload",
+      open: "Open TikTok",
+      label: "Paste your TikTok link",
+      hint: "Open the video, tap Share, then Copy link.",
+      placeholder: "tiktok.com/@you/video/…",
+      error: "That doesn’t look like a TikTok link. It should look like tiktok.com/@you/video/… or vm.tiktok.com/…",
+      hold: "Don’t post it on TikTok yet.",
+      pending: "An admin confirms the TikTok link. This stays here until that check is done.",
+      cta: "Add TikTok link",
+    };
+  }
+  if (format === "instagram_reel") {
+    return {
+      step: "Publish the reel on Instagram",
+      href: "https://www.instagram.com/",
+      open: "Open Instagram",
+      label: "Paste your reel link",
+      hint: "Open the reel, tap ···, then Copy link.",
+      placeholder: "instagram.com/reel/…",
+      error: "That doesn’t look like an Instagram reel link. It should look like instagram.com/reel/…",
+      hold: "Don’t post it on Instagram yet.",
+      pending: "This stays here until the caption on Instagram has the sponsorship line and your tracking link.",
+      cta: "Add reel link",
+    };
+  }
+  return {
+    step: "Publish it on Instagram",
+    href: "https://www.instagram.com/",
+    open: "Open Instagram",
+    label: "Paste your post link",
+    hint: "On Instagram, tap ··· on your post, then Copy link.",
+    placeholder: format === "instagram_post" ? "instagram.com/p/…" : "instagram.com/p/… or instagram.com/reel/…",
+    error: format === "instagram_post"
+      ? "That doesn’t look like an Instagram post link. It should look like instagram.com/p/…"
+      : "That doesn’t look like an Instagram post link. It should look like instagram.com/p/… or instagram.com/reel/…",
+    hold: "Don’t post it on Instagram yet.",
+    pending: "This stays here until the caption on Instagram has the sponsorship line and your tracking link.",
+    cta: "Add Instagram link",
+  };
+}
+
+function submissionLabel(post: HubPost, slides: number) {
+  if (post.format === "tiktok") return "TikTok";
+  if (post.format === "instagram_reel") return "Instagram reel";
+  if (post.format === "instagram_post") return slides > 1 ? `Instagram carousel · ${slides}` : "Instagram post";
+  return slides > 1 ? `Carousel · ${slides}` : "";
 }
 
 function externalHref(value: string) {
@@ -386,6 +576,21 @@ function CopyControl({ value, label, copiedLabel = "Copied" }: { value: string; 
   );
 }
 
+export type OfferComposer = {
+  id: string;
+  format: PostFormat;
+  kindLabel: string;
+  brief: string;
+  publishLabel: string;
+  feeCents: number;
+  maxPayCents: number | null;
+  trackingDays: number;
+  campaign: string;
+  draftId: string;
+  minSlides: number;
+  maxSlides: number;
+};
+
 export function PostsHub({
   posts,
   trackingUrl,
@@ -394,6 +599,14 @@ export function PostsHub({
   email,
   notice,
   noticeTone,
+  agreedFeeCents,
+  standingMaxPayCents,
+  standingTrackingDays,
+  campaigns,
+  offer,
+  focusPostId,
+  startCompose = false,
+  startCampaign = "",
 }: {
   posts: HubPost[];
   trackingUrl: string;
@@ -402,12 +615,23 @@ export function PostsHub({
   email: string;
   notice: string;
   noticeTone: "ok" | "warn";
+  agreedFeeCents: number | null;
+  standingMaxPayCents: number | null;
+  standingTrackingDays: number;
+  campaigns: string[];
+  offer: OfferComposer | null;
+  focusPostId: string;
+  startCompose?: boolean;
+  startCampaign?: string;
 }) {
+  const router = useRouter();
   const motionEase = useSoftMotion();
   const [filter, setFilter] = useState<Filter>("all");
-  const [screen, setScreen] = useState<"hub" | "compose" | "detail">("hub");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [cards, setCards] = useState<Card[]>([blankCard()]);
+  const [screen, setScreen] = useState<"hub" | "compose" | "detail">(offer || startCompose ? "compose" : focusPostId ? "detail" : "hub");
+  const [selectedId, setSelectedId] = useState<string | null>(focusPostId || null);
+  const [cards, setCards] = useState<Card[]>([blankCard(offer ? { id: offer.draftId, format: offer.format, caption: offer.brief } : undefined)]);
+  const [composeCampaign, setComposeCampaign] = useState(offer?.campaign || (campaigns.includes(startCampaign) ? startCampaign : ""));
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [shownNotice, setShownNotice] = useState(notice);
   const [toastHidden, setToastHidden] = useState(false);
   if (notice !== shownNotice) {
@@ -422,7 +646,8 @@ export function PostsHub({
   })();
   const actionPosts = groups.filter((group) => stageOf(groupLead(group)) === "action").map(asOnePost);
 
-  function openCompose(seed?: HubPost) {
+  function openCompose(seed?: HubPost, campaign = seed?.campaign ?? "") {
+    setComposeCampaign(campaigns.includes(campaign) ? campaign : "");
     setCards((current) => {
       for (const card of current) releaseSlides(card.slides);
       return [
@@ -431,6 +656,7 @@ export function PostsHub({
             ? {
                 caption: seed.caption,
                 id: seed.status === "draft" ? seed.id : "",
+                format: seed.format ?? (seed.media === "photo" || seed.slides.length > 1 ? "instagram_post" : null),
                 slides:
                   seed.status === "draft" && seed.hasFile
                     ? [
@@ -467,12 +693,20 @@ export function PostsHub({
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex min-w-0 flex-1 basis-80 flex-col gap-1.5">
               <h2 className="text-[28px] font-medium tracking-tight">Posts</h2>
-              <p className="text-sm leading-normal text-brown">Send posts for review, publish the approved ones on Instagram, then add the link.</p>
+              <p className="text-sm leading-normal text-brown">
+                Choose TikTok, an Instagram post or carousel, or an Instagram reel. Publish it after it’s approved, then add the link.{" "}
+                {agreedFeeCents == null
+                  ? "A full admin sets your rate per 1,000 views before you can send a post."
+                  : `Standing terms: ${viewPayTerms(agreedFeeCents, standingMaxPayCents, standingTrackingDays)}. They lock when you send the post.`}
+              </p>
             </div>
-            <button type="button" onClick={() => openCompose()} className="inline-flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-medium text-white transition-colors duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-brown focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink motion-reduce:transition-none">
-              <PlusIcon />
-              New posts
-            </button>
+            <div className="flex flex-wrap items-end justify-end gap-3">
+              <CampaignField id="hub-campaign" value={composeCampaign} campaigns={campaigns} onChange={setComposeCampaign} />
+              <button type="button" onClick={() => openCompose(undefined, composeCampaign)} className="inline-flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-medium text-white transition-colors duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-brown focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink motion-reduce:transition-none">
+                <PlusIcon />
+                New posts
+              </button>
+            </div>
           </div>
 
           {toast ? (
@@ -498,7 +732,7 @@ export function PostsHub({
                     <Thumb post={post} />
                     <div className="min-w-0 flex-1 basis-60">
                       <p className="truncate text-sm">{post.title}</p>
-                      <p className="mt-1 text-xs font-medium" style={{ color: action.color }}>{slides > 1 ? `Carousel · ${slides} · ${action.hint}` : action.hint}</p>
+                      <p className="mt-1 text-xs font-medium" style={{ color: action.color }}>{submissionLabel(post, slides) ? `${submissionLabel(post, slides)} · ${action.hint}` : action.hint}</p>
                     </div>
                     <button type="button" onClick={() => openDetail(post.id)} className="inline-flex h-10 items-center rounded-full bg-ink px-[18px] text-sm font-medium text-white transition-colors duration-200 hover:bg-brown motion-reduce:transition-none">
                       {action.cta}
@@ -529,8 +763,9 @@ export function PostsHub({
                   const post = asOnePost(group);
                   const mark = statusMark(post);
                   const slides = slideTotal(group);
+                  const label = submissionLabel(post, slides);
                   const sent = post.status === "draft" ? "Not sent yet" : post.sent ? `Sent ${post.sent}` : "";
-                  const meta = slides > 1 ? `Carousel · ${slides}${sent ? ` · ${sent}` : ""}` : sent;
+                  const meta = [post.source, post.campaign, label, sent].filter(Boolean).join(" · ");
                   return (
                     <motion.div key={post.batchId || post.id} layout initial={motionEase.reduced ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={motionEase.fade}>
                       <div className="flex min-h-11 w-full items-center gap-3.5 border-t border-[#F0E8E6] px-1 py-3 text-left text-ink">
@@ -539,6 +774,7 @@ export function PostsHub({
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-sm">{post.title}</span>
                             <span className="mt-0.5 block text-xs text-brown">{meta}</span>
+                            {post.payLabel ? <span className="mt-0.5 block text-xs text-brown">{post.payLabel}{post.payAmount ? ` · ${post.payAmount}` : ""}</span> : null}
                           </span>
                           <span className="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap" style={{ background: mark.bg, color: mark.fg }}>{mark.label}</span>
                           <Chevron direction="right" />
@@ -560,12 +796,22 @@ export function PostsHub({
             trackingUrl={trackingUrl}
             disclosureLine={disclosureLine}
             affiliateCode={affiliateCode}
-            onBack={() => setScreen("hub")}
+            agreedFeeCents={agreedFeeCents}
+            standingMaxPayCents={standingMaxPayCents}
+            standingTrackingDays={standingTrackingDays}
+            campaigns={campaigns}
+            campaign={composeCampaign}
+            onCampaign={setComposeCampaign}
+            offer={offer}
+            termsAccepted={termsAccepted}
+            onTerms={setTermsAccepted}
+            onBack={() => (startCompose ? router.push("/affiliates/posts") : setScreen("hub"))}
           />
         </motion.div>
       ) : selected ? (
         <motion.div key={screenKey} initial={motionEase.reduced ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={motionEase.fade}>
           <PostDetail
+            key={selected.id}
             post={selected}
             email={email}
             trackingUrl={trackingUrl}
@@ -573,6 +819,8 @@ export function PostsHub({
             affiliateCode={affiliateCode}
             onBack={() => setScreen("hub")}
             onReuse={() => openCompose(selected)}
+            campaigns={campaigns}
+            onComposeCampaign={(name) => openCompose(undefined, name)}
           />
         </motion.div>
       ) : null}
@@ -586,6 +834,15 @@ function Composer({
   trackingUrl,
   disclosureLine,
   affiliateCode,
+  agreedFeeCents,
+  standingMaxPayCents,
+  standingTrackingDays,
+  campaigns,
+  campaign,
+  onCampaign,
+  offer,
+  termsAccepted,
+  onTerms,
   onBack,
 }: {
   cards: Card[];
@@ -593,35 +850,94 @@ function Composer({
   trackingUrl: string;
   disclosureLine: string;
   affiliateCode: string;
+  agreedFeeCents: number | null;
+  standingMaxPayCents: number | null;
+  standingTrackingDays: number;
+  campaigns: string[];
+  campaign: string;
+  onCampaign: (value: string) => void;
+  offer: OfferComposer | null;
+  termsAccepted: boolean;
+  onTerms: (value: boolean) => void;
   onBack: () => void;
 }) {
   const [pending, setPending] = useState(false);
+  const [proposedOn, setProposedOn] = useState("");
   const [limitNote, setLimitNote] = useState("");
   const readyCount = cards.filter((card) => cardReady(card, disclosureLine, trackingUrl, affiliateCode)).length;
   const blocked = cards
     .map((card, index) => ({ card, index, problem: cardProblem(card, disclosureLine, trackingUrl, affiliateCode) }))
     .find((item) => item.problem);
-  const hint = blocked ? (blocked.problem.startsWith("needs ") ? `Post ${blocked.index + 1} ${blocked.problem}.` : `Post ${blocked.index + 1}: ${blocked.problem}`) : "Everything’s in place.";
-  const canSend = cards.length > 0 && !blocked && !pending;
+  const slideProblem = offer
+    ? cards.find((card) => card.slides.length > 0 && (card.slides.length < offer.minSlides || card.slides.length > offer.maxSlides))
+    : null;
+  const hint = slideProblem
+    ? offer && offer.minSlides > 1
+      ? "This carousel needs at least two photos or videos."
+      : "This offer takes one file."
+    : blocked
+      ? blocked.problem.startsWith("needs ")
+        ? `Post ${blocked.index + 1} ${blocked.problem}.`
+        : `Post ${blocked.index + 1}: ${blocked.problem}`
+      : offer
+        ? `Marketing offer: ${viewPayTerms(offer.feeCents, offer.maxPayCents, offer.trackingDays)}. These terms are locked. Publish by ${offer.publishLabel}.`
+        : agreedFeeCents == null
+          ? "A full admin needs to set your rate per 1,000 views before you can send a post."
+          : !termsAccepted
+            ? "Accept the rate, maximum, and tracking period before sending."
+            : `Standing terms: ${viewPayTerms(agreedFeeCents, standingMaxPayCents, standingTrackingDays)}. They lock when you send the post.`;
+  const canSend = cards.length > 0 && !blocked && !slideProblem && !pending && (offer != null || (agreedFeeCents != null && termsAccepted));
 
   function update(key: string, patch: Partial<Card>) {
     setCards(cards.map((card) => (card.key === key ? { ...card, ...patch } : card)));
+  }
+
+  function clearFormat(key: string) {
+    const card = cards.find((item) => item.key === key);
+    if (card) releaseSlides(card.slides);
+    setCards(cards.map((item) => (item.key === key ? { ...item, format: null, slides: [] } : item)));
+    setLimitNote("");
+  }
+
+  function chooseFormat(key: string, format: PostFormat) {
+    setCards(cards.map((item) => {
+      if (item.key !== key) return item;
+      const keep = item.slides.length > 0
+        && (format === "instagram_post" || item.slides.length === 1)
+        && item.slides.every((slide) => (format === "instagram_post" || slideIsVideo(slide)) && !slide.fileIssue);
+      if (!keep) releaseSlides(item.slides);
+      return { ...item, format, slides: keep ? item.slides : [] };
+    }));
+    setLimitNote("");
   }
 
   function addFiles(key: string, list: File[]) {
     const incoming = list.filter((file) => file.size > 0);
     if (!incoming.length) return;
     const card = cards.find((item) => item.key === key);
-    if (!card) return;
-    const room = SLIDE_LIMIT - card.slides.length;
-    const accepted = incoming.slice(0, Math.max(room, 0));
-    if (!accepted.length) {
-      setLimitNote("A post can hold 20 photos or videos.");
+    if (!card?.format) return;
+    if (card.format !== "instagram_post") {
+      const file = incoming[0];
+      const slide = makeSlide(file);
+      slide.fileIssue = formatUploadIssue(card.format, file);
+      releaseSlides(card.slides);
+      setCards(cards.map((item) => (item.key === key ? { ...item, slides: [slide] } : item)));
+      setLimitNote(incoming.length > 1 ? `${formatTitle(card.format)} is one video. The first file was kept.` : "");
       return;
     }
-    const added = accepted.map((file) => makeSlide(file));
+    const room = Math.min(SLIDE_LIMIT, offer?.maxSlides ?? SLIDE_LIMIT) - card.slides.length;
+    const accepted = incoming.slice(0, Math.max(room, 0));
+    if (!accepted.length) {
+      setLimitNote("A carousel can hold 20 photos or videos.");
+      return;
+    }
+    const added = accepted.map((file) => {
+      const slide = makeSlide(file);
+      slide.fileIssue = formatUploadIssue("instagram_post", file);
+      return slide;
+    });
     setCards(cards.map((item) => (item.key === key ? applySlides(item, [...item.slides, ...added]) : item)));
-    setLimitNote(incoming.length > room ? "A post can hold 20 photos or videos. The extra files were left out." : "");
+    setLimitNote(incoming.length > room ? "A carousel can hold 20 photos or videos. The extra files were left out." : "");
   }
 
   function removeSlide(key: string, slideKey: string) {
@@ -670,10 +986,15 @@ function Composer({
     if (!canSend) return;
     const data = new FormData();
     data.set("count", String(cards.length));
+    if (offer) data.set("offerId", offer.id);
+    if (termsAccepted) data.set("terms", "yes");
+    data.set("proposedPublishOn", offer ? "" : proposedOn);
     cards.forEach((card, index) => {
       const slideCaptions = isCarousel(card) ? card.slides.map((slide) => slide.caption) : [card.caption];
       data.set(`caption${index}`, joinedCaption(card));
       data.set(`id${index}`, card.id);
+      data.set(`format${index}`, card.format ?? "");
+      data.set("campaign", campaign);
       data.set(`slots${index}`, String(card.slides.length));
       data.set(`slideCount${index}`, String(slideCaptions.length));
       slideCaptions.forEach((caption, slideIndex) => data.set(`slideCaption${index}_${slideIndex}`, caption));
@@ -689,23 +1010,57 @@ function Composer({
       setPending(false);
     }
   }
+  const showAnother = !offer && cards.length < POST_BATCH_LIMIT;
 
   return (
     <div className="flex flex-col gap-[22px]">
       <BackButton onClick={onBack} />
       <div className="flex flex-col gap-1.5">
-        <h2 className="text-[28px] font-medium tracking-tight">New posts</h2>
-        <p className="text-sm leading-normal text-brown">Add one post or several. A post can be photos, a carousel, or a reel. Each post is reviewed on its own, so you can publish them as they’re approved. A link in your bio doesn’t count: both lines below go in every caption.</p>
+        <h2 className="text-[28px] font-medium tracking-tight">{cards.length === 1 && !cards[0]?.format ? "What are you sending?" : "New posts"}</h2>
+        <p className="text-sm leading-normal text-brown">{cards.length === 1 && !cards[0]?.format ? "Pick TikTok, an Instagram post or carousel, or an Instagram reel. The next step matches that choice." : "Each post is reviewed on its own, so you can publish them as they’re approved. A link in your bio doesn’t count: both lines below go in every caption."}</p>
       </div>
+      <CampaignField id="compose-campaign" value={campaign} campaigns={campaigns} onChange={onCampaign} readOnly={Boolean(offer?.campaign)} />
+      <p className="-mt-3 text-sm leading-normal text-brown">Choose a campaign assigned to you, or leave it as no campaign. Every post in this send uses it.</p>
+      {offer ? null : (
+        <label className="flex max-w-xs flex-col gap-2 text-sm font-medium" htmlFor="proposed-publish-on">
+          Proposed publishing date
+          <input id="proposed-publish-on" type="date" value={proposedOn} onChange={(event) => setProposedOn(event.target.value)} className={fieldClass} />
+          <span className="text-sm font-normal leading-normal text-brown">Optional. It does not change review or pay.</span>
+        </label>
+      )}
+      {cards.length === 1 && !cards[0]?.format ? (
+        <FormatPicker onChoose={(format) => chooseFormat(cards[0].key, format)} />
+      ) : (
+      <>
       <Progress current={0} />
       {cards.map((card, index) => {
         const carousel = isCarousel(card);
         const ready = cardReady(card, disclosureLine, trackingUrl, affiliateCode);
+        const videoPost = card.format === "tiktok" || card.format === "instagram_reel";
+        const fileTitle = card.format === "tiktok" ? "TikTok video" : card.format === "instagram_reel" ? "Reel" : "Photos or videos";
+        const addLabel = !card.slides.length
+          ? card.format === "tiktok"
+            ? "Add the TikTok video"
+            : card.format === "instagram_reel"
+              ? "Add the reel"
+              : "Add photos or videos"
+          : "Add another photo or video";
+        const addHint = videoPost
+          ? "One MP4, MOV, or WebM, up to 200 MB."
+          : "Select one photo or video, or several for a carousel. The first one is the cover.";
+        const limitCopy = card.format === "tiktok"
+          ? "A saved TikTok video is usually an MP4, and it can be up to 200 MB."
+          : card.format === "instagram_reel"
+            ? "An Instagram reel is one MP4, MOV, or WebM up to 200 MB."
+            : "Photos need to be PNG, JPEG, or WebP under 8 MB. A video can be an MP4, MOV, or WebM up to 200 MB.";
         return (
           <article key={card.key} className="flex flex-col gap-4 rounded-[18px] bg-background p-5">
             <div className="flex items-center gap-2.5">
               <span className="text-[15px] font-semibold">Post {index + 1}</span>
-              {carousel ? <span className="text-[13px] text-brown">Carousel · {card.slides.length}</span> : null}
+              {card.format ? <span className="text-[13px] text-brown">{carousel ? `Carousel · ${card.slides.length}` : formatTitle(card.format)}</span> : null}
+              {card.format ? (
+                offer ? <span className="text-[13px] font-medium text-ink">{offer.kindLabel}</span> : <button type="button" onClick={() => clearFormat(card.key)} className="text-[13px] text-brown underline underline-offset-4">Change</button>
+              ) : null}
               {ready ? <span className="rounded-full bg-[#DDF0E4] px-2 py-0.5 text-xs font-semibold text-[#1D6340]">Ready</span> : null}
               <span className="flex-1" />
               {cards.length > 1 ? (
@@ -728,10 +1083,12 @@ function Composer({
                 </button>
               ) : null}
             </div>
+            {card.format ? (
+            <>
             <div className="flex flex-col gap-3">
               <div className="flex items-baseline justify-between gap-3">
-                <span className="text-sm font-medium">Photos or videos</span>
-                <span className="text-[13px] text-brown">{card.slides.length ? `${card.slides.length} of ${SLIDE_LIMIT}` : `Up to ${SLIDE_LIMIT}`}</span>
+                <span className="text-sm font-medium">{fileTitle}</span>
+                <span className="text-[13px] text-brown">{videoPost ? (card.slides.length ? "1 video" : "One video") : card.slides.length ? `${card.slides.length} of ${SLIDE_LIMIT}` : `Up to ${SLIDE_LIMIT}`}</span>
               </div>
               {carousel ? (
                 <div className="flex flex-col gap-3">
@@ -791,7 +1148,7 @@ function Composer({
                     <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#E8DEDC] text-[10px] text-brown">{slideIsVideo(card.slides[0]) ? "Video" : "File"}</span>
                   )}
                   <span className="min-w-0 flex-1 truncate text-sm">{card.slides[0].fileName}</span>
-                  <button type="button" aria-label="Remove photo or video" onClick={() => removeSlide(card.key, card.slides[0].key)} className="grid size-8 place-items-center rounded-full text-brown hover:bg-background">
+                  <button type="button" aria-label={videoPost ? "Remove video" : "Remove photo or video"} onClick={() => removeSlide(card.key, card.slides[0].key)} className="grid size-8 place-items-center rounded-full text-brown hover:bg-background">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
                       <path d="M6 6l12 12" />
                       <path d="M18 6L6 18" />
@@ -799,12 +1156,12 @@ function Composer({
                   </button>
                 </div>
               ) : null}
-              {card.slides.length < SLIDE_LIMIT ? (
+              {(videoPost ? card.slides.length === 0 : card.slides.length < SLIDE_LIMIT) ? (
                 <label className="flex cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border-[1.5px] border-dashed border-[#CDBDBA] bg-white px-4 py-4 text-center hover:bg-background">
                   <input
                     type="file"
-                    multiple
-                    accept={POST_FILE_ACCEPT}
+                    multiple={!videoPost}
+                    accept={videoPost ? VIDEO_FILE_ACCEPT : POST_FILE_ACCEPT}
                     className="sr-only"
                     onChange={(event) => {
                       addFiles(card.key, Array.from(event.target.files ?? []));
@@ -813,17 +1170,24 @@ function Composer({
                   />
                   <span className="inline-flex items-center gap-2 text-sm font-medium text-ink">
                     <UploadIcon />
-                    {card.slides.length ? "Add more to this post" : "Add photos or a reel"}
+                    {addLabel}
                   </span>
-                  <span className="text-[13px] text-brown">Select several photos for a carousel, or one video for a reel · up to 20 · the first one is the cover</span>
+                  <span className="text-[13px] text-brown">{addHint}</span>
                 </label>
               ) : null}
-              <p className="text-[13px] leading-relaxed text-brown">Photos need to be under 8 MB. A reel can be an MP4, MOV, or WebM up to 100 MB, vertical, H.264, 30 fps, with AAC audio.</p>
+              <p className="text-[13px] leading-relaxed text-brown">{limitCopy}</p>
               {!carousel && card.slides[0]?.fileIssue ? <p className="text-[13px] text-[#9B2C1F]">{card.slides[0].fileIssue}</p> : null}
               {carousel ? (
                 <p className="text-[13px] leading-relaxed text-brown">Each slide has its own caption, and every slide caption is reviewed. The disclosure line and tracking link have to appear in your slide captions. Slide 1 is best, since the cover is seen first.</p>
               ) : null}
             </div>
+            {offer ? (
+              <div className="flex flex-col gap-1.5 rounded-[14px] bg-[#F7F3F2] px-3.5 py-3">
+                <span className="text-[13px] font-semibold">Requirements</span>
+                <span className="text-sm leading-normal text-[#4A3A37]">{offer.brief || "—"}</span>
+                <span className="text-xs text-[#6B5A57]">Publish by {offer.publishLabel}. Always include “Paid partnership with Leader Health” and your tracking link.</span>
+              </div>
+            ) : null}
             {carousel ? null : (
               <label className="flex flex-col gap-2 text-sm font-medium" htmlFor={`caption-${card.key}`}>
                 Caption
@@ -838,25 +1202,50 @@ function Composer({
               code={affiliateCode}
               onInsert={(line, gap) => insertRequirement(card.key, line, gap)}
             />
+            </>
+            ) : (
+              <FormatPicker onChoose={(format) => chooseFormat(card.key, format)} />
+            )}
           </article>
         );
       })}
-      {cards.length < POST_BATCH_LIMIT ? (
+      {showAnother ? (
         <button type="button" onClick={() => setCards(cards.concat(blankCard()))} className="inline-flex h-14 items-center justify-center gap-2 rounded-2xl border-[1.5px] border-dashed border-[#CDBDBA] bg-white text-sm font-medium text-ink hover:bg-background">
           <PlusIcon />
           Add another post
         </button>
       ) : null}
+      {offer || agreedFeeCents == null ? null : (
+        <label className="flex items-start gap-2.5 text-sm leading-normal text-[#4A3A37]">
+          <input type="checkbox" checked={termsAccepted} onChange={(event) => onTerms(event.target.checked)} className="mt-0.5 size-[18px] accent-ink" />
+          I accept {viewPayTerms(agreedFeeCents, standingMaxPayCents, standingTrackingDays)}. These terms lock when I send the post.
+        </label>
+      )}
       <div className="flex flex-wrap items-center gap-3 border-t border-[#E8DEDC] pt-5">
         <div className="min-w-0 flex-1 basis-60">
           <p className="text-sm font-semibold">{cards.length === 1 ? "1 post" : `${cards.length} posts`} · {readyCount} ready</p>
           {limitNote ? <p className="text-[13px] text-[#9B2C1F]">{limitNote}</p> : null}
-          <p className={`text-[13px] ${blocked ? "text-[#9B2C1F]" : "text-[#1D6340]"}`}>{hint}</p>
+          <p className={`text-[13px] ${blocked || slideProblem || (!offer && !termsAccepted) ? "text-[#9B2C1F]" : "text-[#1D6340]"}`}>{hint}</p>
         </div>
         <button type="button" onClick={send} disabled={!canSend} className={`inline-flex h-11 items-center rounded-full px-[22px] text-sm font-medium ${canSend ? "bg-ink text-white hover:bg-brown" : "cursor-not-allowed bg-[#E8DEDC] text-[#5E4E4B]"}`}>
           {pending ? "Sending…" : cards.length === 1 ? "Send for review" : `Send ${cards.length} for review`}
         </button>
       </div>
+      </>
+      )}
+    </div>
+  );
+}
+
+function FormatPicker({ onChoose }: { onChoose: (format: PostFormat) => void }) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-3">
+      {FORMAT_CHOICES.map((choice) => (
+        <button key={choice.id} type="button" onClick={() => onChoose(choice.id)} className="flex min-h-28 flex-col gap-1.5 rounded-[18px] border border-[#E8DEDC] bg-white p-4 text-left transition-colors duration-200 hover:bg-background focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">
+          <span className="text-[15px] font-semibold">{choice.title}</span>
+          <span className="text-sm leading-normal text-brown">{choice.detail}</span>
+        </button>
+      ))}
     </div>
   );
 }
@@ -955,32 +1344,46 @@ function PostDetail({
   trackingUrl,
   disclosureLine,
   affiliateCode,
+  campaigns,
   onBack,
   onReuse,
+  onComposeCampaign,
 }: {
   post: HubPost;
   email: string;
   trackingUrl: string;
   disclosureLine: string;
   affiliateCode: string;
+  campaigns: string[];
   onBack: () => void;
   onReuse: () => void;
+  onComposeCampaign: (campaign: string) => void;
 }) {
   const mark = statusMark(post);
   const stage = stageOf(post);
   const closed = stage === "closed";
   const carousel = post.slides.length > 1;
+  const guide = publishGuide(post.format);
+  const fileAccept = post.format && post.format !== "instagram_post" ? VIDEO_FILE_ACCEPT : POST_FILE_ACCEPT;
   const [editing, setEditing] = useState(false);
   const [editCaption, setEditCaption] = useState(post.caption);
   const [editFile, setEditFile] = useState<File | null>(null);
   const [editSlides, setEditSlides] = useState<EditSlide[]>(() => editSlidesFrom(post));
   const [pending, setPending] = useState(false);
   const [linkError, setLinkError] = useState("");
+  const [counts, setCounts] = useState(() => ({
+    views: post.counts.views == null ? "" : String(post.counts.views),
+    likes: post.counts.likes == null ? "" : String(post.counts.likes),
+    comments: post.counts.comments == null ? "" : String(post.counts.comments),
+    shares: post.counts.shares == null ? "" : String(post.counts.shares),
+  }));
+  const [countDraft, setCountDraft] = useState<{ views: string; likes: string; comments: string; shares: string } | null>(null);
   const history = [...post.history].reverse();
   const joinedEdit = carousel ? editSlides.map((slide) => slide.caption.trim()).filter(Boolean).join("\n\n") : editCaption;
   const disclosed = hasDisclosure(joinedEdit, disclosureLine);
   const linked = hasTracking(joinedEdit, trackingUrl, affiliateCode);
-  const fileProblem = carousel ? editSlides.find((slide) => slide.issue)?.issue ?? "" : "";
+  const singleIssue = !carousel && editFile ? (post.format ? formatUploadIssue(post.format, editFile) : fileIssue(editFile)) : "";
+  const fileProblem = carousel ? editSlides.find((slide) => slide.issue)?.issue ?? "" : singleIssue;
   const changed = carousel
     ? editSlides.some((slide, index) => slide.caption !== (post.slides[index]?.caption ?? "") || Boolean(slide.file))
     : editCaption !== post.caption || Boolean(editFile);
@@ -1007,7 +1410,7 @@ function PostDetail({
       return {
         ...slide,
         file,
-        issue: fileIssue(file),
+        issue: post.format ? formatUploadIssue(post.format, file) : fileIssue(file),
         previewUrl: URL.createObjectURL(file),
       };
     }));
@@ -1028,6 +1431,7 @@ function PostDetail({
     const data = new FormData();
     data.set("count", "1");
     data.set("id0", post.id);
+    if (post.format) data.set("format0", post.format);
     if (carousel) {
       data.set("caption0", joinedEdit);
       data.set("slots0", String(editSlides.length));
@@ -1051,9 +1455,9 @@ function PostDetail({
 
   function onLinkSubmit(event: FormEvent<HTMLFormElement>) {
     const url = String(new FormData(event.currentTarget).get("postUrl") ?? "");
-    if (!looksLikeInstagramPost(url)) {
+    if (!looksLikePublishedLink(post.format, url)) {
       event.preventDefault();
-      setLinkError("That doesn’t look like an Instagram post link. It should look like instagram.com/p/… or instagram.com/reel/…");
+      setLinkError(guide.error);
     }
   }
 
@@ -1063,16 +1467,44 @@ function PostDetail({
       <div className="flex flex-col gap-2.5">
         <div className="flex flex-wrap items-center gap-2.5">
           <span className="rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: mark.bg, color: mark.fg }}>{mark.label}</span>
+          <span className="rounded-full bg-[#F3E6E3] px-2.5 py-1 text-xs font-semibold text-ink">{post.source}</span>
           {post.sent ? <span className="text-[13px] text-brown">Sent {post.sent}</span> : null}
         </div>
         <h2 className="text-2xl font-medium tracking-tight">{post.title}</h2>
+        {post.payLabel ? (
+          <section className="rounded-[18px] bg-background p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-brown">Marketing pay</p>
+            <p className="mt-1 text-sm font-medium">{post.payLabel}{post.payAmount ? ` · ${post.payAmount}` : ""}</p>
+            <p className="mt-1 text-sm text-brown">{post.payDetail}</p>
+          </section>
+        ) : null}
+        {post.offerId ? (
+          <>
+            <p className="text-sm text-brown">{[post.campaign, post.publishBy ? `Publish by ${post.publishBy}` : ""].filter(Boolean).join(" · ") || "Marketing offer"}</p>
+            {post.offerBrief ? <p className="text-sm leading-normal text-[#4A3A37]">{post.offerBrief}</p> : null}
+          </>
+        ) : null}
+        {post.proposedOn ? <p className="text-sm text-brown">Proposed publishing date {post.proposedOn}</p> : null}
+        {!post.offerId && (post.status === "draft" || post.status === "submitted" || post.status === "revision_requested") ? (
+          <form action={assignPostCampaignAction} className="flex flex-wrap items-end gap-3">
+            <CampaignField id={`post-campaign-${post.id}`} value={campaigns.includes(post.campaign) ? post.campaign : ""} campaigns={campaigns} />
+            <input type="hidden" name="id" value={post.id} />
+            <button type="submit" className="inline-flex h-11 items-center rounded-full border border-[#CDBDBA] bg-white px-5 text-sm font-medium text-ink">Save campaign</button>
+            {post.campaign && campaigns.includes(post.campaign) ? (
+              <button type="button" onClick={() => onComposeCampaign(post.campaign)} className="inline-flex h-11 items-center rounded-full bg-ink px-5 text-sm font-medium text-white">New posts in this campaign</button>
+            ) : null}
+          </form>
+        ) : null}
+        {post.campaign && !post.offerId && !campaigns.includes(post.campaign) ? (
+          <p className="text-sm text-brown">This campaign is not assigned to you. Choose an assigned campaign or no campaign.</p>
+        ) : null}
       </div>
       {closed ? null : <Progress current={stepIndex(post)} live={stage === "live"} />}
 
       {post.status === "submitted" ? (
         <section className="flex flex-col gap-3 rounded-[18px] bg-background p-5">
           <h3 className="text-[17px] font-semibold">We’re reviewing this post</h3>
-          <p className="text-sm leading-relaxed text-[#4A3A37]">Our team checks the caption and file. We’ll email {email} when it’s approved or needs changes. Don’t post it on Instagram yet.</p>
+          <p className="text-sm leading-relaxed text-[#4A3A37]">Our team checks the caption and file. We’ll email {email} when it’s approved or needs changes. {guide.hold}</p>
           <form action={withdrawPostAction}>
             <input type="hidden" name="id" value={post.id} />
             <button type="submit" className="h-9 text-sm text-brown underline">Withdraw this post</button>
@@ -1112,8 +1544,8 @@ function PostDetail({
                         </label>
                         {label ? <p className="text-[13px] text-brown">{label}</p> : null}
                         <label className="flex flex-col gap-2 text-sm font-medium" htmlFor={`edit-file-${index}`}>
-                          Replace photo or video on slide {index + 1}
-                          <input id={`edit-file-${index}`} type="file" accept={POST_FILE_ACCEPT} className={fieldClass} onChange={(event) => replaceSlide(index, event.target.files?.[0] ?? null)} />
+                          {post.format === "instagram_post" ? `Replace the photo or video on slide ${index + 1}` : `Replace the file on slide ${index + 1}`}
+                          <input id={`edit-file-${index}`} type="file" accept={fileAccept} className={fieldClass} onChange={(event) => replaceSlide(index, event.target.files?.[0] ?? null)} />
                         </label>
                         {slide.issue ? <p className="text-[13px] text-[#9B2C1F]">{slide.issue}</p> : null}
                       </div>
@@ -1124,8 +1556,8 @@ function PostDetail({
                 <>
                   <label htmlFor="editcap" className="text-sm font-medium">Caption</label>
                   <textarea id="editcap" rows={6} value={editCaption} onChange={(event) => setEditCaption(event.target.value)} className={`${fieldClass} resize-y`} />
-                  <label htmlFor="editfile" className="text-sm font-medium">Replace photo or video</label>
-                  <input id="editfile" type="file" accept={POST_FILE_ACCEPT} className={fieldClass} onChange={(event) => setEditFile(event.target.files?.[0] ?? null)} />
+                  <label htmlFor="editfile" className="text-sm font-medium">{post.format === "tiktok" ? "Replace the TikTok video" : post.format === "instagram_reel" ? "Replace the reel" : "Replace the photo or video"}</label>
+                  <input id="editfile" type="file" accept={fileAccept} className={fieldClass} onChange={(event) => setEditFile(event.target.files?.[0] ?? null)} />
                 </>
               )}
               <span className={`text-[13px] ${canResubmit ? "text-[#1D6340]" : "text-brown"}`}>{editHint}</span>
@@ -1195,17 +1627,17 @@ function PostDetail({
           </div>
           <div className="flex flex-wrap items-center gap-3.5 rounded-[14px] bg-white p-4">
             <StepNumber n={3} />
-            <span className="min-w-0 flex-1 text-[15px] font-semibold">Publish it on Instagram</span>
-            <a href="https://www.instagram.com/" className={quietButtonClass}>Open Instagram</a>
+            <span className="min-w-0 flex-1 text-[15px] font-semibold">{guide.step}</span>
+            <a href={guide.href} className={quietButtonClass}>{guide.open}</a>
           </div>
           <div className="flex gap-3.5 rounded-[14px] bg-white p-4 outline-2 outline-ink">
             <StepNumber n={4} />
             <form action={submitLiveLinkAction} onSubmit={onLinkSubmit} className="flex min-w-0 flex-1 flex-col gap-2.5">
               <input type="hidden" name="id" value={post.id} />
-              <label htmlFor="iglink" className="text-[15px] font-semibold">Paste your post link</label>
-              <span className="text-[13px] text-brown">On Instagram, tap ··· on your post, then Copy link.</span>
+              <label htmlFor="iglink" className="text-[15px] font-semibold">{guide.label}</label>
+              <span className="text-[13px] text-brown">{guide.hint}</span>
               <div className="flex flex-wrap gap-2.5">
-                <input id="iglink" name="postUrl" type="url" inputMode="url" required placeholder="instagram.com/p/…" onChange={() => setLinkError("")} className={`h-11 min-w-0 flex-1 rounded-full border bg-white px-[18px] text-sm ${linkError ? "border-[#9B2C1F]" : "border-[#CDBDBA]"}`} />
+                <input id="iglink" name="postUrl" type="url" inputMode="url" required placeholder={guide.placeholder} onChange={() => setLinkError("")} className={`h-11 min-w-0 flex-1 rounded-full border bg-white px-[18px] text-sm ${linkError ? "border-[#9B2C1F]" : "border-[#CDBDBA]"}`} />
                 <button type="submit" className="inline-flex h-11 items-center rounded-full bg-ink px-[22px] text-sm font-medium text-white">Submit link</button>
               </div>
               {linkError ? <span role="alert" className="text-[13px] text-[#9B2C1F]">{linkError}</span> : null}
@@ -1215,9 +1647,20 @@ function PostDetail({
       ) : null}
 
       {post.publication === "verification_pending" ? (
-        <section className="rounded-[18px] bg-background p-5">
+        <section className="flex flex-col gap-3 rounded-[18px] bg-background p-5">
           <h3 className="text-[17px] font-semibold">We’re checking the link you added</h3>
-          <p className="mt-2 text-sm leading-relaxed text-[#4A3A37]">This stays here until the caption on Instagram has the sponsorship line and your tracking link.</p>
+          <p className="text-sm leading-relaxed text-[#4A3A37]">{guide.pending}</p>
+          {post.format === "tiktok" ? (
+            <form action={submitLiveLinkAction} onSubmit={onLinkSubmit} className="flex flex-col gap-2.5">
+              <input type="hidden" name="id" value={post.id} />
+              <label htmlFor="tiktok-link" className="text-sm font-medium">Paste a different TikTok link</label>
+              <div className="flex flex-wrap gap-2.5">
+                <input id="tiktok-link" name="postUrl" type="url" inputMode="url" required defaultValue={post.postUrl ?? ""} placeholder={guide.placeholder} onChange={() => setLinkError("")} className={`h-11 min-w-0 flex-1 rounded-full border bg-white px-[18px] text-sm ${linkError ? "border-[#9B2C1F]" : "border-[#CDBDBA]"}`} />
+                <button type="submit" className="inline-flex h-11 items-center rounded-full bg-ink px-[22px] text-sm font-medium text-white">Update link</button>
+              </div>
+              {linkError ? <span role="alert" className="text-[13px] text-[#9B2C1F]">{linkError}</span> : null}
+            </form>
+          ) : null}
         </section>
       ) : null}
 
@@ -1238,9 +1681,9 @@ function PostDetail({
           {!post.postUrl || post.headline.toLowerCase().includes("not found") ? (
             <form action={submitLiveLinkAction} onSubmit={onLinkSubmit} className="flex flex-col gap-2.5">
               <input type="hidden" name="id" value={post.id} />
-              <label htmlFor="iglink-fix" className="text-sm font-medium">Paste the post link</label>
+              <label htmlFor="iglink-fix" className="text-sm font-medium">{guide.label}</label>
               <div className="flex flex-wrap gap-2.5">
-                <input id="iglink-fix" name="postUrl" type="url" inputMode="url" required defaultValue={post.postUrl ?? ""} placeholder="instagram.com/p/…" onChange={() => setLinkError("")} className={`h-11 min-w-0 flex-1 rounded-full border bg-white px-[18px] text-sm ${linkError ? "border-[#9B2C1F]" : "border-[#CDBDBA]"}`} />
+                <input id="iglink-fix" name="postUrl" type="url" inputMode="url" required defaultValue={post.postUrl ?? ""} placeholder={guide.placeholder} onChange={() => setLinkError("")} className={`h-11 min-w-0 flex-1 rounded-full border bg-white px-[18px] text-sm ${linkError ? "border-[#9B2C1F]" : "border-[#CDBDBA]"}`} />
                 <button type="submit" className="inline-flex h-11 items-center rounded-full bg-ink px-[22px] text-sm font-medium text-white">Check again</button>
               </div>
               {linkError ? <span role="alert" className="text-[13px] text-[#9B2C1F]">{linkError}</span> : null}
@@ -1254,7 +1697,99 @@ function PostDetail({
           <h3 className="text-[17px] font-semibold">{post.headline}</h3>
           {post.postUrl ? <a href={externalHref(post.postUrl)} className="text-sm underline underline-offset-4">{post.postUrl}</a> : null}
           <p className="text-sm text-[#4A3A37]">{post.detail}</p>
-          <Link href="/affiliates/stats" className="inline-flex h-11 items-center self-start rounded-full bg-ink px-[22px] text-sm font-medium text-white">View stats</Link>
+          {post.metrics.length > 0 && !post.askManual ? (
+            <dl className="grid grid-cols-2 gap-3 text-sm">
+              {post.metrics.map((metric) => (
+                <div key={metric.label}>
+                  <dt className="text-[#7A5C58]">{metric.label}</dt>
+                  <dd className="mt-1 text-ink">{metric.value}</dd>
+                </div>
+              ))}
+            </dl>
+          ) : null}
+          {post.askManual ? (
+            post.hasManual ? (
+              <div className="flex flex-col gap-3">
+                {post.metricsNote ? <p className="text-sm text-[#4A3A37]">{post.metricsNote}</p> : null}
+                <p className="text-sm leading-relaxed text-[#4A3A37]">An update is due. These numbers are the marketing performance record for this post because the account is not connected. Updates run weekly until {post.trackingDays} days after the link was saved. These numbers stay as entered. Request a change if they need to be updated. A sub-admin or admin makes that change.</p>
+                {post.metrics.length > 0 ? (
+                  <dl className="grid grid-cols-2 gap-3 text-sm">
+                    {post.metrics.map((metric) => (
+                      <div key={metric.label}>
+                        <dt className="text-[#7A5C58]">{metric.label}</dt>
+                        <dd className="mt-1 text-ink">{metric.value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                ) : null}
+                {post.changeRequest ? null : (
+                  <form action={confirmManualMetricsAction}>
+                    <input type="hidden" name="id" value={post.id} />
+                    <button type="submit" className="inline-flex h-11 w-full items-center justify-center rounded-full bg-ink px-[22px] text-sm font-medium text-white sm:w-auto">These numbers are unchanged</button>
+                  </form>
+                )}
+                <MetricChangeForm post={post} />
+                {post.connectHref ? (
+                  <a href={post.connectHref} className="inline-flex h-11 w-full items-center justify-center rounded-full border border-[#CDBDBA] bg-white px-[22px] text-sm font-medium text-ink sm:w-auto sm:self-start">Connect account</a>
+                ) : (
+                  <p className="text-sm text-[#4A3A37]">Connect is not available for this network yet.</p>
+                )}
+              </div>
+            ) : (
+            <>
+              {countDraft ? (
+                <div className="flex flex-col gap-3 rounded-2xl bg-white p-4" role="dialog" aria-labelledby="confirm-counts-title">
+                  <h4 id="confirm-counts-title" className="text-base font-semibold">Are you sure?</h4>
+                  <p className="text-sm leading-relaxed text-[#4A3A37]">These counts will be saved on this post. A later change has to be requested.</p>
+                  <dl className="grid grid-cols-2 gap-3 text-sm">
+                    <div><dt className="text-[#7A5C58]">Views</dt><dd className="mt-1">{countText(countDraft.views)}</dd></div>
+                    <div><dt className="text-[#7A5C58]">Likes</dt><dd className="mt-1">{countText(countDraft.likes)}</dd></div>
+                    <div><dt className="text-[#7A5C58]">Comments</dt><dd className="mt-1">{countText(countDraft.comments)}</dd></div>
+                    <div><dt className="text-[#7A5C58]">Shares</dt><dd className="mt-1">{countText(countDraft.shares)}</dd></div>
+                  </dl>
+                  <form action={saveManualMetricsAction} className="flex flex-col gap-2.5 sm:flex-row">
+                    <input type="hidden" name="id" value={post.id} />
+                    <input type="hidden" name="views" value={countDraft.views} />
+                    <input type="hidden" name="likes" value={countDraft.likes} />
+                    <input type="hidden" name="comments" value={countDraft.comments} />
+                    <input type="hidden" name="shares" value={countDraft.shares} />
+                    <button type="submit" className="inline-flex h-11 items-center justify-center rounded-full bg-ink px-[22px] text-sm font-medium text-white">Confirm</button>
+                    <button type="button" onClick={() => setCountDraft(null)} className="inline-flex h-11 items-center justify-center rounded-full border border-[#CDBDBA] bg-white px-[22px] text-sm font-medium text-ink">Cancel</button>
+                  </form>
+                </div>
+              ) : null}
+              <div className={countDraft ? "hidden" : "flex flex-col gap-3"}>
+                <p className="text-sm leading-relaxed text-[#4A3A37]">An update is due. These numbers are the marketing performance record for this post because the account is not connected. Updates run weekly until {post.trackingDays} days after the link was saved.</p>
+                <form
+                  className="flex flex-col gap-3"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    setCountDraft(counts);
+                  }}
+                >
+                  <div className="grid grid-cols-2 gap-3">
+                    <CountField name="views" label="Views" value={counts.views} onChange={(value) => setCounts((current) => ({ ...current, views: value }))} />
+                    <CountField name="likes" label="Likes" value={counts.likes} onChange={(value) => setCounts((current) => ({ ...current, likes: value }))} />
+                    <CountField name="comments" label="Comments" value={counts.comments} onChange={(value) => setCounts((current) => ({ ...current, comments: value }))} />
+                    <CountField name="shares" label="Shares" value={counts.shares} onChange={(value) => setCounts((current) => ({ ...current, shares: value }))} />
+                  </div>
+                  <button type="submit" className="inline-flex h-11 w-full items-center justify-center rounded-full bg-ink px-[22px] text-sm font-medium text-white sm:w-auto sm:self-start">Save numbers</button>
+                </form>
+                {post.connectHref ? (
+                  <a href={post.connectHref} className="inline-flex h-11 w-full items-center justify-center rounded-full border border-[#CDBDBA] bg-white px-[22px] text-sm font-medium text-ink sm:w-auto sm:self-start">Connect account</a>
+                ) : (
+                  <p className="text-sm text-[#4A3A37]">Connect is not available for this network yet.</p>
+                )}
+              </div>
+            </>
+            )
+          ) : (
+            <>
+              {post.metricsNote ? <p className="text-sm text-[#4A3A37]">{post.metricsNote}</p> : null}
+              <Link href="/affiliates/stats" className="inline-flex h-11 items-center self-start rounded-full bg-ink px-[22px] text-sm font-medium text-white">View stats</Link>
+              {post.hasManual ? <MetricChangeForm post={post} /> : null}
+            </>
+          )}
         </section>
       ) : null}
 

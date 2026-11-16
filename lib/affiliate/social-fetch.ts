@@ -1,4 +1,4 @@
-import { SocialError, type FacebookPageSecret, type TikTokConnectionSecret } from "./social-store";
+import { SocialError, oauthTokenExpired, type FacebookPageSecret, type TikTokConnectionSecret } from "./social-store";
 import type { SocialPost } from "./social-match";
 
 const GRAPH = "https://graph.facebook.com/v21.0";
@@ -68,6 +68,7 @@ export async function readInstagramMedia(page: FacebookPageSecret, mediaId: stri
     signal: AbortSignal.timeout(15000),
   });
   const body: unknown = await response.json().catch(() => null);
+  if (oauthTokenExpired(body)) throw new SocialError("expired");
   if (!response.ok || !body || typeof body !== "object") return null;
   const record = body as Record<string, unknown>;
   if (text(record.id) !== mediaId) return null;
@@ -145,6 +146,7 @@ export async function fetchTikTokPosts(connection: Pick<TikTokConnectionSecret, 
       signal: AbortSignal.timeout(15000),
     });
     const body: unknown = await response.json().catch(() => null);
+    if (oauthTokenExpired(body)) throw new SocialError("expired");
     if (!response.ok || !body || typeof body !== "object") throw new SocialError("unavailable");
     const data: Record<string, unknown> = "data" in body && body.data && typeof body.data === "object" ? (body.data as Record<string, unknown>) : {};
     const batch = Array.isArray(data.videos) ? data.videos : [];
@@ -199,6 +201,7 @@ async function graphPages(path: string, token: string, fields: string) {
       signal: AbortSignal.timeout(15000),
     });
     const body: unknown = await response.json().catch(() => null);
+    if (oauthTokenExpired(body)) throw new SocialError("expired");
     if (!response.ok || !body || typeof body !== "object") throw new SocialError("unavailable");
     const data = "data" in body && Array.isArray(body.data) ? body.data : [];
     for (const item of data) {
@@ -224,6 +227,7 @@ async function insightMap(id: string, token: string, metrics: string[]) {
     signal: AbortSignal.timeout(15000),
   });
   const body = await response.json().catch(() => null);
+  if (oauthTokenExpired(body)) throw new SocialError("expired");
   const values = new Map<string, number>();
   if (!response.ok || !body || typeof body !== "object" || !("data" in body) || !Array.isArray(body.data)) return values;
   for (const item of body.data) {

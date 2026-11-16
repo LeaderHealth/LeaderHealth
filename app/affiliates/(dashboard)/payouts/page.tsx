@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { LAB_COMMISSIONS_ENABLED } from "@/lib/affiliate/code";
+import { deliverableLines, loadDeliverablePayments, marketingTotals, type DeliverableLine } from "@/lib/affiliate/deliverable-payments";
+import { deliverableStatusLabel } from "@/lib/affiliate/deliverable-flow";
 import { formatCents } from "@/lib/affiliate/format";
+import { loadContentSubmissions } from "@/lib/affiliate/post-review";
 import {
   formatPayoutMonth,
   loadPayoutRecords,
@@ -68,6 +72,7 @@ export default async function AffiliatePayoutHistoryPage() {
   if (!affiliate) redirect("/affiliates");
 
   let lines: PayoutLine[] = [];
+  let marketing: DeliverableLine[] = [];
   let loadError = "";
   try {
     const activity = await loadAffiliateActivity(affiliate.code);
@@ -77,19 +82,48 @@ export default async function AffiliatePayoutHistoryPage() {
       orders: activity.conversions,
       payouts,
     });
+    const [posts, payments] = await Promise.all([loadContentSubmissions(), loadDeliverablePayments(affiliate.code)]);
+    marketing = deliverableLines({
+      affiliates: [{ code: affiliate.code, name: affiliate.name }],
+      posts: posts.filter((post) => post.code === affiliate.code),
+      payments,
+    });
   } catch (caught) {
     loadError = caught instanceof AffiliateStoreError ? caught.message : "Could not load your payouts.";
   }
+  const marketingSummary = marketingTotals(marketing);
 
   return (
     <div className="min-w-0 rounded-[28px] bg-white">
       <h2 id="payout-history-title" className="px-4 pt-4 text-2xl">
         Payouts
       </h2>
-      <p className="px-4 pt-2 text-sm text-brown">Your payout status and monthly payment history.</p>
+      <p className="px-4 pt-2 text-sm text-brown">
+        Marketing payments: earned {formatCents(marketingSummary.pendingCents)}, on hold {formatCents(marketingSummary.heldCents)}, approved{" "}
+        {formatCents(marketingSummary.approvedCents)}, paid {formatCents(marketingSummary.paidCents)}. {LAB_COMMISSIONS_ENABLED ? "Lab commission is listed below." : "Lab commission is not active. Rows below are past commission payouts."}
+      </p>
+      {marketing.length > 0 ? (
+        <ul className="border-t border-ink/10" aria-label="Marketing payments">
+          {marketing.map((line) => (
+            <li key={line.postId} className="border-b border-ink/10 px-4 py-4 text-sm">
+              <div className="font-medium">{line.label}</div>
+              <p className="mt-1 text-ink">{deliverableStatusLabel(line.status, line.adjustmentCents != null)}</p>
+              <p className="mt-1 text-brown">{line.detail}</p>
+              <p className="mt-1 text-brown">
+                {line.status === "closed"
+                  ? "Closed"
+                  : line.amountCents === 0 && (line.status === "review" || line.status === "changes" || line.status === "waiting" || line.status === "measuring")
+                    ? "Calculated after the tracking period"
+                    : formatCents(line.status === "paid" ? (line.paidCents ?? 0) + (line.adjustmentCents ?? 0) : line.amountCents)}
+              </p>
+              {line.adjustmentReason ? <p className="mt-1 text-brown">{line.adjustmentReason}</p> : null}
+            </li>
+          ))}
+        </ul>
+      ) : null}
       {loadError ? <p className="px-4 py-6 text-ink">{loadError}</p> : null}
       {!loadError && lines.length === 0 ? (
-        <p className="px-4 py-6 text-sm text-brown">No commission yet.</p>
+        <p className="px-4 py-6 text-sm text-brown">{LAB_COMMISSIONS_ENABLED ? "No lab commission yet." : "No past commission payouts."}</p>
       ) : null}
       {lines.length > 0 ? (
         <ul className="xl:hidden" aria-labelledby="payout-history-title">

@@ -11,6 +11,11 @@ export const COMPLIANCE_ACTIONS = [
   "application-declined",
   "payout-approved",
   "payout-paid",
+  "deliverable-fee",
+  "deliverable-rechecked",
+  "deliverable-forfeited",
+  "deliverable-reinstated",
+  "deliverable-adjusted",
   "marketing-report-saved",
   "disclosure-acknowledged",
   "disclosure-proof-submitted",
@@ -109,6 +114,11 @@ export function complianceActionLabel(action: ComplianceAction) {
   if (action === "content-revision-requested") return "Post change requested";
   if (action === "content-withdrawn") return "Post withdrawn";
   if (action === "post-verified") return "Post verified";
+  if (action === "deliverable-fee") return "View rate saved";
+  if (action === "deliverable-rechecked") return "Marketing fee re-checked";
+  if (action === "deliverable-forfeited") return "Marketing fee forfeited";
+  if (action === "deliverable-reinstated") return "Marketing fee reinstated";
+  if (action === "deliverable-adjusted") return "Marketing fee adjusted";
   return "Post check failed";
 }
 

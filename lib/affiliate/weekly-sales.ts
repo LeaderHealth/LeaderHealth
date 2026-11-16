@@ -2,12 +2,12 @@ import type { DocumentData } from "firebase-admin/firestore";
 import { normalizeAffiliateCode, normalizeAffiliateEmail } from "./code";
 import { affiliateEmailConfigured, sendAffiliateWeeklySalesEmail } from "./email";
 import { affiliateFirebaseConfigured, affiliateFirestore } from "./firebase";
-import { weeklySaleLine } from "./order-view";
+import { LAB_COMMISSIONS_ENABLED } from "./code";
 import { adjustedCommissionCents } from "./refunds";
 import { instantInWeek, previousUtcWeek } from "./week";
 
 type WeekSale = {
-  amountCents: number | null;
+  orderKind: "lab" | "treatment";
   commissionCents: number;
   createdAt: string | null;
 };
@@ -28,11 +28,13 @@ function createdAtIso(value: unknown) {
 function saleFrom(data: DocumentData): { code: string; sale: WeekSale } | null {
   const code = normalizeAffiliateCode(data.code);
   if (!code || data.dryRun === true) return null;
-  const amountCents = typeof data.amountCents === "number" && Number.isFinite(data.amountCents) ? data.amountCents : null;
   const originalCommission = typeof data.commissionCents === "number" && Number.isFinite(data.commissionCents) ? data.commissionCents : 0;
   const refundedCommission = typeof data.commissionRefundedCents === "number" && Number.isFinite(data.commissionRefundedCents) ? data.commissionRefundedCents : 0;
-  const commissionCents = adjustedCommissionCents(originalCommission, refundedCommission);
-  return { code, sale: { amountCents, commissionCents, createdAt: createdAtIso(data.createdAt) } };
+  const commissionCents = data.orderKind === "lab" ? adjustedCommissionCents(originalCommission, refundedCommission) : 0;
+  return {
+    code,
+    sale: { orderKind: data.orderKind === "lab" ? "lab" : "treatment", commissionCents, createdAt: createdAtIso(data.createdAt) },
+  };
 }
 
 async function claimNotice(code: string, weekId: string) {
@@ -78,15 +80,15 @@ export async function deliverPreviousWeekSalesNotices(now = new Date()) {
     rows.sort((left, right) => (left.createdAt ?? "").localeCompare(right.createdAt ?? ""));
     const notice = await claimNotice(code, week.id);
     if (!notice.claimed) continue;
-    const salesCents = rows.every((row) => row.amountCents == null) ? null : rows.reduce((sum, row) => sum + (row.amountCents ?? 0), 0);
+    const labCommissionCents = LAB_COMMISSIONS_ENABLED
+      ? rows.reduce((sum, row) => sum + (row.orderKind === "lab" ? row.commissionCents : 0), 0)
+      : null;
     try {
       await sendAffiliateWeeklySalesEmail({
         email,
         weekLabel: week.label,
         orderCount: rows.length,
-        salesCents,
-        commissionCents: rows.reduce((sum, row) => sum + row.commissionCents, 0),
-        lines: rows.map(weeklySaleLine),
+        labCommissionCents,
       });
     } catch (error) {
       await notice.ref.delete().catch(() => undefined);

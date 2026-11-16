@@ -8,6 +8,7 @@ export type MonthOrder = {
   commissionCents: number;
   commissionRefundedCents: number;
   createdAt: string | null;
+  orderKind?: "lab" | "treatment";
 };
 
 export function monthFigures(input: { code: string; period: string; orders: MonthOrder[] }) {
@@ -18,7 +19,8 @@ export function monthFigures(input: { code: string; period: string; orders: Mont
     orders: paid.length,
     salesCents: paid.reduce((sum, order) => sum + (order.amountCents ?? 0), 0),
     earningsCents: paid.reduce(
-      (sum, order) => sum + adjustedCommissionCents(order.commissionCents, order.commissionRefundedCents),
+      (sum, order) =>
+        order.orderKind === "lab" ? sum + adjustedCommissionCents(order.commissionCents, order.commissionRefundedCents) : sum,
       0,
     ),
   };

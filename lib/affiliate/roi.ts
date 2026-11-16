@@ -3,6 +3,8 @@ import { remainingSalesCents } from "./refunds";
 
 export const ROI_UNASSIGNED = "No promo code";
 
+const CAMPAIGN_NAME = /^[A-Za-z0-9][A-Za-z0-9 '&.,-]{0,59}$/;
+
 export type RoiRange = "30" | "90" | "all";
 
 export type RoiOrder = {
@@ -45,6 +47,13 @@ export function roiCampaignName(value: unknown) {
   return affiliateCampaign(value);
 }
 
+export function campaignDirectoryName(value: unknown) {
+  if (typeof value !== "string") return null;
+  const name = value.trim().replace(/\s+/g, " ");
+  if (!name || name.toLowerCase() === ROI_UNASSIGNED.toLowerCase() || !CAMPAIGN_NAME.test(name)) return null;
+  return name;
+}
+
 export function roiCostCents(value: unknown) {
   const raw = typeof value === "number" ? String(value) : typeof value === "string" ? value.trim().replace(/[$,]/g, "") : "";
   if (!raw) return null;
@@ -85,6 +94,7 @@ function campaignLabel(value: string) {
 export function roiFigures(input: {
   orders: readonly RoiOrder[];
   costs: readonly RoiCost[];
+  campaigns?: readonly string[];
   range: RoiRange;
   now?: number;
 }): RoiReport {
@@ -97,6 +107,12 @@ export function roiFigures(input: {
     const created = { campaign: label, orders: 0, costCents: 0, revenueCents: 0 };
     buckets.set(key, created);
     return created;
+  }
+
+  for (const name of input.campaigns ?? []) {
+    const key = campaignKey(name);
+    if (!key) continue;
+    bucket(key, campaignLabel(name));
   }
 
   for (const order of input.orders) {

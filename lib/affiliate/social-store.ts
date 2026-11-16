@@ -4,7 +4,7 @@ import { affiliateFirebaseConfigured, affiliateFirestore } from "./firebase";
 import { type SocialNetwork } from "./marketing";
 
 export class SocialError extends Error {
-  code: "invalid" | "unavailable" | "unconnected" | "denied" | "page" | "setup";
+  code: "invalid" | "unavailable" | "unconnected" | "denied" | "page" | "setup" | "expired";
 
   constructor(code: SocialError["code"]) {
     super(code);
@@ -18,6 +18,7 @@ export type SocialAccountView = {
   network: SocialNetwork;
   accountId: string;
   accountName: string;
+  needsReconnect: boolean;
 };
 
 export type FacebookPageSecret = {
@@ -32,6 +33,7 @@ export type FacebookConnectionSecret = {
   code: string;
   network: "facebook";
   pages: FacebookPageSecret[];
+  userAccessToken: string | null;
 };
 
 export type TikTokConnectionSecret = {
@@ -97,14 +99,14 @@ function viewsFrom(data: DocumentData | undefined): SocialAccountView[] {
   if (data.network === "tiktok") {
     const accountId = accountIdOf(data.accountId);
     if (!accountId) return [];
-    return [{ code, network: "tiktok", accountId, accountName: labelOf(data.accountName) ?? accountId }];
+    return [{ code, network: "tiktok", accountId, accountName: labelOf(data.accountName) ?? accountId, needsReconnect: data.needsReconnect === true }];
   }
   if (data.network !== "facebook" || !Array.isArray(data.pages)) return [];
   return data.pages.flatMap((page) => {
     const secret = pageSecret(page);
     if (!secret) return [];
     const accounts: SocialAccountView[] = [
-      { code, network: "facebook", accountId: secret.accountId, accountName: secret.accountName },
+      { code, network: "facebook", accountId: secret.accountId, accountName: secret.accountName, needsReconnect: data.needsReconnect === true },
     ];
     if (secret.instagramAccountId) {
       accounts.push({
@@ -112,6 +114,7 @@ function viewsFrom(data: DocumentData | undefined): SocialAccountView[] {
         network: "instagram",
         accountId: secret.instagramAccountId,
         accountName: secret.instagramAccountName ?? secret.instagramAccountId,
+        needsReconnect: data.needsReconnect === true,
       });
     }
     return accounts;
@@ -142,7 +145,7 @@ function secretFrom(data: DocumentData | undefined): ConnectionSecret | null {
     return secret ? [secret] : [];
   });
   if (pages.length === 0) return null;
-  return { code, network: "facebook", pages };
+  return { code, network: "facebook", pages, userAccessToken: tokenOf(data.userAccessToken) };
 }
 
 export async function loadSocialAccounts(code?: string) {
@@ -169,9 +172,9 @@ export async function loadConnectionSecrets(code: string) {
   });
 }
 
-export async function saveFacebookConnection(code: string, pages: FacebookPageSecret[]) {
+export async function saveFacebookConnection(code: string, connection: { userAccessToken: string | null; pages: FacebookPageSecret[] }) {
   const normalized = normalizeAffiliateCode(code);
-  const stored = pages.flatMap((page) => {
+  const stored = connection.pages.flatMap((page) => {
     const accountId = accountIdOf(page.accountId);
     const accessToken = tokenOf(page.accessToken);
     if (!accountId || !accessToken) return [];
@@ -190,6 +193,8 @@ export async function saveFacebookConnection(code: string, pages: FacebookPageSe
     code: normalized,
     network: "facebook",
     pages: stored,
+    userAccessToken: tokenOf(connection.userAccessToken),
+    needsReconnect: false,
     updatedAt: new Date(),
   });
 }
@@ -207,6 +212,7 @@ export async function saveTikTokConnection(input: TikTokConnectionSecret) {
     accessToken,
     refreshToken: tokenOf(input.refreshToken) ?? "",
     expiresAt: input.expiresAt,
+    needsReconnect: false,
     updatedAt: new Date(),
   });
 }
@@ -215,4 +221,26 @@ export async function deleteSocialConnection(code: string, network: "facebook" |
   const normalized = normalizeAffiliateCode(code);
   if (!normalized) throw new SocialError("invalid");
   await requireDb().collection("socialConnections").doc(documentId(normalized, network)).delete();
+}
+
+export async function markSocialReconnect(code: string, network: "facebook" | "tiktok", needed: boolean) {
+  const normalized = normalizeAffiliateCode(code);
+  if (!normalized) return;
+  const ref = requireDb().collection("socialConnections").doc(documentId(normalized, network));
+  const snap = await ref.get();
+  if (!snap.exists) return;
+  await ref.update({ needsReconnect: needed, updatedAt: new Date() });
+}
+
+export function oauthTokenExpired(body: unknown) {
+  if (!body || typeof body !== "object" || !("error" in body)) return false;
+  const error = (body as { error?: unknown }).error;
+  if (typeof error === "string") {
+    return error === "invalid_grant" || error === "invalid_refresh_token" || error === "access_token_invalid";
+  }
+  if (!error || typeof error !== "object") return false;
+  const detail = error as { code?: unknown; error_subcode?: unknown };
+  if (detail.code === 190 || detail.error_subcode === 463 || detail.error_subcode === 467) return true;
+  const code = typeof detail.code === "string" ? detail.code : "";
+  return code === "access_token_invalid" || code === "invalid_grant" || code === "invalid_refresh_token";
 }

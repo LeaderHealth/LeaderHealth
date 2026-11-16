@@ -8,6 +8,7 @@ import { refreshTikTokToken } from "./social-oauth";
 import {
   SocialError,
   loadConnectionSecrets,
+  markSocialReconnect,
   saveTikTokConnection,
   type TikTokConnectionSecret,
 } from "./social-store";
@@ -95,6 +96,7 @@ async function syncAccount(input: {
     });
     if (rows.length === 0) throw new SocialError("invalid");
     for (const row of rows) await saveMarketingReport(row);
+    await markSocialReconnect(input.code, input.network === "tiktok" ? "tiktok" : "facebook", false);
     input.accounts.push({
       network: input.network,
       accountId: input.accountId,
@@ -103,6 +105,9 @@ async function syncAccount(input: {
     });
   } catch (error) {
     if (error instanceof MarketingReportError && error.code === "missing") throw new SocialError("invalid");
+    if (error instanceof SocialError && error.code === "expired") {
+      await markSocialReconnect(input.code, input.network === "tiktok" ? "tiktok" : "facebook", true);
+    }
     console.error("[affiliate] social sync failed", input.network, error instanceof SocialError ? error.code : "unavailable");
     input.failed.push({ network: input.network, accountId: input.accountId, accountName: input.accountName, months: [] });
   }
@@ -119,6 +124,10 @@ async function freshTikTok(connection: TikTokConnectionSecret) {
   };
   await saveTikTokConnection(next);
   return next;
+}
+
+export async function currentTikTokConnection(connection: TikTokConnectionSecret) {
+  return freshTikTok(connection);
 }
 
 function tokenFresh(expiresAt: string | null) {

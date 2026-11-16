@@ -37,7 +37,7 @@ function LegalBlocks({ blocks }: { blocks: LegalBlock[] }) {
   return blocks.map((block, index) => {
     if (block.kind === "h3") {
       return (
-        <h3 key={index} className="mt-6 text-xl">
+        <h3 key={index} id={block.text === "TikTok accounts" ? "tiktok-accounts" : block.text === "Facebook and Instagram accounts" ? "facebook-instagram-accounts" : undefined} className="mt-6 text-xl">
           {block.runs ? <LegalRuns runs={block.runs} /> : block.text}
         </h3>
       );
@@ -127,7 +127,7 @@ export default async function LegalPage({ params }: Props) {
         </div>
       )}
       <div className="mt-10 space-y-10">
-        {page.sections.map((section, index) => (
+        {page.sections.filter((section) => !(slug === "privacy-policy" && section.heading === "Affiliates")).map((section, index) => (
           <section key={`${section.heading}-${index}`}>
             <h2 className="text-2xl">{section.heading}</h2>
             {slug === "do-not-sell" && section.heading === "3. How to opt out" ? (

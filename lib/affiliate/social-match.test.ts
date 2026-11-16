@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { approvableCents } from "./payouts";
 import { marketingReportFields } from "./marketing";
-import { campaignReports, selectCampaignPosts, type SocialPost } from "./social-match";
+import { campaignReports, samePublishedPost, selectCampaignPosts, type SocialPost } from "./social-match";
 
 const code = "k7mq2n4p";
 
@@ -176,4 +176,12 @@ test("a synced report has no commission and does not change the amount owed", ()
   assert.equal("commissionCents" in report, false);
   assert.equal("engagement" in report, false);
   assert.equal(approvableCents({ orders: [], payouts: [], code: report.code, period: report.month }), 0);
+});
+
+test("a pasted TikTok link matches the share URL from video.list", () => {
+  const pasted = "https://www.tiktok.com/@leader/video/1234567890123456789/?is_from_webapp=1";
+  const share = "https://tiktok.com/@leader/video/1234567890123456789";
+  assert.equal(samePublishedPost(pasted, share), true);
+  assert.equal(samePublishedPost(pasted, "https://www.tiktok.com/@leader/video/9999999999999999999"), false);
+  assert.equal(samePublishedPost(null, share), false);
 });

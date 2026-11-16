@@ -1,26 +1,32 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { ApprovedPostsNotice } from "@/components/affiliate/ApprovedPostsNotice";
-import { AreaNav } from "@/components/affiliate/AreaNav";
+import { PortalLegalLinks } from "@/components/affiliate/PortalLegalLinks";
+import { AreaNav, type AreaNavItem } from "@/components/affiliate/AreaNav";
+import { DashboardSections, type DashboardGroup } from "@/components/affiliate/DashboardSections";
 import { PortalBrand } from "@/components/affiliate/PortalBrand";
 import { ProfileCard } from "@/components/affiliate/ProfileCard";
 import { disclosureAcknowledged } from "@/lib/affiliate/disclosures";
+import { remindManualReports } from "@/lib/affiliate/manual-report";
 import { loadContentSubmissions } from "@/lib/affiliate/post-review";
+import { readSocialOnboarding } from "@/lib/affiliate/social-onboarding";
 import { changeAffiliatePassword, logoutAffiliatePortal } from "../actions";
 import { currentAffiliate } from "../current";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const items = [
-  { href: "/affiliates/overview", label: "Overview" },
-  { href: "/affiliates/tracking-link", label: "Referral link" },
-  { href: "/affiliates/posts", label: "Posts" },
-  { href: "/affiliates/stats", label: "Stats" },
-  { href: "/affiliates/compliance", label: "Compliance" },
-  { href: "/affiliates/orders", label: "Orders" },
-  { href: "/affiliates/payouts", label: "Payouts" },
-];
+const overview = "/affiliates/overview";
+const plans = "/affiliates/offers";
+const createPost = "/affiliates/posts/new";
+const submissions = "/affiliates/posts";
+const myCampaigns = "/affiliates/campaigns";
+const stats = "/affiliates/stats";
+const payments = "/affiliates/payouts";
+const orders = "/affiliates/orders";
+const agreements = "/affiliates/contracts";
+const acknowledgments = "/affiliates/compliance";
+const connected = "/affiliates/connect";
 
 function needsPostAction(post: { contentStatus: string; publicationStatus: string | null }) {
   if (post.contentStatus === "revision_requested" || post.publicationStatus === "verification_failed") return true;
@@ -30,12 +36,19 @@ function needsPostAction(post: { contentStatus: string; publicationStatus: strin
 export default async function AffiliateDashboardLayout({ children }: { children: ReactNode }) {
   const affiliate = await currentAffiliate();
   if (!affiliate) redirect("/affiliates");
+  const onboarding = await readSocialOnboarding(affiliate.code).catch(() => "skipped" as const);
+  if (onboarding === "pending") redirect("/affiliates/connect");
   const postsOpen = await disclosureAcknowledged(affiliate.code).catch(() => false);
   let approvedIds: string[] = [];
   let postsNeedingAction = 0;
   if (postsOpen) {
     try {
       const posts = await loadContentSubmissions(affiliate.code);
+      try {
+        await remindManualReports(affiliate.email, posts);
+      } catch (error) {
+        console.error("[affiliate] manual report reminder failed", error instanceof Error ? error.message : "unknown");
+      }
       approvedIds = posts.filter((post) => post.contentStatus === "approved" && post.publicationStatus === "awaiting_publication").map((post) => post.id);
       postsNeedingAction = posts.filter(needsPostAction).length;
     } catch {
@@ -43,11 +56,40 @@ export default async function AffiliateDashboardLayout({ children }: { children:
       postsNeedingAction = 0;
     }
   }
-  const nav = items.map((item) => {
-    if (item.href !== "/affiliates/posts") return item;
-    if (!postsOpen) return { ...item, disabled: true, hint: "Accept the sponsorship agreement on Referral link" };
-    return postsNeedingAction > 0 ? { ...item, badge: postsNeedingAction } : item;
-  });
+  const submissionBadge = postsOpen && postsNeedingAction > 0 ? postsNeedingAction : undefined;
+  const closed = { disabled: true, hint: "Accept the sponsorship agreement on your referral link." };
+  const createItem: AreaNavItem = postsOpen ? { href: createPost, label: "Create post" } : { href: createPost, label: "Create post", ...closed };
+  const submissionsItem: AreaNavItem = postsOpen
+    ? { href: submissions, label: "My posts", badge: submissionBadge }
+    : { href: submissions, label: "My posts", ...closed };
+  const nav: AreaNavItem[] = [
+    { href: overview, label: "Overview", active: [overview, "/affiliates/tracking-link"] },
+    { href: submissions, label: "Content", active: [submissions, createPost, myCampaigns, plans], badge: submissionBadge },
+    { href: stats, label: "Stats", active: [stats] },
+    { href: payments, label: "Payouts", active: [payments, orders] },
+    { href: agreements, label: "Settings", active: [agreements, acknowledgments] },
+  ];
+  const groups: DashboardGroup[] = [
+    {
+      paths: [submissions, createPost, myCampaigns, plans],
+      items: [createItem, submissionsItem, { href: myCampaigns, label: "My campaigns" }],
+    },
+    {
+      paths: [payments, orders],
+      items: [
+        { href: payments, label: "Payments" },
+        { href: orders, label: "Lab commission by month" },
+      ],
+    },
+    {
+      paths: [agreements, acknowledgments],
+      items: [
+        { href: agreements, label: "Agreements" },
+        { href: acknowledgments, label: "Acknowledgments" },
+        { href: connected, label: "Connected accounts" },
+      ],
+    },
+  ];
 
   return (
     <section className="bg-background px-4 pt-32 pb-[calc(max(0.5rem,env(safe-area-inset-bottom))+7.5rem)] text-ink sm:px-6 min-[765px]:pb-20">
@@ -56,8 +98,9 @@ export default async function AffiliateDashboardLayout({ children }: { children:
           <PortalBrand badge="Affiliates" />
         </h1>
         <p className="mt-4 max-w-2xl text-taupe">
-          See your referral link, promo code, orders, earnings, and payouts.
+          See your posts, campaigns, stats, payouts, and settings.
         </p>
+        <PortalLegalLinks className="mt-3" />
         {approvedIds.length > 0 ? (
           <ApprovedPostsNotice
             code={affiliate.code}
@@ -81,7 +124,9 @@ export default async function AffiliateDashboardLayout({ children }: { children:
             />
             <AreaNav label="Affiliate portal" items={nav} />
           </div>
-          <div className="mt-8 min-w-0 xl:mt-0">{children}</div>
+          <div className="mt-8 min-w-0 xl:mt-0">
+            <DashboardSections groups={groups}>{children}</DashboardSections>
+          </div>
         </div>
       </div>
     </section>

@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { currentAffiliate } from "@/app/affiliates/current";
 import { noteComplianceEvent } from "@/lib/affiliate/compliance-log";
-import { POST_BATCH_LIMIT, PostReviewError, saveContentDrafts, submitContentBatch, submitLiveInstagramUrl, withdrawContentPost, type BatchPostInput, type PostFileSlot } from "@/lib/affiliate/post-review";
+import { POST_BATCH_LIMIT, PostReviewError, assignPostCampaign, cancelMetricChange, confirmManualMetrics, requestMetricChange, saveContentDrafts, saveManualMetrics, submitContentBatch, submitLiveInstagramUrl, withdrawContentPost, type BatchPostInput, type PostFileSlot } from "@/lib/affiliate/post-review";
+import { postFormat } from "@/lib/affiliate/post-format";
 
 const LINK = "/affiliates/posts";
 
@@ -14,8 +15,14 @@ function linkFail(error: string): never {
 
 function refresh() {
   revalidatePath(LINK);
+  revalidatePath("/affiliates/posts/new");
+  revalidatePath("/affiliates/campaigns");
+  revalidatePath("/affiliates/offers");
   revalidatePath("/affiliates/stats");
   revalidatePath("/admin/affiliates/accounts");
+  revalidatePath("/admin/affiliates/posts");
+  revalidatePath("/admin/affiliates/posts/pending");
+  revalidatePath("/admin/affiliates/posts/published");
   revalidatePath("/admin/affiliates/records");
   revalidatePath("/admin/affiliates/overview");
 }
@@ -59,6 +66,10 @@ function batchFrom(formData: FormData): BatchPostInput[] {
       file: file instanceof File && file.size > 0 ? file : null,
       slots: slotsFrom(formData, index),
       slideCaptions: slideCaptionsFrom(formData, index),
+      format: postFormat(String(formData.get(`format${index}`) ?? "")),
+      campaign: formData.has("campaign") ? String(formData.get("campaign") ?? "") : null,
+      offerId: String(formData.get("offerId") ?? "").trim(),
+      proposedPublishOn: formData.has("proposedPublishOn") ? String(formData.get("proposedPublishOn") ?? "") : null,
     };
   });
 }
@@ -84,7 +95,7 @@ export async function submitPostsAction(formData: FormData) {
   try {
     const posts = batchFrom(formData);
     count = posts.length;
-    await submitContentBatch({ code: affiliate.code, posts });
+    await submitContentBatch({ code: affiliate.code, posts, termsAccepted: String(formData.get("terms") ?? "") === "yes" });
   } catch (error) {
     if (error instanceof PostReviewError) linkFail(error.code);
     console.error("[affiliate] post batch failed", error instanceof Error ? error.message : "unknown");
@@ -100,10 +111,28 @@ export async function submitPostsAction(formData: FormData) {
   redirect(`${LINK}?notice=post`);
 }
 
+export async function assignPostCampaignAction(formData: FormData) {
+  const affiliate = await currentAffiliate();
+  if (!affiliate) redirect("/affiliates");
+  try {
+    await assignPostCampaign({
+      id: String(formData.get("id") ?? ""),
+      code: affiliate.code,
+      campaign: String(formData.get("campaign") ?? ""),
+    });
+  } catch (error) {
+    if (error instanceof PostReviewError) linkFail(error.code);
+    console.error("[affiliate] post campaign failed", error instanceof Error ? error.message : "unknown");
+    linkFail("unavailable");
+  }
+  refresh();
+  redirect(`${LINK}?notice=campaign`);
+}
+
 export async function submitLiveLinkAction(formData: FormData) {
   const affiliate = await currentAffiliate();
   if (!affiliate) redirect("/affiliates");
-  let publicationStatus: "tracking_active" | "verification_failed";
+  let publicationStatus: "tracking_active" | "verification_failed" | "verification_pending";
   try {
     const result = await submitLiveInstagramUrl({
       id: String(formData.get("id") ?? ""),
@@ -117,14 +146,86 @@ export async function submitLiveLinkAction(formData: FormData) {
     linkFail("unavailable");
   }
   const verified = publicationStatus === "tracking_active";
+  const waiting = publicationStatus === "verification_pending";
   await noteComplianceEvent({
     actor: affiliate.code,
-    action: verified ? "post-verified" : "post-verification-failed",
+    action: verified ? "post-verified" : waiting ? "post-link-added" : "post-verification-failed",
     code: affiliate.code,
-    detail: verified ? `${affiliate.name} Instagram post verified.` : `${affiliate.name} Instagram post could not be verified.`,
+    detail: verified ? `${affiliate.name} Instagram post verified.` : waiting ? `${affiliate.name} added a TikTok link.` : `${affiliate.name} Instagram post could not be verified.`,
   });
   refresh();
-  redirect(`${LINK}?notice=${verified ? "tracked" : "check"}`);
+  redirect(`${LINK}?notice=${verified ? "tracked" : waiting ? "pending" : "check"}`);
+}
+
+export async function saveManualMetricsAction(formData: FormData) {
+  const affiliate = await currentAffiliate();
+  if (!affiliate) redirect("/affiliates");
+  try {
+    await saveManualMetrics({
+      id: String(formData.get("id") ?? ""),
+      code: affiliate.code,
+      views: String(formData.get("views") ?? ""),
+      likes: String(formData.get("likes") ?? ""),
+      comments: String(formData.get("comments") ?? ""),
+      shares: String(formData.get("shares") ?? ""),
+    });
+  } catch (error) {
+    if (error instanceof PostReviewError) linkFail(error.code === "invalid" ? "counts" : error.code);
+    console.error("[affiliate] manual post numbers failed", error instanceof Error ? error.message : "unknown");
+    linkFail("unavailable");
+  }
+  refresh();
+  redirect(`${LINK}?notice=counts`);
+}
+
+export async function confirmManualMetricsAction(formData: FormData) {
+  const affiliate = await currentAffiliate();
+  if (!affiliate) redirect("/affiliates");
+  try {
+    await confirmManualMetrics({ id: String(formData.get("id") ?? ""), code: affiliate.code });
+  } catch (error) {
+    if (error instanceof PostReviewError) linkFail(error.code === "invalid" ? "counts" : error.code);
+    console.error("[affiliate] manual post confirmation failed", error instanceof Error ? error.message : "unknown");
+    linkFail("unavailable");
+  }
+  refresh();
+  redirect(`${LINK}?notice=counts`);
+}
+
+export async function requestMetricChangeAction(formData: FormData) {
+  const affiliate = await currentAffiliate();
+  if (!affiliate) redirect("/affiliates");
+  try {
+    await requestMetricChange({
+      id: String(formData.get("id") ?? ""),
+      code: affiliate.code,
+      views: String(formData.get("views") ?? ""),
+      likes: String(formData.get("likes") ?? ""),
+      comments: String(formData.get("comments") ?? ""),
+      shares: String(formData.get("shares") ?? ""),
+      note: String(formData.get("note") ?? ""),
+    });
+  } catch (error) {
+    if (error instanceof PostReviewError) linkFail(error.code === "invalid" ? "counts" : error.code);
+    console.error("[affiliate] metric change request failed", error instanceof Error ? error.message : "unknown");
+    linkFail("unavailable");
+  }
+  refresh();
+  redirect(`${LINK}?notice=change`);
+}
+
+export async function cancelMetricChangeAction(formData: FormData) {
+  const affiliate = await currentAffiliate();
+  if (!affiliate) redirect("/affiliates");
+  try {
+    await cancelMetricChange({ id: String(formData.get("id") ?? ""), code: affiliate.code });
+  } catch (error) {
+    if (error instanceof PostReviewError) linkFail(error.code);
+    console.error("[affiliate] metric change cancel failed", error instanceof Error ? error.message : "unknown");
+    linkFail("unavailable");
+  }
+  refresh();
+  redirect(`${LINK}?notice=change-cancelled`);
 }
 
 export async function withdrawPostAction(formData: FormData) {

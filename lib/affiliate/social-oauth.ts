@@ -1,8 +1,9 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { absoluteUrl } from "@/lib/seo/schema";
 import { normalizeAffiliateCode } from "./code";
 import {
   SocialError,
+  oauthTokenExpired,
   type FacebookPageSecret,
   type TikTokConnectionSecret,
 } from "./social-store";
@@ -10,9 +11,15 @@ import {
 const GRAPH = "https://graph.facebook.com/v21.0";
 const STATE_MS = 10 * 60 * 1000;
 const ACCOUNT_ID = /^[A-Za-z0-9._-]{1,128}$/;
+const VERIFIER = /^[A-Za-z0-9\-._~]{43,128}$/;
+export const TIKTOK_PKCE_COOKIE = "lh_tiktok_pkce";
 
 export function metaConfigured() {
   return Boolean(process.env.META_APP_ID?.trim() && process.env.META_APP_SECRET?.trim());
+}
+
+export function youtubeConfigured() {
+  return Boolean(process.env.GOOGLE_CLIENT_ID?.trim() && process.env.GOOGLE_CLIENT_SECRET?.trim());
 }
 
 export function tiktokConfigured() {
@@ -67,13 +74,49 @@ export function metaAuthorizeUrl(state: string) {
   return url.toString();
 }
 
-export function tiktokAuthorizeUrl(state: string) {
+export function tiktokCodeVerifier() {
+  return randomBytes(48).toString("base64url");
+}
+
+export function tiktokCodeChallenge(verifier: string) {
+  return createHash("sha256").update(verifier).digest("hex");
+}
+
+export function sealTikTokVerifier(verifier: string, now = Date.now()) {
+  const secret = sessionSecret();
+  if (!secret || !VERIFIER.test(verifier)) return null;
+  const body = Buffer.from(JSON.stringify({ verifier, exp: now + STATE_MS })).toString("base64url");
+  return `${body}.${createHmac("sha256", secret).update(body).digest("base64url")}`;
+}
+
+export function openTikTokVerifier(value: string, now = Date.now()) {
+  const secret = sessionSecret();
+  const separator = value.lastIndexOf(".");
+  if (!secret || separator <= 0) return null;
+  const body = value.slice(0, separator);
+  const signature = value.slice(separator + 1);
+  const expected = createHmac("sha256", secret).update(body).digest("base64url");
+  const actualBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expected);
+  if (actualBuffer.length !== expectedBuffer.length || !timingSafeEqual(actualBuffer, expectedBuffer)) return null;
+  try {
+    const parsed = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as { verifier?: unknown; exp?: unknown };
+    if (typeof parsed.verifier !== "string" || !VERIFIER.test(parsed.verifier) || typeof parsed.exp !== "number" || parsed.exp < now) return null;
+    return parsed.verifier;
+  } catch {
+    return null;
+  }
+}
+
+export function tiktokAuthorizeUrl(state: string, verifier: string) {
   const url = new URL("https://www.tiktok.com/v2/auth/authorize/");
   url.searchParams.set("client_key", process.env.TIKTOK_CLIENT_KEY?.trim() ?? "");
   url.searchParams.set("redirect_uri", tiktokRedirectUri());
   url.searchParams.set("state", state);
   url.searchParams.set("response_type", "code");
   url.searchParams.set("scope", "user.info.basic,video.list");
+  url.searchParams.set("code_challenge", tiktokCodeChallenge(verifier));
+  url.searchParams.set("code_challenge_method", "S256");
   return url.toString();
 }
 
@@ -93,17 +136,18 @@ export async function exchangeMetaCode(oauthCode: string) {
   });
   const pages = await metaPages(userToken);
   if (pages.length === 0) throw new SocialError("page");
-  return pages;
+  return { userAccessToken: userToken, pages };
 }
 
-export async function exchangeTikTokCode(oauthCode: string): Promise<Omit<TikTokConnectionSecret, "code">> {
-  if (!tiktokConfigured()) throw new SocialError("setup");
+export async function exchangeTikTokCode(oauthCode: string, verifier: string): Promise<Omit<TikTokConnectionSecret, "code">> {
+  if (!tiktokConfigured() || !VERIFIER.test(verifier)) throw new SocialError("setup");
   const token = await tiktokToken({
     client_key: env("TIKTOK_CLIENT_KEY"),
     client_secret: env("TIKTOK_CLIENT_SECRET"),
     code: oauthCode,
     grant_type: "authorization_code",
     redirect_uri: tiktokRedirectUri(),
+    code_verifier: verifier,
   });
   const profile = await tiktokProfile(token.accessToken);
   return {
@@ -124,6 +168,42 @@ export async function refreshTikTokToken(refreshToken: string) {
     grant_type: "refresh_token",
     refresh_token: refreshToken,
   });
+}
+
+export async function revokeTikTokToken(token: string) {
+  if (!tiktokConfigured() || !token.trim()) return false;
+  try {
+    const response = await fetch("https://open.tiktokapis.com/v2/oauth/revoke/", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_key: env("TIKTOK_CLIENT_KEY"),
+        client_secret: env("TIKTOK_CLIENT_SECRET"),
+        token,
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+    const body = await response.json().catch(() => null);
+    const error = body && typeof body === "object" && "error" in body ? body.error : null;
+    if (!response.ok) return false;
+    return typeof error !== "string" || error === "" || error === "ok";
+  } catch {
+    return false;
+  }
+}
+
+export async function revokeMetaPermissions(userToken: string) {
+  if (!metaConfigured() || !userToken.trim()) return false;
+  try {
+    const url = new URL(`${GRAPH}/me/permissions`);
+    url.searchParams.set("access_token", userToken);
+    const response = await fetch(url, { method: "DELETE", signal: AbortSignal.timeout(15000) });
+    const body = await response.json().catch(() => null);
+    if (!response.ok || !body || typeof body !== "object") return false;
+    return "success" in body && body.success === true;
+  } catch {
+    return false;
+  }
 }
 
 async function metaAccessToken(params: Record<string, string>) {
@@ -174,6 +254,7 @@ async function tiktokToken(params: Record<string, string>) {
     signal: AbortSignal.timeout(15000),
   });
   const body = await response.json().catch(() => null);
+  if (oauthTokenExpired(body)) throw new SocialError("expired");
   if (!response.ok || !body || typeof body !== "object") throw new SocialError("unavailable");
   const record = body as Record<string, unknown>;
   const accessToken = typeof record.access_token === "string" ? record.access_token : "";
@@ -208,6 +289,7 @@ async function readJson(url: string | URL, token?: string) {
     signal: AbortSignal.timeout(15000),
   });
   const body = await response.json().catch(() => null);
+  if (oauthTokenExpired(body)) throw new SocialError("expired");
   if (!response.ok || !body || typeof body !== "object") throw new SocialError("unavailable");
   return body as Record<string, unknown> & { data?: unknown; paging?: { next?: unknown } };
 }

@@ -3,6 +3,12 @@ import { test } from "node:test";
 import {
   DISCLOSURE_LINE,
   METRICS_STALE_MS,
+  MANUAL_REPORT_MS,
+  PostReviewError,
+  REPORT_WINDOW_MS,
+  appendContentRevision,
+  assignedCampaignName,
+  campaignChangeAllowed,
   canPasteLiveUrl,
   captionHasDisclosure,
   captionIssue,
@@ -11,10 +17,13 @@ import {
   instagramLinkChecks,
   instagramPostUrl,
   matchInstagramPost,
+  manualReportDue,
   metricsAreStale,
   nextContentStatus,
   postMetricFields,
+  proposedPublishDate,
   publicationAfterApproval,
+  revisionOnResubmit,
   verificationFailureNote,
 } from "./post-review";
 
@@ -98,4 +107,70 @@ test("metrics older than six hours are due for a refresh", () => {
   assert.equal(metricsAreStale(null, now), true);
   assert.equal(metricsAreStale(new Date(now - METRICS_STALE_MS).toISOString(), now), true);
   assert.equal(metricsAreStale(new Date(now - METRICS_STALE_MS + 1000).toISOString(), now), false);
+});
+
+test("a manual report stays open until the current checkpoint is saved", () => {
+  const publishedAt = "2026-11-01T12:00:00.000Z";
+  const published = Date.parse(publishedAt);
+  const day7 = published + MANUAL_REPORT_MS;
+  const day30 = published + REPORT_WINDOW_MS;
+  const base = {
+    publicationStatus: "tracking_active" as const,
+    publishedAt,
+    metricsRecordedAt: null,
+    metricsSource: null,
+    connected: false,
+  };
+  assert.equal(manualReportDue(base, day7), true);
+  assert.equal(manualReportDue(base, day7 - 1), false);
+  assert.equal(manualReportDue(base, day30), true);
+  assert.equal(manualReportDue(base, day30 + 1), true);
+  assert.equal(manualReportDue({ ...base, connected: true }, day7), false);
+  assert.equal(manualReportDue({ ...base, metricsSource: "automatic" }, day7), false);
+  const savedAt = new Date(day7).toISOString();
+  const saved = { ...base, metricsSource: "manual" as const, metricsRecordedAt: savedAt };
+  assert.equal(manualReportDue(saved, day7), false);
+  assert.equal(manualReportDue(saved, day7 + MANUAL_REPORT_MS), true);
+  const late = { ...base, metricsSource: "manual" as const, metricsRecordedAt: new Date(day30 - MANUAL_REPORT_MS).toISOString() };
+  assert.equal(manualReportDue(late, day30), false);
+});
+
+test("a post can use only an assigned campaign", () => {
+  assert.equal(assignedCampaignName("", ["Launch"]), "");
+  assert.equal(assignedCampaignName(" launch ", ["Launch"]), "Launch");
+  assert.throws(() => assignedCampaignName("Other", ["Launch"]), (error) => error instanceof PostReviewError && error.code === "campaign");
+  assert.throws(() => assignedCampaignName("No promo code", ["Launch"]), (error) => error instanceof PostReviewError && error.code === "campaign");
+});
+
+test("approved posts cannot change the campaign", () => {
+  assert.equal(campaignChangeAllowed("draft"), true);
+  assert.equal(campaignChangeAllowed("submitted"), true);
+  assert.equal(campaignChangeAllowed("revision_requested"), true);
+  assert.equal(campaignChangeAllowed("approved"), false);
+  assert.equal(campaignChangeAllowed("rejected"), false);
+  assert.equal(campaignChangeAllowed("withdrawn"), false);
+});
+
+test("a proposed publishing date is optional", () => {
+  assert.equal(proposedPublishDate(""), "");
+  assert.equal(proposedPublishDate(null), "");
+  assert.equal(proposedPublishDate("2026-11-16"), "2026-11-16");
+  assert.throws(() => proposedPublishDate("11/16/2026"), (error) => error instanceof PostReviewError && error.code === "date");
+});
+
+test("a resubmit keeps the previous review note", () => {
+  assert.equal(revisionOnResubmit(null), null);
+  assert.equal(revisionOnResubmit({ contentStatus: "draft", version: 1, reviewNote: "Add the disclosure.", reviewedAt: "2026-11-01T00:00:00.000Z" }), null);
+  const entry = revisionOnResubmit({ contentStatus: "revision_requested", version: 1, reviewNote: "Add the disclosure.", reviewedAt: "2026-11-01T00:00:00.000Z" });
+  assert.equal(entry?.reviewNote, "Add the disclosure.");
+  const next = appendContentRevision([], entry ?? { version: 1, reviewNote: "", reviewedAt: null });
+  assert.equal(next.length, 1);
+  assert.equal(next[0]?.reviewNote, "Add the disclosure.");
+  const capped = appendContentRevision(
+    Array.from({ length: 20 }, (_, index) => ({ version: index + 1, reviewNote: "n", reviewedAt: null })),
+    { version: 21, reviewNote: "last", reviewedAt: null },
+  );
+  assert.equal(capped.length, 20);
+  assert.equal(capped.at(-1)?.reviewNote, "last");
+  assert.equal(capped[0]?.version, 2);
 });

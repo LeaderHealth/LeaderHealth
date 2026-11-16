@@ -2,14 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CopyTrackingLink } from "@/components/affiliate/CopyTrackingLink";
-import { AgreementSummary } from "@/components/affiliate/AgreementSummary";
-import { formatCents, formatCommissionRate } from "@/lib/affiliate/format";
-import { loadAffiliateAgreements } from "@/lib/affiliate/agreements";
-import { presentAgreement } from "@/lib/affiliate/agreement-view";
+import { DeliverablePaymentList } from "@/components/affiliate/DeliverablePaymentList";
+import { LAB_COMMISSIONS_ENABLED } from "@/lib/affiliate/code";
+import { deliverableLines, loadDeliverablePayments, marketingTotals, type DeliverableLine } from "@/lib/affiliate/deliverable-payments";
+import { formatCents, formatPublishDate, publishDateValue } from "@/lib/affiliate/format";
+import { loadMarketingOffers, offerKindLabel } from "@/lib/affiliate/marketing-offers";
 import { formatPayoutMonth, loadPayoutRecords, paidOutInRange, type PayoutRecord } from "@/lib/affiliate/payouts";
-import { adjustedCommissionCents, remainingSalesCents } from "@/lib/affiliate/refunds";
-import { periodReferralSummaries, toAffiliateOrder, type AffiliateOrderView } from "@/lib/affiliate/order-view";
-import { AffiliateStoreError, loadAffiliateActivity } from "@/lib/affiliate/store";
+import { remainingSalesCents } from "@/lib/affiliate/refunds";
+import { periodReferralSummaries } from "@/lib/affiliate/order-view";
+import { loadContentSubmissions, type ContentSubmission } from "@/lib/affiliate/post-review";
+import { AffiliateStoreError, loadAffiliateActivity, type ConversionSummary } from "@/lib/affiliate/store";
 import { disclosureAcknowledged } from "@/lib/affiliate/disclosures";
 import { listPromoCodes, personalPromoForAffiliate } from "@/lib/genhealth/promocodes";
 import { currentAffiliate } from "../../current";
@@ -42,10 +44,6 @@ function overviewHref(range: Range) {
   return range === "all" ? "/affiliates/overview" : `/affiliates/overview?range=${range}`;
 }
 
-function netCommission(conversion: AffiliateOrderView) {
-  return adjustedCommissionCents(conversion.commissionCents, conversion.commissionRefundedCents);
-}
-
 function inRange(createdAt: string | null, range: Range) {
   if (range === "all") return true;
   if (!createdAt) return false;
@@ -62,15 +60,27 @@ export default async function AffiliatePortalOverviewPage({
   if (!affiliate) redirect("/affiliates");
 
   const range = rangeOf((await searchParams).range);
-  let conversions: AffiliateOrderView[] = [];
+  let conversions: ConversionSummary[] = [];
   let clickTimes: string[] = [];
   let payouts: PayoutRecord[] = [];
+  let marketing = { pendingCents: 0, heldCents: 0, approvedCents: 0, paidCents: 0 };
+  let paymentLines: DeliverableLine[] = [];
+  let ownPosts: ContentSubmission[] = [];
   let loadError = "";
   try {
     const activity = await loadAffiliateActivity(affiliate.code);
-    conversions = activity.conversions.map(toAffiliateOrder);
+    conversions = activity.conversions;
     clickTimes = activity.clickTimes;
     payouts = await loadPayoutRecords(affiliate.code);
+    const [posts, payments] = await Promise.all([loadContentSubmissions(), loadDeliverablePayments(affiliate.code)]);
+    ownPosts = posts.filter((post) => post.code === affiliate.code);
+    const lines = deliverableLines({
+      affiliates: [{ code: affiliate.code, name: affiliate.name }],
+      posts: ownPosts,
+      payments,
+    });
+    paymentLines = lines.filter((line) => line.status !== "closed" && line.status !== "paid");
+    marketing = marketingTotals(lines);
   } catch (caught) {
     loadError = caught instanceof AffiliateStoreError ? caught.message : "Could not load your overview.";
   }
@@ -89,21 +99,8 @@ export default async function AffiliatePortalOverviewPage({
     acknowledged = false;
   }
 
-  let agreementViews: ReturnType<typeof presentAgreement>[] = [];
-  let agreementsUnavailable = false;
-  try {
-    agreementViews = (await loadAffiliateAgreements(affiliate.code)).map((agreement) => presentAgreement(agreement));
-  } catch {
-    agreementsUnavailable = true;
-  }
-
   const paid = conversions.filter((conversion) => !conversion.dryRun && inRange(conversion.createdAt, range));
-  const salesCents = paid.reduce((sum, conversion) => sum + remainingSalesCents(conversion.amountCents, conversion.refundedAmountCents), 0);
   const paidOrderCount = paid.filter((conversion) => remainingSalesCents(conversion.amountCents, conversion.refundedAmountCents) > 0).length;
-  const commissionCents = paid.reduce((sum, conversion) => sum + netCommission(conversion), 0);
-  const unpaidCents =
-    conversions.filter((conversion) => !conversion.dryRun).reduce((sum, conversion) => sum + netCommission(conversion), 0) -
-    paidOutInRange(payouts, "all");
   const paidOutCents = paidOutInRange(payouts, range);
   const clicks = clickTimes.filter((createdAt) => inRange(createdAt, range)).length;
   const recent = periodReferralSummaries(
@@ -115,10 +112,32 @@ export default async function AffiliatePortalOverviewPage({
       commissionCents: conversion.commissionCents,
       commissionRefundedCents: conversion.commissionRefundedCents,
       createdAt: conversion.createdAt,
+      orderKind: conversion.orderKind,
     })),
   );
-  const commission =
-    affiliate.commissionMode === "fixed" ? `${formatCommissionRate(affiliate)} per order` : `${formatCommissionRate(affiliate)} commission`;
+  const labCents = recent.reduce((sum, row) => sum + row.commissionCents, 0);
+  let deadlines: { id: string; label: string; when: string }[] = [];
+  let deadlineCount = 0;
+  let deadlinesUnavailable = false;
+  try {
+    const offers = await loadMarketingOffers(affiliate.code);
+    const open = offers.filter(
+      (offer) =>
+        (offer.status === "sent" || offer.status === "countered" || offer.status === "accepted") && publishDateValue(offer.publishBy),
+    );
+    deadlineCount = open.length;
+    deadlines = [...open]
+      .sort((left, right) => left.publishBy.localeCompare(right.publishBy))
+      .slice(0, 4)
+      .map((offer) => ({ id: offer.id, label: offerKindLabel(offer.kind), when: formatPublishDate(offer.publishBy) }));
+  } catch {
+    deadlinesUnavailable = true;
+  }
+  const submissionCount = ownPosts.filter(
+    (post) => post.contentStatus !== "withdrawn" && post.contentStatus !== "rejected" && post.contentStatus !== "draft",
+  ).length;
+  const fee = affiliate.deliverableFeeCents == null ? "Not set" : `${formatCents(affiliate.deliverableFeeCents)} per 1,000 views`;
+  const payLabel = LAB_COMMISSIONS_ENABLED ? `${fee}. Lab commission applies to lab orders.` : `${fee}. Lab commission is not active.`;
 
   return (
     <div className="space-y-4">
@@ -130,7 +149,7 @@ export default async function AffiliatePortalOverviewPage({
               <span className="text-brown">Affiliate ID</span>
               <span className="ml-1.5 break-all">{affiliate.code}</span>
             </span>
-            <span className={badgeClass}>{commission}</span>
+            <span className={badgeClass}>{payLabel}</span>
           </div>
         </div>
         <div className="flex flex-wrap gap-2" role="group" aria-label="Time range">
@@ -171,33 +190,59 @@ export default async function AffiliatePortalOverviewPage({
         <p className="mt-2 text-sm text-brown">Customers enter this code at checkout. Your promo link and tracking link are on the referral link page.</p>
       </section>
 
-      <section className="rounded-[28px] bg-white p-4 sm:p-6" aria-labelledby="portal-agreement-title">
-        <h3 id="portal-agreement-title" className="text-xl">
-          Your agreement
-        </h3>
-        <p className="mt-3 text-sm">
-          <span className="text-brown">Referral rate already used for orders</span>
-          <span className="mt-1 block">{formatCommissionRate(affiliate)}</span>
-        </p>
-        {agreementsUnavailable ? <p className="mt-4 text-sm text-ink">Agreements are unavailable right now.</p> : null}
-        {!agreementsUnavailable && agreementViews.length === 0 ? <p className="mt-4 text-sm text-brown">No agreement on file.</p> : null}
-        {agreementViews.map((agreement, index) => (
-          <div key={agreement.id} className={index === 0 ? "mt-6" : "mt-6 border-t border-rose/60 pt-6"}>
-            {index > 0 ? <h4 className="mb-3 text-base">Older agreement</h4> : null}
-            <AgreementSummary
-              agreement={agreement}
-              commission={formatCommissionRate(affiliate)}
-              pdfHref={agreement.file ? `/affiliates/agreement-file?agreement=${encodeURIComponent(agreement.id)}` : null}
-            />
+      <div className="grid gap-4 lg:grid-cols-2">
+        <section className="rounded-[28px] bg-white p-4 sm:p-6" aria-labelledby="portal-deadlines-title">
+          <div className="flex items-baseline justify-between gap-3">
+            <h3 id="portal-deadlines-title" className="text-xl">
+              Deadlines
+            </h3>
+            <Link href="/affiliates/offers" className="text-sm font-medium text-ink underline underline-offset-4">
+              Past monthly plans
+            </Link>
           </div>
-        ))}
-      </section>
+          <p className="mt-2 text-sm text-brown">A plan is optional and does not block a new post.</p>
+          {deadlinesUnavailable ? (
+            <p className="mt-4 text-sm text-brown">Deadlines are unavailable right now.</p>
+          ) : deadlineCount === 0 ? (
+            <p className="mt-4 text-sm text-brown">No publish-by dates on open plans.</p>
+          ) : (
+            <>
+              <p className="mt-2 text-sm text-brown">{deadlineCount === 1 ? "1 open plan has a publish-by date." : `${deadlineCount} open plans have a publish-by date.`}</p>
+              <ul className="mt-3 divide-y divide-rose/60">
+                {deadlines.map((item) => (
+                  <li key={item.id} className="flex items-baseline justify-between gap-3 py-3 text-sm">
+                    <span className="font-medium">{item.label}</span>
+                    <span className="text-brown">{item.when}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </section>
+        <section className="rounded-[28px] bg-white p-4 sm:p-6" aria-labelledby="portal-submissions-title">
+          <div className="flex items-baseline justify-between gap-3">
+            <h3 id="portal-submissions-title" className="text-xl">
+              Submissions
+            </h3>
+            <Link href="/affiliates/posts" className="text-sm font-medium text-ink underline underline-offset-4">
+              My posts
+            </Link>
+          </div>
+          {acknowledged ? (
+            <p className="mt-4 text-sm text-brown">
+              {loadError ? "Submissions are unavailable right now." : submissionCount === 1 ? "1 submission is on file." : `${submissionCount} submissions are on file.`}
+            </p>
+          ) : (
+            <p className="mt-4 text-sm text-brown">Accept the sponsorship agreement before submissions open.</p>
+          )}
+        </section>
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
         <section className="rounded-[28px] bg-white p-6">
-          <h3 className="text-sm text-brown">Sales</h3>
-          <p className="mt-2 text-3xl">{formatCents(salesCents)}</p>
-          <p className="mt-2 text-sm text-brown">From paid orders in this period</p>
+          <h3 className="text-sm text-brown">View rate</h3>
+          <p className="mt-2 text-3xl">{affiliate.deliverableFeeCents == null ? "Not set" : formatCents(affiliate.deliverableFeeCents)}</p>
+          <p className="mt-2 text-sm text-brown">Per 1,000 views</p>
         </section>
         <section className="rounded-[28px] bg-white p-6">
           <h3 className="text-sm text-brown">Paid orders</h3>
@@ -217,19 +262,32 @@ export default async function AffiliatePortalOverviewPage({
         </h3>
         <div className="grid sm:grid-cols-2 sm:divide-x sm:divide-rose/60">
           <div className="sm:pr-8">
-            <h4 className="text-sm text-brown">Unpaid earnings</h4>
-            <p className="mt-2 text-3xl">{formatCents(unpaidCents)}</p>
-            <p className="mt-2 text-sm text-brown">All-time balance. Commission not paid out yet.</p>
+            <h4 className="text-sm text-brown">Marketing earned</h4>
+            <p className="mt-2 text-3xl">{formatCents(marketing.pendingCents)}</p>
+            <p className="mt-2 text-sm text-brown">
+              Approved {formatCents(marketing.approvedCents)} · On hold {formatCents(marketing.heldCents)} · Paid {formatCents(marketing.paidCents)}
+            </p>
           </div>
           <div className="mt-6 border-t border-rose/60 pt-6 sm:mt-0 sm:border-0 sm:pt-0 sm:pl-8">
-            <h4 className="text-sm text-brown">Total earnings</h4>
-            <p className="mt-2 text-3xl">{formatCents(commissionCents)}</p>
-            <p className="mt-2 text-sm text-brown">Commission from paid orders in this period.</p>
+            <h4 className="text-sm text-brown">Lab commission</h4>
+            <p className="mt-2 text-3xl">{LAB_COMMISSIONS_ENABLED ? formatCents(labCents) : "Not active"}</p>
+            <p className="mt-2 text-sm text-brown">
+              {LAB_COMMISSIONS_ENABLED ? `Paid out ${formatCents(paidOutCents)} in this period.` : "Past commission payouts stay on the Payouts page."}
+            </p>
           </div>
         </div>
-        <p className="mt-6 border-t border-rose/60 pt-4 text-sm text-brown">
-          Paid out {formatCents(paidOutCents)} in this period. A refund can leave unpaid earnings negative until a later sale covers it. Pay-period totals are on the Orders page.
-        </p>
+        <p className="mt-6 border-t border-rose/60 pt-4 text-sm text-brown">Pay-period conversion counts are on the Orders page.</p>
+      </section>
+
+      <section className="rounded-[28px] bg-white p-4 sm:p-6" aria-labelledby="portal-payments-title">
+        <div className="flex items-baseline justify-between gap-3">
+          <h3 id="portal-payments-title" className="text-xl">Marketing payments</h3>
+          <Link href="/affiliates/payouts" className="text-sm font-medium text-ink underline underline-offset-4">
+            Payouts
+          </Link>
+        </div>
+        <p className="mt-2 text-sm text-brown">Each post locks its rate, maximum, and tracking period when you send it. Pay is calculated from recorded views after that period, then added to the next payout. Lab commission stays separate.</p>
+        <DeliverablePaymentList lines={paymentLines} />
       </section>
 
       <section className="min-w-0 rounded-[28px] bg-white p-4 sm:p-6" aria-labelledby="portal-recent-orders-title">
@@ -251,7 +309,7 @@ export default async function AffiliatePortalOverviewPage({
                     <div className="break-words font-medium">{formatPayoutMonth(row.period)}</div>
                     <p className="mt-1 text-brown">{row.conversions === 1 ? "1 conversion" : `${row.conversions} conversions`}</p>
                   </div>
-                  <p className="shrink-0 font-medium">{formatCents(row.commissionCents)}</p>
+                  {LAB_COMMISSIONS_ENABLED ? <p className="shrink-0 font-medium">{formatCents(row.commissionCents)}</p> : null}
                 </li>
               ))}
             </ul>

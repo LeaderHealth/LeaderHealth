@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { PortalBrand } from "./PortalBrand";
+import { PortalLegalLinks } from "./PortalLegalLinks";
 
 type Role = "affiliate" | "admin";
 type Method = "password" | "link" | "reset";
@@ -20,12 +21,12 @@ const affiliateSlides = [
   {
     id: "earn",
     label: "Earn",
-    text: "See paid orders and the commission you earn on each one.",
+    text: "See conversion counts and the rate per 1,000 views.",
   },
   {
     id: "paid",
     label: "Get paid",
-    text: "Review payouts as your commission is approved and marked paid.",
+    text: "Review marketing payments as they are approved and marked paid.",
   },
 ] as const;
 
@@ -38,12 +39,12 @@ const adminSlides = [
   {
     id: "earn",
     label: "Earn",
-    text: "Set commission rules and watch partner totals from paid orders.",
+    text: "Set the rate per 1,000 views and review live-post payments.",
   },
   {
     id: "paid",
     label: "Get paid",
-    text: "Approve monthly commission and mark payouts when they go out.",
+    text: "Approve marketing payments and mark them when they go out.",
   },
 ] as const;
 
@@ -91,17 +92,14 @@ export function PortalSignIn({
     "inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-ink px-5 text-sm font-medium text-white hover:bg-brown focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
   const secondaryButtonClass =
     "inline-flex h-12 w-full items-center justify-center rounded-full border border-[#eadfe0] bg-white px-5 text-sm font-medium text-ink hover:border-ink/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
-  const quietLinkClass =
-    "text-[#8d7370] hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
-
   function choose(next: Method) {
     setEditing(true);
     setMethod(next);
   }
   const describedBy = invalid ? errorId : undefined;
   const other = affiliate
-    ? { href: "/admin/affiliates", label: "Sign in as admin" }
-    : { href: "/affiliates", label: "Sign in as an affiliate" };
+    ? { href: "/admin/affiliates", prompt: "Leader Health team?", label: "Admin sign-in" }
+    : { href: "/affiliates", prompt: "Affiliate?", label: "Affiliate sign-in" };
 
   return (
     <div className="min-h-screen overflow-x-clip bg-[#efecee] px-3 pt-[calc(max(12px,env(safe-area-inset-top,0px))+78px)] pb-36 text-ink sm:px-4 sm:pt-32 sm:pb-20 lg:px-5 lg:pb-24">
@@ -139,7 +137,7 @@ export function PortalSignIn({
                       ? "Enter the email on your affiliate account. We'll send a one-time sign-in link. It expires in 15 minutes, works once, and does not change your password."
                       : "Enter the email on your team admin account. We'll send a one-time sign-in link. It expires in 15 minutes, works once, and does not change your password. The main admin still uses the site password."
                     : affiliate
-                      ? "Log in to your affiliate dashboard to track referrals, commissions, and payouts."
+                      ? "Log in to your affiliate dashboard to track referrals, marketing payments, and payouts."
                       : "Log in to manage affiliate accounts, tracking links, orders, and payouts."}
           </p>
           {error ? (
@@ -253,26 +251,30 @@ export function PortalSignIn({
           ) : (
             <p className="mt-8 w-full max-w-md text-sm leading-6 text-ink md:text-center lg:text-left">{unconfigured}</p>
           )}
-          <p className="mt-8 flex w-full max-w-md flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm">
-            <Link href="/contact-us" className={quietLinkClass}>
+          <p className="mt-8 w-full max-w-md text-center text-sm leading-6 text-[#8d7370]">
+            Need help?{" "}
+            <Link href="/contact-us" className="font-medium text-ink underline underline-offset-4 hover:text-brown focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">
               Contact support
             </Link>
             <span aria-hidden className="text-[#d9cccb]">
-              ·
+              {" "}
+              ·{" "}
             </span>
+            {other.prompt}{" "}
             <Link
               href={other.href}
-              className="font-medium text-ink underline decoration-ink underline-offset-4 hover:text-brown focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+              className="font-medium text-ink underline underline-offset-4 hover:text-brown focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
             >
               {other.label}
             </Link>
           </p>
+          <PortalLegalLinks className="mt-1 w-full max-w-md justify-center" />
         </section>
         <aside className="flex min-h-0 min-w-0 flex-col rounded-[28px] bg-[#f4c9c6] px-4 py-8 sm:min-h-[34rem] sm:px-10 sm:py-10 lg:min-h-0">
           <h2 className="max-w-full text-[1.75rem] leading-[1.08] font-medium tracking-[-0.03em] text-balance text-ink sm:max-w-md sm:text-[2.35rem] md:mx-auto md:text-center lg:mx-0 lg:text-left">
             {affiliate
-              ? "Your referrals, commissions, and payouts — all in one place."
-              : "Affiliate accounts, commissions, and payouts — all in one place."}
+              ? "Your referrals, marketing payments, and payouts — all in one place."
+              : "Affiliate accounts, marketing payments, and payouts — all in one place."}
           </h2>
           <AffiliatePhoto />
           <div className="min-w-0 rounded-[24px] bg-[#fbf8f8] p-4 sm:p-5">

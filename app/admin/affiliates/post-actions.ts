@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { noteComplianceEvent } from "@/lib/affiliate/compliance-log";
 import { affiliateEmailConfigured, sendPostApprovedEmail } from "@/lib/affiliate/email";
-import { PostReviewError, approveContentPost, markContentChecked, rejectContentPost, requestContentChange } from "@/lib/affiliate/post-review";
+import { PostReviewError, applyMetricChange, approveContentPost, markContentChecked, rejectContentPost, requestContentChange } from "@/lib/affiliate/post-review";
 import { adminAccountEmail, adminIsSignedIn, adminSessionActor } from "@/lib/affiliate/session";
 import { getAffiliate } from "@/lib/affiliate/store";
 
@@ -21,8 +21,9 @@ async function actor() {
   return adminAccountEmail() ?? "owner";
 }
 
-function fail(error: string): never {
-  redirect(`${REVIEW}?error=${encodeURIComponent(error)}`);
+function fail(error: string, formData?: FormData): never {
+  const path = formData ? reviewPath(formData) : REVIEW;
+  redirect(`${path}?error=${encodeURIComponent(error)}`);
 }
 
 function nextPost(formData: FormData) {
@@ -30,11 +31,23 @@ function nextPost(formData: FormData) {
   return /^[A-Za-z0-9]{10,40}$/.test(next) ? next : "";
 }
 
+function reviewPath(formData: FormData) {
+  const back = formData.get("return");
+  if (back === "pending") return "/admin/affiliates/posts/pending";
+  if (back === "published") return "/admin/affiliates/posts/published";
+  return REVIEW;
+}
+
 function done(notice: string, formData: FormData): never {
   const params = new URLSearchParams({ notice });
   const next = nextPost(formData);
   if (next) params.set("post", next);
-  redirect(`${REVIEW}?${params.toString()}`);
+  redirect(`${reviewPath(formData)}?${params.toString()}`);
+}
+
+function decisionDetail(name: string, campaign: string, sentence: string) {
+  const extra = campaign ? ` Campaign: ${campaign}.` : "";
+  return `${name} ${sentence}${extra}`.slice(0, 500);
 }
 
 function refresh() {
@@ -42,6 +55,8 @@ function refresh() {
   revalidatePath(REVIEW);
   revalidatePath("/admin/affiliates/records");
   revalidatePath("/admin/affiliates/overview");
+  revalidatePath("/admin/affiliates/posts/pending");
+  revalidatePath("/admin/affiliates/posts/published");
   revalidatePath("/affiliates/posts");
   revalidatePath("/affiliates/overview");
   revalidatePath("/affiliates/stats");
@@ -56,19 +71,19 @@ async function affiliateName(code: string) {
   }
 }
 
-function postError(error: unknown): never {
-  if (error instanceof PostReviewError) fail(`post-${error.code}`);
+function postError(error: unknown, formData: FormData): never {
+  if (error instanceof PostReviewError) fail(`post-${error.code}`, formData);
   console.error("[affiliate] post review failed", error instanceof Error ? error.message : "unknown");
-  fail("post-unavailable");
+  fail("post-unavailable", formData);
 }
 
 export async function approvePostAction(formData: FormData) {
   await requireAdmin();
   let post;
   try {
-    post = await approveContentPost(String(formData.get("id") ?? ""));
+    post = await approveContentPost(String(formData.get("id") ?? ""), await actor());
   } catch (error) {
-    postError(error);
+    postError(error, formData);
   }
   const affiliate = await getAffiliate(post.code).catch(() => null);
   const name = affiliate?.name || post.code;
@@ -76,7 +91,7 @@ export async function approvePostAction(formData: FormData) {
     actor: await actor(),
     action: "content-approved",
     code: post.code,
-    detail: `${name} post approved.`,
+    detail: decisionDetail(name, post.campaign, "post approved."),
   });
   if (affiliate?.email && affiliateEmailConfigured()) {
     try {
@@ -93,16 +108,16 @@ export async function requestPostChangeAction(formData: FormData) {
   await requireAdmin();
   let post;
   try {
-    post = await requestContentChange(String(formData.get("id") ?? ""), formData.get("note"));
+    post = await requestContentChange(String(formData.get("id") ?? ""), formData.get("note"), await actor());
   } catch (error) {
-    postError(error);
+    postError(error, formData);
   }
   const name = await affiliateName(post.code);
   await noteComplianceEvent({
     actor: await actor(),
     action: "content-revision-requested",
     code: post.code,
-    detail: `${name} post needs a change.`,
+    detail: decisionDetail(name, post.campaign, "post needs a change."),
   });
   refresh();
   done("post-change", formData);
@@ -112,16 +127,16 @@ export async function rejectPostAction(formData: FormData) {
   await requireAdmin();
   let post;
   try {
-    post = await rejectContentPost(String(formData.get("id") ?? ""), formData.get("note"));
+    post = await rejectContentPost(String(formData.get("id") ?? ""), formData.get("note"), await actor());
   } catch (error) {
-    postError(error);
+    postError(error, formData);
   }
   const name = await affiliateName(post.code);
   await noteComplianceEvent({
     actor: await actor(),
     action: "content-rejected",
     code: post.code,
-    detail: `${name} post rejected.`,
+    detail: decisionDetail(name, post.campaign, "post rejected."),
   });
   refresh();
   done("post-declined", formData);
@@ -133,7 +148,7 @@ export async function markPostCheckedAction(formData: FormData) {
   try {
     post = await markContentChecked(String(formData.get("id") ?? ""));
   } catch (error) {
-    postError(error);
+    postError(error, formData);
   }
   const name = await affiliateName(post.code);
   await noteComplianceEvent({
@@ -144,4 +159,28 @@ export async function markPostCheckedAction(formData: FormData) {
   });
   refresh();
   done("post-checked", formData);
+}
+
+export async function applyMetricChangeAction(formData: FormData) {
+  await requireAdmin();
+  const code = String(formData.get("code") ?? "");
+  try {
+    await applyMetricChange({
+      id: String(formData.get("id") ?? ""),
+      views: String(formData.get("views") ?? ""),
+      likes: String(formData.get("likes") ?? ""),
+      comments: String(formData.get("comments") ?? ""),
+      shares: String(formData.get("shares") ?? ""),
+    });
+  } catch (error) {
+    const reason = error instanceof PostReviewError ? (error.code === "invalid" ? "post-counts" : `post-${error.code}`) : "post-unavailable";
+    if (!(error instanceof PostReviewError)) console.error("[affiliate] metric change apply failed", error instanceof Error ? error.message : "unknown");
+    const params = new URLSearchParams({ error: reason });
+    if (code) params.set("code", code);
+    redirect(`/admin/affiliates/accounts?${params.toString()}`);
+  }
+  refresh();
+  const params = new URLSearchParams({ notice: "counts-updated" });
+  if (code) params.set("code", code);
+  redirect(`/admin/affiliates/accounts?${params.toString()}`);
 }

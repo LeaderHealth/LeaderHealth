@@ -9,7 +9,7 @@ import {
   requestProofCorrectionAction,
   resolveComplianceFlagAction,
 } from "@/app/admin/affiliates/compliance-actions";
-import { markPostCheckedAction } from "@/app/admin/affiliates/post-actions";
+import { markPostCheckedAction, applyMetricChangeAction } from "@/app/admin/affiliates/post-actions";
 import { FLAG_REASONS, flagReasonLabel } from "@/lib/affiliate/compliance-rules";
 
 const actionClass =
@@ -52,6 +52,8 @@ export type AccountCompliancePost = {
   canMarkChecked: boolean;
   tracking: boolean;
   metrics: { label: string; value: string }[];
+  counts: { views: number | null; likes: number | null; comments: number | null; shares: number | null };
+  changeRequest: { views: number | null; likes: number | null; comments: number | null; shares: number | null; note: string } | null;
   fileCount: number;
 };
 
@@ -128,7 +130,7 @@ export function AccountCompliance({
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby={titleId}
-                className="relative flex max-h-[min(40rem,calc(100dvh-2rem))] w-full max-w-3xl flex-col rounded-[28px] bg-white p-4 text-ink shadow-[0_24px_80px_rgba(51,17,16,0.22)] sm:p-8"
+                className="relative flex max-h-[min(40rem,calc(100dvh-2rem))] w-full max-w-3xl flex-col rounded-[28px] bg-white p-4 text-ink shadow-[0_24px_80px_rgba(51,17,16,0.22)] sm:p-8 lg:h-[min(52rem,calc(100dvh-3rem))] lg:max-h-none lg:max-w-6xl"
               >
                 <h2 id={titleId} className="text-2xl">
                   Compliance
@@ -225,6 +227,33 @@ export function AccountCompliance({
                                 </div>
                               ))}
                             </dl>
+                          ) : null}
+                          {post.tracking && post.changeRequest ? (
+                            <form action={applyMetricChangeAction} className="mt-4 flex flex-col gap-3">
+                              <p>This affiliate requested a change. Updating these numbers is the correction.</p>
+                              {post.changeRequest.note ? <p className="break-words">Note: {post.changeRequest.note}</p> : null}
+                              <div className="grid grid-cols-2 gap-3">
+                                <label className="text-sm font-medium text-ink">
+                                  Views
+                                  <input name="views" inputMode="numeric" defaultValue={post.changeRequest.views ?? ""} className={fieldClass} />
+                                </label>
+                                <label className="text-sm font-medium text-ink">
+                                  Likes
+                                  <input name="likes" inputMode="numeric" defaultValue={post.changeRequest.likes ?? ""} className={fieldClass} />
+                                </label>
+                                <label className="text-sm font-medium text-ink">
+                                  Comments
+                                  <input name="comments" inputMode="numeric" defaultValue={post.changeRequest.comments ?? ""} className={fieldClass} />
+                                </label>
+                                <label className="text-sm font-medium text-ink">
+                                  Shares
+                                  <input name="shares" inputMode="numeric" defaultValue={post.changeRequest.shares ?? ""} className={fieldClass} />
+                                </label>
+                              </div>
+                              <input type="hidden" name="id" value={post.id} />
+                              <input type="hidden" name="code" value={code} />
+                              <button type="submit" className={buttonClass}>Update numbers</button>
+                            </form>
                           ) : null}
                           {post.inReview ? (
                             <p className="mt-4">

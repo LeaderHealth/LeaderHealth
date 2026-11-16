@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AssignPromoCode, type AssignableAffiliate } from "@/components/affiliate/AssignPromoCode";
 import { RemovePromoAffiliate } from "@/components/affiliate/RemovePromoAffiliate";
+import { LAB_COMMISSIONS_ENABLED } from "@/lib/affiliate/code";
 import { formatCents } from "@/lib/affiliate/format";
 import { loadRemovedPromoRows, type RemovedPromoRow } from "@/lib/affiliate/removed-promos";
 import { AffiliateStoreError, loadAffiliateDashboard } from "@/lib/affiliate/store";
@@ -328,8 +329,8 @@ function RemovedPromoCodes({ rows, accounts }: { rows: RemovedPromoRow[]; accoun
                   <dd className="mt-1">{promo.orders}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-brown">Commission</dt>
-                  <dd className="mt-1">{formatCents(promo.commissionCents)}</dd>
+                  <dt className="text-xs text-brown">Lab commission</dt>
+                  <dd className="mt-1">{LAB_COMMISSIONS_ENABLED ? formatCents(promo.commissionCents) : "Not active"}</dd>
                 </div>
                 <div>
                   <dt className="text-xs text-brown">Clicks</dt>
@@ -371,7 +372,7 @@ function RemovedPromoCodes({ rows, accounts }: { rows: RemovedPromoRow[]; accoun
                 <td className="break-all px-4 py-5 align-top font-medium">{promo.code}</td>
                 <td className="px-4 py-5 align-top">{affiliateLabels(promo.affiliateCodes, accounts)}</td>
                 <td className="px-4 py-5 align-top">{promo.orders}</td>
-                <td className="px-4 py-5 align-top">{formatCents(promo.commissionCents)}</td>
+                <td className="px-4 py-5 align-top">{LAB_COMMISSIONS_ENABLED ? formatCents(promo.commissionCents) : "Not active"}</td>
                 <td className="px-4 py-5 align-top">{promo.clicks}</td>
                 <td className="px-4 py-5 align-top">—</td>
               </tr>

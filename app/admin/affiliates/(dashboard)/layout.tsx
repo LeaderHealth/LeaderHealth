@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
-import { AreaNav } from "@/components/affiliate/AreaNav";
+import { AreaNav, type AreaNavItem } from "@/components/affiliate/AreaNav";
+import { DashboardSections, type DashboardGroup } from "@/components/affiliate/DashboardSections";
+import { PortalLegalLinks } from "@/components/affiliate/PortalLegalLinks";
 import { PortalBrand } from "@/components/affiliate/PortalBrand";
 import { ProfileCard } from "@/components/affiliate/ProfileCard";
 import { adminAccountProfile } from "@/lib/affiliate/admin-profile";
@@ -12,17 +14,23 @@ import { logoutAffiliateAdmin } from "../actions";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const items = [
-  { href: "/admin/affiliates/overview", label: "Overview" },
-  { href: "/admin/affiliates/add-an-affiliate", label: "Add an affiliate" },
-  { href: "/admin/affiliates/accounts", label: "Accounts" },
-  { href: "/admin/affiliates/posts", label: "Post review" },
-  { href: "/admin/affiliates/promo-codes", label: "Promo codes" },
-  { href: "/admin/affiliates/orders", label: "Orders" },
-  { href: "/admin/affiliates/payouts", label: "Payouts" },
-  { href: "/admin/affiliates/records", label: "Records" },
-  { href: "/admin/affiliates/roi", label: "ROI" },
-];
+const overview = "/admin/affiliates/overview";
+const accounts = "/admin/affiliates/accounts";
+const applications = "/admin/affiliates/add-an-affiliate";
+const promoCodes = "/admin/affiliates/promo-codes";
+const trackingLinks = "/admin/affiliates/tracking-links";
+const plans = "/admin/affiliates/offers";
+const submissions = "/admin/affiliates/posts";
+const pending = "/admin/affiliates/posts/pending";
+const published = "/admin/affiliates/posts/published";
+const campaigns = "/admin/affiliates/campaigns";
+const roi = "/admin/affiliates/roi";
+const website = "/admin/affiliates/reporting";
+const payouts = "/admin/affiliates/payouts";
+const orders = "/admin/affiliates/orders";
+const team = "/admin/affiliates/team";
+const records = "/admin/affiliates/records";
+const compliance = "/admin/affiliates/compliance";
 
 export default async function AdminDashboardLayout({ children }: { children: ReactNode }) {
   const actor = await adminSessionActor();
@@ -35,9 +43,61 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
     waitingPosts = 0;
   }
   const fullAccess = adminHasFullAccess(actor);
-  const visibleItems = fullAccess ? items : items.filter((item) => item.href !== "/admin/affiliates/add-an-affiliate");
-  const withBadge = visibleItems.map((item) => (item.href === "/admin/affiliates/posts" && waitingPosts > 0 ? { ...item, badge: waitingPosts } : item));
-  const nav = fullAccess ? [...withBadge, { href: "/admin/affiliates/team", label: "Team" }] : withBadge;
+  const reviewBadge = waitingPosts > 0 ? waitingPosts : undefined;
+  const nav: AreaNavItem[] = [
+    { href: overview, label: "Overview", active: [overview] },
+    {
+      href: accounts,
+      label: "Affiliates",
+      active: [accounts, applications, "/admin/affiliates/add", promoCodes, trackingLinks],
+    },
+    { href: submissions, label: "Content", active: [submissions, pending, published, campaigns, plans], badge: reviewBadge },
+    { href: roi, label: "Stats", active: [roi, website] },
+    { href: payouts, label: "Payouts", active: [payouts, orders] },
+    { href: records, label: "Settings", active: [records, compliance, team] },
+  ];
+  const groups: DashboardGroup[] = [
+    {
+      paths: [accounts, applications, "/admin/affiliates/add", promoCodes, trackingLinks],
+      items: [
+        { href: accounts, label: "Accounts" },
+        ...(fullAccess ? [{ href: applications, label: "Applications" }] : []),
+        { href: promoCodes, label: "Promo codes" },
+        { href: trackingLinks, label: "Tracking links" },
+      ],
+    },
+    {
+      paths: [submissions, pending, published, campaigns, plans],
+      items: [
+        { href: submissions, label: "All submissions" },
+        { href: pending, label: "Pending approvals", badge: reviewBadge },
+        { href: campaigns, label: "Campaigns" },
+        { href: published, label: "Published content" },
+      ],
+    },
+    {
+      paths: [roi, website],
+      items: [
+        { href: roi, label: "ROI" },
+        { href: website, label: "Website" },
+      ],
+      note: { href: accounts, label: "Per-affiliate social counts" },
+    },
+    {
+      paths: [payouts, orders],
+      items: [
+        { href: payouts, label: "Marketing and lab payouts" },
+        { href: orders, label: "Orders" },
+      ],
+    },
+    {
+      paths: [records, compliance, team],
+      items: [
+        ...(fullAccess ? [{ href: team, label: "Team" }] : []),
+        { href: records, label: "Compliance records", active: [records, compliance] },
+      ],
+    },
+  ];
   const profileRole = actor.role === "owner" ? "Main admin" : actor.role === "admin" ? "Admin" : "Sub admin";
   const admin = await adminAccountProfile();
 
@@ -48,8 +108,9 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
           <PortalBrand badge="Admin" />
         </h1>
         <p className="mt-4 max-w-2xl text-taupe">
-          Manage affiliate accounts, referral links, promo codes, orders, payouts, and campaign ROI.
+          Manage affiliate accounts, content, stats, payouts, and settings.
         </p>
+        <PortalLegalLinks className="mt-3" />
         {affiliateFirebaseConfigured() ? (
           <div className="mt-8 xl:grid xl:grid-cols-[minmax(18rem,max-content)_minmax(0,1fr)] xl:gap-8">
             <div className="z-20 xl:self-stretch">
@@ -66,7 +127,9 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
                 <AreaNav label="Affiliate admin" items={nav} />
               </div>
             </div>
-            <div className="mt-8 flex min-w-0 flex-col xl:mt-0">{children}</div>
+            <div className="mt-8 flex min-w-0 flex-col xl:mt-0">
+              <DashboardSections groups={groups}>{children}</DashboardSections>
+            </div>
           </div>
         ) : (
           <p className="mt-10 max-w-xl text-ink">

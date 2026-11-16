@@ -1,12 +1,22 @@
 import { getStorage } from "firebase-admin/storage";
-import type { DocumentData, Timestamp } from "firebase-admin/firestore";
+import { FieldValue, type DocumentData, type Timestamp } from "firebase-admin/firestore";
 import { normalizeAffiliateCode } from "./code";
 import { disclosureAcknowledged } from "./disclosures";
 import { affiliateFirebaseConfigured, affiliateFirestore } from "./firebase";
+import { filesMatchFormat, formatUploadIssue, instagramPostUrl, liveLinkFor, postFormat, type PostFormat } from "./post-format";
 import { IMAGE_BYTES, VIDEO_BYTES, postUploadKind } from "./post-files";
-import { canonicalPostUrl, textHasTrackingCode } from "./social-match";
-import { fetchInstagramMedia, readInstagramMedia, type InstagramMediaSnapshot } from "./social-fetch";
-import { SocialError, loadConnectionSecrets } from "./social-store";
+import { deliverableFeeCents } from "./deliverable-payments";
+import { formatForOfferKind, lockedPayTerms, offerSlideBounds, type LockedPayTerms } from "./offer-post";
+import { loadMarketingOffer } from "./marketing-offers";
+import { canonicalPostUrl, samePublishedPost, textHasTrackingCode } from "./social-match";
+import { fetchInstagramMedia, fetchTikTokPosts, readInstagramMedia, type InstagramMediaSnapshot } from "./social-fetch";
+import { currentTikTokConnection } from "./social-sync";
+import { SocialError, loadConnectionSecrets, loadSocialAccounts, markSocialReconnect, type TikTokConnectionSecret } from "./social-store";
+import { formatWhen, publishDateValue } from "./format";
+import { loadMarketingCampaignRecords } from "./roi-store";
+import { DEFAULT_TRACKING_DAYS, MANUAL_REPORT_MS, REPORT_WINDOW_MS, manualReportDue, networkConnectedForPost, trackingDaysOf, type MetricsOrigin } from "./manual-checkpoint";
+export { MANUAL_REPORT_MS, REPORT_WINDOW_MS, manualReportDue, networkConnectedForPost };
+export type { MetricsOrigin };
 
 const CAPTION_LIMIT = 2200;
 const SLIDE_LIMIT = 20;
@@ -22,11 +32,20 @@ const METRIC_KEYS = ["likes", "comments", "shares", "saves", "reach", "views"] a
 export type ContentStatus = (typeof CONTENT_STATUSES)[number];
 export type PublicationStatus = (typeof PUBLICATION_STATUSES)[number];
 export type PostMetrics = Record<(typeof METRIC_KEYS)[number], number | null>;
+
+export type MetricChangeRequest = {
+  views: number | null;
+  likes: number | null;
+  comments: number | null;
+  shares: number | null;
+  note: string;
+  requestedAt: string | null;
+};
 export type ContentStep = "approve" | "request" | "reject" | "revise";
 export type VerificationFailure = "not_connected" | "not_found" | "missing_disclosure" | "missing_link" | "unavailable";
 
 export class PostReviewError extends Error {
-  code: "invalid" | "file" | "storage" | "missing" | "unavailable" | "status" | "url" | "note" | "disclosure" | "link";
+  code: "invalid" | "file" | "storage" | "missing" | "unavailable" | "status" | "url" | "note" | "disclosure" | "link" | "fee" | "campaign" | "offer" | "terms" | "date";
 
   constructor(code: PostReviewError["code"]) {
     super(code);
@@ -45,6 +64,16 @@ export type BatchPostInput = {
   file: File | null;
   slots: PostFileSlot[] | null;
   slideCaptions: string[] | null;
+  format: PostFormat | null;
+  campaign: string | null;
+  offerId: string;
+  proposedPublishOn: string | null;
+};
+
+export type ContentRevision = {
+  version: number;
+  reviewNote: string;
+  reviewedAt: string | null;
 };
 
 export type ContentSubmission = {
@@ -55,7 +84,12 @@ export type ContentSubmission = {
   contentType: string;
   files: StoredPostFile[];
   slideCaptions: string[];
+  format: PostFormat | null;
   batchId: string;
+  campaign: string;
+  proposedPublishOn: string;
+  reviewedBy: string;
+  revisions: ContentRevision[];
   version: number;
   submittedAt: string | null;
   contentStatus: ContentStatus;
@@ -67,6 +101,23 @@ export type ContentSubmission = {
   metricsCheckedAt: string | null;
   createdAt: string | null;
   reviewedAt: string | null;
+  publishedAt: string | null;
+  metricsSource: MetricsOrigin | null;
+  metricsRecordedAt: string | null;
+  manualReportEmailedAt: string | null;
+  metricChange: MetricChangeRequest | null;
+  agreedFeeCents: number | null;
+  viewRateCents: number | null;
+  maxPayCents: number | null;
+  trackingDays: number | null;
+  offerId: string;
+  offerKind: string;
+  offerBrief: string;
+  publishBy: string;
+  deliverableHoldStartedAt: string | null;
+  deliverableRecheckedAt: string | null;
+  deliverableForfeitedAt: string | null;
+  deliverableForfeitNote: string;
 } & PostMetrics;
 
 export function contentStatusLabel(status: ContentStatus) {
@@ -216,23 +267,7 @@ export function reviewNoteText(value: unknown) {
   return text;
 }
 
-export function instagramPostUrl(value: unknown) {
-  if (typeof value !== "string") return null;
-  let url: URL;
-  try {
-    url = new URL(value.trim());
-  } catch {
-    return null;
-  }
-  if (url.protocol !== "https:") return null;
-  const host = url.hostname.toLowerCase().replace(/^www\./, "");
-  if (host !== "instagram.com") return null;
-  const parts = url.pathname.split("/").filter(Boolean);
-  const kind = parts[0];
-  const shortcode = parts[1];
-  if ((kind !== "p" && kind !== "reel" && kind !== "tv") || !shortcode || !/^[A-Za-z0-9_-]{5,40}$/.test(shortcode)) return null;
-  return `https://www.instagram.com/${kind}/${shortcode}/`;
-}
+export { instagramPostUrl } from "./post-format";
 
 export function instagramShortcode(value: string) {
   const canonical = canonicalPostUrl(value);
@@ -282,7 +317,7 @@ export function metricText(value: number | null) {
   return new Intl.NumberFormat("en-US").format(value);
 }
 
-export function metricLines(metrics: PostMetrics) {
+export function metricLines(metrics: PostMetrics, empty = "Not available from Instagram") {
   const labels: Record<(typeof METRIC_KEYS)[number], string> = {
     likes: "Likes",
     comments: "Comments",
@@ -291,7 +326,13 @@ export function metricLines(metrics: PostMetrics) {
     reach: "Reach",
     views: "Views",
   };
-  return METRIC_KEYS.map((key) => ({ label: labels[key], value: metricText(metrics[key]) }));
+  return METRIC_KEYS.map((key) => ({ label: labels[key], value: metrics[key] == null ? empty : metricText(metrics[key]) }));
+}
+
+export function metricsOriginLabel(source: MetricsOrigin | null, recordedAt: string | null) {
+  if (source === "automatic") return `Imported ${formatWhen(recordedAt)}`;
+  if (source === "manual") return `Entered by you ${formatWhen(recordedAt)}`;
+  return "";
 }
 
 export function metricsAreStale(checkedAt: string | null, now = Date.now()) {
@@ -363,6 +404,36 @@ function metricValue(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 ? Math.floor(value) : null;
 }
 
+function metricChangeFrom(value: unknown): MetricChangeRequest | null {
+  if (!value || typeof value !== "object") return null;
+  const change = value as Record<string, unknown>;
+  const views = metricValue(change.views);
+  const likes = metricValue(change.likes);
+  const comments = metricValue(change.comments);
+  const shares = metricValue(change.shares);
+  if (views == null && likes == null && comments == null && shares == null) return null;
+  const note = typeof change.note === "string" ? change.note.trim().slice(0, NOTE_LIMIT) : "";
+  return { views, likes, comments, shares, note, requestedAt: asDate(change.requestedAt)?.toISOString() ?? null };
+}
+
+function revisionsFrom(value: unknown): ContentRevision[] {
+  if (!Array.isArray(value)) return [];
+  const items: ContentRevision[] = [];
+  for (const entry of value) {
+    if (!entry || typeof entry !== "object") continue;
+    const row = entry as Record<string, unknown>;
+    const version = typeof row.version === "number" && row.version >= 1 && row.version <= 99 ? Math.floor(row.version) : 0;
+    if (!version) continue;
+    items.push({
+      version,
+      reviewNote: typeof row.reviewNote === "string" ? row.reviewNote.slice(0, NOTE_LIMIT) : "",
+      reviewedAt: asDate(row.reviewedAt)?.toISOString() ?? null,
+    });
+    if (items.length >= 20) break;
+  }
+  return items;
+}
+
 function submissionFrom(id: string, data: DocumentData | undefined): ContentSubmission | null {
   if (!data) return null;
   const code = normalizeAffiliateCode(data.code);
@@ -381,7 +452,12 @@ function submissionFrom(id: string, data: DocumentData | undefined): ContentSubm
     contentType: files[0]?.contentType ?? "",
     files,
     slideCaptions: slideCaptionList(data.slideCaptions),
+    format: postFormat(data.format),
     batchId: typeof data.batchId === "string" && /^[0-9a-f-]{36}$/i.test(data.batchId) ? data.batchId : "",
+    campaign: storedCampaign(data.campaign),
+    proposedPublishOn: publishDateValue(data.proposedPublishOn) ?? "",
+    reviewedBy: typeof data.reviewedBy === "string" ? data.reviewedBy.trim().slice(0, 120) : "",
+    revisions: revisionsFrom(data.revisions),
     version: typeof data.version === "number" && data.version >= 1 && data.version <= 99 ? Math.floor(data.version) : 1,
     submittedAt: asDate(data.submittedAt)?.toISOString() ?? null,
     contentStatus,
@@ -399,6 +475,23 @@ function submissionFrom(id: string, data: DocumentData | undefined): ContentSubm
     metricsCheckedAt: asDate(data.metricsCheckedAt)?.toISOString() ?? null,
     createdAt: asDate(data.createdAt)?.toISOString() ?? null,
     reviewedAt: asDate(data.reviewedAt)?.toISOString() ?? null,
+    publishedAt: asDate(data.publishedAt)?.toISOString() ?? null,
+    metricsSource: data.metricsSource === "automatic" || data.metricsSource === "manual" ? data.metricsSource : null,
+    metricsRecordedAt: asDate(data.metricsRecordedAt)?.toISOString() ?? null,
+    manualReportEmailedAt: asDate(data.manualReportEmailedAt)?.toISOString() ?? null,
+    metricChange: metricChangeFrom(data.metricChange),
+    agreedFeeCents: deliverableFeeCents(data.agreedFeeCents),
+    viewRateCents: deliverableFeeCents(data.viewRateCents),
+    maxPayCents: deliverableFeeCents(data.maxPayCents),
+    trackingDays: trackingDaysOf(data.trackingDays),
+    offerId: typeof data.offerId === "string" && !data.offerId.includes("/") ? data.offerId : "",
+    offerKind: typeof data.offerKind === "string" ? data.offerKind : "",
+    offerBrief: typeof data.offerBrief === "string" ? data.offerBrief.slice(0, 800) : "",
+    publishBy: typeof data.publishBy === "string" ? data.publishBy : "",
+    deliverableHoldStartedAt: asDate(data.deliverableHoldStartedAt)?.toISOString() ?? null,
+    deliverableRecheckedAt: asDate(data.deliverableRecheckedAt)?.toISOString() ?? null,
+    deliverableForfeitedAt: asDate(data.deliverableForfeitedAt)?.toISOString() ?? null,
+    deliverableForfeitNote: typeof data.deliverableForfeitNote === "string" ? data.deliverableForfeitNote : "",
   };
 }
 
@@ -505,6 +598,7 @@ export async function submitContentPost(input: { code: string; caption: unknown;
   const file = input.file && input.file.size > 0 ? input.file : null;
   if (!file) throw new PostReviewError("file");
   const db = requireDb();
+  const standing = await requireStandingTerms(code);
   const ref = db.collection("contentSubmissions").doc();
   const stored = await savePostFile(code, ref.id, file);
   await ref.set({
@@ -528,6 +622,7 @@ export async function submitContentPost(input: { code: string; caption: unknown;
     createdAt: new Date(),
     reviewedAt: null,
     publishedAt: null,
+    ...standing,
   });
   return ref.id;
 }
@@ -541,14 +636,17 @@ export async function reviseContentPost(input: { id: string; code: string; capti
   if (!nextContentStatus(post.contentStatus, "revise")) throw new PostReviewError("status");
   const stored = file ? await savePostFile(code, post.id, file) : null;
   const files = stored ? filesAfterLegacyUpload(post, stored) : knownFiles(post);
+  const standing = post.viewRateCents == null && post.agreedFeeCents == null ? await requireStandingTerms(code) : null;
   await requireDb().collection("contentSubmissions").doc(post.id).update({
     caption,
     ...(stored ? fileRecord(files) : {}),
     ...(files.length <= 1 ? { slideCaptions: [caption] } : {}),
+    ...(standing ?? {}),
     version: Math.min(99, (post.version || 1) + 1),
     submittedAt: new Date(),
     contentStatus: "submitted",
     reviewNote: null,
+    ...revisionFields(post),
   });
   return post;
 }
@@ -560,6 +658,95 @@ function slideCaptionsFor(value: string[] | null, count: number, caption: string
   while (captions.length < count) captions.push("");
   if (captions.some((text) => text.length > CAPTION_LIMIT)) throw new PostReviewError("invalid");
   return captions;
+}
+
+const CAMPAIGN_NAME = /^[A-Za-z0-9][A-Za-z0-9 '&.,-]{0,59}$/;
+
+export function campaignName(value: unknown) {
+  if (typeof value !== "string") throw new PostReviewError("campaign");
+  const name = value.trim().replace(/\s+/g, " ");
+  if (!name) return "";
+  if (!CAMPAIGN_NAME.test(name)) throw new PostReviewError("campaign");
+  return name;
+}
+
+export function assignedCampaignName(value: unknown, assigned: readonly string[]) {
+  const name = campaignName(value);
+  if (!name) return "";
+  const match = assigned.find((item) => item.toLowerCase() === name.toLowerCase());
+  if (!match) throw new PostReviewError("campaign");
+  return match;
+}
+
+export function campaignChangeAllowed(status: ContentStatus) {
+  return status === "draft" || status === "submitted" || status === "revision_requested";
+}
+
+export function proposedPublishDate(value: unknown) {
+  if (value == null || value === "") return "";
+  const date = publishDateValue(value);
+  if (!date) throw new PostReviewError("date");
+  return date;
+}
+
+export function revisionOnResubmit(existing: { contentStatus: ContentStatus; version: number; reviewNote: string; reviewedAt: string | null } | null) {
+  if (!existing || existing.contentStatus === "draft") return null;
+  return { version: existing.version, reviewNote: existing.reviewNote, reviewedAt: existing.reviewedAt };
+}
+
+export function appendContentRevision(existing: readonly ContentRevision[], entry: ContentRevision) {
+  const next = [
+    ...existing,
+    {
+      version: entry.version,
+      reviewNote: entry.reviewNote.trim().slice(0, NOTE_LIMIT),
+      reviewedAt: entry.reviewedAt,
+    },
+  ];
+  return next.slice(-20);
+}
+
+function campaignFields(campaign: string | null, allowed: readonly string[], mode: "set" | "update") {
+  if (campaign == null) return {};
+  const name = assignedCampaignName(campaign, allowed);
+  if (name) return { campaign: name };
+  if (mode === "set") return {};
+  return { campaign: FieldValue.delete() };
+}
+
+function proposedDateFields(value: string | null) {
+  if (value == null) return {};
+  const date = proposedPublishDate(value);
+  if (!date) return { proposedPublishOn: FieldValue.delete() };
+  return { proposedPublishOn: date };
+}
+
+function revisionFields(existing: ContentSubmission | null) {
+  const entry = revisionOnResubmit(existing);
+  if (!existing || !entry) return {};
+  return { revisions: appendContentRevision(existing.revisions, entry), reviewedBy: FieldValue.delete() };
+}
+
+async function campaignNamesFor(code: string) {
+  try {
+    const records = await loadMarketingCampaignRecords();
+    return records.filter((record) => record.assignedCodes.includes(code)).map((record) => record.name);
+  } catch (error) {
+    if (error instanceof PostReviewError) throw error;
+    throw new PostReviewError("unavailable");
+  }
+}
+
+function reviewerName(value: unknown) {
+  if (typeof value !== "string") return "admin";
+  const name = value.trim().slice(0, 120);
+  return name || "admin";
+}
+
+function storedCampaign(value: unknown) {
+  if (typeof value !== "string") return "";
+  const name = value.trim().replace(/\s+/g, " ");
+  return CAMPAIGN_NAME.test(name) ? name : "";
 }
 
 function draftCaption(value: unknown) {
@@ -588,11 +775,43 @@ function newSubmissionFields(code: string, caption: string, files: StoredPostFil
   };
 }
 
+function payFieldsFor(existing: ContentSubmission | null, incoming: LockedPayTerms | null, standing: LockedPayTerms | null) {
+  if (existing?.viewRateCents != null) return lockedPayTerms(existing, incoming ?? standingTerms(existing.viewRateCents, existing.maxPayCents, existing.trackingDays));
+  if (incoming) return incoming;
+  if (existing?.agreedFeeCents != null) return { agreedFeeCents: existing.agreedFeeCents };
+  return standing;
+}
+
+function standingTerms(viewRateCents: number, maxPayCents: number | null, trackingDays: number | null): LockedPayTerms {
+  return { viewRateCents, maxPayCents, trackingDays: trackingDays ?? DEFAULT_TRACKING_DAYS };
+}
+
+async function requireStandingTerms(code: string): Promise<LockedPayTerms> {
+  const snap = await requireDb().collection("affiliates").doc(code).get();
+  const data = snap.data();
+  const viewRateCents = deliverableFeeCents(data?.deliverableFeeCents);
+  if (viewRateCents == null) throw new PostReviewError("fee");
+  return standingTerms(viewRateCents, deliverableFeeCents(data?.deliverableMaxPayCents), trackingDaysOf(data?.deliverableTrackingDays));
+}
+
 async function ownedBatchPost(id: string, code: string, allowed: ContentStatus[]) {
   if (!id) return null;
   const post = await requireOwned(id, code);
   if (!allowed.includes(post.contentStatus)) throw new PostReviewError("status");
   return post;
+}
+
+function assertFormatUploads(format: PostFormat, item: BatchPostInput) {
+  if (item.slots) {
+    if (format !== "instagram_post" && item.slots.length !== 1) throw new PostReviewError("file");
+    if (format === "instagram_post" && (item.slots.length < 1 || item.slots.length > SLIDE_LIMIT)) throw new PostReviewError("file");
+  }
+  const uploads = item.slots
+    ? item.slots.flatMap((slot) => (slot.kind === "upload" ? [slot.file] : []))
+    : item.file && item.file.size > 0
+      ? [item.file]
+      : [];
+  if (uploads.some((file) => formatUploadIssue(format, file))) throw new PostReviewError("file");
 }
 
 async function filesForBatchItem(code: string, id: string, item: BatchPostInput, existing: ContentSubmission | null) {
@@ -606,6 +825,7 @@ export async function saveContentDrafts(input: { code: string; posts: BatchPostI
   if (!code || input.posts.length < 1 || input.posts.length > POST_BATCH_LIMIT) throw new PostReviewError("invalid");
   if (!(await disclosureAcknowledged(code))) throw new PostReviewError("invalid");
   const db = requireDb();
+  const allowed = await campaignNamesFor(code);
   const ids: string[] = [];
   for (const item of input.posts) {
     const caption = draftCaption(item.caption);
@@ -620,16 +840,22 @@ export async function saveContentDrafts(input: { code: string; posts: BatchPostI
         caption,
         ...(files ? fileRecord(files) : {}),
         contentStatus: "draft",
+        ...campaignFields(item.campaign, allowed, "update"),
+        ...proposedDateFields(item.proposedPublishOn),
       });
     } else {
-      await ref.set(newSubmissionFields(code, caption, files ?? [], "draft"));
+      await ref.set({
+        ...newSubmissionFields(code, caption, files ?? [], "draft"),
+        ...campaignFields(item.campaign, allowed, "set"),
+        ...proposedDateFields(item.proposedPublishOn),
+      });
     }
     ids.push(ref.id);
   }
   return ids;
 }
 
-export async function submitContentBatch(input: { code: string; posts: BatchPostInput[] }) {
+export async function submitContentBatch(input: { code: string; posts: BatchPostInput[]; termsAccepted: boolean }) {
   const code = normalizeAffiliateCode(input.code);
   if (!code || input.posts.length < 1 || input.posts.length > POST_BATCH_LIMIT) throw new PostReviewError("invalid");
   const db = requireDb();
@@ -637,6 +863,15 @@ export async function submitContentBatch(input: { code: string; posts: BatchPost
   for (const item of input.posts) {
     const caption = await preparedCaption(code, item.caption);
     const existing = await ownedBatchPost(item.id, code, ["draft", "submitted", "revision_requested"]);
+    const offerId = existing?.offerId || item.offerId.trim();
+    if (existing?.offerId && item.offerId.trim() && item.offerId.trim() !== existing.offerId) throw new PostReviewError("offer");
+    if (existing && !existing.offerId && item.offerId.trim()) throw new PostReviewError("offer");
+    const linked = offerId ? await loadMarketingOffer(offerId) : null;
+    if (offerId && (!linked || linked.code !== code || linked.status !== "accepted")) throw new PostReviewError("offer");
+    const format = (linked ? formatForOfferKind(linked.kind) : null) ?? item.format ?? existing?.format ?? null;
+    if (!existing && !format) throw new PostReviewError("invalid");
+    if (linked && item.format && item.format !== format) throw new PostReviewError("invalid");
+    if (format) assertFormatUploads(format, item);
     const available = knownFiles(existing).length;
     if (item.slideCaptions && item.slots && item.slideCaptions.length !== item.slots.length) throw new PostReviewError("invalid");
     if (item.slots) {
@@ -647,6 +882,15 @@ export async function submitContentBatch(input: { code: string; posts: BatchPost
     }
     ready.push({ caption, existing, item });
   }
+  const needsStandingFee = ready.some((entry) => {
+    const bound = entry.existing?.offerId || entry.item.offerId.trim();
+    return !bound && entry.existing?.viewRateCents == null && entry.existing?.agreedFeeCents == null;
+  });
+  if (needsStandingFee && !input.termsAccepted) throw new PostReviewError("terms");
+  const offerIds = new Set(ready.map((entry) => entry.existing?.offerId || entry.item.offerId.trim()).filter(Boolean));
+  if (offerIds.size > 1 || (offerIds.size === 1 && ready.length > 1)) throw new PostReviewError("offer");
+  const standing = needsStandingFee ? await requireStandingTerms(code) : null;
+  const allowed = await campaignNamesFor(code);
   const freshBatch = crypto.randomUUID();
   const ids: string[] = [];
   for (const entry of ready) {
@@ -654,14 +898,75 @@ export async function submitContentBatch(input: { code: string; posts: BatchPost
     const uploaded = await filesForBatchItem(code, ref.id, entry.item, entry.existing);
     const files = uploaded ?? knownFiles(entry.existing);
     if (!files.length) throw new PostReviewError("file");
+    const boundOffer = entry.existing?.offerId || entry.item.offerId.trim();
+    const offer = boundOffer ? await loadMarketingOffer(boundOffer) : null;
+    if (boundOffer && (!offer || offer.code !== code || offer.status !== "accepted")) throw new PostReviewError("offer");
+    const expectedFormat = offer ? formatForOfferKind(offer.kind) : null;
+    const format = expectedFormat ?? entry.item.format ?? entry.existing?.format ?? null;
+    if (offer && entry.item.format && entry.item.format !== expectedFormat) throw new PostReviewError("invalid");
+    if (format && !filesMatchFormat(format, files)) throw new PostReviewError("file");
+    if (offer) {
+      const bounds = offerSlideBounds(offer.kind);
+      if (!bounds || files.length < bounds.min || files.length > bounds.max) throw new PostReviewError("file");
+    }
     const slideCaptions = slideCaptionsFor(entry.item.slideCaptions, files.length, entry.caption, entry.existing?.slideCaptions ?? []);
+    const payFields = payFieldsFor(entry.existing, offer ? standingTerms(offer.amountCents, offer.maxPayCents, offer.trackingDays) : null, standing);
+    if (!payFields) throw new PostReviewError("fee");
     const reviewMeta = {
       slideCaptions,
+      ...(format ? { format } : {}),
       batchId: entry.existing?.batchId || freshBatch,
       version: entry.existing && entry.existing.contentStatus !== "draft" ? Math.min(99, (entry.existing.version || 1) + 1) : 1,
       submittedAt: new Date(),
+      ...payFields,
+      ...(offer
+        ? {
+            offerId: offer.id,
+            offerKind: offer.kind,
+            offerBrief: offer.brief,
+            publishBy: offer.publishBy,
+          }
+        : {}),
     };
-    if (entry.existing) {
+    const savedCampaign = offer?.campaign
+      ? { campaign: offer.campaign }
+      : campaignFields(entry.item.campaign, allowed, entry.existing ? "update" : "set");
+    const extras = { ...savedCampaign, ...proposedDateFields(entry.item.proposedPublishOn), ...revisionFields(entry.existing) };
+    if (offer) {
+      await db.runTransaction(async (tx) => {
+        const offerSnap = await tx.get(db.collection("marketingOffers").doc(offer.id));
+        const siblings = await tx.get(db.collection("contentSubmissions").where("offerId", "==", offer.id));
+        const others = siblings.docs.filter((doc) => doc.id !== ref.id);
+        if (others.some((doc) => {
+          const status = doc.data().contentStatus;
+          return status !== "withdrawn" && status !== "rejected";
+        })) throw new PostReviewError("offer");
+        for (const doc of others) {
+          const payment = await tx.get(db.collection("deliverablePayments").doc(doc.id));
+          if (payment.exists) throw new PostReviewError("offer");
+        }
+        const fresh = offerSnap.data();
+        if (fresh?.status !== "accepted" || normalizeAffiliateCode(fresh.code) !== code) throw new PostReviewError("offer");
+        const freshRate = deliverableFeeCents(fresh?.amountCents);
+        const freshPay = freshRate == null ? null : payFieldsFor(entry.existing, standingTerms(freshRate, deliverableFeeCents(fresh?.maxPayCents), trackingDaysOf(fresh?.trackingDays)), null);
+        if (!freshPay) throw new PostReviewError("fee");
+        const saved = { ...reviewMeta, ...freshPay };
+        if (entry.existing) {
+          tx.update(ref, {
+            caption: entry.caption,
+            ...fileRecord(files),
+            ...saved,
+            contentStatus: "submitted",
+            publicationStatus: null,
+            reviewNote: null,
+            reviewedAt: null,
+            ...extras,
+          });
+        } else {
+          tx.set(ref, { ...newSubmissionFields(code, entry.caption, files, "submitted"), ...saved, ...extras });
+        }
+      });
+    } else if (entry.existing) {
       await ref.update({
         caption: entry.caption,
         ...fileRecord(files),
@@ -670,13 +975,24 @@ export async function submitContentBatch(input: { code: string; posts: BatchPost
         publicationStatus: null,
         reviewNote: null,
         reviewedAt: null,
+        ...extras,
       });
     } else {
-      await ref.set({ ...newSubmissionFields(code, entry.caption, files, "submitted"), ...reviewMeta });
+      await ref.set({ ...newSubmissionFields(code, entry.caption, files, "submitted"), ...reviewMeta, ...extras });
     }
     ids.push(ref.id);
   }
   return ids;
+}
+
+export async function assignPostCampaign(input: { id: string; code: string; campaign: unknown }) {
+  const code = normalizeAffiliateCode(input.code);
+  if (!code) throw new PostReviewError("invalid");
+  const post = await requireOwned(input.id, code);
+  if (post.offerId) throw new PostReviewError("status");
+  if (!campaignChangeAllowed(post.contentStatus)) throw new PostReviewError("status");
+  const allowed = await campaignNamesFor(code);
+  await requireDb().collection("contentSubmissions").doc(post.id).update(campaignFields(typeof input.campaign === "string" ? input.campaign : "", allowed, "update"));
 }
 
 export async function withdrawContentPost(input: { id: string; code: string }) {
@@ -707,7 +1023,7 @@ async function carouselMates(post: ContentSubmission) {
   return mates.length ? mates : [post];
 }
 
-async function review(id: string, step: "approve" | "request" | "reject", note: unknown) {
+async function review(id: string, step: "approve" | "request" | "reject", note: unknown, reviewer: unknown) {
   const post = await loadContentSubmission(id);
   if (!post) throw new PostReviewError("missing");
   const reviewNote = step === "approve" ? null : reviewNoteText(note);
@@ -716,25 +1032,27 @@ async function review(id: string, step: "approve" | "request" | "reject", note: 
   const mates = (await carouselMates(post)).filter((item) => item.contentStatus === "submitted" || item.contentStatus === "revision_requested");
   if (!mates.length) throw new PostReviewError("status");
   const reviewedAt = new Date();
+  const reviewedBy = reviewerName(reviewer);
   await Promise.all(mates.map((item) => requireDb().collection("contentSubmissions").doc(item.id).update({
     contentStatus: status,
     publicationStatus: step === "approve" ? "awaiting_publication" : null,
     reviewNote,
     reviewedAt,
+    reviewedBy,
   })));
   return post;
 }
 
-export function approveContentPost(id: string) {
-  return review(id, "approve", null);
+export function approveContentPost(id: string, reviewer: unknown) {
+  return review(id, "approve", null, reviewer);
 }
 
-export function requestContentChange(id: string, note: unknown) {
-  return review(id, "request", note);
+export function requestContentChange(id: string, note: unknown, reviewer: unknown) {
+  return review(id, "request", note, reviewer);
 }
 
-export function rejectContentPost(id: string, note: unknown) {
-  return review(id, "reject", note);
+export function rejectContentPost(id: string, note: unknown, reviewer: unknown) {
+  return review(id, "reject", note, reviewer);
 }
 
 async function instagramPages(code: string) {
@@ -742,6 +1060,7 @@ async function instagramPages(code: string) {
     const secrets = await loadConnectionSecrets(code);
     return secrets.flatMap((secret) => (secret.network === "facebook" ? secret.pages.filter((page) => page.instagramAccountId) : []));
   } catch (error) {
+    if (error instanceof SocialError && error.code === "expired") throw error;
     if (error instanceof SocialError) throw new PostReviewError("unavailable");
     throw error;
   }
@@ -766,10 +1085,20 @@ async function finishVerification(id: string, code: string, url: string) {
       verificationNote: null,
       instagramMediaId: match.mediaId,
       ...match.metrics,
+      metricsSource: "automatic",
+      metricsRecordedAt: new Date(),
       metricsCheckedAt: new Date(),
+      deliverableHoldStartedAt: new Date(),
+      deliverableRecheckedAt: FieldValue.delete(),
+      deliverableForfeitedAt: FieldValue.delete(),
+      deliverableForfeitNote: FieldValue.delete(),
     });
+    await markSocialReconnect(code, "facebook", false);
     return "tracking_active" as const;
   } catch (error) {
+    if (error instanceof SocialError && error.code === "expired") {
+      await markSocialReconnect(code, "facebook", true);
+    }
     await ref.update({ publicationStatus: "verification_failed", verificationNote: verificationFailureNote("unavailable"), instagramMediaId: null });
     if (!(error instanceof SocialError) && !(error instanceof PostReviewError)) {
       console.error("[affiliate] instagram post check failed", error instanceof Error ? error.message : "unknown");
@@ -780,17 +1109,19 @@ async function finishVerification(id: string, code: string, url: string) {
 
 export async function submitLiveInstagramUrl(input: { id: string; code: string; url: unknown }) {
   const code = normalizeAffiliateCode(input.code);
-  const url = instagramPostUrl(input.url);
   if (!code) throw new PostReviewError("invalid");
-  if (!url) throw new PostReviewError("url");
   const post = await requireOwned(input.id, code);
-  if (!canPasteLiveUrl(post.contentStatus, post.publicationStatus)) throw new PostReviewError("status");
+  const url = liveLinkFor(post.format, input.url);
+  if (!url) throw new PostReviewError("url");
+  const waitingOnTikTok = post.format === "tiktok" && post.publicationStatus === "verification_pending";
+  if (!canPasteLiveUrl(post.contentStatus, post.publicationStatus) && !waitingOnTikTok) throw new PostReviewError("status");
   await requireDb().collection("contentSubmissions").doc(post.id).update({
     postUrl: url,
     publicationStatus: "verification_pending",
     verificationNote: null,
     publishedAt: new Date(),
   });
+  if (post.format === "tiktok") return { ...post, postUrl: url, publicationStatus: "verification_pending" as const };
   const publicationStatus = await finishVerification(post.id, code, url);
   return { ...post, publicationStatus };
 }
@@ -798,28 +1129,85 @@ export async function submitLiveInstagramUrl(input: { id: string; code: string; 
 export async function markContentChecked(id: string) {
   const post = await loadContentSubmission(id);
   if (!post) throw new PostReviewError("missing");
-  if (post.publicationStatus !== "verification_failed") throw new PostReviewError("status");
+  const tiktokWaiting = post.format === "tiktok" && post.publicationStatus === "verification_pending";
+  if (post.publicationStatus !== "verification_failed" && !tiktokWaiting) throw new PostReviewError("status");
   await requireDb().collection("contentSubmissions").doc(post.id).update({
     publicationStatus: "tracking_active",
     verificationNote: "An admin checked this link.",
     instagramMediaId: null,
     ...blankMetrics(),
+    metricsSource: null,
+    metricsRecordedAt: null,
     metricsCheckedAt: null,
+    metricChange: FieldValue.delete(),
+    deliverableHoldStartedAt: new Date(),
+    deliverableRecheckedAt: FieldValue.delete(),
+    deliverableForfeitedAt: FieldValue.delete(),
+    deliverableForfeitNote: FieldValue.delete(),
   });
   return post;
 }
 
 async function writeFreshMetrics(post: ContentSubmission) {
+  try {
+    if (post.format === "tiktok") return await writeTikTokPostMetrics(post);
+    return await writeInstagramPostMetrics(post);
+  } catch (error) {
+    if (error instanceof SocialError && error.code === "expired") {
+      await markSocialReconnect(post.code, post.format === "tiktok" ? "tiktok" : "facebook", true);
+      return false;
+    }
+    throw error;
+  }
+}
+
+function importedMetrics(metrics: PostMetrics) {
+  return {
+    ...postMetricFields(metrics),
+    metricsSource: "automatic" as const,
+    metricsRecordedAt: new Date(),
+    metricsCheckedAt: new Date(),
+    metricChange: FieldValue.delete(),
+  };
+}
+
+async function writeTikTokPostMetrics(post: ContentSubmission) {
+  if (!post.postUrl) return false;
+  const secrets = await loadConnectionSecrets(post.code);
+  const connection = secrets.find((item): item is TikTokConnectionSecret => item.network === "tiktok");
+  if (!connection) return false;
+  const current = await currentTikTokConnection(connection);
+  const videos = await fetchTikTokPosts(current);
+  const match = videos.find((video) => samePublishedPost(post.postUrl, video.permalink));
+  const ref = requireDb().collection("contentSubmissions").doc(post.id);
+  if (!match) {
+    await ref.update({ metricsCheckedAt: new Date() });
+    await markSocialReconnect(post.code, "tiktok", false);
+    return false;
+  }
+  await ref.update(
+    importedMetrics({
+      likes: match.likes,
+      comments: match.comments,
+      shares: match.shares,
+      saves: null,
+      reach: null,
+      views: match.impressions,
+    }),
+  );
+  await markSocialReconnect(post.code, "tiktok", false);
+  return true;
+}
+
+async function writeInstagramPostMetrics(post: ContentSubmission) {
   const pages = await instagramPages(post.code);
   if (pages.length === 0) return false;
   if (post.instagramMediaId) {
     for (const page of pages) {
       const media = await readInstagramMedia(page, post.instagramMediaId);
       if (!media) continue;
-      await requireDb().collection("contentSubmissions").doc(post.id).update({
-        ...postMetricFields(media),
-        metricsCheckedAt: new Date(),
-      });
+      await requireDb().collection("contentSubmissions").doc(post.id).update(importedMetrics(media));
+      await markSocialReconnect(post.code, "facebook", false);
       return true;
     }
     await requireDb().collection("contentSubmissions").doc(post.id).update({ metricsCheckedAt: new Date() });
@@ -834,10 +1222,115 @@ async function writeFreshMetrics(post: ContentSubmission) {
   }
   await requireDb().collection("contentSubmissions").doc(post.id).update({
     instagramMediaId: match.mediaId,
-    ...match.metrics,
-    metricsCheckedAt: new Date(),
+    ...importedMetrics(match.metrics),
   });
+  await markSocialReconnect(post.code, "facebook", false);
   return true;
+}
+
+function manualCount(value: unknown) {
+  if (typeof value !== "string") throw new PostReviewError("invalid");
+  const text = value.trim();
+  if (!text) return null;
+  if (!/^\d+$/.test(text)) throw new PostReviewError("invalid");
+  const count = Number(text);
+  if (!Number.isSafeInteger(count) || count > 1_000_000_000) throw new PostReviewError("invalid");
+  return count;
+}
+
+async function manualCheckpointOpen(post: ContentSubmission) {
+  let accounts: { network: string; needsReconnect: boolean }[] = [];
+  try {
+    accounts = await loadSocialAccounts(post.code);
+  } catch (error) {
+    if (error instanceof SocialError) throw new PostReviewError("unavailable");
+    throw error;
+  }
+  return manualReportDue({
+    publicationStatus: post.publicationStatus,
+    publishedAt: post.publishedAt,
+    metricsRecordedAt: post.metricsRecordedAt,
+    metricsSource: post.metricsSource,
+    connected: networkConnectedForPost(post.format, accounts),
+  });
+}
+
+export async function saveManualMetrics(input: { id: string; code: string; views: unknown; likes: unknown; comments: unknown; shares: unknown }) {
+  const code = normalizeAffiliateCode(input.code);
+  if (!code) throw new PostReviewError("invalid");
+  const post = await requireOwned(input.id, code);
+  if (post.publicationStatus !== "tracking_active" || post.metricsSource != null) throw new PostReviewError("status");
+  if (!(await manualCheckpointOpen(post))) throw new PostReviewError("status");
+  const views = manualCount(input.views);
+  const likes = manualCount(input.likes);
+  const comments = manualCount(input.comments);
+  const shares = manualCount(input.shares);
+  if (views == null && likes == null && comments == null && shares == null) throw new PostReviewError("invalid");
+  await requireDb().collection("contentSubmissions").doc(post.id).update({
+    views,
+    likes,
+    comments,
+    shares,
+    metricsSource: "manual",
+    metricsRecordedAt: new Date(),
+  });
+}
+
+export async function confirmManualMetrics(input: { id: string; code: string }) {
+  const code = normalizeAffiliateCode(input.code);
+  if (!code) throw new PostReviewError("invalid");
+  const post = await requireOwned(input.id, code);
+  if (post.metricsSource !== "manual" || post.publicationStatus !== "tracking_active" || post.metricChange) throw new PostReviewError("status");
+  if (!(await manualCheckpointOpen(post))) throw new PostReviewError("status");
+  if (post.views == null && post.likes == null && post.comments == null && post.shares == null) throw new PostReviewError("invalid");
+  await requireDb().collection("contentSubmissions").doc(post.id).update({
+    metricsSource: "manual",
+    metricsRecordedAt: new Date(),
+  });
+}
+
+export async function requestMetricChange(input: { id: string; code: string; views: unknown; likes: unknown; comments: unknown; shares: unknown; note: unknown }) {
+  const code = normalizeAffiliateCode(input.code);
+  if (!code) throw new PostReviewError("invalid");
+  const post = await requireOwned(input.id, code);
+  if (post.metricsSource !== "manual" || post.publicationStatus !== "tracking_active") throw new PostReviewError("status");
+  const views = manualCount(input.views);
+  const likes = manualCount(input.likes);
+  const comments = manualCount(input.comments);
+  const shares = manualCount(input.shares);
+  if (views == null && likes == null && comments == null && shares == null) throw new PostReviewError("invalid");
+  const note = typeof input.note === "string" ? input.note.trim().slice(0, NOTE_LIMIT) : "";
+  await requireDb().collection("contentSubmissions").doc(post.id).update({
+    metricChange: { views, likes, comments, shares, note, requestedAt: new Date() },
+  });
+}
+
+export async function cancelMetricChange(input: { id: string; code: string }) {
+  const code = normalizeAffiliateCode(input.code);
+  if (!code) throw new PostReviewError("invalid");
+  const post = await requireOwned(input.id, code);
+  if (!post.metricChange) throw new PostReviewError("status");
+  await requireDb().collection("contentSubmissions").doc(post.id).update({ metricChange: FieldValue.delete() });
+}
+
+export async function applyMetricChange(input: { id: string; views: unknown; likes: unknown; comments: unknown; shares: unknown }) {
+  const post = await loadContentSubmission(input.id);
+  if (!post?.metricChange || post.metricsSource !== "manual" || post.publicationStatus !== "tracking_active") throw new PostReviewError("status");
+  const views = manualCount(input.views);
+  const likes = manualCount(input.likes);
+  const comments = manualCount(input.comments);
+  const shares = manualCount(input.shares);
+  if (views == null && likes == null && comments == null && shares == null) throw new PostReviewError("invalid");
+  await requireDb().collection("contentSubmissions").doc(post.id).update({
+    views,
+    likes,
+    comments,
+    shares,
+    metricsSource: "manual",
+    metricsRecordedAt: new Date(),
+    metricChange: FieldValue.delete(),
+  });
+  return post;
 }
 
 export async function refreshDueMetrics(code?: string, limit = 8) {

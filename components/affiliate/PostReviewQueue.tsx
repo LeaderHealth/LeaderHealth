@@ -18,7 +18,7 @@ export type ReviewSlide = {
 
 export type ReviewCheck = { tone: "pass" | "warn"; label: string };
 
-export type ReviewQueue = "waiting" | "changes" | "approved" | "link" | "live" | "declined";
+export type ReviewQueue = "waiting" | "changes" | "approved" | "link" | "live" | "declined" | "withdrawn";
 
 export type ReviewPost = {
   id: string;
@@ -31,6 +31,7 @@ export type ReviewPost = {
   batchLabel: string;
   kind: string;
   kindShort: string;
+  source: string;
   excerpt: string;
   flagCount: number;
   checksPass: boolean;
@@ -41,16 +42,36 @@ export type ReviewPost = {
   canMark: boolean;
   pastHref: string;
   suggestedNote: string;
+  campaign: string;
+  platform: string;
+  submittedOn: string;
+  dateLabel: string;
+  dateValue: string;
+  reviewedBy: string;
+  postUrl: string | null;
+  views: number | null;
+  revisions: { version: number; note: string; when: string }[];
 };
 
-const FILTERS: { id: ReviewQueue; label: string }[] = [
-  { id: "waiting", label: "Waiting" },
-  { id: "changes", label: "Changes requested" },
-  { id: "approved", label: "Approved" },
-  { id: "link", label: "Link failed" },
-  { id: "live", label: "Live" },
-  { id: "declined", label: "Not approved" },
-];
+const STATUS_LABEL: Record<ReviewQueue, string> = {
+  waiting: "In review",
+  link: "Link needs a fix",
+  changes: "Changes requested",
+  approved: "Approved",
+  live: "Published",
+  declined: "Rejected",
+  withdrawn: "Withdrawn",
+};
+
+const VIEW_TITLE = {
+  all: "All submissions",
+  pending: "Pending approvals",
+  published: "Published content",
+} as const;
+
+function unique(values: string[]) {
+  return [...new Set(values.filter(Boolean))].sort((left, right) => left.localeCompare(right));
+}
 
 const quietButton =
   "inline-flex h-10 items-center justify-center rounded-full border border-[#CDBDBA] bg-white px-4 text-sm font-medium text-ink hover:bg-background focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
@@ -115,23 +136,40 @@ function captionPieces(caption: string): CaptionPiece[] {
   return pieces.filter((piece) => piece.kind === "link" || piece.value.trim());
 }
 
-export function PostReviewQueue({ posts, initialId, notice }: { posts: ReviewPost[]; initialId: string; notice: string }) {
-  const initialPost = posts.find((post) => post.id === initialId);
-  const [filter, setFilter] = useState<ReviewQueue>(initialPost?.queue ?? "waiting");
+const selectClass = "h-11 rounded-full border border-[#CDBDBA] bg-white px-4 text-sm";
+
+export function PostReviewQueue({ posts, initialId, notice, view }: { posts: ReviewPost[]; initialId: string; notice: string; view: "all" | "pending" | "published" }) {
+  const [affiliate, setAffiliate] = useState("");
+  const [platform, setPlatform] = useState("");
+  const [campaign, setCampaign] = useState("");
+  const [status, setStatus] = useState("");
+  const [day, setDay] = useState("");
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(initialId);
   const [note, setNote] = useState("");
   const [notedFor, setNotedFor] = useState("");
   const [openNext, setOpenNext] = useState(true);
+  const affiliates = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const post of posts) seen.set(post.code, post.name);
+    return [...seen.entries()].sort((left, right) => left[1].localeCompare(right[1]));
+  }, [posts]);
+  const platforms = useMemo(() => unique(posts.map((post) => post.platform)), [posts]);
+  const campaigns = useMemo(() => unique(posts.map((post) => post.campaign)), [posts]);
+  const statuses = useMemo(() => unique(posts.map((post) => post.queue)) as ReviewQueue[], [posts]);
   const visible = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return posts.filter((post) => {
-      if (post.queue !== filter) return false;
+      if (affiliate && post.code !== affiliate) return false;
+      if (platform && post.platform !== platform) return false;
+      if (campaign && post.campaign !== campaign) return false;
+      if (status && post.queue !== status) return false;
+      if (day && post.submittedOn !== day) return false;
       if (!needle) return true;
-      const haystack = [post.name, post.email, post.code, post.excerpt, ...post.slides.map((slide) => slide.caption)].join(" ").toLowerCase();
+      const haystack = [post.name, post.email, post.code, post.excerpt, post.campaign, ...post.slides.map((slide) => slide.caption)].join(" ").toLowerCase();
       return haystack.includes(needle);
     });
-  }, [filter, posts, query]);
+  }, [affiliate, campaign, day, platform, posts, query, status]);
   const selected = visible.find((post) => post.id === selectedId) ?? visible[0] ?? null;
   const activeNote = selected && notedFor === selected.id ? note : selected?.suggestedNote ?? "";
   const nextId = selected ? visible.find((post) => post.id !== selected.id && visible.indexOf(post) > visible.indexOf(selected))?.id ?? visible.find((post) => post.id !== selected.id)?.id ?? "" : "";
@@ -156,22 +194,30 @@ export function PostReviewQueue({ posts, initialId, notice }: { posts: ReviewPos
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-[28px] font-medium tracking-tight">Post review</h2>
+      <div className="flex flex-col gap-3">
+        <h2 className="text-[28px] font-medium tracking-tight">{VIEW_TITLE[view]}</h2>
         <div className="flex flex-wrap gap-2">
-          {FILTERS.map((item) => {
-            const count = posts.filter((post) => post.queue === item.id).length;
-            const current = filter === item.id;
-            return (
-              <button key={item.id} type="button" aria-pressed={current} onClick={() => { setFilter(item.id); setSelectedId(""); }} className={`inline-flex h-9 items-center rounded-full px-3 text-sm ${current ? "bg-ink text-white" : "border border-[#CDBDBA] bg-white text-ink hover:bg-background"}`}>
-                {item.label} {count}
-              </button>
-            );
-          })}
+          <select aria-label="Affiliate" value={affiliate} onChange={(event) => { setAffiliate(event.target.value); setSelectedId(""); }} className={selectClass}>
+            <option value="">All affiliates</option>
+            {affiliates.map(([code, name]) => <option key={code} value={code}>{name}</option>)}
+          </select>
+          <select aria-label="Platform" value={platform} onChange={(event) => { setPlatform(event.target.value); setSelectedId(""); }} className={selectClass}>
+            <option value="">All platforms</option>
+            {platforms.map((item) => <option key={item} value={item}>{item}</option>)}
+          </select>
+          <select aria-label="Campaign" value={campaign} onChange={(event) => { setCampaign(event.target.value); setSelectedId(""); }} className={selectClass}>
+            <option value="">All campaigns</option>
+            {campaigns.map((item) => <option key={item} value={item}>{item}</option>)}
+          </select>
+          <select aria-label="Status" value={status} onChange={(event) => { setStatus(event.target.value); setSelectedId(""); }} className={selectClass}>
+            <option value="">All statuses</option>
+            {statuses.map((item) => <option key={item} value={item}>{STATUS_LABEL[item]}</option>)}
+          </select>
+          <input aria-label="Submitted date" type="date" value={day} onChange={(event) => { setDay(event.target.value); setSelectedId(""); }} className={selectClass} />
         </div>
       </div>
       {notice ? <p role="status" className="rounded-2xl bg-white px-4 py-3 text-sm text-ink">{notice}</p> : null}
-      <div className="grid min-h-[calc(100dvh-18rem)] items-stretch gap-4 lg:min-h-[calc(100dvh-16rem)] lg:grid-cols-[17rem_minmax(0,1fr)]">
+      <div className="grid min-h-[calc(100dvh-14rem)] items-stretch gap-4 lg:min-h-[calc(100dvh-12rem)] lg:grid-cols-[17rem_minmax(0,1fr)]">
         <aside className="flex h-full min-h-0 flex-col gap-3 rounded-[24px] bg-white p-3">
           <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search affiliate or caption" className="h-11 rounded-full border border-[#CDBDBA] px-4 text-sm" />
           <p className="px-2 text-xs text-brown">Oldest first</p>
@@ -190,7 +236,10 @@ export function PostReviewQueue({ posts, initialId, notice }: { posts: ReviewPos
                       </span>
                       <span className="mt-0.5 block truncate text-[13px] text-brown">{post.excerpt || "No caption yet"}</span>
                       <span className="mt-1 flex flex-wrap gap-1">
+                        <span className="rounded-full bg-[#EFEAE9] px-2 py-0.5 text-[11px] text-[#4A3A37]">{STATUS_LABEL[post.queue]}</span>
                         <span className="rounded-full bg-[#EFEAE9] px-2 py-0.5 text-[11px] text-[#4A3A37]">{post.kindShort}</span>
+                        <span className="rounded-full bg-[#F3E6E3] px-2 py-0.5 text-[11px] text-[#4A3A37]">{post.source}</span>
+                        {post.campaign ? <span className="rounded-full bg-[#EFEAE9] px-2 py-0.5 text-[11px] text-[#4A3A37]">{post.campaign}</span> : null}
                         {post.flagCount ? <span className="rounded-full bg-[#FBEFD6] px-2 py-0.5 text-[11px] font-medium text-[#7A4E00]">{post.flagCount} flag{post.flagCount === 1 ? "" : "s"}</span> : null}
                         {!post.flagCount && post.checksPass ? <span className="rounded-full bg-[#DDF0E4] px-2 py-0.5 text-[11px] font-medium text-[#1D6340]">Checks pass</span> : null}
                         {post.batchLabel ? <span className="text-[11px] text-brown">{post.batchLabel}</span> : null}
@@ -211,10 +260,15 @@ export function PostReviewQueue({ posts, initialId, notice }: { posts: ReviewPos
                 <span className="grid size-10 shrink-0 place-items-center rounded-full bg-[#F3E4E1] text-xs font-semibold text-ink">{initials(selected.name)}</span>
                 <div className="min-w-0">
                   <h3 className="text-lg font-semibold">{selected.name} · {selected.kind}</h3>
+                  <p className="text-xs font-semibold text-brown">{selected.source}</p>
                   <p className="mt-1 text-[13px] text-brown">
                     {selected.email} · ref {selected.code} · sent {selected.sent} · version {selected.version}
                     {selected.batchLabel ? ` · post ${selected.batchLabel}` : ""}
                   </p>
+                  {selected.campaign || selected.dateValue ? (
+                    <p className="mt-1 text-[13px] text-brown">{[selected.campaign, selected.dateValue ? `${selected.dateLabel} ${selected.dateValue}` : ""].filter(Boolean).join(" · ")}</p>
+                  ) : null}
+                  {selected.reviewedBy ? <p className="mt-1 text-[13px] text-brown">Reviewed by {selected.reviewedBy}</p> : null}
                 </div>
               </div>
               <a href={selected.pastHref} className="text-sm underline underline-offset-4">Affiliate’s past posts</a>
@@ -224,7 +278,7 @@ export function PostReviewQueue({ posts, initialId, notice }: { posts: ReviewPos
                 <p className="text-[11px] font-semibold tracking-wide text-brown">SLIDES AND CAPTIONS · IN POSTING ORDER</p>
                 <div className="flex min-w-0 flex-col gap-3">
                 {selected.slides.map((slide) => (
-                  <SlideCard key={slide.index} slide={slide} canDecide={selected.canDecide} onAdd={addReply} />
+                  <SlideCard key={`${selected.id}-${slide.index}`} slide={slide} canDecide={selected.canDecide} onAdd={addReply} />
                 ))}
                 </div>
               </div>
@@ -240,6 +294,32 @@ export function PostReviewQueue({ posts, initialId, notice }: { posts: ReviewPos
                   </ul>
                   <p className="mt-3 text-[13px] leading-relaxed text-brown">Checks help, but every slide and caption still needs a look.</p>
                 </div>
+                {selected.postUrl || selected.queue === "live" || selected.queue === "link" ? (
+                  <div className="rounded-2xl bg-background p-4 text-sm">
+                    <h4 className="font-semibold">Published post</h4>
+                    {selected.postUrl ? (
+                      <a href={selected.postUrl} target="_blank" rel="noopener noreferrer" className="mt-2 block break-all underline underline-offset-4">{selected.postUrl}</a>
+                    ) : (
+                      <p className="mt-2 text-[#7A4E00]">No live link on file.</p>
+                    )}
+                    {selected.queue === "link" ? <p className="mt-2 text-[#7A4E00]">The live link could not be confirmed.</p> : null}
+                    {selected.queue === "live" && selected.views == null ? <p className="mt-2 text-[#7A4E00]">Views are not on file yet.</p> : null}
+                    {selected.queue === "live" && selected.views != null ? <p className="mt-2 text-brown">{selected.views.toLocaleString("en-US")} views on file.</p> : null}
+                  </div>
+                ) : null}
+                {selected.revisions.length ? (
+                  <div className="rounded-2xl bg-background p-4 text-sm">
+                    <h4 className="font-semibold">Revision history</h4>
+                    <ul className="mt-2 flex flex-col gap-2">
+                      {selected.revisions.map((revision) => (
+                        <li key={`${revision.version}-${revision.when}`}>
+                          <p className="text-brown">Version {revision.version}{revision.when ? ` · ${revision.when}` : ""}</p>
+                          {revision.note ? <p className="mt-1 whitespace-pre-wrap">{revision.note}</p> : null}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
                 {selected.canDecide ? (
                   <div className="rounded-2xl bg-background p-4">
                     <label htmlFor="review-note" className="text-sm font-semibold">Note to affiliate</label>
@@ -248,7 +328,7 @@ export function PostReviewQueue({ posts, initialId, notice }: { posts: ReviewPos
                     <div className="mt-2 flex flex-wrap gap-2">
                       <button type="button" className="text-[13px] underline underline-offset-4" onClick={() => addReply(selected.suggestedNote || "Please remove the treatment claim. We can’t make treatment claims in affiliate posts.")}>Treatment claim</button>
                       <button type="button" className="text-[13px] underline underline-offset-4" onClick={() => addReply("Please add “Paid partnership with Leader Health” in the caption. A link in your bio is not enough.")}>Missing disclosure</button>
-                      <button type="button" className="text-[13px] underline underline-offset-4" onClick={() => addReply("Please resend the video at 1080×1920, vertical, H.264 in an MP4 or MOV, 30 fps, with AAC audio. Photos need to be under 8 MB.")}>Media quality</button>
+                      <button type="button" className="text-[13px] underline underline-offset-4" onClick={() => addReply("Please resend the video as an MP4, MOV, or WebM under 200 MB. A video saved from TikTok is fine when it is an MP4. Photos need to be under 8 MB.")}>Media quality</button>
                     </div>
                   </div>
                 ) : null}
@@ -267,17 +347,20 @@ export function PostReviewQueue({ posts, initialId, notice }: { posts: ReviewPos
                 <form action={rejectPostAction}>
                   <input type="hidden" name="id" value={selected.id} />
                   <input type="hidden" name="note" value={activeNote} />
+                  <input type="hidden" name="return" value={view === "all" ? "" : view} />
                   <input type="hidden" name="next" value={openNext ? nextId : ""} />
                   <button type="submit" disabled={!noteReady} className={`${quietButton} text-[#9B2C1F] disabled:cursor-not-allowed disabled:opacity-50`}>Decline</button>
                 </form>
                 <form action={requestPostChangeAction}>
                   <input type="hidden" name="id" value={selected.id} />
                   <input type="hidden" name="note" value={activeNote} />
+                  <input type="hidden" name="return" value={view === "all" ? "" : view} />
                   <input type="hidden" name="next" value={openNext ? nextId : ""} />
                   <button type="submit" disabled={!noteReady} className="inline-flex h-10 items-center rounded-full bg-ink px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50">Request changes</button>
                 </form>
                 <form action={approvePostAction}>
                   <input type="hidden" name="id" value={selected.id} />
+                  <input type="hidden" name="return" value={view === "all" ? "" : view} />
                   <input type="hidden" name="next" value={openNext ? nextId : ""} />
                   <button type="submit" className={quietButton}>{selected.slides.length > 1 ? `Approve all ${selected.slides.length} slides` : "Approve"}</button>
                 </form>
@@ -286,6 +369,7 @@ export function PostReviewQueue({ posts, initialId, notice }: { posts: ReviewPos
             {selected.canMark ? (
               <form action={markPostCheckedAction}>
                 <input type="hidden" name="id" value={selected.id} />
+                <input type="hidden" name="return" value={view === "all" ? "" : view} />
                 <input type="hidden" name="next" value={openNext ? nextId : ""} />
                 <button type="submit" className="inline-flex h-10 items-center rounded-full bg-ink px-4 text-sm font-medium text-white">Mark as checked</button>
               </form>
@@ -333,6 +417,11 @@ function LinkCheck({ url }: { url: string }) {
 
 function SlideCard({ slide, canDecide, onAdd }: { slide: ReviewSlide; canDecide: boolean; onAdd: (value: string) => void }) {
   const [failed, setFailed] = useState(false);
+  const [seenHref, setSeenHref] = useState(slide.href);
+  if (slide.href !== seenHref) {
+    setSeenHref(slide.href);
+    setFailed(false);
+  }
   const pieces = captionPieces(slide.caption);
   const links = pieces.filter((piece) => piece.kind === "link").map((piece) => piece.value);
   const text = pieces.filter((piece) => piece.kind === "text").map((piece) => piece.value).join("").trim();

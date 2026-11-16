@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PasswordInput } from "@/components/affiliate/PasswordInput";
+import { PortalLegalLinks } from "@/components/affiliate/PortalLegalLinks";
 import { readSubAdminInvitation, type SubAdminInvitationState } from "@/lib/affiliate/admins";
 import { affiliateFirebaseConfigured } from "@/lib/affiliate/firebase";
 import { affiliateAdminConfigured } from "@/lib/affiliate/session";
@@ -106,6 +107,7 @@ export default async function ActivateSubAdminPage({
             </Link>
           </p>
         ) : null}
+        <PortalLegalLinks className="mt-8" />
       </div>
     </section>
   );

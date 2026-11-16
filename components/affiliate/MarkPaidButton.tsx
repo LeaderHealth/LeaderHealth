@@ -18,6 +18,8 @@ export function MarkPaidButton({
   amount,
   paidOn,
   monthLabel,
+  postId,
+  action = markPayoutPaidAction,
 }: {
   code: string;
   name: string;
@@ -25,6 +27,8 @@ export function MarkPaidButton({
   amount: string;
   paidOn: string;
   monthLabel: string;
+  postId?: string;
+  action?: (formData: FormData) => void | Promise<void>;
 }) {
   const titleId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -80,7 +84,7 @@ export function MarkPaidButton({
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby={titleId}
-                className="relative w-full max-w-md rounded-[28px] bg-white p-8 text-ink shadow-[0_24px_80px_rgba(51,17,16,0.22)]"
+                className="relative w-full max-w-md rounded-[28px] bg-white p-8 text-ink shadow-[0_24px_80px_rgba(51,17,16,0.22)] lg:max-w-lg"
               >
                 <h2 id={titleId} className="text-2xl">
                   Mark paid
@@ -88,9 +92,10 @@ export function MarkPaidButton({
                 <p className="mt-2 text-sm text-brown">
                   Record the payment sent to {name} for {monthLabel}. This does not send money.
                 </p>
-                <form action={markPayoutPaidAction} className="mt-6 space-y-4">
+                <form action={action} className="mt-6 space-y-4">
                   <input type="hidden" name="code" value={code} />
                   <input type="hidden" name="period" value={period} />
+                  {postId ? <input type="hidden" name="postId" value={postId} /> : null}
                   <label className="block text-sm font-medium text-ink" htmlFor={`payout-amount-${code}-${period}`}>
                     Amount
                     <input

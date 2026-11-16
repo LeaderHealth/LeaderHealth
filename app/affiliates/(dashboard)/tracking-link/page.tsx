@@ -4,7 +4,8 @@ import { acknowledgeDisclosureAction } from "../../compliance-actions";
 import { CopyTrackingLink } from "@/components/affiliate/CopyTrackingLink";
 import { EligibleProducts } from "@/components/affiliate/EligibleProducts";
 import { eligibleProductGroups } from "@/lib/affiliate/eligibleProducts";
-import { formatCommissionRate } from "@/lib/affiliate/format";
+import { LAB_COMMISSIONS_ENABLED } from "@/lib/affiliate/code";
+import { formatCents } from "@/lib/affiliate/format";
 import { affiliateTrackingLink } from "@/lib/affiliate/link";
 import { disclosureAcknowledged } from "@/lib/affiliate/disclosures";
 import { listPromoCodes, personalPromoForAffiliate, type PromoCodeRow } from "@/lib/genhealth/promocodes";
@@ -47,8 +48,8 @@ export default async function TrackingLinkPage({
   const products = personal ? await eligibleProductGroups(personal.productIds) : [];
   const url = affiliateTrackingLink(affiliate.code);
   const promoUrl = personalCode ? affiliateTrackingLink(affiliate.code, personalCode) : null;
-  const commission =
-    affiliate.commissionMode === "fixed" ? `${formatCommissionRate(affiliate)} per order` : `${formatCommissionRate(affiliate)} commission`;
+  const fee = affiliate.deliverableFeeCents == null ? "View rate not set" : `${formatCents(affiliate.deliverableFeeCents)} per 1,000 views`;
+  const commission = LAB_COMMISSIONS_ENABLED ? `${fee}. Lab commission applies to lab orders.` : `${fee}. Lab commission is not active.`;
 
   return (
     <div className="min-w-0 rounded-[28px] bg-white p-4 sm:p-8">
@@ -122,7 +123,10 @@ export default async function TrackingLinkPage({
           <CopyTrackingLink url={url} label="Copy" quiet accessibleName="Copy link" />
         </div>
         <p className="mt-2 text-sm text-brown">Stores the visitor for 30 days.</p>
-        <p className="mt-4 border-t border-rose/70 pt-4 text-sm text-brown">One paid order pays commission once, even if the customer uses your code and a link.</p>
+        <p className="mt-4 border-t border-rose/70 pt-4 text-sm text-brown">
+          A paid order is counted once, even if the customer uses your code and a link.{" "}
+          {LAB_COMMISSIONS_ENABLED ? "Lab commission applies to lab orders." : "Lab commission is not active."}
+        </p>
       </div>
       ) : null}
     </div>

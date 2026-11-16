@@ -13,6 +13,7 @@ export type StatOrder = {
   amountCents: number | null;
   refundedAmountCents: number;
   dryRun: boolean;
+  orderKind?: "lab" | "treatment";
 };
 
 export type DailyAffiliateStat = {
@@ -68,7 +69,9 @@ export function dailyAffiliateStats(clicks: readonly StatClick[], orders: readon
     if (!date) continue;
     const row = rowFor(date);
     if (remainingSalesCents(order.amountCents, order.refundedAmountCents) > 0) row.orders += 1;
-    row.commissionCents += adjustedCommissionCents(order.commissionCents, order.commissionRefundedCents ?? 0);
+    if (order.orderKind === "lab") {
+      row.commissionCents += adjustedCommissionCents(order.commissionCents, order.commissionRefundedCents ?? 0);
+    }
   }
 
   return [...days.values()].sort((left, right) => right.date.localeCompare(left.date));

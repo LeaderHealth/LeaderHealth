@@ -21,8 +21,8 @@ export function presentAgreement(agreement: AffiliateAgreement, today = utcAgree
     expiresOn: formatAgreementDate(agreement.expiresOn),
     deliverables: agreement.deliverables.map((item) => ({
       description: item.description,
-      dueOn: formatAgreementDate(item.dueOn),
-      amount: item.amountCents == null ? "—" : formatCents(item.amountCents),
+      dueOn: item.dueOn ? formatAgreementDate(item.dueOn) : "No set publish-by date",
+      amount: item.amountCents == null ? "Standing rate, locked when the post is sent" : `${formatCents(item.amountCents)} per 1,000 views`,
     })),
     compensationNote: agreement.compensationNote ?? "—",
     licensing: agreement.licensing ?? "—",

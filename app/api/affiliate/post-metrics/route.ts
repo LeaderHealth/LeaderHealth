@@ -1,6 +1,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { refreshDueMetrics } from "@/lib/affiliate/post-review";
+import { remindDueManualReports } from "@/lib/affiliate/manual-report";
 
 export const runtime = "nodejs";
 
@@ -21,7 +22,8 @@ export async function GET(request: Request) {
   }
   try {
     const updated = await refreshDueMetrics(undefined, 40);
-    return NextResponse.json({ ok: true, updated });
+    const reminded = await remindDueManualReports();
+    return NextResponse.json({ ok: true, updated, reminded });
   } catch (error) {
     console.error("[affiliate] post metrics cron failed", error instanceof Error ? error.message : "unknown");
     return NextResponse.json({ ok: false, error: "Could not refresh post metrics." }, { status: 502 });

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ComplianceRecordLinks } from "@/components/affiliate/ComplianceRecordLinks";
 import { listSubAdmins } from "@/lib/affiliate/admins";
 import { normalizeAffiliateCode } from "@/lib/affiliate/code";
 import { loadComplianceEvents } from "@/lib/affiliate/compliance-log";
@@ -86,6 +87,7 @@ export default async function ComplianceRecordsPage({
     <div className="space-y-4">
       <section className="rounded-[28px] bg-white p-4 sm:p-8">
         <h2 className="text-2xl">Compliance records</h2>
+        <ComplianceRecordLinks current="records" />
         <p className="mt-2 max-w-2xl text-sm text-brown">
           Account changes, payment authorizations, marketing reports, disclosure reviews, and correction requests. Records are kept and are not edited.
         </p>

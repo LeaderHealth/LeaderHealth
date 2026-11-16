@@ -1,6 +1,8 @@
 import type { AgreementView } from "./agreement-types";
+import { STANDARD_DELIVERABLE_DESCRIPTION, STANDARD_PAYMENT_CONDITIONS } from "@/lib/affiliate/agreement-pay";
 
 export function AgreementSummary({ agreement, commission, pdfHref }: { agreement: AgreementView; commission: string; pdfHref: string | null }) {
+  const written = agreement.deliverables.filter((item) => item.description.trim());
   return (
     <div className="space-y-3 text-sm">
       <p className="text-brown">{agreement.statusLabel}</p>
@@ -16,24 +18,27 @@ export function AgreementSummary({ agreement, commission, pdfHref }: { agreement
       </dl>
       <div>
         <p className="text-brown">Deliverables</p>
-        {agreement.deliverables.length === 0 ? <p className="mt-1">None written down.</p> : null}
-        <ul className="mt-1 space-y-2">
-          {agreement.deliverables.map((item, index) => (
-            <li key={`${index}-${item.description}`}>
-              <p>{item.description}</p>
-              <p className="text-brown">
-                Due {item.dueOn} · Stated amount {item.amount}
-              </p>
-            </li>
-          ))}
-        </ul>
+        <p className="mt-1">{STANDARD_DELIVERABLE_DESCRIPTION}</p>
+        <p className="mt-2">{STANDARD_PAYMENT_CONDITIONS}</p>
+        {written.length > 0 ? (
+          <ul className="mt-3 space-y-2">
+            {written.map((item, index) => (
+              <li key={`${index}-${item.description}`}>
+                <p>{item.description}</p>
+                <p className="text-brown">
+                  Publish by {item.dueOn} · {item.amount}
+                </p>
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </div>
       <div>
         <p className="text-brown">Compensation note</p>
         <p className="mt-1 whitespace-pre-wrap break-words">{agreement.compensationNote}</p>
       </div>
       <div>
-        <p className="text-brown">Referral rate already used for orders</p>
+        <p className="text-brown">Standing rate per 1,000 views</p>
         <p className="mt-1">{commission}</p>
       </div>
       <div>
@@ -42,7 +47,9 @@ export function AgreementSummary({ agreement, commission, pdfHref }: { agreement
       </div>
       <div>
         <p className="text-brown">Payment conditions</p>
-        <p className="mt-1 whitespace-pre-wrap break-words">{agreement.paymentConditions}</p>
+        <p className="mt-1 whitespace-pre-wrap break-words">
+          {agreement.paymentConditions === "—" ? "Included with the deliverables above." : agreement.paymentConditions}
+        </p>
       </div>
       {agreement.signerName ? (
         <p>

@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { saveMarketingCostAction } from "@/app/admin/affiliates/actions";
+import { saveMarketingCampaignAction, saveMarketingCostAction } from "@/app/admin/affiliates/actions";
 import { ADMIN_ERRORS } from "@/app/admin/affiliates/messages";
 import { formatCents } from "@/lib/affiliate/format";
 import { roiRange, type RoiRange, type RoiReport } from "@/lib/affiliate/roi";
-import { loadRoiReport, RoiStoreError } from "@/lib/affiliate/roi-store";
+import { loadMarketingCampaigns, loadRoiReport, RoiStoreError } from "@/lib/affiliate/roi-store";
 
 export const metadata: Metadata = {
   title: "Campaign ROI",
@@ -41,14 +41,16 @@ export default async function AffiliateRoiPage({
 }) {
   const query = await searchParams;
   const range = roiRange(query.range);
-  const notice = query.notice === "saved" ? "Marketing cost saved." : "";
+  const notice =
+    query.notice === "saved" ? "Marketing cost saved." : query.notice === "created" ? "Campaign saved." : query.notice === "exists" ? "That campaign is already on the list." : "";
   const error = query.error ? ADMIN_ERRORS[query.error] ?? "" : "";
   const spentOn = new Date().toISOString().slice(0, 10);
 
   let report = emptyReport();
+  let campaigns: string[] = [];
   let loadError = "";
   try {
-    report = await loadRoiReport(range);
+    [report, campaigns] = await Promise.all([loadRoiReport(range), loadMarketingCampaigns()]);
   } catch (caught) {
     loadError = caught instanceof RoiStoreError ? caught.message : "Could not load campaign ROI.";
   }
@@ -95,6 +97,21 @@ export default async function AffiliateRoiPage({
         </section>
       </div>
 
+      <form action={saveMarketingCampaignAction} className="rounded-[28px] bg-white p-4 sm:p-6">
+        <h3 className="text-xl">New campaign</h3>
+        <p className="mt-2 max-w-2xl text-sm text-brown">Up to 60 letters, numbers, spaces, or &amp; &apos; . , -. The list below includes a campaign before it has any spend.</p>
+        <input type="hidden" name="range" value={range} />
+        <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-end">
+          <label className="block min-w-0 flex-1 text-sm text-brown">
+            Name
+            <input name="name" required maxLength={60} autoComplete="off" className={`${fieldClass} mt-2`} />
+          </label>
+          <button type="submit" className={buttonClass}>
+            Save campaign
+          </button>
+        </div>
+      </form>
+
       <form action={saveMarketingCostAction} className="rounded-[28px] bg-white p-4 sm:p-6">
         <h3 className="text-xl">Add a marketing cost</h3>
         <p className="mt-2 max-w-2xl text-sm text-brown">
@@ -104,7 +121,20 @@ export default async function AffiliateRoiPage({
         <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <label className="block text-sm text-brown">
             Campaign
-            <input name="campaign" required maxLength={80} autoComplete="off" className={`${fieldClass} mt-2`} />
+            {campaigns.length === 0 ? (
+              <span className={`${fieldClass} mt-2 flex items-center text-brown`}>Create a campaign first.</span>
+            ) : (
+              <select name="campaign" required defaultValue="" className={`${fieldClass} mt-2`}>
+                <option value="" disabled>
+                  Choose a campaign
+                </option>
+                {campaigns.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            )}
           </label>
           <label className="block text-sm text-brown">
             Amount
@@ -115,7 +145,7 @@ export default async function AffiliateRoiPage({
             <input name="spentOn" type="date" required defaultValue={spentOn} className={`${fieldClass} mt-2`} />
           </label>
           <div className="flex items-end">
-            <button type="submit" className={buttonClass}>
+            <button type="submit" className={`${buttonClass} disabled:cursor-not-allowed disabled:opacity-50`} disabled={campaigns.length === 0}>
               Save cost
             </button>
           </div>
@@ -127,7 +157,7 @@ export default async function AffiliateRoiPage({
           Campaigns
         </h3>
         {report.rows.length === 0 ? (
-          <p className="px-4 py-6 text-sm text-brown">No campaign sales or costs in this range.</p>
+          <p className="px-4 py-6 text-sm text-brown">No campaigns yet. Create one above.</p>
         ) : (
           <ul className="xl:hidden" aria-labelledby="roi-table-title">
             {report.rows.map((row) => (
