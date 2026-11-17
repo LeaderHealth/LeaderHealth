@@ -215,7 +215,7 @@ async function createOrder(item: CatalogItem, patientId: string, affiliateCode?:
   };
 }
 
-export async function loadCheckoutItem(input: CheckoutInput): Promise<CatalogItem> {
+export async function placeCheckoutOrder(input: CheckoutInput, affiliateCode?: string | null): Promise<CheckoutResult> {
   const catalog = await listCatalog();
   const item =
     catalog.find((entry) => entry.clientProductId === input.clientProductId) ??
@@ -230,15 +230,6 @@ export async function loadCheckoutItem(input: CheckoutInput): Promise<CatalogIte
   if (item.excludedStates.includes(input.state)) {
     throw Object.assign(new Error(`This treatment is not available in ${input.state}.`), { status: 400 });
   }
-  return item;
-}
-
-export async function ensureCheckoutPatient(input: CheckoutInput) {
-  return resolvePatient(input);
-}
-
-export async function placeCheckoutOrder(input: CheckoutInput, affiliateCode?: string | null): Promise<CheckoutResult> {
-  const item = await loadCheckoutItem(input);
 
   if (!ALLOW_LIVE_GENHEALTH_ORDERS) {
     console.info("[checkout] dry-run: catalog matched, no GenHealth patient or order write");
