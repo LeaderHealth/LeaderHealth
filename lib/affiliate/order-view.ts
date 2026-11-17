@@ -41,6 +41,47 @@ export type PeriodReferralSource = {
   orderKind?: "lab" | "treatment";
 };
 
+export type AdminOrderSource = PeriodReferralSource & {
+  orderId: string;
+  productName: string;
+  promoCode?: string | null;
+};
+
+export type AdminOrderDetail = {
+  period: string;
+  code: string;
+  orderId: string;
+  productName: string;
+  createdAt: string;
+  orderKind: "lab" | "treatment";
+  saleCents: number;
+  commissionCents: number;
+  promoCode: string;
+};
+
+export function adminOrderDetails(orders: AdminOrderSource[]): AdminOrderDetail[] {
+  const lines: AdminOrderDetail[] = [];
+  for (const order of orders) {
+    if (order.dryRun || !order.orderId || !order.productName) continue;
+    const saleCents = remainingSalesCents(order.amountCents, order.refundedAmountCents);
+    if (saleCents <= 0) continue;
+    const period = payoutPeriod(order.createdAt);
+    if (!period || !order.createdAt) continue;
+    lines.push({
+      period,
+      code: order.code,
+      orderId: order.orderId,
+      productName: order.productName,
+      createdAt: order.createdAt,
+      orderKind: order.orderKind === "lab" ? "lab" : "treatment",
+      saleCents,
+      commissionCents: order.orderKind === "lab" ? adjustedCommissionCents(order.commissionCents, order.commissionRefundedCents) : 0,
+      promoCode: order.promoCode?.trim() ?? "",
+    });
+  }
+  return lines.sort((left, right) => right.createdAt.localeCompare(left.createdAt) || left.code.localeCompare(right.code));
+}
+
 export function periodReferralSummaries(orders: PeriodReferralSource[]): PeriodReferralSummary[] {
   const groups = new Map<string, PeriodReferralSummary>();
   for (const order of orders) {

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { assignPostCampaignAction, cancelMetricChangeAction, confirmManualMetricsAction, requestMetricChangeAction, saveManualMetricsAction, submitLiveLinkAction, submitPostsAction, withdrawPostAction } from "@/app/affiliates/post-actions";
+import { cancelMetricChangeAction, confirmManualMetricsAction, requestMetricChangeAction, saveManualMetricsAction, submitLiveLinkAction, submitPostsAction, withdrawPostAction } from "@/app/affiliates/post-actions";
 import { MediaExpand, MediaPreview } from "@/components/affiliate/MediaExpand";
 import { viewPayTerms } from "@/lib/affiliate/format";
 import { POST_FILE_ACCEPT, VIDEO_FILE_ACCEPT, postUploadIssue } from "@/lib/affiliate/post-files";
@@ -28,27 +28,6 @@ const quietButtonClass =
 const fieldClass =
   "w-full rounded-xl border border-[#DCCFCC] bg-white px-3.5 py-3 text-sm leading-relaxed text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
 
-function CampaignField({ id, value, campaigns, onChange, readOnly = false }: { id: string; value: string; campaigns: string[]; onChange?: (value: string) => void; readOnly?: boolean }) {
-  const names = readOnly && value && !campaigns.includes(value) ? [value, ...campaigns] : campaigns;
-  return (
-    <label className="flex min-w-0 flex-col gap-2 text-sm font-medium" htmlFor={id}>
-      Campaign
-      <select
-        id={id}
-        name="campaign"
-        value={onChange ? value : undefined}
-        defaultValue={onChange ? undefined : value}
-        disabled={readOnly}
-        onChange={onChange ? (event) => onChange(event.target.value) : undefined}
-        className={fieldClass}
-      >
-        <option value="">No campaign</option>
-        {names.map((name) => <option key={name} value={name}>{name}</option>)}
-      </select>
-    </label>
-  );
-}
-
 function CountField({ name, label, value, onChange }: { name: string; label: string; value: string; onChange: (value: string) => void }) {
   return (
     <label className="block text-sm font-medium text-ink">
@@ -62,7 +41,7 @@ function countText(value: string) {
   return value.trim() ? value.trim() : "Blank";
 }
 
-type ChangeDraft = { views: string; likes: string; comments: string; shares: string; note: string };
+type ChangeDraft = { views: string; likes: string; comments: string; shares: string; saves: string; note: string };
 
 function countFieldValue(value: number | null) {
   return value == null ? "" : String(value);
@@ -97,6 +76,7 @@ function MetricChangeForm({ post }: { post: HubPost }) {
           <input type="hidden" name="shares" value={draft.shares} />
           <input type="hidden" name="note" value={draft.note} />
           <button type="submit" className="inline-flex h-11 items-center justify-center rounded-full bg-ink px-[22px] text-sm font-medium text-white">Confirm</button>
+          <input type="hidden" name="saves" value={draft.saves} />
           <button type="button" onClick={() => setDraft(null)} className="inline-flex h-11 items-center justify-center rounded-full border border-[#CDBDBA] bg-white px-[22px] text-sm font-medium text-ink">Cancel</button>
         </form>
       </div>
@@ -119,6 +99,7 @@ function MetricChangeForm({ post }: { post: HubPost }) {
           <CountField name="shares" label="Shares" value={values.shares} onChange={(value) => setValues((current) => ({ ...current, shares: value }))} />
         </div>
         <label className="block text-sm font-medium text-ink">
+          <CountField name="saves" label="Saves" value={values.saves} onChange={(value) => setValues((current) => ({ ...current, saves: value }))} />
           Note
           <textarea name="note" value={values.note} onChange={(event) => setValues((current) => ({ ...current, note: event.target.value }))} rows={3} className={`${fieldClass} mt-1`} />
         </label>
@@ -160,9 +141,9 @@ export type HubPost = {
   metricsNote: string;
   counts: { views: number | null; likes: number | null; comments: number | null; shares: number | null };
   hasManual: boolean;
-  changeRequest: { views: number | null; likes: number | null; comments: number | null; shares: number | null; note: string } | null;
-  askManual: boolean;
-  connectHref: string | null;
+  counts: { views: number | null; likes: number | null; comments: number | null; shares: number | null; saves: number | null };
+  hasManual: boolean;
+  changeRequest: { views: number | null; likes: number | null; comments: number | null; shares: number | null; saves: number | null; note: string } | null;
   history: HistoryEvent[];
   slides: { href: string; downloadHref: string; media: "photo" | "video"; caption: string }[];
   batchId: string;
@@ -701,8 +682,7 @@ export function PostsHub({
               </p>
             </div>
             <div className="flex flex-wrap items-end justify-end gap-3">
-              <CampaignField id="hub-campaign" value={composeCampaign} campaigns={campaigns} onChange={setComposeCampaign} />
-              <button type="button" onClick={() => openCompose(undefined, composeCampaign)} className="inline-flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-medium text-white transition-colors duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-brown focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink motion-reduce:transition-none">
+              <button type="button" onClick={() => openCompose()} className="inline-flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-medium text-white transition-colors duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-brown focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink motion-reduce:transition-none">
                 <PlusIcon />
                 New posts
               </button>
@@ -799,9 +779,7 @@ export function PostsHub({
             agreedFeeCents={agreedFeeCents}
             standingMaxPayCents={standingMaxPayCents}
             standingTrackingDays={standingTrackingDays}
-            campaigns={campaigns}
             campaign={composeCampaign}
-            onCampaign={setComposeCampaign}
             offer={offer}
             termsAccepted={termsAccepted}
             onTerms={setTermsAccepted}
@@ -837,9 +815,7 @@ function Composer({
   agreedFeeCents,
   standingMaxPayCents,
   standingTrackingDays,
-  campaigns,
   campaign,
-  onCampaign,
   offer,
   termsAccepted,
   onTerms,
@@ -853,9 +829,7 @@ function Composer({
   agreedFeeCents: number | null;
   standingMaxPayCents: number | null;
   standingTrackingDays: number;
-  campaigns: string[];
   campaign: string;
-  onCampaign: (value: string) => void;
   offer: OfferComposer | null;
   termsAccepted: boolean;
   onTerms: (value: boolean) => void;
@@ -1019,8 +993,6 @@ function Composer({
         <h2 className="text-[28px] font-medium tracking-tight">{cards.length === 1 && !cards[0]?.format ? "What are you sending?" : "New posts"}</h2>
         <p className="text-sm leading-normal text-brown">{cards.length === 1 && !cards[0]?.format ? "Pick TikTok, an Instagram post or carousel, or an Instagram reel. The next step matches that choice." : "Each post is reviewed on its own, so you can publish them as they’re approved. A link in your bio doesn’t count: both lines below go in every caption."}</p>
       </div>
-      <CampaignField id="compose-campaign" value={campaign} campaigns={campaigns} onChange={onCampaign} readOnly={Boolean(offer?.campaign)} />
-      <p className="-mt-3 text-sm leading-normal text-brown">Choose a campaign assigned to you, or leave it as no campaign. Every post in this send uses it.</p>
       {offer ? null : (
         <label className="flex max-w-xs flex-col gap-2 text-sm font-medium" htmlFor="proposed-publish-on">
           Proposed publishing date
@@ -1376,10 +1348,9 @@ function PostDetail({
     likes: post.counts.likes == null ? "" : String(post.counts.likes),
     comments: post.counts.comments == null ? "" : String(post.counts.comments),
     shares: post.counts.shares == null ? "" : String(post.counts.shares),
+    saves: post.counts.saves == null ? "" : String(post.counts.saves),
   }));
-  const [countDraft, setCountDraft] = useState<{ views: string; likes: string; comments: string; shares: string } | null>(null);
-  const history = [...post.history].reverse();
-  const joinedEdit = carousel ? editSlides.map((slide) => slide.caption.trim()).filter(Boolean).join("\n\n") : editCaption;
+  const [countDraft, setCountDraft] = useState<{ views: string; likes: string; comments: string; shares: string; saves: string } | null>(null);
   const disclosed = hasDisclosure(joinedEdit, disclosureLine);
   const linked = hasTracking(joinedEdit, trackingUrl, affiliateCode);
   const singleIssue = !carousel && editFile ? (post.format ? formatUploadIssue(post.format, editFile) : fileIssue(editFile)) : "";
@@ -1485,18 +1456,8 @@ function PostDetail({
           </>
         ) : null}
         {post.proposedOn ? <p className="text-sm text-brown">Proposed publishing date {post.proposedOn}</p> : null}
-        {!post.offerId && (post.status === "draft" || post.status === "submitted" || post.status === "revision_requested") ? (
-          <form action={assignPostCampaignAction} className="flex flex-wrap items-end gap-3">
-            <CampaignField id={`post-campaign-${post.id}`} value={campaigns.includes(post.campaign) ? post.campaign : ""} campaigns={campaigns} />
-            <input type="hidden" name="id" value={post.id} />
-            <button type="submit" className="inline-flex h-11 items-center rounded-full border border-[#CDBDBA] bg-white px-5 text-sm font-medium text-ink">Save campaign</button>
-            {post.campaign && campaigns.includes(post.campaign) ? (
-              <button type="button" onClick={() => onComposeCampaign(post.campaign)} className="inline-flex h-11 items-center rounded-full bg-ink px-5 text-sm font-medium text-white">New posts in this campaign</button>
-            ) : null}
-          </form>
-        ) : null}
-        {post.campaign && !post.offerId && !campaigns.includes(post.campaign) ? (
-          <p className="text-sm text-brown">This campaign is not assigned to you. Choose an assigned campaign or no campaign.</p>
+        {post.campaign && campaigns.includes(post.campaign) ? (
+          <button type="button" onClick={() => onComposeCampaign(post.campaign)} className="inline-flex h-11 w-fit items-center rounded-full bg-ink px-5 text-sm font-medium text-white">New posts in this campaign</button>
         ) : null}
       </div>
       {closed ? null : <Progress current={stepIndex(post)} live={stage === "live"} />}
@@ -1748,6 +1709,7 @@ function PostDetail({
                     <div><dt className="text-[#7A5C58]">Shares</dt><dd className="mt-1">{countText(countDraft.shares)}</dd></div>
                   </dl>
                   <form action={saveManualMetricsAction} className="flex flex-col gap-2.5 sm:flex-row">
+                    <div><dt className="text-[#7A5C58]">Saves</dt><dd className="mt-1">{countText(countDraft.saves)}</dd></div>
                     <input type="hidden" name="id" value={post.id} />
                     <input type="hidden" name="views" value={countDraft.views} />
                     <input type="hidden" name="likes" value={countDraft.likes} />
@@ -1755,6 +1717,7 @@ function PostDetail({
                     <input type="hidden" name="shares" value={countDraft.shares} />
                     <button type="submit" className="inline-flex h-11 items-center justify-center rounded-full bg-ink px-[22px] text-sm font-medium text-white">Confirm</button>
                     <button type="button" onClick={() => setCountDraft(null)} className="inline-flex h-11 items-center justify-center rounded-full border border-[#CDBDBA] bg-white px-[22px] text-sm font-medium text-ink">Cancel</button>
+                    <input type="hidden" name="saves" value={countDraft.saves} />
                   </form>
                 </div>
               ) : null}
@@ -1774,6 +1737,7 @@ function PostDetail({
                     <CountField name="shares" label="Shares" value={counts.shares} onChange={(value) => setCounts((current) => ({ ...current, shares: value }))} />
                   </div>
                   <button type="submit" className="inline-flex h-11 w-full items-center justify-center rounded-full bg-ink px-[22px] text-sm font-medium text-white sm:w-auto sm:self-start">Save numbers</button>
+                    <CountField name="saves" label="Saves" value={counts.saves} onChange={(value) => setCounts((current) => ({ ...current, saves: value }))} />
                 </form>
                 {post.connectHref ? (
                   <a href={post.connectHref} className="inline-flex h-11 w-full items-center justify-center rounded-full border border-[#CDBDBA] bg-white px-[22px] text-sm font-medium text-ink sm:w-auto sm:self-start">Connect account</a>

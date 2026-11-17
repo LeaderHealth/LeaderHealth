@@ -53,7 +53,7 @@ export type AccountCompliancePost = {
   tracking: boolean;
   metrics: { label: string; value: string }[];
   counts: { views: number | null; likes: number | null; comments: number | null; shares: number | null };
-  changeRequest: { views: number | null; likes: number | null; comments: number | null; shares: number | null; note: string } | null;
+  changeRequest: { views: number | null; likes: number | null; comments: number | null; shares: number | null; saves: number | null; note: string } | null;
   fileCount: number;
 };
 
@@ -248,6 +248,10 @@ export function AccountCompliance({
                                 <label className="text-sm font-medium text-ink">
                                   Shares
                                   <input name="shares" inputMode="numeric" defaultValue={post.changeRequest.shares ?? ""} className={fieldClass} />
+                                </label>
+                                <label className="text-sm font-medium text-ink">
+                                  Saves
+                                  <input name="saves" inputMode="numeric" defaultValue={post.changeRequest.saves ?? ""} className={fieldClass} />
                                 </label>
                               </div>
                               <input type="hidden" name="id" value={post.id} />

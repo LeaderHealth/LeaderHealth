@@ -8,7 +8,9 @@ import { PortalBrand } from "@/components/affiliate/PortalBrand";
 import { ProfileCard } from "@/components/affiliate/ProfileCard";
 import { disclosureAcknowledged } from "@/lib/affiliate/disclosures";
 import { remindManualReports } from "@/lib/affiliate/manual-report";
+import { newCampaignInvitations } from "@/lib/affiliate/affiliate-campaigns";
 import { loadContentSubmissions } from "@/lib/affiliate/post-review";
+import { loadMarketingCampaignRecords } from "@/lib/affiliate/roi-store";
 import { readSocialOnboarding } from "@/lib/affiliate/social-onboarding";
 import { changeAffiliatePassword, logoutAffiliatePortal } from "../actions";
 import { currentAffiliate } from "../current";
@@ -41,9 +43,11 @@ export default async function AffiliateDashboardLayout({ children }: { children:
   const postsOpen = await disclosureAcknowledged(affiliate.code).catch(() => false);
   let approvedIds: string[] = [];
   let postsNeedingAction = 0;
+  let ownPosts: { campaign: string; contentStatus: string }[] = [];
   if (postsOpen) {
     try {
       const posts = await loadContentSubmissions(affiliate.code);
+      ownPosts = posts;
       try {
         await remindManualReports(affiliate.email, posts);
       } catch (error) {
@@ -56,7 +60,14 @@ export default async function AffiliateDashboardLayout({ children }: { children:
       postsNeedingAction = 0;
     }
   }
+  let campaignInvites = 0;
+  try {
+    campaignInvites = newCampaignInvitations(await loadMarketingCampaignRecords(), affiliate.code, ownPosts);
+  } catch {
+    campaignInvites = 0;
+  }
   const submissionBadge = postsOpen && postsNeedingAction > 0 ? postsNeedingAction : undefined;
+  const campaignBadge = campaignInvites > 0 ? campaignInvites : undefined;
   const closed = { disabled: true, hint: "Accept the sponsorship agreement on your referral link." };
   const createItem: AreaNavItem = postsOpen ? { href: createPost, label: "Create post" } : { href: createPost, label: "Create post", ...closed };
   const submissionsItem: AreaNavItem = postsOpen
@@ -72,7 +83,7 @@ export default async function AffiliateDashboardLayout({ children }: { children:
   const groups: DashboardGroup[] = [
     {
       paths: [submissions, createPost, myCampaigns, plans],
-      items: [createItem, submissionsItem, { href: myCampaigns, label: "My campaigns" }],
+      items: [createItem, submissionsItem, { href: myCampaigns, label: "My campaigns", badge: campaignBadge }],
     },
     {
       paths: [payments, orders],

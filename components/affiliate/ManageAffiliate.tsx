@@ -8,8 +8,9 @@ import type { WebsiteMonthReport } from "@/lib/affiliate/website-report";
 
 type MonthView = {
   label: string;
-  orders: number;
-  earnings: string;
+  social: string;
+  website: string;
+  lab: string;
 };
 
 const closeClass =
@@ -19,14 +20,18 @@ function MonthBlock({ month }: { month: MonthView }) {
   return (
     <div className="rounded-[24px] bg-background px-4 py-5">
       <h3 className="text-lg">{month.label}</h3>
-      <dl className="mt-4 grid grid-cols-2 gap-3 text-sm leading-6">
+      <dl className="mt-4 grid grid-cols-3 gap-3 text-sm leading-6">
         <div>
-          <dt className="text-xs text-brown">Paid orders</dt>
-          <dd className="mt-1">{month.orders}</dd>
+          <dt className="text-xs text-brown">Social</dt>
+          <dd className="mt-1">{month.social}</dd>
         </div>
         <div>
-          <dt className="text-xs text-brown">Lab commission</dt>
-          <dd className="mt-1">{month.earnings}</dd>
+          <dt className="text-xs text-brown">Website traffic</dt>
+          <dd className="mt-1">{month.website}</dd>
+        </div>
+        <div>
+          <dt className="text-xs text-brown">Lab</dt>
+          <dd className="mt-1">{month.lab}</dd>
         </div>
       </dl>
     </div>

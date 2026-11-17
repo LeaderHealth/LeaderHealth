@@ -139,12 +139,30 @@ export default async function PromoCodesPage({
       <h2 id="promo-codes-title" className="px-4 pt-4 text-2xl">
         Promo codes
       </h2>
-      <p className="px-4 pt-2 text-sm text-brown">
-        {codes.length === 0
-          ? "Promo codes are created in Gen Health."
-          : `${assignedCount} assigned · ${availableCount} available. Each code locks to one affiliate. Promo codes are created in Gen Health.`}{" "}
-        Deactivating a promo code in Gen Health removes it from this list. Sales and clicks recorded for that code stay under Removed.
-      </p>
+      <div className="px-4 pt-2 text-sm text-brown">
+        {codes.length === 0 ? null : (
+          <p>
+            {assignedCount} assigned · {availableCount} available. Each code locks to one affiliate.
+          </p>
+        )}
+        <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
+          <li className="inline-flex items-center gap-1.5">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1D6340" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M20 6 9 17l-5-5" />
+            </svg>
+            Customers get the discount on the products the code covers.
+          </li>
+          <li className="inline-flex items-center gap-1.5">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 2v20" />
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+            </svg>
+            The affiliate earns only on lab orders.
+          </li>
+          <li>Codes are created in Gen Health.</li>
+        </ul>
+        <p className="mt-2">Deactivating a code in Gen Health removes it here. Its sales and clicks stay under Removed.</p>
+      </div>
       {codes.length === 0 ? (
         <p className="px-4 py-6 text-sm text-brown">No promo codes yet.</p>
       ) : (

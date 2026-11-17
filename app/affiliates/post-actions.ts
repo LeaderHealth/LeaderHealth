@@ -9,8 +9,14 @@ import { postFormat } from "@/lib/affiliate/post-format";
 
 const LINK = "/affiliates/posts";
 
-function linkFail(error: string): never {
-  redirect(`${LINK}?error=${encodeURIComponent(error)}`);
+function linkFail(error: string, formData?: FormData): never {
+  const campaigns = formData && String(formData.get("returnTo") ?? "") === "campaigns";
+  redirect(`${campaigns ? "/affiliates/campaigns" : LINK}?error=${encodeURIComponent(error)}`);
+}
+
+function donePath(formData: FormData, query: string) {
+  const campaigns = String(formData.get("returnTo") ?? "") === "campaigns";
+  return `${campaigns ? "/affiliates/campaigns" : LINK}?${query}`;
 }
 
 function refresh() {
@@ -97,9 +103,9 @@ export async function submitPostsAction(formData: FormData) {
     count = posts.length;
     await submitContentBatch({ code: affiliate.code, posts, termsAccepted: String(formData.get("terms") ?? "") === "yes" });
   } catch (error) {
-    if (error instanceof PostReviewError) linkFail(error.code);
+    if (error instanceof PostReviewError) linkFail(error.code, formData);
     console.error("[affiliate] post batch failed", error instanceof Error ? error.message : "unknown");
-    linkFail("unavailable");
+    linkFail("unavailable", formData);
   }
   await noteComplianceEvent({
     actor: affiliate.code,
@@ -108,7 +114,7 @@ export async function submitPostsAction(formData: FormData) {
     detail: count === 1 ? `${affiliate.name} sent a post for review.` : `${affiliate.name} sent ${count} posts for review.`,
   });
   refresh();
-  redirect(`${LINK}?notice=post`);
+  redirect(donePath(formData, "notice=post"));
 }
 
 export async function assignPostCampaignAction(formData: FormData) {
@@ -141,9 +147,9 @@ export async function submitLiveLinkAction(formData: FormData) {
     });
     publicationStatus = result.publicationStatus;
   } catch (error) {
-    if (error instanceof PostReviewError) linkFail(error.code);
+    if (error instanceof PostReviewError) linkFail(error.code, formData);
     console.error("[affiliate] post link failed", error instanceof Error ? error.message : "unknown");
-    linkFail("unavailable");
+    linkFail("unavailable", formData);
   }
   const verified = publicationStatus === "tracking_active";
   const waiting = publicationStatus === "verification_pending";
@@ -154,7 +160,7 @@ export async function submitLiveLinkAction(formData: FormData) {
     detail: verified ? `${affiliate.name} Instagram post verified.` : waiting ? `${affiliate.name} added a TikTok link.` : `${affiliate.name} Instagram post could not be verified.`,
   });
   refresh();
-  redirect(`${LINK}?notice=${verified ? "tracked" : waiting ? "pending" : "check"}`);
+  redirect(donePath(formData, `notice=${verified ? "tracked" : waiting ? "pending" : "check"}`));
 }
 
 export async function saveManualMetricsAction(formData: FormData) {
@@ -168,6 +174,7 @@ export async function saveManualMetricsAction(formData: FormData) {
       likes: String(formData.get("likes") ?? ""),
       comments: String(formData.get("comments") ?? ""),
       shares: String(formData.get("shares") ?? ""),
+      saves: String(formData.get("saves") ?? ""),
     });
   } catch (error) {
     if (error instanceof PostReviewError) linkFail(error.code === "invalid" ? "counts" : error.code);

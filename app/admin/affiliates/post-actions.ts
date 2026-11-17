@@ -171,6 +171,7 @@ export async function applyMetricChangeAction(formData: FormData) {
       likes: String(formData.get("likes") ?? ""),
       comments: String(formData.get("comments") ?? ""),
       shares: String(formData.get("shares") ?? ""),
+      saves: String(formData.get("saves") ?? ""),
     });
   } catch (error) {
     const reason = error instanceof PostReviewError ? (error.code === "invalid" ? "post-counts" : `post-${error.code}`) : "post-unavailable";

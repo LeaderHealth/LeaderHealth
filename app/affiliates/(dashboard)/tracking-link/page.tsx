@@ -6,6 +6,8 @@ import { EligibleProducts } from "@/components/affiliate/EligibleProducts";
 import { eligibleProductGroups } from "@/lib/affiliate/eligibleProducts";
 import { LAB_COMMISSIONS_ENABLED } from "@/lib/affiliate/code";
 import { formatCents } from "@/lib/affiliate/format";
+import { standingViewRateCents } from "@/lib/affiliate/payment-rates";
+import { loadPaymentRates } from "@/lib/affiliate/payment-store";
 import { affiliateTrackingLink } from "@/lib/affiliate/link";
 import { disclosureAcknowledged } from "@/lib/affiliate/disclosures";
 import { listPromoCodes, personalPromoForAffiliate, type PromoCodeRow } from "@/lib/genhealth/promocodes";
@@ -48,7 +50,13 @@ export default async function TrackingLinkPage({
   const products = personal ? await eligibleProductGroups(personal.productIds) : [];
   const url = affiliateTrackingLink(affiliate.code);
   const promoUrl = personalCode ? affiliateTrackingLink(affiliate.code, personalCode) : null;
-  const fee = affiliate.deliverableFeeCents == null ? "View rate not set" : `${formatCents(affiliate.deliverableFeeCents)} per 1,000 views`;
+  let viewRate: number | null = null;
+  try {
+    viewRate = standingViewRateCents(await loadPaymentRates());
+  } catch {
+    viewRate = null;
+  }
+  const fee = viewRate == null ? "View rate not set" : `${formatCents(viewRate)} per 1,000 views`;
   const commission = LAB_COMMISSIONS_ENABLED ? `${fee}. Lab commission applies to lab orders.` : `${fee}. Lab commission is not active.`;
 
   return (

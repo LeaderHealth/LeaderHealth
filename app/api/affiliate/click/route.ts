@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { affiliatePath, affiliateReferrer, resolveAffiliateAttribution } from "@/lib/affiliate/code";
 import { affiliateFirebaseConfigured } from "@/lib/affiliate/firebase";
 import { affiliateCampaign } from "@/lib/affiliate/link";
+import { recordMarketingEvent } from "@/lib/affiliate/marketing-events";
 import {
   AFFILIATE_CAMPAIGN_COOKIE,
   AFFILIATE_COOKIE,
@@ -91,6 +92,17 @@ export async function POST(request: Request) {
   }
 
   const loggedKey = todayKey(code);
+  try {
+    await recordMarketingEvent({
+      code,
+      visitorId,
+      kind: "click",
+      path: record.path,
+      userAgent: request.headers.get("user-agent") ?? "",
+    });
+  } catch (error) {
+    console.error("[affiliate] marketing click failed", error instanceof Error ? error.message : "unknown");
+  }
   if (jar.get(CLICK_LOG_COOKIE)?.value === loggedKey) return tracked;
 
   try {

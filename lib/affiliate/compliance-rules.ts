@@ -35,6 +35,7 @@ export const COMPLIANCE_ACTIONS = [
   "content-withdrawn",
   "post-verified",
   "post-verification-failed",
+  "payment-method-approved",
 ] as const;
 
 export type ComplianceAction = (typeof COMPLIANCE_ACTIONS)[number];
@@ -119,6 +120,7 @@ export function complianceActionLabel(action: ComplianceAction) {
   if (action === "deliverable-forfeited") return "Marketing fee forfeited";
   if (action === "deliverable-reinstated") return "Marketing fee reinstated";
   if (action === "deliverable-adjusted") return "Marketing fee adjusted";
+  if (action === "payment-method-approved") return "Payment method approved";
   return "Post check failed";
 }
 

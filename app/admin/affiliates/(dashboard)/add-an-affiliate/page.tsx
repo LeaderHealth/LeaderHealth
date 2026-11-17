@@ -1,11 +1,8 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { ApplicationLinkForm } from "@/components/affiliate/ApplicationLinkForm";
-import { PendingApplications } from "@/components/affiliate/PendingApplications";
-import { listOpenApplications, type AffiliateApplication } from "@/lib/affiliate/applications";
-import { reportHandledAffiliateError } from "@/lib/affiliate/report";
 import { adminHasFullAccess, adminSessionActor } from "@/lib/affiliate/session";
-import { approveAffiliateApplicationAction, createApplicationLinkAction, declineAffiliateApplicationAction, sendApplicationLinkAction } from "../../actions";
+import { createApplicationLinkAction, sendApplicationLinkAction } from "../../actions";
 import { ADMIN_ERRORS } from "../../messages";
 
 export const metadata: Metadata = {
@@ -24,14 +21,6 @@ export default async function AddAffiliatePage({
   if (!actor || !adminHasFullAccess(actor)) redirect("/admin/affiliates/overview");
   const query = await searchParams;
   const error = query.error ? ADMIN_ERRORS[query.error] : "";
-  let applications: AffiliateApplication[] = [];
-  let applicationsError = "";
-  try {
-    applications = await listOpenApplications();
-  } catch (caught) {
-    reportHandledAffiliateError("[affiliate] applications failed", caught);
-    applicationsError = "Applications are unavailable right now.";
-  }
 
   return (
     <div className="space-y-6">
@@ -47,18 +36,11 @@ export default async function AddAffiliatePage({
       ) : null}
       <section className="rounded-[28px] bg-white p-4 sm:p-8">
         <h2 className="text-4xl">Send an application link</h2>
-        <div className="mt-3 max-w-2xl space-y-3 text-sm leading-6 text-taupe">
-          <p>Pick a commission and create a link. The rate stays with that link, and you approve each application before an account is created.</p>
-          <p>Approval adds a unique ID, an optional tracking link, and one promo code. You can lock an existing Gen Health code to that affiliate.</p>
-        </div>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-taupe">
+          Choose how this affiliate gets paid, then create the link. You&apos;ll approve them before their account is made.
+        </p>
         <ApplicationLinkForm createLink={createApplicationLinkAction} sendLink={sendApplicationLinkAction} />
-        <PendingApplications
-          applications={applications}
-          approveAction={approveAffiliateApplicationAction}
-          declineAction={declineAffiliateApplicationAction}
-        />
       </section>
-      {applicationsError ? <p className="text-ink">{applicationsError}</p> : null}
     </div>
   );
 }

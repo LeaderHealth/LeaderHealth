@@ -7,6 +7,8 @@ import { presentAgreement } from "@/lib/affiliate/agreement-view";
 import { loadAffiliateAgreements } from "@/lib/affiliate/agreements";
 import { loadDisclosureAcknowledgement } from "@/lib/affiliate/disclosures";
 import { formatCents, formatWhen } from "@/lib/affiliate/format";
+import { standingViewRateCents } from "@/lib/affiliate/payment-rates";
+import { loadPaymentRates } from "@/lib/affiliate/payment-store";
 import { DISCLOSURE_LINE } from "@/lib/affiliate/post-review";
 import { currentAffiliate } from "../../current";
 
@@ -21,7 +23,13 @@ export default async function AffiliateContractsPage() {
   const affiliate = await currentAffiliate();
   if (!affiliate) redirect("/affiliates");
 
-  const fee = affiliate.deliverableFeeCents == null ? "Not set" : `${formatCents(affiliate.deliverableFeeCents)} per 1,000 views`;
+  let viewRate: number | null = null;
+  try {
+    viewRate = standingViewRateCents(await loadPaymentRates());
+  } catch {
+    viewRate = null;
+  }
+  const fee = viewRate == null ? "Not set" : `${formatCents(viewRate)} per 1,000 views`;
   const payLabel = LAB_COMMISSIONS_ENABLED ? `${fee}. Lab commission applies to lab orders.` : `${fee}. Lab commission is not active.`;
   let unavailable = false;
   let agreements: ReturnType<typeof presentAgreement>[] = [];

@@ -1,13 +1,47 @@
-"use client";
-
-import { useEffect, useId, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import type { AffiliateApplication } from "@/lib/affiliate/applications";
+import { formatWhen } from "@/lib/affiliate/format";
 
 const buttonClass =
   "inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-5 text-sm font-medium text-white hover:bg-brown focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
 const quietButtonClass =
-  "inline-flex min-h-11 items-center justify-center rounded-full border border-ink/30 px-5 text-sm font-medium text-ink hover:bg-background focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
+  "inline-flex min-h-11 items-center justify-center rounded-full border border-ink/30 px-5 text-sm font-medium text-ink hover:bg-rose focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
+
+const next = "/admin/affiliates/applications";
+
+function promoText(code: string) {
+  return code || "Not yet";
+}
+
+function Actions({
+  application,
+  approveAction,
+  declineAction,
+}: {
+  application: AffiliateApplication;
+  approveAction: (formData: FormData) => void | Promise<void>;
+  declineAction: (formData: FormData) => void | Promise<void>;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {application.commissionLabel ? (
+        <form action={approveAction}>
+          <input type="hidden" name="email" value={application.email} />
+          <input type="hidden" name="next" value={next} />
+          <button type="submit" className={buttonClass}>
+            Approve
+          </button>
+        </form>
+      ) : null}
+      <form action={declineAction}>
+        <input type="hidden" name="email" value={application.email} />
+        <input type="hidden" name="next" value={next} />
+        <button type="submit" className={quietButtonClass}>
+          Decline
+        </button>
+      </form>
+    </div>
+  );
+}
 
 export function PendingApplications({
   applications,
@@ -18,107 +52,67 @@ export function PendingApplications({
   approveAction: (formData: FormData) => void | Promise<void>;
   declineAction: (formData: FormData) => void | Promise<void>;
 }) {
-  const titleId = useId();
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const dialogRef = useRef<HTMLDivElement>(null);
-  const [open, setOpen] = useState(false);
-  const count = applications.length;
-
-  useEffect(() => {
-    if (!open) return;
-    const trigger = triggerRef.current;
-    const root = dialogRef.current;
-    root?.querySelector<HTMLElement>("button")?.focus();
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        setOpen(false);
-        return;
-      }
-      if (event.key !== "Tab" || !root) return;
-      const items = [...root.querySelectorAll<HTMLElement>("button, input")];
-      const first = items[0];
-      const last = items[items.length - 1];
-      if (!first || !last) return;
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    }
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", onKeyDown);
-      trigger?.focus();
-    };
-  }, [open]);
-
-  if (count === 0) return null;
+  if (applications.length === 0) {
+    return <p className="px-4 py-8 text-sm text-brown">No applications are waiting.</p>;
+  }
 
   return (
     <>
-      <button
-        ref={triggerRef}
-        type="button"
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        onClick={() => setOpen(true)}
-        className={`${quietButtonClass} mt-4`}
-      >
-        Pending applications
-        <span className="ml-2 inline-flex min-w-6 items-center justify-center rounded-full bg-rose px-2 py-0.5 text-xs text-ink">{count}</span>
-      </button>
-      {open
-        ? createPortal(
-            <div className="fixed inset-0 z-[80] flex items-end justify-center p-4 sm:items-center">
-              <button type="button" aria-label="Close pending applications" className="absolute inset-0 bg-ink/40" onClick={() => setOpen(false)} />
-              <div
-                ref={dialogRef}
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby={titleId}
-                className="relative max-h-[85vh] w-full max-w-xl overflow-y-auto rounded-[28px] bg-white p-6 text-ink shadow-[0_24px_80px_rgba(51,17,16,0.22)] lg:h-[min(40rem,calc(100dvh-3rem))] lg:max-h-none lg:max-w-3xl"
-              >
-                <h2 id={titleId} className="text-2xl">
-                  Pending applications
-                </h2>
-                <p className="mt-2 text-sm text-brown">The commission was set on the link. Approve creates the account and sends the invitation. Decline leaves no account.</p>
-                <ul className="mt-6 space-y-6">
-                  {applications.map((application) => (
-                    <li key={application.email} className="border-t border-ink/10 pt-6 first:border-t-0 first:pt-0">
-                      <p className="font-medium">{application.name}</p>
-                      <p className="mt-1 break-all text-sm text-brown">{application.email}</p>
-                      <p className="mt-3 text-sm text-ink">Commission {application.commissionLabel ?? "was not saved with this application."}</p>
-                      {application.commissionLabel ? (
-                        <form action={approveAction} className="mt-4">
-                          <input type="hidden" name="email" value={application.email} />
-                          <button type="submit" className={buttonClass}>
-                            Approve
-                          </button>
-                        </form>
-                      ) : null}
-                      <form action={declineAction} className="mt-3">
-                        <input type="hidden" name="email" value={application.email} />
-                        <button type="submit" className={quietButtonClass}>
-                          Decline
-                        </button>
-                      </form>
-                    </li>
-                  ))}
-                </ul>
-                <button type="button" onClick={() => setOpen(false)} className={`${quietButtonClass} mt-6`}>
-                  Close
-                </button>
+      <ul className="xl:hidden" aria-labelledby="pending-applications-title">
+        {applications.map((application) => (
+          <li key={application.email} className="border-t border-ink/10 px-4 py-5">
+            <p className="font-medium text-ink">{application.name}</p>
+            <p className="mt-0.5 break-all text-sm text-brown">{application.email}</p>
+            <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-5 text-sm leading-6">
+              <div>
+                <dt className="text-xs text-brown">Lab commission</dt>
+                <dd className="mt-1">{application.commissionLabel ?? "Not saved"}</dd>
               </div>
-            </div>,
-            document.body,
-          )
-        : null}
+              <div>
+                <dt className="text-xs text-brown">Promo code</dt>
+                <dd className="mt-1 break-all">{promoText(application.promoCode)}</dd>
+              </div>
+              <div className="col-span-2">
+                <dt className="text-xs text-brown">Submitted</dt>
+                <dd className="mt-1">{formatWhen(application.createdAt)}</dd>
+              </div>
+            </dl>
+            <div className="mt-5">
+              <Actions application={application} approveAction={approveAction} declineAction={declineAction} />
+            </div>
+          </li>
+        ))}
+      </ul>
+      <div className="hidden overflow-x-auto xl:block">
+        <table className="w-full border-collapse text-left text-sm leading-6" aria-labelledby="pending-applications-title">
+          <thead className="text-brown">
+            <tr>
+              <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Applicant</th>
+              <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Email</th>
+              <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Lab commission</th>
+              <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Promo code</th>
+              <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Submitted</th>
+              <th scope="col" className="px-4 py-4 align-bottom">
+                <span className="sr-only">Decision</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {applications.map((application) => (
+              <tr key={application.email} className="border-t border-ink/10">
+                <td className="px-4 py-5 align-middle font-medium">{application.name}</td>
+                <td className="break-all px-4 py-5 align-middle">{application.email}</td>
+                <td className="whitespace-nowrap px-4 py-5 align-middle">{application.commissionLabel ?? "Not saved"}</td>
+                <td className="break-all px-4 py-5 align-middle">{promoText(application.promoCode)}</td>
+                <td className="whitespace-nowrap px-4 py-5 align-middle">{formatWhen(application.createdAt)}</td>
+                <td className="px-4 py-5 align-middle">
+                  <Actions application={application} approveAction={approveAction} declineAction={declineAction} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </>
   );
 }

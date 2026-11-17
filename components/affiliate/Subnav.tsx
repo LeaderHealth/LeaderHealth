@@ -13,7 +13,7 @@ export function Subnav({ label, items }: { label: string; items: AreaNavItem[] }
       {items.map((item) => {
         const current = navItemCurrent(pathname, item);
         const className = `inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-4 text-center text-sm font-medium whitespace-nowrap transition-colors duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink motion-reduce:transition-none ${
-          item.disabled ? "cursor-not-allowed text-brown" : current ? "bg-ink text-white" : "bg-white text-ink hover:bg-background"
+          item.disabled ? "cursor-not-allowed text-brown" : current ? "bg-ink text-white" : "bg-white text-ink hover:bg-rose"
         }`;
         if (item.disabled) {
           return (

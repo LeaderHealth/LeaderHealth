@@ -13,8 +13,11 @@ import { fetchInstagramMedia, fetchTikTokPosts, readInstagramMedia, type Instagr
 import { currentTikTokConnection } from "./social-sync";
 import { SocialError, loadConnectionSecrets, loadSocialAccounts, markSocialReconnect, type TikTokConnectionSecret } from "./social-store";
 import { formatWhen, publishDateValue } from "./format";
+import { affiliateCanAttachCampaign } from "./campaign-record";
 import { loadMarketingCampaignRecords } from "./roi-store";
 import { DEFAULT_TRACKING_DAYS, MANUAL_REPORT_MS, REPORT_WINDOW_MS, manualReportDue, networkConnectedForPost, trackingDaysOf, type MetricsOrigin } from "./manual-checkpoint";
+import { rateFor, standingViewRateCents } from "./payment-rates";
+import { loadPaymentRates } from "./payment-store";
 export { MANUAL_REPORT_MS, REPORT_WINDOW_MS, manualReportDue, networkConnectedForPost };
 export type { MetricsOrigin };
 
@@ -38,6 +41,7 @@ export type MetricChangeRequest = {
   likes: number | null;
   comments: number | null;
   shares: number | null;
+  saves: number | null;
   note: string;
   requestedAt: string | null;
 };
@@ -108,6 +112,7 @@ export type ContentSubmission = {
   metricChange: MetricChangeRequest | null;
   agreedFeeCents: number | null;
   viewRateCents: number | null;
+  engagementRateCents: number | null;
   maxPayCents: number | null;
   trackingDays: number | null;
   offerId: string;
@@ -411,9 +416,10 @@ function metricChangeFrom(value: unknown): MetricChangeRequest | null {
   const likes = metricValue(change.likes);
   const comments = metricValue(change.comments);
   const shares = metricValue(change.shares);
-  if (views == null && likes == null && comments == null && shares == null) return null;
+  const saves = metricValue(change.saves);
+  if (views == null && likes == null && comments == null && shares == null && saves == null) return null;
   const note = typeof change.note === "string" ? change.note.trim().slice(0, NOTE_LIMIT) : "";
-  return { views, likes, comments, shares, note, requestedAt: asDate(change.requestedAt)?.toISOString() ?? null };
+  return { views, likes, comments, shares, saves, note, requestedAt: asDate(change.requestedAt)?.toISOString() ?? null };
 }
 
 function revisionsFrom(value: unknown): ContentRevision[] {
@@ -482,6 +488,7 @@ function submissionFrom(id: string, data: DocumentData | undefined): ContentSubm
     metricChange: metricChangeFrom(data.metricChange),
     agreedFeeCents: deliverableFeeCents(data.agreedFeeCents),
     viewRateCents: deliverableFeeCents(data.viewRateCents),
+    engagementRateCents: deliverableFeeCents(data.engagementRateCents),
     maxPayCents: deliverableFeeCents(data.maxPayCents),
     trackingDays: trackingDaysOf(data.trackingDays),
     offerId: typeof data.offerId === "string" && !data.offerId.includes("/") ? data.offerId : "",
@@ -730,7 +737,10 @@ function revisionFields(existing: ContentSubmission | null) {
 async function campaignNamesFor(code: string) {
   try {
     const records = await loadMarketingCampaignRecords();
-    return records.filter((record) => record.assignedCodes.includes(code)).map((record) => record.name);
+    const posts = await loadContentSubmissions(code);
+    return records
+      .filter((record) => affiliateCanAttachCampaign(record, code, posts.some((post) => post.contentStatus !== "withdrawn" && post.campaign.trim().toLowerCase() === record.name.toLowerCase())))
+      .map((record) => record.name);
   } catch (error) {
     if (error instanceof PostReviewError) throw error;
     throw new PostReviewError("unavailable");
@@ -776,22 +786,36 @@ function newSubmissionFields(code: string, caption: string, files: StoredPostFil
 }
 
 function payFieldsFor(existing: ContentSubmission | null, incoming: LockedPayTerms | null, standing: LockedPayTerms | null) {
-  if (existing?.viewRateCents != null) return lockedPayTerms(existing, incoming ?? standingTerms(existing.viewRateCents, existing.maxPayCents, existing.trackingDays));
+  if (existing?.viewRateCents != null) return lockedPayTerms(existing, incoming ?? standingTerms(existing.viewRateCents, existing.maxPayCents, existing.trackingDays, existing.engagementRateCents));
   if (incoming) return incoming;
   if (existing?.agreedFeeCents != null) return { agreedFeeCents: existing.agreedFeeCents };
   return standing;
 }
 
-function standingTerms(viewRateCents: number, maxPayCents: number | null, trackingDays: number | null): LockedPayTerms {
-  return { viewRateCents, maxPayCents, trackingDays: trackingDays ?? DEFAULT_TRACKING_DAYS };
+function standingTerms(viewRateCents: number, maxPayCents: number | null, trackingDays: number | null, engagementRateCents: number | null = 0): LockedPayTerms {
+  return { viewRateCents, maxPayCents, trackingDays: trackingDays ?? DEFAULT_TRACKING_DAYS, engagementRateCents: engagementRateCents ?? 0 };
+}
+
+async function currentPaymentRates() {
+  try {
+    return await loadPaymentRates();
+  } catch {
+    return null;
+  }
 }
 
 async function requireStandingTerms(code: string): Promise<LockedPayTerms> {
   const snap = await requireDb().collection("affiliates").doc(code).get();
   const data = snap.data();
-  const viewRateCents = deliverableFeeCents(data?.deliverableFeeCents);
+  const rates = await currentPaymentRates();
+  const viewRateCents = standingViewRateCents(rates);
   if (viewRateCents == null) throw new PostReviewError("fee");
-  return standingTerms(viewRateCents, deliverableFeeCents(data?.deliverableMaxPayCents), trackingDaysOf(data?.deliverableTrackingDays));
+  return standingTerms(
+    viewRateCents,
+    deliverableFeeCents(data?.deliverableMaxPayCents),
+    trackingDaysOf(data?.deliverableTrackingDays),
+    rates ? rateFor(rates, "engagements") : 0,
+  );
 }
 
 async function ownedBatchPost(id: string, code: string, allowed: ContentStatus[]) {
@@ -890,6 +914,7 @@ export async function submitContentBatch(input: { code: string; posts: BatchPost
   const offerIds = new Set(ready.map((entry) => entry.existing?.offerId || entry.item.offerId.trim()).filter(Boolean));
   if (offerIds.size > 1 || (offerIds.size === 1 && ready.length > 1)) throw new PostReviewError("offer");
   const standing = needsStandingFee ? await requireStandingTerms(code) : null;
+  const engagementRateCents = standing?.engagementRateCents ?? (await currentPaymentRates().then((rates) => (rates ? rateFor(rates, "engagements") : 0)));
   const allowed = await campaignNamesFor(code);
   const freshBatch = crypto.randomUUID();
   const ids: string[] = [];
@@ -910,7 +935,7 @@ export async function submitContentBatch(input: { code: string; posts: BatchPost
       if (!bounds || files.length < bounds.min || files.length > bounds.max) throw new PostReviewError("file");
     }
     const slideCaptions = slideCaptionsFor(entry.item.slideCaptions, files.length, entry.caption, entry.existing?.slideCaptions ?? []);
-    const payFields = payFieldsFor(entry.existing, offer ? standingTerms(offer.amountCents, offer.maxPayCents, offer.trackingDays) : null, standing);
+    const payFields = payFieldsFor(entry.existing, offer ? standingTerms(offer.amountCents, offer.maxPayCents, offer.trackingDays, engagementRateCents) : null, standing);
     if (!payFields) throw new PostReviewError("fee");
     const reviewMeta = {
       slideCaptions,
@@ -948,7 +973,7 @@ export async function submitContentBatch(input: { code: string; posts: BatchPost
         const fresh = offerSnap.data();
         if (fresh?.status !== "accepted" || normalizeAffiliateCode(fresh.code) !== code) throw new PostReviewError("offer");
         const freshRate = deliverableFeeCents(fresh?.amountCents);
-        const freshPay = freshRate == null ? null : payFieldsFor(entry.existing, standingTerms(freshRate, deliverableFeeCents(fresh?.maxPayCents), trackingDaysOf(fresh?.trackingDays)), null);
+        const freshPay = freshRate == null ? null : payFieldsFor(entry.existing, standingTerms(freshRate, deliverableFeeCents(fresh?.maxPayCents), trackingDaysOf(fresh?.trackingDays), engagementRateCents), null);
         if (!freshPay) throw new PostReviewError("fee");
         const saved = { ...reviewMeta, ...freshPay };
         if (entry.existing) {
@@ -1255,7 +1280,7 @@ async function manualCheckpointOpen(post: ContentSubmission) {
   });
 }
 
-export async function saveManualMetrics(input: { id: string; code: string; views: unknown; likes: unknown; comments: unknown; shares: unknown }) {
+export async function saveManualMetrics(input: { id: string; code: string; views: unknown; likes: unknown; comments: unknown; shares: unknown; saves: unknown }) {
   const code = normalizeAffiliateCode(input.code);
   if (!code) throw new PostReviewError("invalid");
   const post = await requireOwned(input.id, code);
@@ -1265,12 +1290,14 @@ export async function saveManualMetrics(input: { id: string; code: string; views
   const likes = manualCount(input.likes);
   const comments = manualCount(input.comments);
   const shares = manualCount(input.shares);
-  if (views == null && likes == null && comments == null && shares == null) throw new PostReviewError("invalid");
+  const saves = manualCount(input.saves);
+  if (views == null && likes == null && comments == null && shares == null && saves == null) throw new PostReviewError("invalid");
   await requireDb().collection("contentSubmissions").doc(post.id).update({
     views,
     likes,
     comments,
     shares,
+    saves,
     metricsSource: "manual",
     metricsRecordedAt: new Date(),
   });
@@ -1282,14 +1309,14 @@ export async function confirmManualMetrics(input: { id: string; code: string }) 
   const post = await requireOwned(input.id, code);
   if (post.metricsSource !== "manual" || post.publicationStatus !== "tracking_active" || post.metricChange) throw new PostReviewError("status");
   if (!(await manualCheckpointOpen(post))) throw new PostReviewError("status");
-  if (post.views == null && post.likes == null && post.comments == null && post.shares == null) throw new PostReviewError("invalid");
+  if (post.views == null && post.likes == null && post.comments == null && post.shares == null && post.saves == null) throw new PostReviewError("invalid");
   await requireDb().collection("contentSubmissions").doc(post.id).update({
     metricsSource: "manual",
     metricsRecordedAt: new Date(),
   });
 }
 
-export async function requestMetricChange(input: { id: string; code: string; views: unknown; likes: unknown; comments: unknown; shares: unknown; note: unknown }) {
+export async function requestMetricChange(input: { id: string; code: string; views: unknown; likes: unknown; comments: unknown; shares: unknown; saves: unknown; note: unknown }) {
   const code = normalizeAffiliateCode(input.code);
   if (!code) throw new PostReviewError("invalid");
   const post = await requireOwned(input.id, code);
@@ -1298,10 +1325,11 @@ export async function requestMetricChange(input: { id: string; code: string; vie
   const likes = manualCount(input.likes);
   const comments = manualCount(input.comments);
   const shares = manualCount(input.shares);
-  if (views == null && likes == null && comments == null && shares == null) throw new PostReviewError("invalid");
+  const saves = manualCount(input.saves);
+  if (views == null && likes == null && comments == null && shares == null && saves == null) throw new PostReviewError("invalid");
   const note = typeof input.note === "string" ? input.note.trim().slice(0, NOTE_LIMIT) : "";
   await requireDb().collection("contentSubmissions").doc(post.id).update({
-    metricChange: { views, likes, comments, shares, note, requestedAt: new Date() },
+    metricChange: { views, likes, comments, shares, saves, note, requestedAt: new Date() },
   });
 }
 
@@ -1313,19 +1341,21 @@ export async function cancelMetricChange(input: { id: string; code: string }) {
   await requireDb().collection("contentSubmissions").doc(post.id).update({ metricChange: FieldValue.delete() });
 }
 
-export async function applyMetricChange(input: { id: string; views: unknown; likes: unknown; comments: unknown; shares: unknown }) {
+export async function applyMetricChange(input: { id: string; views: unknown; likes: unknown; comments: unknown; shares: unknown; saves: unknown }) {
   const post = await loadContentSubmission(input.id);
   if (!post?.metricChange || post.metricsSource !== "manual" || post.publicationStatus !== "tracking_active") throw new PostReviewError("status");
   const views = manualCount(input.views);
   const likes = manualCount(input.likes);
   const comments = manualCount(input.comments);
   const shares = manualCount(input.shares);
-  if (views == null && likes == null && comments == null && shares == null) throw new PostReviewError("invalid");
+  const saves = manualCount(input.saves);
+  if (views == null && likes == null && comments == null && shares == null && saves == null) throw new PostReviewError("invalid");
   await requireDb().collection("contentSubmissions").doc(post.id).update({
     views,
     likes,
     comments,
     shares,
+    saves,
     metricsSource: "manual",
     metricsRecordedAt: new Date(),
     metricChange: FieldValue.delete(),

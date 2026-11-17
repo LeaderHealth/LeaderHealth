@@ -49,6 +49,7 @@ export const ADMIN_ERRORS: Record<string, string> = {
   "roi-when": "Enter campaign dates as YYYY-MM-DD, with the end on or after the start.",
   "roi-unavailable": "ROI reporting is unavailable right now.",
   application: "That application is no longer waiting.",
+  "application-promo": "That promo code is no longer available. The application was not approved.",
   report: "Check the affiliate, month, and totals.",
   "report-missing": "That affiliate was not found.",
   sync: "Those reports could not be imported. Check the connected account and try again.",

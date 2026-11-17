@@ -23,6 +23,42 @@ export function viewPayCents(views: number, rateCents: number, maxPayCents: numb
   return Math.min(amount, maxPayCents);
 }
 
+export function engagementCount(input: { likes?: number | null; comments?: number | null; shares?: number | null; saves?: number | null }) {
+  const parts = [input.likes, input.comments, input.shares, input.saves];
+  let total = 0;
+  for (const part of parts) {
+    if (part == null) continue;
+    if (!Number.isInteger(part) || part < 0) return null;
+    total += part;
+  }
+  return total;
+}
+
+export function engagementPayCents(count: number, rateCents: number) {
+  if (!Number.isInteger(count) || count < 0 || !Number.isInteger(rateCents) || rateCents < 0) return null;
+  return count * rateCents;
+}
+
+export function socialPayCents(input: {
+  views?: number | null;
+  viewRateCents: number;
+  likes?: number | null;
+  comments?: number | null;
+  shares?: number | null;
+  saves?: number | null;
+  engagementRateCents?: number | null;
+  maxPayCents?: number | null;
+}) {
+  const views = viewPayCents(input.views ?? 0, input.viewRateCents, null);
+  const engagements = engagementCount(input);
+  const engagement = engagements == null ? null : engagementPayCents(engagements, input.engagementRateCents ?? 0);
+  if (views == null || engagement == null) return null;
+  const amount = views + engagement;
+  if (input.maxPayCents == null) return amount;
+  if (!Number.isInteger(input.maxPayCents) || input.maxPayCents < 0) return null;
+  return Math.min(amount, input.maxPayCents);
+}
+
 export function viewWindowEnded(publishedAt: string | null, now = Date.now(), trackingDays?: number | null) {
   if (!publishedAt) return false;
   const published = Date.parse(publishedAt);

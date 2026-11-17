@@ -6,6 +6,8 @@ import { DeliverablePaymentList } from "@/components/affiliate/DeliverablePaymen
 import { LAB_COMMISSIONS_ENABLED } from "@/lib/affiliate/code";
 import { deliverableLines, loadDeliverablePayments, marketingTotals, type DeliverableLine } from "@/lib/affiliate/deliverable-payments";
 import { formatCents, formatPublishDate, publishDateValue } from "@/lib/affiliate/format";
+import { standingViewRateCents, type PaymentRates } from "@/lib/affiliate/payment-rates";
+import { loadPaymentRates } from "@/lib/affiliate/payment-store";
 import { loadMarketingOffers, offerKindLabel } from "@/lib/affiliate/marketing-offers";
 import { formatPayoutMonth, loadPayoutRecords, paidOutInRange, type PayoutRecord } from "@/lib/affiliate/payouts";
 import { remainingSalesCents } from "@/lib/affiliate/refunds";
@@ -136,7 +138,14 @@ export default async function AffiliatePortalOverviewPage({
   const submissionCount = ownPosts.filter(
     (post) => post.contentStatus !== "withdrawn" && post.contentStatus !== "rejected" && post.contentStatus !== "draft",
   ).length;
-  const fee = affiliate.deliverableFeeCents == null ? "Not set" : `${formatCents(affiliate.deliverableFeeCents)} per 1,000 views`;
+  let contentRates: PaymentRates | null = null;
+  try {
+    contentRates = await loadPaymentRates();
+  } catch {
+    contentRates = null;
+  }
+  const viewRate = standingViewRateCents(contentRates);
+  const fee = viewRate == null ? "Not set" : `${formatCents(viewRate)} per 1,000 views`;
   const payLabel = LAB_COMMISSIONS_ENABLED ? `${fee}. Lab commission applies to lab orders.` : `${fee}. Lab commission is not active.`;
 
   return (
@@ -241,7 +250,7 @@ export default async function AffiliatePortalOverviewPage({
       <div className="grid gap-4 sm:grid-cols-3">
         <section className="rounded-[28px] bg-white p-6">
           <h3 className="text-sm text-brown">View rate</h3>
-          <p className="mt-2 text-3xl">{affiliate.deliverableFeeCents == null ? "Not set" : formatCents(affiliate.deliverableFeeCents)}</p>
+          <p className="mt-2 text-3xl">{viewRate == null ? "Not set" : formatCents(viewRate)}</p>
           <p className="mt-2 text-sm text-brown">Per 1,000 views</p>
         </section>
         <section className="rounded-[28px] bg-white p-6">

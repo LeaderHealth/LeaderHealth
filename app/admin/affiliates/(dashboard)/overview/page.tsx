@@ -1,16 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ManageAffiliate } from "@/components/affiliate/ManageAffiliate";
-import { DeliverablePaymentList } from "@/components/affiliate/DeliverablePaymentList";
 import { LAB_COMMISSIONS_ENABLED } from "@/lib/affiliate/code";
-import { deliverableLines, loadDeliverablePayments, marketingTotals, type DeliverableLine } from "@/lib/affiliate/deliverable-payments";
+import { deliverableLines, loadDeliverablePayments, marketingTotals } from "@/lib/affiliate/deliverable-payments";
 import { formatCents, publishDateValue } from "@/lib/affiliate/format";
+import { loadMarketingEvents, loadWebsitePayouts } from "@/lib/affiliate/marketing-events";
+import { socialMonthCents, websiteMonthAmount, type PaymentRates } from "@/lib/affiliate/payment-rates";
+import { loadPaymentRates } from "@/lib/affiliate/payment-store";
 import { listOpenApplications } from "@/lib/affiliate/applications";
 import { loadMarketingOffers } from "@/lib/affiliate/marketing-offers";
 import { loadContentSubmissions } from "@/lib/affiliate/post-review";
 import { visibleReportSections } from "@/lib/affiliate/marketing";
 import { loadMarketingReports, type MarketingReport } from "@/lib/affiliate/marketing-store";
-import { monthFigures } from "@/lib/affiliate/month-figures";
 import { loadSocialAccounts, type SocialAccountView } from "@/lib/affiliate/social-store";
 import { loadWebsiteEvents, websiteReportMonths, type WebsiteOrder, type WebsiteVisit } from "@/lib/affiliate/website-report";
 import { currentPayoutPeriod, formatPayoutMonth, loadPayoutRecords, paidOutInRange, payoutLines, previousPayoutPeriod, type PayoutRecord } from "@/lib/affiliate/payouts";
@@ -84,10 +85,6 @@ function netCommission(conversion: ConversionSummary) {
   return adjustedCommissionCents(conversion.commissionCents, conversion.commissionRefundedCents);
 }
 
-function feeText(cents: number | null) {
-  return cents == null ? "Not set" : `${formatCents(cents)} per 1,000 views`;
-}
-
 function paidInRange(conversions: ConversionSummary[], range: Range) {
   return conversions.filter((conversion) => !conversion.dryRun && inRange(conversion.createdAt, range));
 }
@@ -132,17 +129,21 @@ export default async function AffiliateOverviewPage({
   }
 
   let marketing = { pendingCents: 0, heldCents: 0, approvedCents: 0, paidCents: 0 };
-  let paymentLines: DeliverableLine[] = [];
   let reviewCount: number | null = null;
   let marketingApprovalCount = 0;
   const marketingByCode = new Map<string, { pendingCents: number; approvedCents: number; paidCents: number }>();
+  let contentPosts: Awaited<ReturnType<typeof loadContentSubmissions>> = [];
+  let deliverablePayments: Awaited<ReturnType<typeof loadDeliverablePayments>> = [];
+  let postsReady = false;
   try {
     const [posts, payments] = await Promise.all([loadContentSubmissions(), loadDeliverablePayments()]);
+    contentPosts = posts;
+    deliverablePayments = payments;
+    postsReady = true;
     reviewCount = posts.filter((post) => post.contentStatus === "submitted").length;
     const lines = deliverableLines({ affiliates, posts, payments });
     marketingApprovalCount = lines.filter((line) => line.status === "pending").length;
     marketing = marketingTotals(lines);
-    paymentLines = lines.filter((line) => line.status !== "closed" && line.status !== "paid");
     for (const affiliate of affiliates) {
       marketingByCode.set(affiliate.code, marketingTotals(lines.filter((line) => line.code === affiliate.code)));
     }
@@ -192,9 +193,8 @@ export default async function AffiliateOverviewPage({
   } catch {
     deadlineCount = null;
   }
-  const payoutApprovalCount = loadError
-    ? null
-    : payoutLines({ affiliates, orders: conversions, payouts }).filter((line) => line.status === "pending").length;
+  const labLines = loadError ? [] : payoutLines({ affiliates, orders: conversions, payouts });
+  const payoutApprovalCount = loadError ? null : labLines.filter((line) => line.status === "pending").length;
   const payoutsWaiting =
     payoutApprovalCount == null && reviewCount == null ? null : (payoutApprovalCount ?? 0) + marketingApprovalCount;
 
@@ -202,7 +202,7 @@ export default async function AffiliateOverviewPage({
     ...(canInvite
       ? [
           {
-            href: "/admin/affiliates/add-an-affiliate",
+            href: "/admin/affiliates/applications",
             label: "Pending applications",
             value: applicationsUnavailable || applicationCount == null ? "—" : String(applicationCount),
             detail: applicationsUnavailable ? "Unavailable right now" : "Waiting for approval",
@@ -287,6 +287,25 @@ export default async function AffiliateOverviewPage({
 
   const currentPeriod = currentPayoutPeriod();
   const priorPeriod = previousPayoutPeriod(currentPeriod) ?? currentPeriod;
+  let contentRates: PaymentRates | null = null;
+  let marketingEvents: Awaited<ReturnType<typeof loadMarketingEvents>> = [];
+  let websiteSnapshots: Awaited<ReturnType<typeof loadWebsitePayouts>> = [];
+  let websiteReady = false;
+  try {
+    const [rates, priorEvents, currentEvents, priorPayouts, currentPayouts] = await Promise.all([
+      loadPaymentRates(),
+      loadMarketingEvents({ period: priorPeriod }),
+      priorPeriod === currentPeriod ? Promise.resolve([]) : loadMarketingEvents({ period: currentPeriod }),
+      loadWebsitePayouts(priorPeriod),
+      priorPeriod === currentPeriod ? Promise.resolve([]) : loadWebsitePayouts(currentPeriod),
+    ]);
+    contentRates = rates;
+    marketingEvents = [...priorEvents, ...currentEvents];
+    websiteSnapshots = [...priorPayouts, ...currentPayouts];
+    websiteReady = true;
+  } catch {
+    websiteReady = false;
+  }
 
   function manageReports(code: string) {
     return {
@@ -296,20 +315,29 @@ export default async function AffiliateOverviewPage({
     };
   }
 
-  function manageMonths(code: string) {
-    const prior = monthFigures({ code, period: priorPeriod, orders: conversions });
-    const current = monthFigures({ code, period: currentPeriod, orders: conversions });
+  function monthPay(code: string, period: string) {
+    const socialMonth = socialMonthCents({
+      period,
+      posts: contentPosts.filter((post) => post.code === code),
+      payments: deliverablePayments.filter((payment) => payment.code === code),
+    });
+    const snapshot = websiteSnapshots.find((row) => row.code === code && row.period === period) ?? null;
+    const labCents = labLines.filter((line) => line.code === code && line.period === period).reduce((sum, line) => sum + line.earnedCents, 0);
     return {
-      prior: {
-        label: formatPayoutMonth(priorPeriod),
-        orders: prior.orders,
-        earnings: LAB_COMMISSIONS_ENABLED ? formatCents(prior.earningsCents) : "Not active",
-      },
-      current: {
-        label: formatPayoutMonth(currentPeriod),
-        orders: current.orders,
-        earnings: LAB_COMMISSIONS_ENABLED ? formatCents(current.earningsCents) : "Not active",
-      },
+      label: formatPayoutMonth(period),
+      social: postsReady ? formatCents(socialMonth.socialCents + socialMonth.adjustmentCents) : "—",
+      website:
+        websiteReady && contentRates
+          ? formatCents(websiteMonthAmount({ events: marketingEvents, code, period, rates: contentRates, snapshot }).amountCents)
+          : "—",
+      lab: !LAB_COMMISSIONS_ENABLED ? "Not active" : loadError ? "—" : formatCents(labCents),
+    };
+  }
+
+  function manageMonths(code: string) {
+    return {
+      prior: monthPay(code, priorPeriod),
+      current: monthPay(code, currentPeriod),
     };
   }
 
@@ -414,17 +442,6 @@ export default async function AffiliateOverviewPage({
           </section>
         </div>
       </div>
-
-      <section className="rounded-[28px] bg-white p-4 sm:p-6" aria-labelledby="admin-payments-title">
-        <div className="flex items-baseline justify-between gap-3">
-          <h3 id="admin-payments-title" className="text-xl">Marketing payments</h3>
-          <Link href="/admin/affiliates/payouts" className="text-sm font-medium text-ink underline underline-offset-4">
-            Payouts
-          </Link>
-        </div>
-        <p className="mt-2 text-sm text-brown">Each post locks its rate, maximum, and tracking period when it is sent. Pay is calculated from recorded views after that period, then added to the next payout. Lab commission stays on lab orders.</p>
-        <DeliverablePaymentList lines={paymentLines} showAffiliate />
-      </section>
 
       <div className="grid gap-4 xl:grid-cols-2">
         <section className="min-w-0 rounded-[28px] bg-white p-4 sm:p-6" aria-labelledby="top-affiliates-title">
@@ -558,10 +575,6 @@ export default async function AffiliateOverviewPage({
                       {promos ? <dd className="text-brown">{promos}</dd> : null}
                     </div>
                     <div>
-                      <dt className="text-xs text-brown">View rate</dt>
-                      <dd className="mt-1">{feeText(affiliate.deliverableFeeCents)}</dd>
-                    </div>
-                    <div>
                       <dt className="text-xs text-brown">Paid orders</dt>
                       <dd className="mt-1">{stats.orders}</dd>
                     </div>
@@ -624,7 +637,6 @@ export default async function AffiliateOverviewPage({
                     </td>
                     <td className="px-4 py-5 align-top">
                       <div className="break-all">{affiliate.code}</div>
-                      <div className="mt-1 text-brown">{feeText(affiliate.deliverableFeeCents)}</div>
                       {promos ? <div className="text-brown">{promos}</div> : null}
                     </td>
                     <td className="px-4 py-5 align-top">{stats.orders}</td>
@@ -654,7 +666,7 @@ export default async function AffiliateOverviewPage({
           </table>
         ) : null}
         <p className="px-4 py-4 text-sm text-brown sm:px-6">
-          Showing {visible.length} of {affiliates.length} affiliates. Promo codes and the view rate are edited on each affiliate.
+          Showing {visible.length} of {affiliates.length} affiliates. Promo codes are edited on each affiliate.
         </p>
       </section>
     </div>

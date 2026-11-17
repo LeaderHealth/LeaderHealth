@@ -11,7 +11,7 @@ import {
 } from "./deliverable-flow";
 import { formatCents, formatWhen } from "./format";
 import { affiliateFirebaseConfigured, affiliateFirestore } from "./firebase";
-import { resolvedTrackingDays, trackingDaysOf, viewPayCents } from "./manual-checkpoint";
+import { resolvedTrackingDays, socialPayCents, trackingDaysOf } from "./manual-checkpoint";
 import { payoutAmountCents, payoutPaidAt, payoutReference } from "./payouts";
 import { postCheckpointOpen } from "./report-gate";
 
@@ -36,9 +36,14 @@ export type DeliverablePost = {
   publicationStatus: string | null;
   agreedFeeCents: number | null;
   viewRateCents?: number | null;
+  engagementRateCents?: number | null;
   maxPayCents?: number | null;
   trackingDays?: number | null;
   views?: number | null;
+  likes?: number | null;
+  comments?: number | null;
+  shares?: number | null;
+  saves?: number | null;
   format: string | null;
   contentStatus?: string | null;
   publishedAt?: string | null;
@@ -153,16 +158,29 @@ function snapshotFrom(post: {
 function lineAmount(post: DeliverablePost, status: DeliverableLineStatus) {
   if (post.viewRateCents != null) {
     if (status !== "pending") return 0;
-    return viewPayCents(post.views ?? 0, post.viewRateCents, post.maxPayCents ?? null) ?? 0;
+    return (
+      socialPayCents({
+        views: post.views ?? 0,
+        viewRateCents: post.viewRateCents,
+        engagementRateCents: post.engagementRateCents ?? 0,
+        likes: post.likes,
+        comments: post.comments,
+        shares: post.shares,
+        saves: post.saves,
+        maxPayCents: post.maxPayCents ?? null,
+      }) ?? 0
+    );
   }
   return post.agreedFeeCents ?? 0;
 }
 
-function lineDetail(status: DeliverableLineStatus, post: DeliverableSnapshot) {
+function lineDetail(status: DeliverableLineStatus, post: DeliverableSnapshot, engagementRateCents = 0) {
   if (post.viewRateCents != null && (status === "review" || status === "changes" || status === "waiting" || status === "measuring")) {
     const days = resolvedTrackingDays(post.trackingDays);
     const cap = post.maxPayCents == null ? "There is no maximum." : `The maximum is ${formatCents(post.maxPayCents)}.`;
-    return `The rate is locked. Pay is calculated from recorded views after ${days} days live. ${cap}`;
+    const basis = engagementRateCents > 0 ? "recorded views and engagements" : "recorded views";
+    const engagement = engagementRateCents > 0 ? ` Engagements are ${formatCents(engagementRateCents)} each.` : "";
+    return `The rate is locked. Pay is calculated from ${basis} after ${days} days live.${engagement} ${cap}`;
   }
   const ends = holdEndsAt(post);
   return deliverableDetail(status, ends ? formatWhen(ends) : null);
@@ -192,7 +210,7 @@ export function deliverableLines(
       name: names.get(post.code) ?? post.code,
       label: postLabel(post.format),
       status,
-      detail: lineDetail(status, snapshot),
+      detail: lineDetail(status, snapshot, post.engagementRateCents ?? 0),
       amountCents: lineAmount(post, status),
       paidCents: null,
       paidAt: null,
@@ -212,7 +230,7 @@ export function deliverableLines(
       name: names.get(payment.code) ?? payment.code,
       label: postLabel(post?.format ?? null),
       status,
-      detail: snapshot ? lineDetail(status, snapshot) : deliverableDetail(status, null),
+      detail: snapshot ? lineDetail(status, snapshot, post?.engagementRateCents ?? 0) : deliverableDetail(status, null),
       amountCents: payment.amountCents,
       paidCents: payment.paidCents,
       paidAt: payment.paidAt,
@@ -323,6 +341,11 @@ export async function approveDeliverablePayment(postId: string) {
     const maxPayCents = deliverableFeeCents(data?.maxPayCents);
     const trackingDays = trackingDaysOf(data?.trackingDays);
     const views = viewCount(data?.views);
+    const likes = viewCount(data?.likes);
+    const comments = viewCount(data?.comments);
+    const shares = viewCount(data?.shares);
+    const saves = viewCount(data?.saves);
+    const engagementRateCents = deliverableFeeCents(data?.engagementRateCents) ?? 0;
     const publicationStatus = typeof data?.publicationStatus === "string" ? data.publicationStatus : null;
     if (!code) throw new DeliverablePaymentError("missing", "That post was not found.");
     const offerId = typeof data?.offerId === "string" ? data.offerId : "";
@@ -355,7 +378,21 @@ export async function approveDeliverablePayment(postId: string) {
     if (decision === "hold") throw new DeliverablePaymentError("hold", "This fee stays on hold until the post has been live for 14 days.");
     if (decision === "recheck") throw new DeliverablePaymentError("recheck", "Re-check that the post is still up before approving this fee.");
     if (decision === "forfeited") throw new DeliverablePaymentError("forfeited", "This fee was forfeited. Reinstate it before it can be paid.");
-    const amountCents = viewRateCents == null ? fee : views == null ? null : viewPayCents(views, viewRateCents, maxPayCents);
+    const amountCents =
+      viewRateCents == null
+        ? fee
+        : views == null
+          ? null
+          : socialPayCents({
+              views,
+              viewRateCents,
+              engagementRateCents,
+              likes,
+              comments,
+              shares,
+              saves,
+              maxPayCents,
+            });
     if (decision !== "create" || amountCents == null) {
       throw new DeliverablePaymentError("unpublished", "Approve a post only after its link is live.");
     }

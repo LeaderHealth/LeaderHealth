@@ -7,6 +7,7 @@ import { CartProvider } from "./cart/CartProvider";
 import { SideCart } from "./cart/SideCart";
 import { AccessibilityButton } from "./AccessibilityButton";
 import { AffiliateCapture } from "./affiliate/AffiliateCapture";
+import { MarketingMeter, MarketingPlacement } from "./affiliate/MarketingMeter";
 
 export function SiteShell({ children }: { children: React.ReactNode }) {
   return (
@@ -14,6 +15,8 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
     <CartProvider>
       <Suspense fallback={null}>
         <AffiliateCapture />
+        <MarketingMeter />
+        <MarketingPlacement />
       </Suspense>
       <Header />
       <main className="flex-1">

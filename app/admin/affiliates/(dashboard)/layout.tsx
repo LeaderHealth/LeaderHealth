@@ -6,6 +6,7 @@ import { PortalLegalLinks } from "@/components/affiliate/PortalLegalLinks";
 import { PortalBrand } from "@/components/affiliate/PortalBrand";
 import { ProfileCard } from "@/components/affiliate/ProfileCard";
 import { adminAccountProfile } from "@/lib/affiliate/admin-profile";
+import { listOpenApplications } from "@/lib/affiliate/applications";
 import { affiliateFirebaseConfigured } from "@/lib/affiliate/firebase";
 import { loadContentSubmissions } from "@/lib/affiliate/post-review";
 import { adminHasFullAccess, adminSessionActor } from "@/lib/affiliate/session";
@@ -17,6 +18,7 @@ export const dynamic = "force-dynamic";
 const overview = "/admin/affiliates/overview";
 const accounts = "/admin/affiliates/accounts";
 const applications = "/admin/affiliates/add-an-affiliate";
+const pendingApplications = "/admin/affiliates/applications";
 const promoCodes = "/admin/affiliates/promo-codes";
 const trackingLinks = "/admin/affiliates/tracking-links";
 const plans = "/admin/affiliates/offers";
@@ -24,11 +26,13 @@ const submissions = "/admin/affiliates/posts";
 const pending = "/admin/affiliates/posts/pending";
 const published = "/admin/affiliates/posts/published";
 const campaigns = "/admin/affiliates/campaigns";
+const campaignNew = "/admin/affiliates/campaigns/new";
 const roi = "/admin/affiliates/roi";
 const website = "/admin/affiliates/reporting";
 const payouts = "/admin/affiliates/payouts";
 const orders = "/admin/affiliates/orders";
 const team = "/admin/affiliates/team";
+const payments = "/admin/affiliates/settings/payments";
 const records = "/admin/affiliates/records";
 const compliance = "/admin/affiliates/compliance";
 
@@ -43,31 +47,40 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
     waitingPosts = 0;
   }
   const fullAccess = adminHasFullAccess(actor);
+  let openApplications = 0;
+  if (fullAccess) {
+    try {
+      openApplications = (await listOpenApplications()).length;
+    } catch {
+      openApplications = 0;
+    }
+  }
   const reviewBadge = waitingPosts > 0 ? waitingPosts : undefined;
   const nav: AreaNavItem[] = [
     { href: overview, label: "Overview", active: [overview] },
     {
       href: accounts,
       label: "Affiliates",
-      active: [accounts, applications, "/admin/affiliates/add", promoCodes, trackingLinks],
+      active: [accounts, applications, pendingApplications, "/admin/affiliates/add", promoCodes, trackingLinks],
     },
-    { href: submissions, label: "Content", active: [submissions, pending, published, campaigns, plans], badge: reviewBadge },
+    { href: submissions, label: "Content", active: [submissions, pending, published, campaigns, campaignNew, plans], badge: reviewBadge },
     { href: roi, label: "Stats", active: [roi, website] },
     { href: payouts, label: "Payouts", active: [payouts, orders] },
-    { href: records, label: "Settings", active: [records, compliance, team] },
+    { href: records, label: "Settings", active: [records, compliance, team, payments] },
   ];
   const groups: DashboardGroup[] = [
     {
-      paths: [accounts, applications, "/admin/affiliates/add", promoCodes, trackingLinks],
+      paths: [accounts, applications, pendingApplications, "/admin/affiliates/add", promoCodes, trackingLinks],
       items: [
         { href: accounts, label: "Accounts" },
         ...(fullAccess ? [{ href: applications, label: "Applications" }] : []),
+        ...(fullAccess ? [{ href: pendingApplications, label: "Pending applications", badge: openApplications > 0 ? openApplications : undefined }] : []),
         { href: promoCodes, label: "Promo codes" },
         { href: trackingLinks, label: "Tracking links" },
       ],
     },
     {
-      paths: [submissions, pending, published, campaigns, plans],
+      paths: [submissions, pending, published, campaigns, campaignNew, plans],
       items: [
         { href: submissions, label: "All submissions" },
         { href: pending, label: "Pending approvals", badge: reviewBadge },
@@ -79,7 +92,7 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
       paths: [roi, website],
       items: [
         { href: roi, label: "ROI" },
-        { href: website, label: "Website" },
+        { href: website, label: "Website traffic" },
       ],
       note: { href: accounts, label: "Per-affiliate social counts" },
     },
@@ -91,9 +104,10 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
       ],
     },
     {
-      paths: [records, compliance, team],
+      paths: [records, compliance, team, payments],
       items: [
         ...(fullAccess ? [{ href: team, label: "Team" }] : []),
+        ...(fullAccess ? [{ href: payments, label: "Payment rates" }] : []),
         { href: records, label: "Compliance records", active: [records, compliance] },
       ],
     },

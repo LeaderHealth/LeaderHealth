@@ -20,6 +20,8 @@ export function MarkPaidButton({
   monthLabel,
   postId,
   action = markPayoutPaidAction,
+  label = "Mark paid",
+  triggerClass,
 }: {
   code: string;
   name: string;
@@ -29,6 +31,8 @@ export function MarkPaidButton({
   monthLabel: string;
   postId?: string;
   action?: (formData: FormData) => void | Promise<void>;
+  label?: string;
+  triggerClass?: string;
 }) {
   const titleId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -72,8 +76,8 @@ export function MarkPaidButton({
 
   return (
     <>
-      <button ref={triggerRef} type="button" onClick={() => setOpen(true)} className={actionClass}>
-        Mark paid
+      <button ref={triggerRef} type="button" onClick={() => setOpen(true)} className={triggerClass ?? actionClass}>
+        {label}
       </button>
       {open
         ? createPortal(

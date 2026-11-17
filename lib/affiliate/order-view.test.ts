@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { periodReferralSummaries, toAffiliateOrder, weeklySaleLine } from "./order-view";
+import { adminOrderDetails, periodReferralSummaries, toAffiliateOrder, weeklySaleLine } from "./order-view";
 
 const orderId = "ord_48ed6c335e9719fef64960ca";
 
@@ -142,6 +142,43 @@ test("period summaries collapse a month and hide order details", () => {
   assert.equal(serialized.includes(orderId), false);
   assert.equal(serialized.includes("ord_other"), false);
   assert.equal(serialized.includes("ord_lab_secret"), false);
+});
+
+test("admin order lines keep the product, sale, and order id", () => {
+  const lines = adminOrderDetails([
+    {
+      code: "abc",
+      dryRun: false,
+      amountCents: 15900,
+      refundedAmountCents: 0,
+      commissionCents: 0,
+      commissionRefundedCents: 0,
+      createdAt: "2026-09-14T15:00:00.000Z",
+      orderKind: "treatment",
+      orderId,
+      productName: "Semaglutide",
+      promoCode: "ANGIE10",
+    },
+    {
+      code: "abc",
+      dryRun: true,
+      amountCents: 8000,
+      refundedAmountCents: 0,
+      commissionCents: 800,
+      commissionRefundedCents: 0,
+      createdAt: "2026-09-11T00:00:00.000Z",
+      orderKind: "lab",
+      orderId: "ord_dry",
+      productName: "Hidden Panel",
+    },
+  ]);
+  assert.equal(lines.length, 1);
+  assert.equal(lines[0].productName, "Semaglutide");
+  assert.equal(lines[0].orderId, orderId);
+  assert.equal(lines[0].saleCents, 15900);
+  assert.equal(lines[0].orderKind, "treatment");
+  assert.equal(lines[0].commissionCents, 0);
+  assert.equal(lines[0].promoCode, "ANGIE10");
 });
 
 test("weekly lines name the date and a conversion count", () => {

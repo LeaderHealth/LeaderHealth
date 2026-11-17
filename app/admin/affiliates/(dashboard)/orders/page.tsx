@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { LAB_COMMISSIONS_ENABLED } from "@/lib/affiliate/code";
 import { formatCents } from "@/lib/affiliate/format";
-import { periodReferralSummaries, type PeriodReferralSource } from "@/lib/affiliate/order-view";
+import { adminOrderDetails, type AdminOrderSource } from "@/lib/affiliate/order-view";
 import { formatPayoutMonth } from "@/lib/affiliate/payouts";
 import { AffiliateStoreError, loadAffiliateOverview } from "@/lib/affiliate/store";
 
@@ -12,9 +12,24 @@ export const metadata: Metadata = {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function periodSource(conversion: { code: string; dryRun: boolean; amountCents: number | null; refundedAmountCents: number; commissionCents: number; commissionRefundedCents: number; createdAt: string | null; orderKind: "lab" | "treatment" }): PeriodReferralSource {
+function periodSource(conversion: {
+  code: string;
+  orderId: string;
+  productName: string;
+  promoCode: string | null;
+  dryRun: boolean;
+  amountCents: number | null;
+  refundedAmountCents: number;
+  commissionCents: number;
+  commissionRefundedCents: number;
+  createdAt: string | null;
+  orderKind: "lab" | "treatment";
+}): AdminOrderSource {
   return {
     code: conversion.code,
+    orderId: conversion.orderId,
+    productName: conversion.productName,
+    promoCode: conversion.promoCode,
     dryRun: conversion.dryRun,
     amountCents: conversion.amountCents,
     refundedAmountCents: conversion.refundedAmountCents,
@@ -25,18 +40,28 @@ function periodSource(conversion: { code: string; dryRun: boolean; amountCents: 
   };
 }
 
-function labCommission(cents: number) {
-  return LAB_COMMISSIONS_ENABLED ? formatCents(cents) : "Not active";
+function orderDate(value: string) {
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(value));
+}
+
+function labCommission(cents: number, kind: "lab" | "treatment") {
+  if (!LAB_COMMISSIONS_ENABLED) return "Not active";
+  if (kind !== "lab") return "—";
+  return formatCents(cents);
 }
 
 export default async function AffiliateOrdersPage() {
-  let rows: ReturnType<typeof periodReferralSummaries> = [];
+  let sources: AdminOrderSource[] = [];
+  let names = new Map<string, string>();
   let loadError = "";
   try {
-    rows = periodReferralSummaries((await loadAffiliateOverview()).conversions.map(periodSource));
+    const overview = await loadAffiliateOverview();
+    sources = overview.conversions.map(periodSource);
+    names = new Map(overview.affiliates.map((affiliate) => [affiliate.code, affiliate.name]));
   } catch (error) {
     loadError = error instanceof AffiliateStoreError ? error.message : "Could not load affiliate records.";
   }
+  const orders = adminOrderDetails(sources);
 
   if (loadError) return <p className="text-ink">{loadError}</p>;
 
@@ -45,60 +70,55 @@ export default async function AffiliateOrdersPage() {
       <h2 id="recent-orders-title" className="px-4 pt-4 text-2xl">
         Orders
       </h2>
-      <p className="px-4 pt-2 text-sm text-brown">Period, referral id, and conversion count. {LAB_COMMISSIONS_ENABLED ? "Lab commission is separate from marketing payments." : "Lab commission is not active."}</p>
-      {rows.length === 0 ? (
+      <p className="px-4 pt-2 text-sm text-brown">Each paid order, with its date, product, sale, and order id. {LAB_COMMISSIONS_ENABLED ? "Lab commission applies to lab orders." : "Lab commission is not active."}</p>
+      {orders.length === 0 ? (
         <p className="px-4 py-6 text-sm text-brown">No paid orders yet.</p>
       ) : (
-        <ul className="xl:hidden" aria-labelledby="recent-orders-title">
-          {rows.map((row) => (
-            <li key={`${row.period}:${row.code}`} className="border-t border-ink/10 px-4 py-5 text-sm">
-              <div className="font-medium">{formatPayoutMonth(row.period)}</div>
-              <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-5 leading-6">
-                <div className="col-span-2">
-                  <dt className="text-xs text-brown">Referral ID</dt>
-                  <dd className="mt-1 break-all">{row.code}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-brown">Conversions</dt>
-                  <dd className="mt-1">{row.conversions}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-brown">Lab commission</dt>
-                  <dd className="mt-1">{labCommission(row.commissionCents)}</dd>
-                </div>
-              </dl>
-            </li>
-          ))}
-        </ul>
-      )}
-      {rows.length > 0 ? (
-        <table className="hidden w-full max-w-full table-fixed border-collapse text-left text-sm leading-6 xl:table" aria-labelledby="recent-orders-title">
+        <table className="w-full table-fixed border-collapse text-left text-sm leading-6" aria-labelledby="recent-orders-title">
           <colgroup>
-            <col className="w-[28%]" />
-            <col className="w-[32%]" />
-            <col className="w-[20%]" />
-            <col className="w-[20%]" />
+            <col className="w-[15%]" />
+            <col className="w-[13%]" />
+            <col className="w-[22%]" />
+            <col className="w-[11%]" />
+            <col className="w-[10%]" />
+            <col className="w-[11%]" />
+            <col className="w-[18%]" />
           </colgroup>
           <thead className="text-brown">
             <tr>
-              <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Period</th>
-              <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Referral ID</th>
-              <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Conversions</th>
-              <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Lab commission</th>
+              <th scope="col" className="px-3 py-4 align-bottom font-medium">Date</th>
+              <th scope="col" className="px-3 py-4 align-bottom font-medium">Affiliate</th>
+              <th scope="col" className="px-3 py-4 align-bottom font-medium">Product</th>
+              <th scope="col" className="px-3 py-4 align-bottom font-medium">Type</th>
+              <th scope="col" className="px-3 py-4 align-bottom font-medium">Sale</th>
+              <th scope="col" className="px-3 py-4 align-bottom font-medium">Commission</th>
+              <th scope="col" className="px-3 py-4 align-bottom font-medium">Order ID</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
-              <tr key={`${row.period}:${row.code}`} className="border-t border-rose/60">
-                <td className="break-words px-4 py-5 align-top">{formatPayoutMonth(row.period)}</td>
-                <td className="break-all px-4 py-5 align-top">{row.code}</td>
-                <td className="px-4 py-5 align-top">{row.conversions}</td>
-                <td className="px-4 py-5 align-top">{labCommission(row.commissionCents)}</td>
+            {orders.map((order) => (
+              <tr key={order.orderId} className="border-t border-rose/60">
+                <td className="px-3 py-4 align-top">
+                  <div>{orderDate(order.createdAt)}</div>
+                  <div className="text-xs text-brown">{formatPayoutMonth(order.period)}</div>
+                </td>
+                <td className="px-3 py-4 align-top break-words">
+                  <div>{names.get(order.code) || order.code}</div>
+                  <div className="text-xs text-brown">{order.code}</div>
+                </td>
+                <td className="px-3 py-4 align-top break-words">
+                  <div>{order.productName}</div>
+                  {order.promoCode ? <div className="text-xs text-brown">Promo {order.promoCode}</div> : null}
+                </td>
+                <td className="px-3 py-4 align-top">{order.orderKind === "lab" ? "Lab" : "Treatment"}</td>
+                <td className="px-3 py-4 align-top">{formatCents(order.saleCents)}</td>
+                <td className="px-3 py-4 align-top">{labCommission(order.commissionCents, order.orderKind)}</td>
+                <td className="px-3 py-4 align-top break-all text-xs leading-5">{order.orderId}</td>
               </tr>
             ))}
           </tbody>
         </table>
-      ) : null}
+      )}
     </div>
   );
 }

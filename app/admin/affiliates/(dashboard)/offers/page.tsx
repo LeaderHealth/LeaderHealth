@@ -4,6 +4,8 @@ import { normalizeAffiliateCode } from "@/lib/affiliate/code";
 import { loadMarketingOffers, offerExpiresLabel, offerKindLabel } from "@/lib/affiliate/marketing-offers";
 import { loadMarketingCampaigns } from "@/lib/affiliate/roi-store";
 import { adminHasFullAccess, adminSessionActor } from "@/lib/affiliate/session";
+import { standingViewRateCents } from "@/lib/affiliate/payment-rates";
+import { loadPaymentRates } from "@/lib/affiliate/payment-store";
 import { AffiliateStoreError, loadAffiliateOverview } from "@/lib/affiliate/store";
 import { ADMIN_ERRORS } from "../../messages";
 
@@ -33,6 +35,12 @@ export default async function MarketingOffersPage({
   const error = query.error ? ADMIN_ERRORS[query.error] ?? "" : "";
   const affiliateCode = normalizeAffiliateCode(query.code) ?? "";
   let loadError = "";
+  let socialViewRateCents: number | null = null;
+  try {
+    socialViewRateCents = standingViewRateCents(await loadPaymentRates());
+  } catch {
+    socialViewRateCents = null;
+  }
   let affiliates: { code: string; name: string; feeCents: number | null; maxPayCents: number | null; trackingDays: number }[] = [];
   let offers: Awaited<ReturnType<typeof loadMarketingOffers>> = [];
   let campaigns: string[] = [];
@@ -66,6 +74,7 @@ export default async function MarketingOffersPage({
       selectedId={query.offer ?? ""}
       affiliateCode={affiliateCode}
       affiliates={affiliates}
+      socialViewRateCents={socialViewRateCents}
       campaigns={campaigns}
       offers={offers.map((offer) => ({
         id: offer.id,

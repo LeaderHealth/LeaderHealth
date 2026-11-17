@@ -30,11 +30,14 @@ import {
 import { noteComplianceEvent } from "@/lib/affiliate/compliance-log";
 import { adjustDeliverablePayment, approveDeliverablePayment, canReleaseDeliverablePayment, DeliverablePaymentError, forfeitDeliverable, markDeliverablePaid, recheckDeliverable, reinstateDeliverable } from "@/lib/affiliate/deliverable-payments";
 import { approvePayout, markPayoutPaid, PayoutError } from "@/lib/affiliate/payouts";
-import { RoiStoreError, saveMarketingCampaign, saveMarketingCost } from "@/lib/affiliate/roi-store";
+import { readCampaignFlow, type CampaignFlowInput } from "@/lib/affiliate/campaign-record";
+import { RoiStoreError, saveCampaignBrief, saveMarketingCampaign, saveMarketingCost } from "@/lib/affiliate/roi-store";
 import { roiRange } from "@/lib/affiliate/roi";
 import {
   ApplicationError,
   applicationCommission,
+  applicationLinkPromo,
+  promoAvailableForNewLink,
   claimAffiliateApplication,
   createApplicationLink,
   declineAffiliateApplication,
@@ -49,7 +52,7 @@ import { formatCommissionRate } from "@/lib/affiliate/format";
 import { absoluteUrl } from "@/lib/seo/schema";
 import { acceptMarketingCounter, declineMarketingOffer, MarketingOfferError, saveMarketingOffer, withdrawMarketingOffer } from "@/lib/affiliate/marketing-offers";
 import { AffiliateStoreError, createAffiliate, issueAffiliateInvitation, setAffiliateActive, setAffiliatePassword } from "@/lib/affiliate/store";
-import { PromoCodeError, assignPromoCode, unassignPromoCode } from "@/lib/genhealth/promocodes";
+import { PromoCodeError, assignPromoCode, listPromoCodes, promoByCode, unassignPromoCode } from "@/lib/genhealth/promocodes";
 import {
   adminAccountEmail,
   adminCredentialsMatch,
@@ -714,6 +717,26 @@ export async function saveMarketingCampaignAction(formData: FormData) {
   redirect(campaignDestination(formData, range, { notice }));
 }
 
+export async function saveCampaignFlowAction(input: CampaignFlowInput) {
+  await requireAdmin();
+  const parsed = readCampaignFlow(input);
+  if ("error" in parsed) return { ok: false as const, error: parsed.error };
+  try {
+    const notice = await saveCampaignBrief(parsed.name, parsed.brief);
+    if (notice === "exists") return { ok: false as const, error: "That campaign is already on the list." };
+  } catch (error) {
+    if (error instanceof RoiStoreError) return { ok: false as const, error: "Campaigns are unavailable right now." };
+    console.error("[affiliate] campaign flow failed", error instanceof Error ? error.message : "unknown");
+    return { ok: false as const, error: "Campaigns are unavailable right now." };
+  }
+  revalidatePath(ROI_PATH);
+  revalidatePath(CAMPAIGNS_PATH);
+  revalidatePath("/admin/affiliates/offers");
+  revalidatePath("/affiliates/campaigns");
+  revalidatePath("/affiliates/posts");
+  return { ok: true as const, status: parsed.brief.status, count: parsed.brief.assignedCodes.length };
+}
+
 export async function saveMarketingCostAction(formData: FormData) {
   await requireAdmin();
   const range = roiRange(formData.get("range"));
@@ -733,17 +756,28 @@ export async function saveMarketingCostAction(formData: FormData) {
 }
 
 const APPLY_PATH = "/admin/affiliates/add-an-affiliate";
+const PENDING_APPLICATIONS_PATH = "/admin/affiliates/applications";
 
-function applicationFail(error: unknown): never {
+function applicationPath(formData: FormData) {
+  return formData.get("next") === PENDING_APPLICATIONS_PATH ? PENDING_APPLICATIONS_PATH : APPLY_PATH;
+}
+
+function applicationFail(error: unknown, path = APPLY_PATH): never {
   if (error instanceof ApplicationError) {
-    if (error.code === "email") fail("email", APPLY_PATH);
-    if (error.code === "invalid") fail("invalid", APPLY_PATH);
-    if (error.code === "missing" || error.code === "decided") fail("application", APPLY_PATH);
-    fail("unavailable", APPLY_PATH);
+    if (error.code === "email") fail("email", path);
+    if (error.code === "invalid") fail("invalid", path);
+    if (error.code === "missing" || error.code === "decided") fail("application", path);
+    fail("unavailable", path);
   }
-  if (error instanceof AffiliateStoreError) fail(error.code, APPLY_PATH);
+  if (error instanceof AffiliateStoreError) fail(error.code, path);
   console.error("[affiliate] application action failed", error instanceof Error ? error.message : "unknown");
-  fail("unavailable", APPLY_PATH);
+  fail("unavailable", path);
+}
+
+async function confirmedPromoCode(code: string) {
+  const row = promoByCode(await listPromoCodes(), code);
+  if (!row || !promoAvailableForNewLink(row)) return null;
+  return row.code;
 }
 
 export async function createApplicationLinkAction(formData: FormData) {
@@ -753,10 +787,23 @@ export async function createApplicationLinkAction(formData: FormData) {
     commissionPercent: formData.get("commissionPercent"),
     commissionFixed: formData.get("commissionFixed"),
   };
+  const commission = applicationCommission(input);
+  if (!commission) return { error: "Check the commission, then create the link again." };
+  const requested = applicationLinkPromo(formData.get("promoChoice"), formData.get("promoCode"));
+  if (requested == null) return { error: "Enter the Gen Health promo code, or choose Not yet." };
+  let promoCode = "";
+  if (requested) {
+    try {
+      const confirmed = await confirmedPromoCode(requested);
+      if (!confirmed) return { error: "That promo code must be active in Gen Health and not already assigned." };
+      promoCode = confirmed;
+    } catch (error) {
+      console.error("[affiliate] application promo check failed", error instanceof Error ? error.message : "unknown");
+      return { error: "Gen Health could not confirm that promo code. The link was not created." };
+    }
+  }
   try {
-    const token = await createApplicationLink(input);
-    const commission = applicationCommission(input);
-    if (!commission) return { error: "Check the commission, then create the link again." };
+    const token = await createApplicationLink({ ...input, promoCode });
     return {
       url: absoluteUrl(`/affiliates/apply?link=${encodeURIComponent(token)}`),
       token,
@@ -789,13 +836,31 @@ export async function sendApplicationLinkAction(formData: FormData) {
 }
 
 export async function approveAffiliateApplicationAction(formData: FormData) {
-  await requireFullAdmin(APPLY_PATH);
-  if (!affiliateEmailConfigured()) fail("mail", APPLY_PATH);
+  const returnPath = applicationPath(formData);
+  await requireFullAdmin(returnPath);
+  if (!affiliateEmailConfigured()) fail("mail", returnPath);
   let claimed: Awaited<ReturnType<typeof claimAffiliateApplication>>;
   try {
     claimed = await claimAffiliateApplication(formData.get("email"));
   } catch (error) {
-    applicationFail(error);
+    applicationFail(error, returnPath);
+  }
+  if (claimed.promoCode) {
+    let confirmed: string | null = null;
+    try {
+      confirmed = await confirmedPromoCode(claimed.promoCode);
+    } catch (error) {
+      console.error("[affiliate] application promo check failed", error instanceof Error ? error.message : "unknown");
+    }
+    if (!confirmed) {
+      try {
+        await releaseAffiliateApplication(claimed.email);
+      } catch (releaseError) {
+        console.error("[affiliate] application release failed", releaseError instanceof Error ? releaseError.message : "unknown");
+      }
+      fail("application-promo", returnPath);
+    }
+    claimed = { ...claimed, promoCode: confirmed };
   }
   let code = "";
   try {
@@ -816,7 +881,7 @@ export async function approveAffiliateApplicationAction(formData: FormData) {
       } catch (releaseError) {
         console.error("[affiliate] application release failed", releaseError instanceof Error ? releaseError.message : "unknown");
       }
-      applicationFail(error);
+      applicationFail(error, returnPath);
     }
   }
   try {
@@ -831,6 +896,22 @@ export async function approveAffiliateApplicationAction(formData: FormData) {
     detail: `Approved ${claimed.name} at ${formatCommissionRate(claimed)}.`,
   });
   const created = `/admin/affiliates/accounts?created=${encodeURIComponent(code)}`;
+  if (claimed.promoCode) {
+    let confirmed: string | null = null;
+    try {
+      confirmed = await confirmedPromoCode(claimed.promoCode);
+    } catch (error) {
+      console.error("[affiliate] application promo lock failed", error instanceof Error ? error.message : "unknown");
+      redirect(`${created}&error=assign`);
+    }
+    if (!confirmed) redirect(`${created}&error=assign`);
+    try {
+      await assignPromoCode(confirmed, code);
+    } catch (error) {
+      console.error("[affiliate] application promo lock failed", error instanceof Error ? error.message : "unknown");
+      redirect(`${created}&error=assign`);
+    }
+  }
   let issued: Awaited<ReturnType<typeof issueAffiliateInvitation>>;
   try {
     issued = await issueAffiliateInvitation(code);
@@ -852,11 +933,12 @@ export async function approveAffiliateApplicationAction(formData: FormData) {
 }
 
 export async function declineAffiliateApplicationAction(formData: FormData) {
-  await requireFullAdmin(APPLY_PATH);
+  const returnPath = applicationPath(formData);
+  await requireFullAdmin(returnPath);
   try {
     await declineAffiliateApplication(formData.get("email"));
   } catch (error) {
-    applicationFail(error);
+    applicationFail(error, returnPath);
   }
   const email = normalizeAffiliateEmail(formData.get("email"));
   if (email) {
@@ -866,7 +948,7 @@ export async function declineAffiliateApplicationAction(formData: FormData) {
       detail: `Declined application for ${email}.`,
     });
   }
-  redirect(`${APPLY_PATH}?declined=1`);
+  redirect(`${applicationPath(formData)}?declined=1`);
 }
 
 const TEAM_PATH = "/admin/affiliates/team";

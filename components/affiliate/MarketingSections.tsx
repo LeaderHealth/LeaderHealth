@@ -152,7 +152,7 @@ export function WebsiteReportSection({ months }: { months: WebsiteMonthReport[] 
   const columns = shown.map((month) => ({ id: month.month, label: shortReportMonth(month.month) }));
   return (
     <section className="mt-4 border-t border-rose/60 pt-4">
-      <h3 className="text-lg">Website</h3>
+      <h3 className="text-lg">Website traffic</h3>
       <p className="mt-1 text-sm text-brown">Visits come from tracking links. A promo code is counted when the link carries that code, or when a paid order uses it.</p>
       <MonthCompare
         months={columns}

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { formatCents, formatPublishDate, publishDateValue, viewPayTerms } from "@/lib/affiliate/format";
+import { formatCents, formatPublishDate, publishDateValue } from "@/lib/affiliate/format";
 import type { OfferKind, OfferStatus } from "@/lib/affiliate/marketing-offers";
 import {
   acceptMarketingCounterAction,
@@ -75,6 +75,7 @@ export function AdminOffersBoard({
   toast,
   selectedId,
   affiliateCode = "",
+  socialViewRateCents = null,
 }: {
   offers: OfferCard[];
   affiliates: OfferAffiliate[];
@@ -83,6 +84,7 @@ export function AdminOffersBoard({
   toast: string;
   selectedId: string;
   affiliateCode?: string;
+  socialViewRateCents?: number | null;
 }) {
   const scoped = affiliateCode ? offers.filter((offer) => offer.code === affiliateCode) : offers;
   const focused = affiliates.find((affiliate) => affiliate.code === affiliateCode) ?? null;
@@ -94,7 +96,7 @@ export function AdminOffersBoard({
   const [hiddenToast, setHiddenToast] = useState(false);
   const [code, setCode] = useState(first?.code ?? "");
   const [kind, setKind] = useState<OfferKind>("instagram_reel");
-  const [fee, setFee] = useState(first?.feeCents == null ? "" : String(first.feeCents / 100));
+  const [fee, setFee] = useState(socialViewRateCents == null ? "" : String(socialViewRateCents / 100));
   const [maximum, setMaximum] = useState(first?.maxPayCents == null ? "" : String(first.maxPayCents / 100));
   const [trackingDays, setTrackingDays] = useState(String(first?.trackingDays ?? 30));
   const [due, setDue] = useState("");
@@ -122,7 +124,6 @@ export function AdminOffersBoard({
     { id: "progress", label: "Committed", value: String(scoped.filter((offer) => offer.status === "accepted" || offer.status === "completed").length), sub: "Accepted, rate locked", tone: "#4A3A37" },
     { id: "done", label: "Paid", value: String(scoped.filter((offer) => offer.status === "paid").length), sub: "Offers paid", tone: "#4A3A37" },
   ];
-  const starting = affiliates.find((affiliate) => affiliate.code === code);
   const campaignOptions = [...campaigns];
   if (campaign && !campaignOptions.some((name) => name.toLowerCase() === campaign.toLowerCase())) campaignOptions.push(campaign);
 
@@ -131,7 +132,7 @@ export function AdminOffersBoard({
     setMode("new");
     setCode(affiliate?.code ?? "");
     setKind("instagram_reel");
-    setFee(affiliate?.feeCents == null ? "" : String(affiliate.feeCents / 100));
+    setFee(socialViewRateCents == null ? "" : String(socialViewRateCents / 100));
     setMaximum(affiliate?.maxPayCents == null ? "" : String(affiliate.maxPayCents / 100));
     setTrackingDays(String(affiliate?.trackingDays ?? 30));
     setDue("");
@@ -287,7 +288,7 @@ export function AdminOffersBoard({
                     const on = affiliate.code === code;
                     const locked = revising && !on;
                     return (
-                      <button key={affiliate.code} type="button" role="radio" aria-checked={on} disabled={locked} onClick={() => { setCode(affiliate.code); if (!revising) { setFee(affiliate.feeCents == null ? "" : String(affiliate.feeCents / 100)); setMaximum(affiliate.maxPayCents == null ? "" : String(affiliate.maxPayCents / 100)); setTrackingDays(String(affiliate.trackingDays)); } setFormError(""); }} className={`inline-flex h-[38px] items-center rounded-full border px-3.5 text-sm font-medium disabled:opacity-40 ${on ? "border-ink bg-ink text-white" : "border-[#CDBDBA] bg-white text-ink"}`}>
+                      <button key={affiliate.code} type="button" role="radio" aria-checked={on} disabled={locked} onClick={() => { setCode(affiliate.code); if (!revising) { setFee(socialViewRateCents == null ? "" : String(socialViewRateCents / 100)); setMaximum(affiliate.maxPayCents == null ? "" : String(affiliate.maxPayCents / 100)); setTrackingDays(String(affiliate.trackingDays)); } setFormError(""); }} className={`inline-flex h-[38px] items-center rounded-full border px-3.5 text-sm font-medium disabled:opacity-40 ${on ? "border-ink bg-ink text-white" : "border-[#CDBDBA] bg-white text-ink"}`}>
                         {affiliate.name}
                       </button>
                     );
@@ -317,7 +318,7 @@ export function AdminOffersBoard({
                   <p className="mt-1.5 text-xs text-[#6B5A57]">
                     {revising && current?.counterAmountCents != null
                       ? `You offered ${formatCents(current.amountCents)} per 1,000 views, they asked ${formatCents(current.counterAmountCents)}`
-                      : `Standing terms for ${starting?.name ?? "this affiliate"}: ${starting?.feeCents == null ? "Not set" : viewPayTerms(starting.feeCents, starting.maxPayCents, starting.trackingDays)}`}
+                      : `Social rate for every affiliate: ${socialViewRateCents == null ? "not set" : `${formatCents(socialViewRateCents)} per 1,000 views`}.`}
                   </p>
                 </div>
                 <div>

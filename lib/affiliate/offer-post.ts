@@ -5,6 +5,7 @@ export type LockedPayTerms = {
   viewRateCents: number;
   maxPayCents: number | null;
   trackingDays: number;
+  engagementRateCents: number;
 };
 
 export function formatForOfferKind(kind: string): PostFormat | null {

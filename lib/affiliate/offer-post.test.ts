@@ -22,16 +22,23 @@ test("a locked rate, maximum, and period are not replaced and one open post clai
   assert.deepEqual(
     lockedPayTerms(
       { viewRateCents: 1000, maxPayCents: 1200, trackingDays: 14 },
-      { viewRateCents: 3000, maxPayCents: null, trackingDays: 45 },
+      { viewRateCents: 3000, maxPayCents: null, trackingDays: 45, engagementRateCents: 0 },
     ),
-    { viewRateCents: 1000, maxPayCents: 1200, trackingDays: 14 },
+    { viewRateCents: 1000, maxPayCents: 1200, trackingDays: 14, engagementRateCents: 0 },
+  );
+  assert.deepEqual(
+    lockedPayTerms(
+      { viewRateCents: 1000, maxPayCents: 1200, trackingDays: 14, engagementRateCents: 5 },
+      { viewRateCents: 3000, maxPayCents: null, trackingDays: 45, engagementRateCents: 9 },
+    ),
+    { viewRateCents: 1000, maxPayCents: 1200, trackingDays: 14, engagementRateCents: 5 },
   );
   assert.deepEqual(
     lockedPayTerms(
       { viewRateCents: null, maxPayCents: null, trackingDays: null },
-      { viewRateCents: 3000, maxPayCents: 5000, trackingDays: 30 },
+      { viewRateCents: 3000, maxPayCents: 5000, trackingDays: 30, engagementRateCents: 5 },
     ),
-    { viewRateCents: 3000, maxPayCents: 5000, trackingDays: 30 },
+    { viewRateCents: 3000, maxPayCents: 5000, trackingDays: 30, engagementRateCents: 5 },
   );
   const posts = [
     { id: "a", offerId: "offer", contentStatus: "submitted" },

@@ -7,10 +7,13 @@ import { deliverableDetail, deliverablePhase, deliverableStatusLabel, holdEndsAt
 import { resolvedTrackingDays, viewPayCents } from "@/lib/affiliate/manual-checkpoint";
 import { loadDeliverablePayments, type DeliverablePayment } from "@/lib/affiliate/deliverable-payments";
 import { formatCents, formatPublishDate, formatWhen, viewPayTerms } from "@/lib/affiliate/format";
+import { standingViewRateCents } from "@/lib/affiliate/payment-rates";
+import { loadPaymentRates } from "@/lib/affiliate/payment-store";
 import { affiliateTrackingLink } from "@/lib/affiliate/link";
 import { loadMarketingOffer, offerKindLabel } from "@/lib/affiliate/marketing-offers";
 import { formatForOfferKind, offerSlideBounds, postSourceLabel } from "@/lib/affiliate/offer-post";
 import { DISCLOSURE_LINE, instagramCheckCopy, instagramLinkChecks, loadContentSubmissions, manualReportDue, metricLines, metricsOriginLabel, networkConnectedForPost, type ContentSubmission } from "@/lib/affiliate/post-review";
+import { affiliateCanAttachCampaign } from "@/lib/affiliate/campaign-record";
 import { loadMarketingCampaignRecords } from "@/lib/affiliate/roi-store";
 import { metaConfigured, tiktokConfigured } from "@/lib/affiliate/social-oauth";
 import { loadSocialAccounts, type SocialAccountView } from "@/lib/affiliate/social-store";
@@ -35,7 +38,7 @@ const postErrors: Record<string, string> = {
   file: "Use a PNG, JPEG, or WebP image under 8 MB, or an MP4, MOV, or WebM video under 200 MB. A saved TikTok video is usually an MP4.",
   storage: "Post storage is not set up. Set FIREBASE_STORAGE_BUCKET.",
   status: "That post can no longer be changed that way.",
-  counts: "Enter views, likes, comments, or shares as a whole number.",
+  counts: "Enter views, likes, comments, shares, or saves as a whole number.",
   unavailable: "That could not be saved right now.",
   fee: "A full admin needs to set your rate per 1,000 views before you can send a post.",
   offer: "That marketing offer is already attached to a post.",
@@ -221,7 +224,9 @@ export default async function AffiliatePostsPage({
     }
     try {
       const records = await loadMarketingCampaignRecords();
-      assignedCampaigns = records.filter((record) => record.assignedCodes.includes(affiliate.code)).map((record) => record.name);
+      assignedCampaigns = records
+        .filter((record) => affiliateCanAttachCampaign(record, affiliate.code, posts.some((post) => post.contentStatus !== "withdrawn" && post.campaign.trim().toLowerCase() === record.name.toLowerCase())))
+        .map((record) => record.name);
     } catch {
       assignedCampaigns = [];
     }
@@ -308,7 +313,7 @@ export default async function AffiliatePostsPage({
           email={affiliate.email}
           notice={notice}
           noticeTone={query.notice === "check" ? "warn" : "ok"}
-          agreedFeeCents={affiliate.deliverableFeeCents}
+          agreedFeeCents={standingViewRateCents(await loadPaymentRates().catch(() => null))}
           standingMaxPayCents={affiliate.deliverableMaxPayCents}
           standingTrackingDays={affiliate.deliverableTrackingDays}
           campaigns={assignedCampaigns}
