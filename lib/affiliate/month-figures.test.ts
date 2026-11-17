@@ -11,6 +11,7 @@ const orders = [
     commissionCents: 1500,
     commissionRefundedCents: 500,
     createdAt: "2026-09-15T12:00:00.000Z",
+    orderKind: "lab" as const,
   },
   {
     code: "athlete",
@@ -35,6 +36,7 @@ const orders = [
     commissionCents: 300,
     commissionRefundedCents: 0,
     createdAt: "2026-10-02T12:00:00.000Z",
+    orderKind: "lab" as const,
   },
   {
     code: "athlete",

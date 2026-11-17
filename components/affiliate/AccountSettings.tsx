@@ -77,7 +77,7 @@ export function AccountSettings({ name, children }: { name: string; children: Re
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby={titleId}
-                className="relative w-full max-w-sm rounded-[28px] bg-white p-6 text-ink shadow-[0_24px_80px_rgba(51,17,16,0.22)]"
+                className="relative w-full max-w-sm rounded-[28px] bg-white p-6 text-ink shadow-[0_24px_80px_rgba(51,17,16,0.22)] lg:max-w-lg lg:p-8"
               >
                 <h2 id={titleId} className="text-2xl">
                   {name}

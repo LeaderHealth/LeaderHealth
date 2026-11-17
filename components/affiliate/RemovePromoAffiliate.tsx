@@ -79,7 +79,7 @@ export function RemovePromoAffiliate({ code, affiliate, name }: { code: string; 
                 aria-modal="true"
                 aria-labelledby={titleId}
                 aria-describedby={descriptionId}
-                className="relative w-full max-w-md rounded-[28px] bg-white p-6 text-ink shadow-[0_24px_80px_rgba(51,17,16,0.22)] sm:p-8"
+                className="relative w-full max-w-md rounded-[28px] bg-white p-6 text-ink shadow-[0_24px_80px_rgba(51,17,16,0.22)] sm:p-8 lg:max-w-lg"
               >
                 <h2 id={titleId} className="text-2xl">
                   Remove {name}?

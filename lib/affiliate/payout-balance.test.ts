@@ -15,14 +15,24 @@ const paid: PayoutRecord = {
 };
 
 test("a negative balance holds a later month until the deficit is recovered", () => {
+  const treatment = {
+    code: "88h4dcji",
+    commissionCents: 4905,
+    commissionRefundedCents: 0,
+    dryRun: false,
+    createdAt: "2026-10-04T12:00:00.000Z",
+    orderKind: "treatment" as const,
+  };
   const orders = [
-    { code: "88h4dcji", commissionCents: 4905, commissionRefundedCents: 4905, dryRun: false, createdAt: "2026-09-16T12:00:00.000Z" },
-    { code: "88h4dcji", commissionCents: 2000, commissionRefundedCents: 0, dryRun: false, createdAt: "2026-10-04T12:00:00.000Z" },
+    { code: "88h4dcji", commissionCents: 4905, commissionRefundedCents: 4905, dryRun: false, createdAt: "2026-09-16T12:00:00.000Z", orderKind: "lab" as const },
+    { code: "88h4dcji", commissionCents: 2000, commissionRefundedCents: 0, dryRun: false, createdAt: "2026-10-04T12:00:00.000Z", orderKind: "lab" as const },
+    treatment,
   ];
   assert.equal(approvableCents({ orders, payouts: [paid], code: "88h4dcji", period: "2026-10" }), 0);
   const recovered = [
     orders[0],
-    { code: "88h4dcji", commissionCents: 6000, commissionRefundedCents: 0, dryRun: false, createdAt: "2026-10-04T12:00:00.000Z" },
+    { code: "88h4dcji", commissionCents: 6000, commissionRefundedCents: 0, dryRun: false, createdAt: "2026-10-04T12:00:00.000Z", orderKind: "lab" as const },
+    treatment,
   ];
   assert.equal(approvableCents({ orders: recovered, payouts: [paid], code: "88h4dcji", period: "2026-10" }), 1095);
   assert.equal(approvableCents({ orders: recovered, payouts: [paid], code: "88h4dcji", period: "2026-09" }), 0);

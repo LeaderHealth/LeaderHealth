@@ -2,6 +2,7 @@ import type { DocumentData, DocumentReference, Timestamp } from "firebase-admin/
 import { formatCents } from "./format";
 import { normalizeAffiliateCode } from "./code";
 import { affiliateFirebaseConfigured, affiliateFirestore } from "./firebase";
+import { affiliateCheckpointOpen } from "./report-gate";
 import { adjustedCommissionCents } from "./refunds";
 
 export type PayoutStatus = "pending" | "approved" | "paid";
@@ -38,10 +39,11 @@ type EarnedOrder = {
   commissionRefundedCents?: number;
   dryRun: boolean;
   createdAt: string | null;
+  orderKind?: "lab" | "treatment";
 };
 
 export class PayoutError extends Error {
-  code: "empty" | "status" | "amount" | "date" | "missing" | "unavailable";
+  code: "empty" | "status" | "amount" | "date" | "missing" | "unavailable" | "report";
 
   constructor(code: PayoutError["code"], message: string) {
     super(message);
@@ -165,6 +167,7 @@ function recordFrom(id: string, data: DocumentData | undefined): PayoutRecord | 
 }
 
 function netCommission(order: EarnedOrder) {
+  if (order.orderKind !== "lab") return 0;
   return adjustedCommissionCents(order.commissionCents, order.commissionRefundedCents ?? 0);
 }
 
@@ -326,6 +329,7 @@ export async function approvePayout(code: string, period: string) {
   const normalized = normalizeAffiliateCode(code);
   const month = normalizePayoutPeriod(period);
   if (!normalized || !month) throw new PayoutError("missing", "That affiliate was not found.");
+  if (await affiliateCheckpointOpen(normalized)) throw new PayoutError("report", "Weekly post numbers are still due.");
   const db = await requireStore();
   const affiliateRef = db.collection("affiliates").doc(normalized);
 
@@ -344,6 +348,7 @@ export async function approvePayout(code: string, period: string) {
         commissionRefundedCents: asNumber(data.commissionRefundedCents),
         dryRun: data.dryRun === true,
         createdAt: asTimestamp(data.createdAt),
+        orderKind: data.orderKind === "lab" ? ("lab" as const) : ("treatment" as const),
       };
     });
     const saved = payouts.docs
@@ -382,6 +387,7 @@ export async function markPayoutPaid(input: { code: string; period: string; amou
   const normalized = normalizeAffiliateCode(input.code);
   const month = normalizePayoutPeriod(input.period);
   if (!normalized || !month) throw new PayoutError("missing", "That affiliate was not found.");
+  if (await affiliateCheckpointOpen(normalized)) throw new PayoutError("report", "Weekly post numbers are still due.");
   const paidCents = payoutAmountCents(input.amount);
   if (paidCents == null) throw new PayoutError("amount", "Enter a paid amount of zero or more.");
   const paidAt = payoutPaidAt(input.paidOn);

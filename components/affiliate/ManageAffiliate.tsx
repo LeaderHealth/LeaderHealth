@@ -2,12 +2,15 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { MarketingAccountSections, WebsiteReportSection } from "@/components/affiliate/MarketingSections";
+import type { SocialNetwork } from "@/lib/affiliate/marketing";
+import type { WebsiteMonthReport } from "@/lib/affiliate/website-report";
 
 type MonthView = {
   label: string;
-  orders: number;
-  sales: string;
-  earnings: string;
+  social: string;
+  website: string;
+  lab: string;
 };
 
 const closeClass =
@@ -19,33 +22,50 @@ function MonthBlock({ month }: { month: MonthView }) {
       <h3 className="text-lg">{month.label}</h3>
       <dl className="mt-4 grid grid-cols-3 gap-3 text-sm leading-6">
         <div>
-          <dt className="text-xs text-brown">Paid orders</dt>
-          <dd className="mt-1">{month.orders}</dd>
+          <dt className="text-xs text-brown">Social</dt>
+          <dd className="mt-1">{month.social}</dd>
         </div>
         <div>
-          <dt className="text-xs text-brown">Sales</dt>
-          <dd className="mt-1">{month.sales}</dd>
+          <dt className="text-xs text-brown">Website traffic</dt>
+          <dd className="mt-1">{month.website}</dd>
         </div>
         <div>
-          <dt className="text-xs text-brown">Earnings</dt>
-          <dd className="mt-1">{month.earnings}</dd>
+          <dt className="text-xs text-brown">Lab</dt>
+          <dd className="mt-1">{month.lab}</dd>
         </div>
       </dl>
     </div>
   );
 }
 
+type ReportSection = {
+  network: SocialNetwork;
+  accountId: string;
+  accountName: string;
+  months: {
+    month: string;
+    impressions: number;
+    reach: number;
+    likes: number;
+    comments: number;
+    shares: number;
+    saves: number;
+  }[];
+};
+
 export function ManageAffiliate({
   name,
   email,
   prior,
   current,
+  reports,
   className,
 }: {
   name: string;
   email: string;
   prior: MonthView;
   current: MonthView;
+  reports: { unavailable: boolean; months: WebsiteMonthReport[]; sections: ReportSection[] };
   className: string;
 }) {
   const titleId = useId();
@@ -109,7 +129,7 @@ export function ManageAffiliate({
                 aria-modal="true"
                 aria-labelledby={titleId}
                 tabIndex={-1}
-                className="relative max-h-[85vh] w-full max-w-xl overflow-y-auto rounded-[28px] bg-white p-6 text-ink shadow-[0_24px_80px_rgba(51,17,16,0.22)]"
+                className="relative max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-[28px] bg-white p-6 text-ink shadow-[0_24px_80px_rgba(51,17,16,0.22)] lg:h-[calc(100dvh-3rem)] lg:max-h-none lg:max-w-6xl"
               >
                 <h2 id={titleId} className="text-2xl">
                   {name}
@@ -122,6 +142,17 @@ export function ManageAffiliate({
                 <p className="mt-6 text-sm text-brown">
                   Payouts are usually recorded around the 3rd, after the prior month has closed. These months match the Payouts page. Allotment is still your check of these numbers.
                 </p>
+                <section className="mt-6 border-t border-rose/60 pt-6">
+                  <h3 className="text-lg">Marketing reports</h3>
+                  <p className="mt-1 text-sm text-brown">These figures do not change commission or payouts.</p>
+                  {reports.unavailable ? <p className="mt-4 text-sm text-ink">Marketing reports are unavailable right now.</p> : null}
+                  {reports.unavailable ? null : (
+                    <>
+                      <WebsiteReportSection months={reports.months} />
+                      <MarketingAccountSections sections={reports.sections} />
+                    </>
+                  )}
+                </section>
                 <button type="button" onClick={() => setOpen(false)} className={`${closeClass} mt-6`}>
                   Close
                 </button>

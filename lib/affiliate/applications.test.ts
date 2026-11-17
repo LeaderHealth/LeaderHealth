@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { applicationCommission } from "./applications";
+import { applicationCommission, applicationLinkPromo, promoAvailableForNewLink } from "./applications";
 
 test("an application link keeps the commission chosen before it is sent", () => {
   assert.deepEqual(
@@ -16,4 +16,17 @@ test("an application link keeps the commission chosen before it is sent", () => 
     { commissionMode: "fixed", commissionPercent: 0, commissionFixedCents: 2500 },
   );
   assert.equal(applicationCommission({ commissionMode: "percent", commissionPercent: "150", commissionFixed: "" }), null);
+});
+
+test("a blank promo choice stores no code, and only an active unassigned code can be reserved", () => {
+  assert.equal(applicationLinkPromo("later", "WELLNESS20"), "");
+  assert.equal(applicationLinkPromo("", ""), "");
+  assert.equal(applicationLinkPromo("assign", "  "), null);
+  assert.equal(applicationLinkPromo("assign", "WELLNESS20"), "WELLNESS20");
+  assert.equal(promoAvailableForNewLink({ statusLabel: "Active", affiliates: [{ utmSlug: "" }] }), true);
+  assert.equal(promoAvailableForNewLink({ statusLabel: "Active", affiliates: [] }), true);
+  assert.equal(promoAvailableForNewLink({ statusLabel: "Inactive", affiliates: [] }), false);
+  assert.equal(promoAvailableForNewLink({ statusLabel: "Expired", affiliates: [] }), false);
+  assert.equal(promoAvailableForNewLink({ statusLabel: "Active", affiliates: [{ utmSlug: "angie" }] }), false);
+  assert.equal(promoAvailableForNewLink(null), false);
 });

@@ -100,7 +100,7 @@ export async function activateAffiliateAccount(formData: FormData) {
   }
   if (result.status !== "ok") activateFail(token, result.status);
   if (!(await setPortalSession(result.code))) activateFail(token, "signin");
-  redirect("/affiliates/overview");
+  redirect("/affiliates/connect");
 }
 
 export async function loginAffiliatePortal(formData: FormData) {

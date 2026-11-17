@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import { OrderCommission } from "@/components/affiliate/OrderCommission";
-import { formatCents, formatWhen } from "@/lib/affiliate/format";
-import { remainingSalesCents } from "@/lib/affiliate/refunds";
-import { AffiliateStoreError, loadAffiliateOverview, type ConversionSummary } from "@/lib/affiliate/store";
+import { LAB_COMMISSIONS_ENABLED } from "@/lib/affiliate/code";
+import { formatCents } from "@/lib/affiliate/format";
+import { adminOrderDetails, type AdminOrderSource } from "@/lib/affiliate/order-view";
+import { formatPayoutMonth } from "@/lib/affiliate/payouts";
+import { AffiliateStoreError, loadAffiliateOverview } from "@/lib/affiliate/store";
 
 export const metadata: Metadata = {
   title: "Orders",
@@ -11,16 +12,56 @@ export const metadata: Metadata = {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+function periodSource(conversion: {
+  code: string;
+  orderId: string;
+  productName: string;
+  promoCode: string | null;
+  dryRun: boolean;
+  amountCents: number | null;
+  refundedAmountCents: number;
+  commissionCents: number;
+  commissionRefundedCents: number;
+  createdAt: string | null;
+  orderKind: "lab" | "treatment";
+}): AdminOrderSource {
+  return {
+    code: conversion.code,
+    orderId: conversion.orderId,
+    productName: conversion.productName,
+    promoCode: conversion.promoCode,
+    dryRun: conversion.dryRun,
+    amountCents: conversion.amountCents,
+    refundedAmountCents: conversion.refundedAmountCents,
+    commissionCents: conversion.commissionCents,
+    commissionRefundedCents: conversion.commissionRefundedCents,
+    createdAt: conversion.createdAt,
+    orderKind: conversion.orderKind,
+  };
+}
+
+function orderDate(value: string) {
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(value));
+}
+
+function labCommission(cents: number, kind: "lab" | "treatment") {
+  if (!LAB_COMMISSIONS_ENABLED) return "Not active";
+  if (kind !== "lab") return "—";
+  return formatCents(cents);
+}
+
 export default async function AffiliateOrdersPage() {
-  let conversions: ConversionSummary[] = [];
+  let sources: AdminOrderSource[] = [];
+  let names = new Map<string, string>();
   let loadError = "";
   try {
-    conversions = (await loadAffiliateOverview()).conversions
-      .filter((conversion) => !conversion.dryRun && remainingSalesCents(conversion.amountCents, conversion.refundedAmountCents) > 0)
-      .sort((left, right) => (right.createdAt ?? "").localeCompare(left.createdAt ?? ""));
+    const overview = await loadAffiliateOverview();
+    sources = overview.conversions.map(periodSource);
+    names = new Map(overview.affiliates.map((affiliate) => [affiliate.code, affiliate.name]));
   } catch (error) {
     loadError = error instanceof AffiliateStoreError ? error.message : "Could not load affiliate records.";
   }
+  const orders = adminOrderDetails(sources);
 
   if (loadError) return <p className="text-ink">{loadError}</p>;
 
@@ -29,74 +70,55 @@ export default async function AffiliateOrdersPage() {
       <h2 id="recent-orders-title" className="px-4 pt-4 text-2xl">
         Orders
       </h2>
-      {conversions.length === 0 ? (
+      <p className="px-4 pt-2 text-sm text-brown">Each paid order, with its date, product, sale, and order id. {LAB_COMMISSIONS_ENABLED ? "Lab commission applies to lab orders." : "Lab commission is not active."}</p>
+      {orders.length === 0 ? (
         <p className="px-4 py-6 text-sm text-brown">No paid orders yet.</p>
       ) : (
-        <ul className="xl:hidden" aria-labelledby="recent-orders-title">
-          {conversions.map((conversion) => (
-            <li key={conversion.orderId} className="border-t border-ink/10 px-4 py-5 text-sm">
-              <div className="font-medium">{conversion.productName}</div>
-              <p className="mt-1 break-all text-brown">{conversion.orderId}</p>
-              <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-5 leading-6">
-                <div>
-                  <dt className="text-xs text-brown">When</dt>
-                  <dd className="mt-1">{formatWhen(conversion.createdAt)}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-brown">Affiliate ID</dt>
-                  <dd className="mt-1 break-all">{conversion.code}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-brown">Amount</dt>
-                  <dd className="mt-1">{formatCents(remainingSalesCents(conversion.amountCents, conversion.refundedAmountCents))}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-brown">Commission</dt>
-                  <dd className="mt-1">
-                    <OrderCommission conversion={conversion} />
-                  </dd>
-                </div>
-              </dl>
-            </li>
-          ))}
-        </ul>
-      )}
-      {conversions.length > 0 ? (
-      <table className="hidden w-full max-w-full table-fixed border-collapse text-left text-sm leading-6 xl:table" aria-labelledby="recent-orders-title">
-        <colgroup>
-          <col className="w-[20%]" />
-          <col className="w-[14%]" />
-          <col className="w-[18%]" />
-          <col className="w-[22%]" />
-          <col className="w-[13%]" />
-          <col className="w-[13%]" />
-        </colgroup>
-        <thead className="text-brown">
-          <tr>
-            <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">When</th>
-            <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Affiliate ID</th>
-            <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Order</th>
-            <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Product</th>
-            <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Amount</th>
-            <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Commission</th>
-          </tr>
-        </thead>
-        <tbody>
-          {conversions.map((conversion) => (
-              <tr key={conversion.orderId} className="border-t border-rose/60">
-                <td className="break-words px-4 py-5 align-top">{formatWhen(conversion.createdAt)}</td>
-                <td className="break-all px-4 py-5 align-top">{conversion.code}</td>
-                <td className="break-all px-4 py-5 align-top">{conversion.orderId}</td>
-                <td className="break-words px-4 py-5 align-top">{conversion.productName}</td>
-                <td className="px-4 py-5 align-top">{formatCents(remainingSalesCents(conversion.amountCents, conversion.refundedAmountCents))}</td>
-                <td className="px-4 py-5 align-top">
-                  <OrderCommission conversion={conversion} />
+        <table className="w-full table-fixed border-collapse text-left text-sm leading-6" aria-labelledby="recent-orders-title">
+          <colgroup>
+            <col className="w-[15%]" />
+            <col className="w-[13%]" />
+            <col className="w-[22%]" />
+            <col className="w-[11%]" />
+            <col className="w-[10%]" />
+            <col className="w-[11%]" />
+            <col className="w-[18%]" />
+          </colgroup>
+          <thead className="text-brown">
+            <tr>
+              <th scope="col" className="px-3 py-4 align-bottom font-medium">Date</th>
+              <th scope="col" className="px-3 py-4 align-bottom font-medium">Affiliate</th>
+              <th scope="col" className="px-3 py-4 align-bottom font-medium">Product</th>
+              <th scope="col" className="px-3 py-4 align-bottom font-medium">Type</th>
+              <th scope="col" className="px-3 py-4 align-bottom font-medium">Sale</th>
+              <th scope="col" className="px-3 py-4 align-bottom font-medium">Commission</th>
+              <th scope="col" className="px-3 py-4 align-bottom font-medium">Order ID</th>
+            </tr>
+          </thead>
+          <tbody>
+            {orders.map((order) => (
+              <tr key={order.orderId} className="border-t border-rose/60">
+                <td className="px-3 py-4 align-top">
+                  <div>{orderDate(order.createdAt)}</div>
+                  <div className="text-xs text-brown">{formatPayoutMonth(order.period)}</div>
                 </td>
+                <td className="px-3 py-4 align-top break-words">
+                  <div>{names.get(order.code) || order.code}</div>
+                  <div className="text-xs text-brown">{order.code}</div>
+                </td>
+                <td className="px-3 py-4 align-top break-words">
+                  <div>{order.productName}</div>
+                  {order.promoCode ? <div className="text-xs text-brown">Promo {order.promoCode}</div> : null}
+                </td>
+                <td className="px-3 py-4 align-top">{order.orderKind === "lab" ? "Lab" : "Treatment"}</td>
+                <td className="px-3 py-4 align-top">{formatCents(order.saleCents)}</td>
+                <td className="px-3 py-4 align-top">{labCommission(order.commissionCents, order.orderKind)}</td>
+                <td className="px-3 py-4 align-top break-all text-xs leading-5">{order.orderId}</td>
               </tr>
             ))}
-        </tbody>
-      </table>
-      ) : null}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }

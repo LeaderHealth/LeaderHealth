@@ -16,12 +16,14 @@ export function AccountActions({
   name,
   active,
   pendingInvite = false,
+  canInvite = true,
   layout = "inline",
 }: {
   code: string;
   name: string;
   active: boolean;
   pendingInvite?: boolean;
+  canInvite?: boolean;
   layout?: "inline" | "stack";
 }) {
   const titleId = useId();
@@ -91,7 +93,7 @@ export function AccountActions({
         >
           Set password
         </button>
-        {pendingInvite ? (
+        {pendingInvite && canInvite ? (
           <form action={resendAffiliateInvitationAction} className={layout === "stack" ? undefined : "min-[420px]:col-span-2"}>
             <input type="hidden" name="code" value={code} />
             <button type="submit" className={`${actionClass} w-full`}>
@@ -109,7 +111,7 @@ export function AccountActions({
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby={titleId}
-                className="relative w-full max-w-md rounded-[28px] bg-white p-8 text-ink shadow-[0_24px_80px_rgba(51,17,16,0.22)]"
+                className="relative w-full max-w-md rounded-[28px] bg-white p-8 text-ink shadow-[0_24px_80px_rgba(51,17,16,0.22)] lg:max-w-lg"
               >
                 <h2 id={titleId} className="text-2xl">
                   Set password

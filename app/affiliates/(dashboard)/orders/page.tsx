@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { OrderCommission } from "@/components/affiliate/OrderCommission";
-import { formatCents, formatWhen } from "@/lib/affiliate/format";
-import { remainingSalesCents } from "@/lib/affiliate/refunds";
-import { AffiliateStoreError, loadAffiliateConversions, type ConversionSummary } from "@/lib/affiliate/store";
+import { LAB_COMMISSIONS_ENABLED } from "@/lib/affiliate/code";
+import { formatCents } from "@/lib/affiliate/format";
+import { periodReferralSummaries, type PeriodReferralSource } from "@/lib/affiliate/order-view";
+import { formatPayoutMonth } from "@/lib/affiliate/payouts";
+import { AffiliateStoreError, loadAffiliateConversions } from "@/lib/affiliate/store";
 import { currentAffiliate } from "../../current";
 
 export const metadata: Metadata = {
@@ -13,16 +14,31 @@ export const metadata: Metadata = {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+function periodSource(code: string, conversion: { dryRun: boolean; amountCents: number | null; refundedAmountCents: number; commissionCents: number; commissionRefundedCents: number; createdAt: string | null; orderKind: "lab" | "treatment" }): PeriodReferralSource {
+  return {
+    code,
+    dryRun: conversion.dryRun,
+    amountCents: conversion.amountCents,
+    refundedAmountCents: conversion.refundedAmountCents,
+    commissionCents: conversion.commissionCents,
+    commissionRefundedCents: conversion.commissionRefundedCents,
+    createdAt: conversion.createdAt,
+    orderKind: conversion.orderKind,
+  };
+}
+
+function labCommission(cents: number) {
+  return LAB_COMMISSIONS_ENABLED ? formatCents(cents) : "Not active";
+}
+
 export default async function AffiliateOrdersPage() {
   const affiliate = await currentAffiliate();
   if (!affiliate) redirect("/affiliates");
 
-  let conversions: ConversionSummary[] = [];
+  let rows: ReturnType<typeof periodReferralSummaries> = [];
   let loadError = "";
   try {
-    conversions = (await loadAffiliateConversions(affiliate.code)).filter(
-      (conversion) => !conversion.dryRun && remainingSalesCents(conversion.amountCents, conversion.refundedAmountCents) > 0,
-    );
+    rows = periodReferralSummaries((await loadAffiliateConversions(affiliate.code)).map((conversion) => periodSource(affiliate.code, conversion)));
   } catch (error) {
     loadError = error instanceof AffiliateStoreError ? error.message : "Could not load your orders.";
   }
@@ -34,66 +50,54 @@ export default async function AffiliateOrdersPage() {
       <h2 id="portal-orders-title" className="px-4 pt-4 text-2xl">
         Orders
       </h2>
-      {conversions.length === 0 ? (
+      <p className="px-4 pt-2 text-sm text-brown">
+        Referral ID <span className="break-all text-ink">{affiliate.code}</span>. {LAB_COMMISSIONS_ENABLED ? "Lab commission is listed by period." : "Lab commission is not active."}
+      </p>
+      {rows.length === 0 ? (
         <p className="px-4 py-6 text-sm text-brown">No paid orders yet.</p>
       ) : (
         <ul className="xl:hidden" aria-labelledby="portal-orders-title">
-          {conversions.map((conversion) => (
-            <li key={conversion.orderId} className="border-t border-ink/10 px-4 py-5 text-sm">
-              <div className="font-medium">{conversion.productName}</div>
-              <p className="mt-1 break-all text-brown">{conversion.orderId}</p>
+          {rows.map((row) => (
+            <li key={row.period} className="border-t border-ink/10 px-4 py-5 text-sm">
+              <div className="font-medium">{formatPayoutMonth(row.period)}</div>
               <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-5 leading-6">
                 <div>
-                  <dt className="text-xs text-brown">When</dt>
-                  <dd className="mt-1">{formatWhen(conversion.createdAt)}</dd>
+                  <dt className="text-xs text-brown">Conversions</dt>
+                  <dd className="mt-1">{row.conversions}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-brown">Amount</dt>
-                  <dd className="mt-1">{formatCents(remainingSalesCents(conversion.amountCents, conversion.refundedAmountCents))}</dd>
-                </div>
-                <div className="col-span-2">
-                  <dt className="text-xs text-brown">Commission</dt>
-                  <dd className="mt-1">
-                    <OrderCommission conversion={conversion} />
-                  </dd>
+                  <dt className="text-xs text-brown">Lab commission</dt>
+                  <dd className="mt-1">{labCommission(row.commissionCents)}</dd>
                 </div>
               </dl>
             </li>
           ))}
         </ul>
       )}
-      {conversions.length > 0 ? (
-      <table className="hidden w-full max-w-full table-fixed border-collapse text-left text-sm leading-6 xl:table" aria-labelledby="portal-orders-title">
-        <colgroup>
-          <col className="w-[22%]" />
-          <col className="w-[24%]" />
-          <col className="w-[28%]" />
-          <col className="w-[13%]" />
-          <col className="w-[13%]" />
-        </colgroup>
-        <thead className="text-brown">
-          <tr>
-            <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">When</th>
-            <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Order</th>
-            <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Product</th>
-            <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Amount</th>
-            <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Commission</th>
-          </tr>
-        </thead>
-        <tbody>
-          {conversions.map((conversion) => (
-              <tr key={conversion.orderId} className="border-t border-rose/60">
-                <td className="break-words px-4 py-5 align-top">{formatWhen(conversion.createdAt)}</td>
-                <td className="break-all px-4 py-5 align-top">{conversion.orderId}</td>
-                <td className="break-words px-4 py-5 align-top">{conversion.productName}</td>
-                <td className="px-4 py-5 align-top">{formatCents(remainingSalesCents(conversion.amountCents, conversion.refundedAmountCents))}</td>
-                <td className="px-4 py-5 align-top">
-                  <OrderCommission conversion={conversion} />
-                </td>
+      {rows.length > 0 ? (
+        <table className="hidden w-full max-w-full table-fixed border-collapse text-left text-sm leading-6 xl:table" aria-labelledby="portal-orders-title">
+          <colgroup>
+            <col className="w-[40%]" />
+            <col className="w-[30%]" />
+            <col className="w-[30%]" />
+          </colgroup>
+          <thead className="text-brown">
+            <tr>
+              <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Period</th>
+              <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Conversions</th>
+              <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Lab commission</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.period} className="border-t border-rose/60">
+                <td className="break-words px-4 py-5 align-top">{formatPayoutMonth(row.period)}</td>
+                <td className="px-4 py-5 align-top">{row.conversions}</td>
+                <td className="px-4 py-5 align-top">{labCommission(row.commissionCents)}</td>
               </tr>
             ))}
-        </tbody>
-      </table>
+          </tbody>
+        </table>
       ) : null}
     </div>
   );

@@ -72,7 +72,7 @@ function ChangePasswordForm({
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby={titleId}
-                className="lh-popup-panel relative w-full max-w-sm rounded-[28px] bg-white p-6 text-ink shadow-[0_24px_80px_rgba(51,17,16,0.22)]"
+                className="lh-popup-panel relative w-full max-w-sm rounded-[28px] bg-white p-6 text-ink shadow-[0_24px_80px_rgba(51,17,16,0.22)] lg:max-w-lg lg:p-8"
               >
                 <h2 id={titleId} className="text-2xl">
                   Change password
@@ -168,7 +168,7 @@ export function ProfileCard({
 }: {
   name: string;
   email: string;
-  role: "Admin" | "Affiliate";
+  role: "Admin" | "Main admin" | "Sub admin" | "Affiliate";
   avatarUrl: string | null;
   signOut: () => Promise<void>;
   changePassword?: (previous: PasswordChangeState, formData: FormData) => Promise<PasswordChangeState>;

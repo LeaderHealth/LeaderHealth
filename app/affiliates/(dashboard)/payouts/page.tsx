@@ -1,15 +1,21 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { EarningsMonth, type EarningsMonthRow } from "@/components/affiliate/EarningsMonth";
+import { LAB_COMMISSIONS_ENABLED } from "@/lib/affiliate/code";
+import { deliverableLines, loadDeliverablePayments, marketingTotals, type DeliverableLine } from "@/lib/affiliate/deliverable-payments";
+import { deliverableStatusLabel } from "@/lib/affiliate/deliverable-flow";
 import { formatCents } from "@/lib/affiliate/format";
+import { loadMarketingEvents, loadWebsitePayoutsForCode } from "@/lib/affiliate/marketing-events";
+import { eventPeriod, socialMonthCents, websiteMonthAmount } from "@/lib/affiliate/payment-rates";
+import { loadPaymentRates } from "@/lib/affiliate/payment-store";
+import { loadContentSubmissions } from "@/lib/affiliate/post-review";
 import {
+  currentPayoutPeriod,
+  formatPayoutDate,
   formatPayoutMonth,
   loadPayoutRecords,
   payoutLines,
-  payoutPaidAmount,
-  payoutPaidOn,
-  payoutReferenceText,
   type PayoutLine,
-  type PayoutStatus,
 } from "@/lib/affiliate/payouts";
 import { AffiliateStoreError, loadAffiliateActivity } from "@/lib/affiliate/store";
 import { currentAffiliate } from "../../current";
@@ -21,46 +27,15 @@ export const metadata: Metadata = {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function statusClass(status: PayoutStatus) {
-  if (status === "pending") return "border border-ink/30 text-brown";
-  return "bg-rose text-ink";
-}
-
-function statusLabel(status: PayoutStatus) {
-  if (status === "pending") return "Pending";
-  if (status === "approved") return "Approved";
-  return "Paid";
-}
-
-function HistoryRow({ line }: { line: PayoutLine }) {
-  return (
-    <>
-      <div className="font-medium">{formatPayoutMonth(line.period)}</div>
-      <div className="mt-2">
-        <span className={`inline-flex min-h-8 items-center rounded-full px-3 text-sm ${statusClass(line.status)}`}>
-          {statusLabel(line.status)}
-        </span>
-      </div>
-      <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-5 leading-6">
-        <div>
-          <dt className="text-xs text-brown">Earned</dt>
-          <dd className="mt-1">{formatCents(line.earnedCents)}</dd>
-        </div>
-        <div>
-          <dt className="text-xs text-brown">Paid</dt>
-          <dd className="mt-1">{payoutPaidAmount(line)}</dd>
-        </div>
-        <div>
-          <dt className="text-xs text-brown">Paid on</dt>
-          <dd className="mt-1">{payoutPaidOn(line)}</dd>
-        </div>
-        <div>
-          <dt className="text-xs text-brown">Reference</dt>
-          <dd className="mt-1 break-words">{payoutReferenceText(line)}</dd>
-        </div>
-      </dl>
-    </>
-  );
+function labNote(line: PayoutLine | undefined) {
+  if (!line || (line.earnedCents === 0 && line.status === "pending")) return "";
+  if (line.status === "paid") {
+    const date = formatPayoutDate(line.paidAt);
+    const reference = line.reference ? ` · ${line.reference}` : "";
+    return date === "—" ? `Paid${reference}` : `Paid ${date}${reference}`;
+  }
+  if (line.status === "approved") return "Approved";
+  return "Pending";
 }
 
 export default async function AffiliatePayoutHistoryPage() {
@@ -68,6 +43,8 @@ export default async function AffiliatePayoutHistoryPage() {
   if (!affiliate) redirect("/affiliates");
 
   let lines: PayoutLine[] = [];
+  let marketing: DeliverableLine[] = [];
+  let earningRows: EarningsMonthRow[] = [];
   let loadError = "";
   try {
     const activity = await loadAffiliateActivity(affiliate.code);
@@ -77,67 +54,97 @@ export default async function AffiliatePayoutHistoryPage() {
       orders: activity.conversions,
       payouts,
     });
+    const [posts, payments, events, websitePayouts, rates] = await Promise.all([
+      loadContentSubmissions(),
+      loadDeliverablePayments(affiliate.code),
+      loadMarketingEvents({ code: affiliate.code }),
+      loadWebsitePayoutsForCode(affiliate.code),
+      loadPaymentRates(),
+    ]);
+    const ownPosts = posts.filter((post) => post.code === affiliate.code);
+    marketing = deliverableLines({
+      affiliates: [{ code: affiliate.code, name: affiliate.name }],
+      posts: ownPosts,
+      payments,
+    });
+    const periods = new Set<string>([currentPayoutPeriod(), ...lines.map((line) => line.period), ...websitePayouts.map((row) => row.period)]);
+    for (const payment of payments) {
+      const period = eventPeriod(payment.approvedAt ?? payment.paidAt ?? "");
+      if (period) periods.add(period);
+    }
+    earningRows = [...periods]
+      .sort((left, right) => right.localeCompare(left))
+      .flatMap((period) => {
+        const social = socialMonthCents({ period, posts: ownPosts, payments });
+        const snapshot = websitePayouts.find((row) => row.period === period) ?? null;
+        const website = websiteMonthAmount({ events, code: affiliate.code, period, rates, snapshot });
+        const lab = lines.find((line) => line.period === period);
+        const labCents = lines.filter((line) => line.period === period).reduce((sum, line) => sum + line.earnedCents, 0);
+        const totalCents = social.socialCents + website.amountCents + labCents + social.adjustmentCents;
+        if (totalCents === 0 && !snapshot && !lab) return [];
+        const websiteState = website.status === "paid" ? "Paid" : website.status === "approved" ? "Approved" : "";
+        const counts = website.clicks + website.pageViews;
+        return [
+          {
+            key: period,
+            name: formatPayoutMonth(period),
+            socialCents: social.socialCents,
+            websiteCents: website.amountCents,
+            labCents,
+            adjustmentCents: social.adjustmentCents,
+            totalCents,
+            websiteLabel: counts === 0 && !websiteState ? "" : `${website.clicks} clicks, ${website.pageViews} page views${websiteState ? ` · ${websiteState}` : ""}`,
+            labNote: labNote(lab),
+          },
+        ];
+      });
   } catch (caught) {
-    loadError = caught instanceof AffiliateStoreError ? caught.message : "Could not load your payouts.";
+    loadError = caught instanceof AffiliateStoreError ? caught.message : "Could not load payouts.";
   }
+  const marketingSummary = marketingTotals(marketing);
+
+  const marketingSummaryText = [
+    marketingSummary.pendingCents ? `To approve ${formatCents(marketingSummary.pendingCents)}` : "",
+    marketingSummary.heldCents ? `On hold ${formatCents(marketingSummary.heldCents)}` : "",
+    marketingSummary.approvedCents ? `Approved ${formatCents(marketingSummary.approvedCents)}` : "",
+    marketingSummary.paidCents ? `Paid ${formatCents(marketingSummary.paidCents)}` : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
-    <div className="min-w-0 rounded-[28px] bg-white">
-      <h2 id="payout-history-title" className="px-4 pt-4 text-2xl">
-        Payouts
-      </h2>
-      <p className="px-4 pt-2 text-sm text-brown">Your payout status and monthly payment history.</p>
-      {loadError ? <p className="px-4 py-6 text-ink">{loadError}</p> : null}
-      {!loadError && lines.length === 0 ? (
-        <p className="px-4 py-6 text-sm text-brown">No commission yet.</p>
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-2xl">Payouts</h2>
+        <p className="mt-1 text-sm text-brown">
+          Social, website traffic, and lab for each month.{LAB_COMMISSIONS_ENABLED ? "" : " Lab commission is not active."}
+        </p>
+      </div>
+      {loadError ? <p className="text-ink">{loadError}</p> : null}
+      {marketing.length > 0 ? (
+        <section className="min-w-0 rounded-[28px] bg-white">
+          <h3 className="px-4 pt-4 text-xl">Posts</h3>
+          {marketingSummaryText ? <p className="px-4 pt-1 text-sm text-brown">{marketingSummaryText}</p> : null}
+          <ul>
+            {marketing.map((line) => {
+              const waiting = line.amountCents === 0 && (line.status === "review" || line.status === "changes" || line.status === "waiting" || line.status === "measuring");
+              const amount = line.status === "closed" ? "Closed" : waiting ? "After the tracking period" : formatCents(line.status === "paid" ? (line.paidCents ?? 0) + (line.adjustmentCents ?? 0) : line.amountCents);
+              return (
+                <li key={line.postId} className="border-t border-ink/10 px-4 py-3 text-sm">
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                    <div className="font-medium">{line.label}</div>
+                    <div>{amount}</div>
+                  </div>
+                  <p className="mt-1 text-brown">{deliverableStatusLabel(line.status, line.adjustmentCents != null)}</p>
+                  {line.detail ? <p className="mt-1 text-brown">{line.detail}</p> : null}
+                  {line.adjustmentReason ? <p className="mt-1 text-brown">{line.adjustmentReason}</p> : null}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
       ) : null}
-      {lines.length > 0 ? (
-        <ul className="xl:hidden" aria-labelledby="payout-history-title">
-          {lines.map((line) => (
-            <li key={line.key} className="border-t border-ink/10 px-4 py-5 text-sm">
-              <HistoryRow line={line} />
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      {lines.length > 0 ? (
-        <table className="mt-4 hidden w-full max-w-full table-fixed border-collapse text-left text-sm leading-6 xl:table" aria-labelledby="payout-history-title">
-          <colgroup>
-            <col className="w-[20%]" />
-            <col className="w-[16%]" />
-            <col className="w-[16%]" />
-            <col className="w-[16%]" />
-            <col className="w-[16%]" />
-            <col className="w-[16%]" />
-          </colgroup>
-          <thead className="text-brown">
-            <tr>
-              <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Month</th>
-              <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Earned</th>
-              <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Status</th>
-              <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Paid</th>
-              <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Paid on</th>
-              <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Reference</th>
-            </tr>
-          </thead>
-          <tbody>
-            {lines.map((line) => (
-              <tr key={line.key} className="border-t border-rose/60">
-                <td className="px-4 py-5 align-top font-medium">{formatPayoutMonth(line.period)}</td>
-                <td className="px-4 py-5 align-top">{formatCents(line.earnedCents)}</td>
-                <td className="px-4 py-5 align-top">
-                  <span className={`inline-flex min-h-8 items-center rounded-full px-3 text-sm ${statusClass(line.status)}`}>
-                    {statusLabel(line.status)}
-                  </span>
-                </td>
-                <td className="px-4 py-5 align-top">{payoutPaidAmount(line)}</td>
-                <td className="px-4 py-5 align-top">{payoutPaidOn(line)}</td>
-                <td className="break-words px-4 py-5 align-top">{payoutReferenceText(line)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : null}
+      <EarningsMonth title="Months" rows={earningRows} emptyLabel="Nothing to show yet." nameLabel="Month" />
     </div>
   );
 }

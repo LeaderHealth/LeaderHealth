@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import { PortalLegalLinks } from "@/components/affiliate/PortalLegalLinks";
 import { readApplicationLink } from "@/lib/affiliate/applications";
-import { formatCommissionRate } from "@/lib/affiliate/format";
+import { LAB_COMMISSIONS_ENABLED } from "@/lib/affiliate/code";
 import { submitAffiliateApplication } from "./actions";
 
 export const metadata: Metadata = {
@@ -31,11 +32,10 @@ export default async function AffiliateApplyPage({
   const error = query.error ? ERRORS[query.error] : "";
   const sent = query.sent === "1" && !error;
   const link = typeof query.link === "string" ? query.link : "";
-  let commissionLabel = "";
+  let linkReady = false;
   if (link && !sent) {
     try {
-      const commission = await readApplicationLink(link);
-      commissionLabel = commission ? formatCommissionRate(commission) : "";
+      linkReady = Boolean(await readApplicationLink(link));
     } catch (caught) {
       console.error("[affiliate] application link read failed", caught instanceof Error ? caught.message : "unknown");
     }
@@ -46,7 +46,11 @@ export default async function AffiliateApplyPage({
       <div className="mx-auto max-w-lg">
         <h1 className="text-4xl">Apply to be an affiliate</h1>
         <p className="mt-4 text-sm text-brown">Enter your name and email. An admin reviews this before your account is created.</p>
-        {commissionLabel ? <p className="mt-2 text-sm text-ink">Commission on this link: {commissionLabel}.</p> : null}
+        {linkReady ? (
+          <p className="mt-2 text-sm text-ink">
+            Marketing pay is a rate per 1,000 views. {LAB_COMMISSIONS_ENABLED ? "Lab commission applies to lab orders." : "Lab commission is not active."}
+          </p>
+        ) : null}
         {error ? (
           <p role="alert" className="mt-6 rounded-2xl bg-rose px-4 py-3 text-sm text-ink">
             {error}
@@ -56,7 +60,7 @@ export default async function AffiliateApplyPage({
           <p role="status" className="mt-6 rounded-2xl bg-white px-4 py-3 text-sm text-ink">
             Thanks. An admin will review this application.
           </p>
-        ) : commissionLabel ? (
+        ) : linkReady ? (
           <form action={submitAffiliateApplication} className="mt-6 grid gap-4 rounded-[28px] bg-white p-4 sm:p-8">
             <input type="hidden" name="link" value={link} />
             <label className="block text-sm font-medium text-ink" htmlFor="application-name">
@@ -86,6 +90,7 @@ export default async function AffiliateApplyPage({
             {ERRORS.missing}
           </p>
         )}
+        <PortalLegalLinks className="mt-8" />
       </div>
     </section>
   );

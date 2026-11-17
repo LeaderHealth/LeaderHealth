@@ -81,6 +81,9 @@ export function normalizeCommissionPercent(value: unknown, fallback: number | nu
 
 export const DEFAULT_COMMISSION_PERCENT = 15;
 
+/** Lab orders earn the affiliate's percent or fixed rate. Treatment orders do not. There is no dashboard switch. */
+export const LAB_COMMISSIONS_ENABLED = true;
+
 export type CommissionMode = "default" | "percent" | "fixed";
 
 export function normalizeCommissionMode(value: unknown): CommissionMode | null {

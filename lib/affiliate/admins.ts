@@ -13,10 +13,13 @@ const LINK_COOLDOWN_MS = 60 * 1000;
 const TOKEN_PATTERN = /^[A-Za-z0-9_-]{20,200}$/;
 const ADMIN_ID = /^[A-Za-z0-9_-]{20,80}$/;
 
+export type StoredAdminRole = "owner" | "admin" | "sub";
+
 export type SubAdminRecord = {
   id: string;
   name: string;
   email: string;
+  role: StoredAdminRole;
   active: boolean;
   invitePending: boolean;
   createdAt: string | null;
@@ -56,6 +59,11 @@ function adminIdShape(id: string) {
   return ADMIN_ID.test(id);
 }
 
+export function storedAdminRole(value: unknown): StoredAdminRole {
+  if (value === "owner" || value === "admin") return value;
+  return "sub";
+}
+
 function asDate(value: unknown) {
   if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
   if (value && typeof value === "object" && "toDate" in value && typeof value.toDate === "function") {
@@ -78,6 +86,7 @@ function recordFrom(id: string, data: DocumentData): SubAdminRecord {
     id,
     name: typeof data.name === "string" ? data.name : "",
     email: loginEmail || sentTo,
+    role: storedAdminRole(data.role),
     active: data.active === true,
     invitePending: data.invitePending === true,
     createdAt: created ? created.toISOString() : null,
@@ -131,7 +140,7 @@ export async function subAdminIdForPassword(email: string, password: string) {
   const stored = typeof data?.passwordHash === "string" ? data.passwordHash : null;
   const passwordOkMatch = await passwordMatches(passwordOk, stored);
   if (!snap || !data || data.active !== true || data.invitePending === true || !passwordOkMatch) return null;
-  return snap.id;
+  return { id: snap.id, role: storedAdminRole(data.role) };
 }
 
 export async function readSubAdmin(id: string) {
@@ -159,12 +168,13 @@ async function emailTaken(email: string) {
   return !logins.empty || !invites.empty;
 }
 
-export async function issueSubAdminInvitation(emailInput: unknown) {
+export async function issueSubAdminInvitation(emailInput: unknown, roleInput: unknown) {
   if (!affiliateFirebaseConfigured()) return { status: "unavailable" as const };
   const email = normalizeAffiliateEmail(emailInput);
   if (!email) return { status: "invalid" as const };
   if (email === mainAdminEmail()) return { status: "owner" as const };
   if (await emailTaken(email)) return { status: "exists" as const };
+  const role = storedAdminRole(roleInput);
   const token = randomBytes(32).toString("base64url");
   const id = newAdminId();
   try {
@@ -174,6 +184,7 @@ export async function issueSubAdminInvitation(emailInput: unknown) {
       inviteEmail: email,
       emailKey: null,
       passwordHash: null,
+      role,
       active: true,
       invitePending: true,
       inviteTokenHash: tokenHash(token),
@@ -262,7 +273,7 @@ export async function acceptSubAdminInvitation(token: string, nameInput: unknown
       invitePending: false,
       inviteUsedAt: new Date(),
     });
-    return { status: "ok" as const, id: snap.id };
+    return { status: "ok" as const, id: snap.id, role: storedAdminRole(snap.data()?.role) };
   });
 }
 
@@ -344,7 +355,7 @@ export async function redeemSubAdminMagicLink(token: string | null) {
       expires != null &&
       expires.getTime() > Date.now();
     if (snap.exists) tx.update(ref, { magicLinkHash: null, magicLinkExpiresAt: null });
-    return current ? snap.id : null;
+    return current ? { id: snap.id, role: storedAdminRole(data?.role) } : null;
   });
 }
 
@@ -431,7 +442,7 @@ export async function acceptSubAdminPasswordReset(token: string, passwordInput: 
       passwordResetHash: null,
       passwordResetExpiresAt: null,
     });
-    return { status: "ok" as const, id: snap.id };
+    return { status: "ok" as const, id: snap.id, role: storedAdminRole(snap.data()?.role) };
   });
 }
 

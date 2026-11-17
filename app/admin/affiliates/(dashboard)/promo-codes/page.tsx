@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AssignPromoCode, type AssignableAffiliate } from "@/components/affiliate/AssignPromoCode";
 import { RemovePromoAffiliate } from "@/components/affiliate/RemovePromoAffiliate";
+import { LAB_COMMISSIONS_ENABLED } from "@/lib/affiliate/code";
 import { formatCents } from "@/lib/affiliate/format";
 import { loadRemovedPromoRows, type RemovedPromoRow } from "@/lib/affiliate/removed-promos";
 import { AffiliateStoreError, loadAffiliateDashboard } from "@/lib/affiliate/store";
@@ -138,12 +139,30 @@ export default async function PromoCodesPage({
       <h2 id="promo-codes-title" className="px-4 pt-4 text-2xl">
         Promo codes
       </h2>
-      <p className="px-4 pt-2 text-sm text-brown">
-        {codes.length === 0
-          ? "Promo codes are created in Gen Health."
-          : `${assignedCount} assigned · ${availableCount} available. Each code locks to one affiliate. Promo codes are created in Gen Health.`}{" "}
-        Deactivating a promo code in Gen Health removes it from this list. Sales and clicks recorded for that code stay under Removed.
-      </p>
+      <div className="px-4 pt-2 text-sm text-brown">
+        {codes.length === 0 ? null : (
+          <p>
+            {assignedCount} assigned · {availableCount} available. Each code locks to one affiliate.
+          </p>
+        )}
+        <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
+          <li className="inline-flex items-center gap-1.5">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1D6340" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M20 6 9 17l-5-5" />
+            </svg>
+            Customers get the discount on the products the code covers.
+          </li>
+          <li className="inline-flex items-center gap-1.5">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 2v20" />
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+            </svg>
+            The affiliate earns only on lab orders.
+          </li>
+          <li>Codes are created in Gen Health.</li>
+        </ul>
+        <p className="mt-2">Deactivating a code in Gen Health removes it here. Its sales and clicks stay under Removed.</p>
+      </div>
       {codes.length === 0 ? (
         <p className="px-4 py-6 text-sm text-brown">No promo codes yet.</p>
       ) : (
@@ -286,8 +305,8 @@ function RemovedPromoCodes({ rows, accounts }: { rows: RemovedPromoRow[]; accoun
       </h2>
       <p className="px-4 pt-2 text-sm text-brown">
         {empty
-          ? "No recorded sales or clicks for a removed code yet."
-          : "These codes are no longer active in Gen Health. Orders, sales, commission, and clicks were recorded on this site. Gen Health usage is not available after a code is removed."}
+          ? "No recorded orders or clicks for a removed code yet."
+          : "These codes are no longer active in Gen Health. Orders, commission, and clicks were recorded on this site. Gen Health usage is not available after a code is removed."}
       </p>
       <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-5 border-t border-ink/10 px-4 py-5 text-sm leading-6 xl:hidden" aria-labelledby="removed-promo-codes-title">
         {empty ? (
@@ -302,10 +321,6 @@ function RemovedPromoCodes({ rows, accounts }: { rows: RemovedPromoRow[]; accoun
             </div>
             <div>
               <dt className="text-xs text-brown">Orders</dt>
-              <dd className="mt-1">—</dd>
-            </div>
-            <div>
-              <dt className="text-xs text-brown">Sales</dt>
               <dd className="mt-1">—</dd>
             </div>
             <div>
@@ -332,12 +347,8 @@ function RemovedPromoCodes({ rows, accounts }: { rows: RemovedPromoRow[]; accoun
                   <dd className="mt-1">{promo.orders}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-brown">Sales</dt>
-                  <dd className="mt-1">{promo.salesCents == null ? "—" : formatCents(promo.salesCents)}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-brown">Commission</dt>
-                  <dd className="mt-1">{formatCents(promo.commissionCents)}</dd>
+                  <dt className="text-xs text-brown">Lab commission</dt>
+                  <dd className="mt-1">{LAB_COMMISSIONS_ENABLED ? formatCents(promo.commissionCents) : "Not active"}</dd>
                 </div>
                 <div>
                   <dt className="text-xs text-brown">Clicks</dt>
@@ -358,7 +369,6 @@ function RemovedPromoCodes({ rows, accounts }: { rows: RemovedPromoRow[]; accoun
             <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Promo code</th>
             <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Affiliate</th>
             <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Orders</th>
-            <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Sales</th>
             <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Commission</th>
             <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Clicks</th>
             <th scope="col" className="px-4 py-4 align-bottom font-medium leading-snug">Usage</th>
@@ -373,7 +383,6 @@ function RemovedPromoCodes({ rows, accounts }: { rows: RemovedPromoRow[]; accoun
               <td className="px-4 py-5 align-top">—</td>
               <td className="px-4 py-5 align-top">—</td>
               <td className="px-4 py-5 align-top">—</td>
-              <td className="px-4 py-5 align-top">—</td>
             </tr>
           ) : (
             rows.map((promo) => (
@@ -381,8 +390,7 @@ function RemovedPromoCodes({ rows, accounts }: { rows: RemovedPromoRow[]; accoun
                 <td className="break-all px-4 py-5 align-top font-medium">{promo.code}</td>
                 <td className="px-4 py-5 align-top">{affiliateLabels(promo.affiliateCodes, accounts)}</td>
                 <td className="px-4 py-5 align-top">{promo.orders}</td>
-                <td className="px-4 py-5 align-top">{promo.salesCents == null ? "—" : formatCents(promo.salesCents)}</td>
-                <td className="px-4 py-5 align-top">{formatCents(promo.commissionCents)}</td>
+                <td className="px-4 py-5 align-top">{LAB_COMMISSIONS_ENABLED ? formatCents(promo.commissionCents) : "Not active"}</td>
                 <td className="px-4 py-5 align-top">{promo.clicks}</td>
                 <td className="px-4 py-5 align-top">—</td>
               </tr>

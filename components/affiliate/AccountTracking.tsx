@@ -67,6 +67,7 @@ export function AccountTracking({
   name,
   code,
   commission,
+  viewRate,
   cookieDays,
   trackingLink,
   promos,
@@ -75,6 +76,7 @@ export function AccountTracking({
   name: string;
   code: string;
   commission: string;
+  viewRate: string;
   cookieDays: number;
   trackingLink: string;
   promos: AccountTrackingPromo[];
@@ -133,7 +135,7 @@ export function AccountTracking({
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby={titleId}
-                className="relative flex max-h-[min(40rem,calc(100dvh-2rem))] w-full max-w-3xl flex-col rounded-[28px] bg-white p-4 text-ink shadow-[0_24px_80px_rgba(51,17,16,0.22)] sm:p-8"
+                className="relative flex max-h-[min(40rem,calc(100dvh-2rem))] w-full max-w-3xl flex-col rounded-[28px] bg-white p-4 text-ink shadow-[0_24px_80px_rgba(51,17,16,0.22)] sm:p-8 lg:h-[min(52rem,calc(100dvh-3rem))] lg:max-h-none lg:max-w-6xl"
               >
                 <h2 id={titleId} className="text-2xl">
                   Tracking information
@@ -145,6 +147,7 @@ export function AccountTracking({
                   <h3 className="text-xs font-medium tracking-wide text-brown">Link tracking</h3>
                   <dl>
                     <Row label="Commission">{commission}</Row>
+                    <Row label="View rate">{viewRate}</Row>
                     <Row label="Cookie duration">{cookieDays} days</Row>
                     <Row label="Tracking link">
                       <CopyValue value={trackingLink} label="tracking link" />

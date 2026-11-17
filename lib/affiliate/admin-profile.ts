@@ -16,14 +16,7 @@ function httpsUrl(value: string | null | undefined) {
   return url;
 }
 
-export async function adminAccountProfile() {
-  const actor = await adminSessionActor();
-  if (!actor) return null;
-  if (actor.role === "sub") {
-    const admin = await readSubAdmin(actor.id);
-    if (!admin) return null;
-    return { name: admin.name, email: admin.email, avatarUrl: null };
-  }
+export async function environmentAdminProfile() {
   const email = adminAccountEmail();
   if (!email) return null;
   let name = "";
@@ -43,4 +36,15 @@ export async function adminAccountProfile() {
     }
   }
   return { name: name || nameFromEmail(email), email, avatarUrl };
+}
+
+export async function adminAccountProfile() {
+  const actor = await adminSessionActor();
+  if (!actor) return null;
+  if ("id" in actor) {
+    const admin = await readSubAdmin(actor.id);
+    if (!admin) return null;
+    return { name: admin.name, email: admin.email, avatarUrl: null };
+  }
+  return environmentAdminProfile();
 }

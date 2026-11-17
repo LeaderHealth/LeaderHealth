@@ -19,6 +19,20 @@ export type ApplicationCommission = {
   commissionFixedCents: number;
 };
 
+export function applicationLinkPromo(choice: unknown, code: unknown) {
+  if (choice == null || choice === "" || choice === "later") return "";
+  if (choice !== "assign") return null;
+  if (typeof code !== "string") return null;
+  const trimmed = code.trim();
+  if (!trimmed || trimmed.length > 80 || /[\u0000-\u001f]/.test(trimmed)) return null;
+  return trimmed;
+}
+
+export function promoAvailableForNewLink(row: { statusLabel: string; affiliates: { utmSlug: string }[] } | null) {
+  if (!row || row.statusLabel !== "Active") return false;
+  return row.affiliates.every((affiliate) => affiliate.utmSlug.trim() === "");
+}
+
 export function applicationCommission(input: {
   commissionMode: unknown;
   commissionPercent: unknown;
@@ -52,6 +66,7 @@ export type AffiliateApplication = {
   name: string;
   createdAt: string | null;
   commissionLabel: string | null;
+  promoCode: string;
 };
 
 function asDate(value: unknown) {
@@ -82,17 +97,26 @@ function storedCommission(value: unknown): ApplicationCommission | null {
   });
 }
 
+function storedPromoCode(value: unknown) {
+  if (!value || typeof value !== "object") return "";
+  const code = (value as Record<string, unknown>).promoCode;
+  return applicationLinkPromo("assign", code) ?? "";
+}
+
 export async function createApplicationLink(input: {
   commissionMode: unknown;
   commissionPercent: unknown;
   commissionFixed: unknown;
+  promoCode?: unknown;
 }) {
   const commission = applicationCommission(input);
-  if (!commission) throw new ApplicationError("invalid");
+  const promoCode = input.promoCode == null || input.promoCode === "" ? "" : applicationLinkPromo("assign", input.promoCode);
+  if (!commission || promoCode == null) throw new ApplicationError("invalid");
   if (!affiliateFirebaseConfigured()) throw new ApplicationError("unavailable");
   const token = randomBytes(32).toString("base64url");
   await affiliateFirestore().collection("applicationLinks").doc(token).create({
     ...commission,
+    promoCode,
     createdAt: new Date(),
   });
   return token;
@@ -103,7 +127,9 @@ export async function readApplicationLink(token: unknown) {
   if (!affiliateFirebaseConfigured()) return null;
   const snap = await affiliateFirestore().collection("applicationLinks").doc(token).get();
   if (!snap.exists) return null;
-  return storedCommission(snap.data());
+  const commission = storedCommission(snap.data());
+  if (!commission) return null;
+  return { ...commission, promoCode: storedPromoCode(snap.data()) };
 }
 
 export async function saveAffiliateApplication(input: { name: unknown; email: unknown; link: unknown }) {
@@ -122,6 +148,7 @@ export async function saveAffiliateApplication(input: { name: unknown; email: un
       name,
       email,
       ...commission,
+      promoCode: commission.promoCode,
       status: "pending",
       createdAt: new Date(),
       decidedAt: null,
@@ -144,6 +171,7 @@ export async function listOpenApplications() {
         email,
         createdAt: asDate(data.createdAt)?.toISOString() ?? null,
         commissionLabel: commission ? formatCommissionRate(commission) : null,
+        promoCode: storedPromoCode(data),
       };
     })
     .filter((application) => application.name && application.email)
@@ -165,7 +193,7 @@ export async function claimAffiliateApplication(emailInput: unknown) {
     const commission = storedCommission(data);
     if (!commission) throw new ApplicationError("invalid");
     tx.update(ref, { status: "approving" });
-    return { name: data.name, email, ...commission };
+    return { name: data.name, email, ...commission, promoCode: storedPromoCode(data) };
   });
 }
 

@@ -67,8 +67,8 @@ export const products: Product[] = [
         eyebrow: "Weekly injection",
         clientProductId: "prod_48ed6c335e9719fef64960ca",
         detail: "Titrated dosing, adjusted as you progress.",
-        price: "From $159 / month",
-        priceAmount: "$159",
+        price: "From $179 / month",
+        priceAmount: "$179",
         notes: ["4 doses / month", "Supplies included"],
         image:
           "https://framerusercontent.com/images/qjehMU3idCiDUkHLomxHWBSbnkk.png?width=626&height=888",

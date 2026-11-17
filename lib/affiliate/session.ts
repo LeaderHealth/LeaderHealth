@@ -67,7 +67,20 @@ function signatureMatches(body: string, signature: string) {
   return timingSafeEqual(actualBuffer, expectedBuffer);
 }
 
-export type AdminActor = { role: "owner" } | { role: "sub"; id: string };
+export type AdminActor = { role: "owner" } | { role: "owner" | "admin" | "sub"; id: string };
+
+export function adminHasFullAccess(actor: AdminActor) {
+  return actor.role === "owner" || actor.role === "admin";
+}
+
+function actorFromSubject(role: "owner" | "admin" | "sub", subject: string): AdminActor | null {
+  if (role === "admin" || role === "sub") {
+    if (!SESSION_ID.test(subject)) return null;
+    return { role, id: subject };
+  }
+  if (SESSION_ID.test(subject)) return { role: "owner", id: subject };
+  return { role: "owner" };
+}
 
 function sessionExpiry(expiresAt: string) {
   const expires = Number(expiresAt);
@@ -84,11 +97,11 @@ type SessionClaims = {
 function claimsValid(value: unknown): value is SessionClaims {
   if (!value || typeof value !== "object") return false;
   const claims = value as SessionClaims;
-  if (claims.role !== "owner" && claims.role !== "sub" && claims.role !== "affiliate") return false;
+  if (claims.role !== "owner" && claims.role !== "admin" && claims.role !== "sub" && claims.role !== "affiliate") return false;
   if (typeof claims.id !== "string" || !SESSION_ID.test(claims.id)) return false;
   if (typeof claims.subject !== "string" || !claims.subject) return false;
   if (!sessionExpiry(String(claims.expiresAt))) return false;
-  if (claims.role === "sub" && !SESSION_ID.test(claims.subject)) return false;
+  if ((claims.role === "admin" || claims.role === "sub") && !SESSION_ID.test(claims.subject)) return false;
   if (claims.role === "affiliate" && !normalizeAffiliateCode(claims.subject)) return false;
   return true;
 }
@@ -157,17 +170,14 @@ async function remember(name: string, token: string | null, maxAge: number) {
 export async function adminSessionActor(): Promise<AdminActor | null> {
   const jar = await cookies();
   const claims = parseSessionToken(jar.get(ADMIN_COOKIE)?.value);
-  if (!claims || (claims.role !== "owner" && claims.role !== "sub")) return null;
+  if (!claims || (claims.role !== "owner" && claims.role !== "admin" && claims.role !== "sub")) return null;
   try {
     const session = await activeDashboardSession(claims.id);
-    if (!session) return null;
-    if (session.role === "owner") return { role: "owner" };
-    if (session.role !== "sub") return null;
-    return { role: "sub", id: session.subject };
+    if (!session || (session.role !== "owner" && session.role !== "admin" && session.role !== "sub")) return null;
+    return actorFromSubject(session.role, session.subject);
   } catch (error) {
     console.warn("[affiliate] session read failed", error instanceof Error ? error.message : "unknown");
-    if (claims.role === "owner") return { role: "owner" };
-    return { role: "sub", id: claims.subject };
+    return actorFromSubject(claims.role, claims.subject);
   }
 }
 
@@ -187,10 +197,14 @@ export async function setAdminSession(rememberDevice = false) {
   return remember(ADMIN_COOKIE, await issueSession("owner", email, seconds), seconds);
 }
 
-export async function setSubAdminSession(id: string, rememberDevice = false) {
-  if (!SESSION_ID.test(id)) return false;
+export async function setStoredAdminSession(id: string, role: "owner" | "admin" | "sub", rememberDevice = false) {
+  if ((role !== "owner" && role !== "admin" && role !== "sub") || !SESSION_ID.test(id)) return false;
   const seconds = sessionSeconds(rememberDevice);
-  return remember(ADMIN_COOKIE, await issueSession("sub", id, seconds), seconds);
+  return remember(ADMIN_COOKIE, await issueSession(role, id, seconds), seconds);
+}
+
+export async function setSubAdminSession(id: string, rememberDevice = false) {
+  return setStoredAdminSession(id, "sub", rememberDevice);
 }
 
 export async function clearAdminSession() {

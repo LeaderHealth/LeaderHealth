@@ -3,7 +3,7 @@ import { normalizeAffiliateCode } from "./code";
 import { affiliateFirebaseConfigured, affiliateFirestore } from "./firebase";
 import { getAffiliate } from "./store";
 
-export type DashboardRole = "owner" | "sub" | "affiliate";
+export type DashboardRole = "owner" | "admin" | "sub" | "affiliate";
 
 export type DashboardSessionRecord = {
   id: string;
@@ -30,7 +30,7 @@ function asDate(value: unknown) {
 }
 
 function roleOf(value: unknown): DashboardRole | null {
-  if (value === "owner" || value === "sub" || value === "affiliate") return value;
+  if (value === "owner" || value === "admin" || value === "sub" || value === "affiliate") return value;
   return null;
 }
 
@@ -40,7 +40,7 @@ function recordFrom(id: string, data: DocumentData | undefined): DashboardSessio
   const expires = asDate(data.expiresAt);
   if (!role || !expires || expires.getTime() <= Date.now()) return null;
   const subject = typeof data.subject === "string" ? data.subject.trim() : "";
-  if (role === "sub" && !SESSION_ID.test(subject)) return null;
+  if ((role === "admin" || role === "sub") && !SESSION_ID.test(subject)) return null;
   if (role === "affiliate" && !normalizeAffiliateCode(subject)) return null;
   if (role === "owner" && !subject) return null;
   const created = asDate(data.createdAt);
@@ -56,8 +56,8 @@ function recordFrom(id: string, data: DocumentData | undefined): DashboardSessio
 }
 
 async function accountStillActive(session: DashboardSessionRecord) {
-  if (session.role === "owner") return true;
-  if (session.role === "sub") {
+  if (session.role === "owner" && !SESSION_ID.test(session.subject)) return true;
+  if (session.role === "owner" || session.role === "admin" || session.role === "sub") {
     const { subAdminSessionActive } = await import("./admins");
     return subAdminSessionActive(session.subject);
   }
@@ -113,4 +113,15 @@ export async function revokeDashboardSession(id: string) {
   if (!snap.exists || snap.data()?.revoked === true) return "missing" as const;
   await ref.set({ revoked: true }, { merge: true });
   return "ok" as const;
+}
+
+export async function revokeDashboardSessionsForSubject(subject: string) {
+  if (!affiliateFirebaseConfigured() || !subject) return;
+  const snap = await sessions().where("subject", "==", subject).get();
+  const open = snap.docs.filter((doc) => doc.data()?.revoked !== true);
+  for (let index = 0; index < open.length; index += 400) {
+    const batch = affiliateFirestore().batch();
+    for (const doc of open.slice(index, index + 400)) batch.set(doc.ref, { revoked: true }, { merge: true });
+    await batch.commit();
+  }
 }

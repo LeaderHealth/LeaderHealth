@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { adminAccountProfile } from "@/lib/affiliate/admin-profile";
+import { environmentAdminProfile } from "@/lib/affiliate/admin-profile";
 import { listSubAdmins, type SubAdminRecord } from "@/lib/affiliate/admins";
 import { listOpenDashboardSessions, type DashboardSessionRecord } from "@/lib/affiliate/dashboard-sessions";
 import { reportHandledAffiliateError } from "@/lib/affiliate/report";
-import { adminSessionActor, currentAdminSessionId } from "@/lib/affiliate/session";
+import { adminHasFullAccess, adminSessionActor, currentAdminSessionId } from "@/lib/affiliate/session";
 import { getAffiliate } from "@/lib/affiliate/store";
 import { inviteSubAdminAction, removeSubAdminAction, resendSubAdminInvitationAction, revokeDashboardSessionAction, setSubAdminActiveAction } from "../../actions";
 import { ADMIN_ERRORS } from "../../messages";
@@ -37,7 +37,8 @@ function statusClass(admin: SubAdminRecord) {
 
 function roleLabel(role: DashboardSessionRecord["role"]) {
   if (role === "owner") return "Main admin";
-  if (role === "sub") return "Admin";
+  if (role === "admin") return "Admin";
+  if (role === "sub") return "Sub admin";
   return "Affiliate";
 }
 
@@ -54,6 +55,48 @@ function formatSignedIn(value: string | null) {
   }).format(date);
 }
 
+function AdminRow({ admin, self, role }: { admin: SubAdminRecord; self: boolean; role?: string }) {
+  return (
+    <li className="flex flex-col gap-4 py-5 lg:flex-row lg:items-center lg:justify-between">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="font-medium text-ink">{admin.name || "Invitation sent"}</p>
+          {role ? <span className="inline-flex rounded-full border border-ink/20 px-2.5 py-1 text-xs text-brown">{role}</span> : null}
+          <span className={`inline-flex rounded-full px-2.5 py-1 text-xs ${statusClass(admin)}`}>{statusLabel(admin)}</span>
+        </div>
+        <p className="mt-1 break-all text-sm text-brown">{admin.email}</p>
+      </div>
+      <div className="flex flex-wrap gap-2" role="group" aria-label={`Actions for ${admin.name || admin.email}`}>
+        {self ? null : (
+          <form action={setSubAdminActiveAction}>
+            <input type="hidden" name="id" value={admin.id} />
+            <input type="hidden" name="active" value={admin.active ? "false" : "true"} />
+            <button type="submit" className={actionClass}>
+              {admin.active ? "Deactivate" : "Activate"}
+            </button>
+          </form>
+        )}
+        {admin.invitePending && admin.active ? (
+          <form action={resendSubAdminInvitationAction}>
+            <input type="hidden" name="id" value={admin.id} />
+            <button type="submit" className={actionClass}>
+              Resend invitation
+            </button>
+          </form>
+        ) : null}
+        {self ? null : (
+          <form action={removeSubAdminAction}>
+            <input type="hidden" name="id" value={admin.id} />
+            <button type="submit" className={actionClass}>
+              Remove
+            </button>
+          </form>
+        )}
+      </div>
+    </li>
+  );
+}
+
 function sessionPerson(
   session: DashboardSessionRecord,
   owner: { name: string; email: string } | null,
@@ -61,11 +104,14 @@ function sessionPerson(
   affiliates: Map<string, { name: string; email: string }>,
 ) {
   if (session.role === "owner") {
+    const admin = admins.find((entry) => entry.id === session.subject);
+    if (admin) return { name: admin.name || "Main admin", detail: admin.email || "Main admin" };
     return { name: owner?.name || "Main admin", detail: session.subject };
   }
-  if (session.role === "sub") {
+  if (session.role === "admin" || session.role === "sub") {
     const admin = admins.find((entry) => entry.id === session.subject);
-    return { name: admin?.name || "Admin", detail: admin?.email || "Sub-admin" };
+    const label = session.role === "admin" ? "Admin" : "Sub admin";
+    return { name: admin?.name || label, detail: admin?.email || label };
   }
   const affiliate = affiliates.get(session.subject);
   return { name: affiliate?.name || session.subject, detail: affiliate?.email || session.subject };
@@ -78,11 +124,11 @@ export default async function AdminTeamPage({
 }) {
   const actor = await adminSessionActor();
   if (!actor) redirect("/admin/affiliates");
-  if (actor.role !== "owner") redirect("/admin/affiliates/overview");
+  if (!adminHasFullAccess(actor)) redirect("/admin/affiliates/overview");
 
   const query = await searchParams;
   const error = query.error ? ADMIN_ERRORS[query.error] : "";
-  const owner = await adminAccountProfile();
+  const owner = await environmentAdminProfile();
   let admins: SubAdminRecord[] = [];
   let loadError = "";
   let sessions: DashboardSessionRecord[] = [];
@@ -147,12 +193,28 @@ export default async function AdminTeamPage({
       <section className="rounded-[28px] bg-white p-4 sm:p-8">
         <h2 className="text-4xl">Invite an admin</h2>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-taupe">
-          Send a link to their inbox. They choose the name, email, and password they will use to sign in. They get the same affiliate dashboard. Only you can invite, list, and remove admins.
+          Send a link to their inbox. They choose the name, email, and password they will use to sign in. Admins have full access. Sub admins can view the dashboard, but they cannot pay affiliates, invite admins, or invite affiliates.
         </p>
         <form action={inviteSubAdminAction} className="mt-6 grid max-w-xl gap-4">
           <label className="block text-sm font-medium text-ink" htmlFor="team-email">
             Send invitation to
-            <input id="team-email" name="email" type="email" required maxLength={120} autoComplete="email" className={fieldClass} />
+            <input
+              id="team-email"
+              name="email"
+              type="email"
+              required
+              maxLength={120}
+              autoComplete="email"
+              placeholder="name@example.com"
+              className={fieldClass}
+            />
+          </label>
+          <label className="block text-sm font-medium text-ink" htmlFor="team-role">
+            Access
+            <select id="team-role" name="role" defaultValue="sub" className={fieldClass}>
+              <option value="admin">Admin</option>
+              <option value="sub">Sub admin</option>
+            </select>
           </label>
           <button type="submit" className={`${buttonClass} w-fit`}>
             Send invitation
@@ -161,6 +223,7 @@ export default async function AdminTeamPage({
       </section>
       <section className="rounded-[28px] bg-white p-4 sm:p-8">
         <h2 className="text-2xl">Admins</h2>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-taupe">Main admins and admins have the same access. The site account stays a main admin.</p>
         {loadError ? <p className="mt-4 text-sm text-ink">{loadError}</p> : null}
         <ul className="mt-6 divide-y divide-ink/10">
           {owner ? (
@@ -172,42 +235,30 @@ export default async function AdminTeamPage({
               <p className="text-sm text-brown">Main admin</p>
             </li>
           ) : null}
-          {admins.map((admin) => (
-            <li key={admin.id} className="flex flex-col gap-4 py-5 lg:flex-row lg:items-center lg:justify-between">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-medium text-ink">{admin.name || "Invitation sent"}</p>
-                  <span className={`inline-flex rounded-full px-2.5 py-1 text-xs ${statusClass(admin)}`}>{statusLabel(admin)}</span>
-                </div>
-                <p className="mt-1 break-all text-sm text-brown">{admin.email}</p>
-              </div>
-              <div className="flex flex-wrap gap-2" role="group" aria-label={`Actions for ${admin.name || admin.email}`}>
-                <form action={setSubAdminActiveAction}>
-                  <input type="hidden" name="id" value={admin.id} />
-                  <input type="hidden" name="active" value={admin.active ? "false" : "true"} />
-                  <button type="submit" className={actionClass}>
-                    {admin.active ? "Deactivate" : "Activate"}
-                  </button>
-                </form>
-                {admin.invitePending && admin.active ? (
-                  <form action={resendSubAdminInvitationAction}>
-                    <input type="hidden" name="id" value={admin.id} />
-                    <button type="submit" className={actionClass}>
-                      Resend invitation
-                    </button>
-                  </form>
-                ) : null}
-                <form action={removeSubAdminAction}>
-                  <input type="hidden" name="id" value={admin.id} />
-                  <button type="submit" className={actionClass}>
-                    Remove
-                  </button>
-                </form>
-              </div>
-            </li>
-          ))}
+          {admins
+            .filter((admin) => admin.role === "owner" || admin.role === "admin")
+            .map((admin) => (
+              <AdminRow
+                key={admin.id}
+                admin={admin}
+                self={"id" in actor && actor.id === admin.id}
+                role={admin.role === "owner" ? "Main admin" : "Admin"}
+              />
+            ))}
         </ul>
-        {admins.length === 0 && !loadError ? <p className="text-sm text-brown">No sub-admins yet.</p> : null}
+      </section>
+      <section className="rounded-[28px] bg-white p-4 sm:p-8">
+        <h2 className="text-2xl">Sub admins</h2>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-taupe">Sub admins can view the dashboard. They cannot pay affiliates, invite admins, or invite affiliates.</p>
+        {loadError ? <p className="mt-4 text-sm text-ink">{loadError}</p> : null}
+        <ul className="mt-6 divide-y divide-ink/10">
+          {admins
+            .filter((admin) => admin.role === "sub")
+            .map((admin) => (
+              <AdminRow key={admin.id} admin={admin} self={"id" in actor && actor.id === admin.id} />
+            ))}
+        </ul>
+        {admins.filter((admin) => admin.role === "sub").length === 0 && !loadError ? <p className="text-sm text-brown">No sub admins yet.</p> : null}
       </section>
       <section className="rounded-[28px] bg-white p-4 sm:p-8">
         <h2 className="text-2xl">Signed-in browsers</h2>

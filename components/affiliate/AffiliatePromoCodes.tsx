@@ -103,7 +103,7 @@ export function AffiliatePromoCodes({
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby={titleId}
-                className="relative flex max-h-[min(40rem,calc(100dvh-2rem))] w-full max-w-5xl flex-col rounded-[28px] bg-white p-4 text-ink shadow-[0_24px_80px_rgba(51,17,16,0.22)] sm:p-8"
+                className="relative flex max-h-[min(40rem,calc(100dvh-2rem))] w-full max-w-5xl flex-col rounded-[28px] bg-white p-4 text-ink shadow-[0_24px_80px_rgba(51,17,16,0.22)] sm:p-8 lg:h-[min(52rem,calc(100dvh-3rem))] lg:max-h-none lg:max-w-6xl"
               >
                 <h2 id={titleId} className="text-2xl">
                   Promo codes
