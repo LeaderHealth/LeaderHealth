@@ -12,6 +12,7 @@ type SuccessPayload = {
   magicLink?: string | null;
   email?: string;
   charged?: boolean;
+  subscriptionStatus?: string | null;
 };
 
 const NEXT_STEPS = [
@@ -77,6 +78,16 @@ export function SuccessView() {
             A licensed provider will look it over before any prescription is written.
           </p>
           {publicOrderId ? <p className="mt-4 text-sm text-white/70">Order {publicOrderId}</p> : null}
+          {payload?.subscriptionStatus === "active" ? (
+            <p className="mt-3 text-sm text-white/80">
+              Your plan is active. Renewals are charged automatically to the card you just used.
+            </p>
+          ) : null}
+          {payload?.subscriptionStatus === "needs_payment_method" ? (
+            <p className="mt-3 text-sm text-white/80">
+              Your payment went through, but the card was not saved for renewals. Open your portal and save a card so the plan can continue.
+            </p>
+          ) : null}
           <ol className="mt-8 space-y-4">
             {NEXT_STEPS.map((step, index) => (
               <li key={step.title} className="flex gap-3">

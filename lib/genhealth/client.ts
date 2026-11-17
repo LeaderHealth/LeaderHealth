@@ -67,12 +67,19 @@ export type GenHealthEnvelope<T = Record<string, unknown>> = {
   success: boolean;
   status: number;
   error: string | null;
+  code: string | null;
   data: T | null;
 };
 
 export async function genHealthRequest<T = Record<string, unknown>>(
   path: string,
-  options: { method?: string; body?: unknown; query?: Record<string, string | undefined> } = {},
+  options: {
+    method?: string;
+    body?: unknown;
+    query?: Record<string, string | undefined>;
+    headers?: Record<string, string>;
+    omitApiKey?: boolean;
+  } = {},
 ): Promise<GenHealthEnvelope<T>> {
   const method = (options.method ?? "GET").toUpperCase();
   if (WRITE_METHODS.has(method) && !ALLOW_LIVE_GENHEALTH_ORDERS) {
@@ -80,6 +87,7 @@ export async function genHealthRequest<T = Record<string, unknown>>(
       success: false,
       status: 403,
       error: "Live GenHealth writes are disabled until checkout is approved.",
+      code: null,
       data: null,
     };
   }
@@ -93,8 +101,9 @@ export async function genHealthRequest<T = Record<string, unknown>>(
 
   const headers: Record<string, string> = {
     accept: "application/json",
-    "x-api-key": apiKey(),
+    ...options.headers,
   };
+  if (!options.omitApiKey) headers["x-api-key"] = apiKey();
 
   const init: RequestInit = { method, headers, cache: "no-store" };
   if (options.body !== undefined) {
@@ -111,11 +120,12 @@ export async function genHealthRequest<T = Record<string, unknown>>(
       success: false,
       status: 502,
       error: message,
+      code: null,
       data: null,
     };
   }
 
-  let payload: { success?: boolean; error?: string; message?: string; data?: T } | null = null;
+  let payload: { success?: boolean; error?: string; message?: string; code?: string; data?: T } | null = null;
   const text = await response.text();
   if (text) {
     try {
@@ -130,6 +140,7 @@ export async function genHealthRequest<T = Record<string, unknown>>(
       success: false,
       status: response.status,
       error: payload?.error || payload?.message || `GenHealth API error (${response.status})`,
+      code: payload?.code ?? null,
       data: (payload?.data as T | undefined) ?? null,
     };
   }
@@ -138,6 +149,7 @@ export async function genHealthRequest<T = Record<string, unknown>>(
     success: payload?.success !== false,
     status: response.status,
     error: payload?.error ?? null,
+    code: payload?.code ?? null,
     data: (payload?.data as T | undefined) ?? (payload as T | null),
   };
 }
