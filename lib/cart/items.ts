@@ -69,6 +69,29 @@ export function cartItemFromLab(lab: Lab, gender?: "Men" | "Women"): CartItem {
   };
 }
 
+export function cartItemFromCatalogId(id: string): CartItem | null {
+  const product = products.find(
+    (item) =>
+      item.listed !== false &&
+      (item.clientProductId === id ||
+        item.threeMonthProductId === id ||
+        item.variants?.some((variant) => variant.clientProductId === id || variant.threeMonthProductId === id)),
+  );
+  if (product) {
+    const listed = presentListedProduct(product);
+    const variant = listed.variants?.find((item) => item.clientProductId === id || item.threeMonthProductId === id);
+    return cartItemFromProduct(listed, variant);
+  }
+  const lab = labs.find(
+    (item) => item.clientProductId === id || item.clientProductIds?.Men === id || item.clientProductIds?.Women === id,
+  );
+  if (lab) {
+    const gender = lab.clientProductIds?.Men === id ? "Men" : lab.clientProductIds?.Women === id ? "Women" : undefined;
+    return cartItemFromLab(lab, gender);
+  }
+  return cartItemFromSlug(id);
+}
+
 export function cartItemFromSlug(slug: string, variantName?: string) {
   const found = products.find((item) => item.slug === slug);
   if (found) {
