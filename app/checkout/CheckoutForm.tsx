@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/components/cart/CartProvider";
-import { cartItemFromCatalogId, threeMonthCartNote } from "@/lib/cart/items";
+import { cartItemFromSlug, threeMonthCartNote } from "@/lib/cart/items";
 import { cartRuleIssue, isQuantityCapped, QUANTITY_LIMIT_MESSAGE } from "@/lib/cart/rules";
 import { cartSubtotal } from "@/lib/cart/types";
 import { getProduct, labs } from "@/lib/content/products";
@@ -45,11 +45,11 @@ import {
   warmGateway,
 } from "@/lib/nmi/collect";
 import { ALLOW_LIVE_NMI_CHARGES } from "@/lib/nmi/flags";
-import { markCheckoutSettled } from "@/lib/cart/settled";
 
 export type CheckoutFormProps = {
   catalog: CatalogItem[];
-  seedProducts?: string[];
+  seedProduct?: string;
+  seedVariant?: string;
 };
 
 const fieldClass =
@@ -85,9 +85,9 @@ function isHormoneSlug(slug: string) {
   return getProduct(slug)?.category === "hormone";
 }
 
-export function CheckoutForm({ catalog, seedProducts = [] }: CheckoutFormProps) {
+export function CheckoutForm({ catalog, seedProduct, seedVariant }: CheckoutFormProps) {
   const router = useRouter();
-  const { items, addItem, setQuantity, removeItem, clear, ready, rejection } = useCart();
+  const { items, addItem, setQuantity, removeItem, ready, rejection } = useCart();
   const [openStep, setOpenStep] = useState<CheckoutStepId>("details");
   const [contact, setContact] = useState(emptyContact);
   const [shipping, setShipping] = useState(emptyShipping);
@@ -99,16 +99,47 @@ export function CheckoutForm({ catalog, seedProducts = [] }: CheckoutFormProps) 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [pending, setPending] = useState(false);
   const seededRef = useRef(false);
-  const [nmi, setNmi] = useState<typeof NMI_UNAVAILABLE | null>(null);
+  const [nmi, setNmi] = useState<typeof NMI_UNAVAILABLE | null>(ALLOW_LIVE_NMI_CHARGES ? null : NMI_UNAVAILABLE);
   const [collectKey, setCollectKey] = useState<string | null>(null);
   const fieldsMounted = useSyncExternalStore(subscribeMounted, () => true, () => false);
   const collectReady = Boolean(
     nmi?.configured && collectKey === `${nmi.tokenizationKey}|${nmi.gatewayBaseUrl}`,
   );
   const dobBounds = useMemo(() => getDobInputBounds(), []);
+  const steps = useMemo(
+    () => (ALLOW_LIVE_NMI_CHARGES ? CHECKOUT_STEPS : CHECKOUT_STEPS.filter((step) => step.id !== "payment")),
+    [],
+  );
 
   useEffect(() => {
-    if (!fieldsMounted || !nmi?.configured) return;
+    if (!ALLOW_LIVE_NMI_CHARGES) return;
+    let cancelled = false;
+    fetch("/api/checkout/nmi")
+      .then((response) => response.json())
+      .then((data) => {
+        if (cancelled) return;
+        const tokenizationKey = typeof data.tokenizationKey === "string" ? data.tokenizationKey : "";
+        const gatewayBaseUrl =
+          typeof data.gatewayBaseUrl === "string" ? data.gatewayBaseUrl : "https://secure.nmi.com";
+        setNmi({
+          configured: Boolean(data.configured) && Boolean(tokenizationKey),
+          tokenizationKey,
+          gatewayBaseUrl,
+          chargesEnabled: Boolean(data.chargesEnabled),
+        });
+        if (tokenizationKey) warmGateway(gatewayBaseUrl);
+        else setCardError("Payment fields could not load. Refresh the page, or contact support if it keeps happening.");
+      })
+      .catch(() => {
+        if (!cancelled) setNmi(NMI_UNAVAILABLE);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!ALLOW_LIVE_NMI_CHARGES || !fieldsMounted || !nmi?.configured) return;
     let cancelled = false;
     const key = `${nmi.tokenizationKey}|${nmi.gatewayBaseUrl}`;
     loadCollectJs(nmi.tokenizationKey, nmi.gatewayBaseUrl)
@@ -143,60 +174,26 @@ export function CheckoutForm({ catalog, seedProducts = [] }: CheckoutFormProps) 
     };
   }, [fieldsMounted, nmi]);
 
-  const matches = useMemo(() => {
-    const list = Array.isArray(catalog) ? catalog : [];
-    const found: CatalogItem[] = [];
-    for (const line of items) {
-      const match = matchCatalogItem(list, {
-        product: line.slug,
-        variant: line.variant,
-        clientProductId: line.clientProductId,
-      });
-      if (match && !found.some((item) => item.clientProductId === match.clientProductId)) found.push(match);
-    }
-    return found;
-  }, [catalog, items]);
-  const selected = matches[0];
-  const collectCard = ALLOW_LIVE_NMI_CHARGES || matches.some((item) => item.kind === "product");
-  const steps = collectCard ? CHECKOUT_STEPS : CHECKOUT_STEPS.filter((step) => step.id !== "payment");
-
   useEffect(() => {
-    if (!collectCard) return;
-    let cancelled = false;
-    fetch("/api/checkout/nmi")
-      .then((response) => response.json())
-      .then((data) => {
-        if (cancelled) return;
-        const tokenizationKey = typeof data.tokenizationKey === "string" ? data.tokenizationKey : "";
-        const gatewayBaseUrl =
-          typeof data.gatewayBaseUrl === "string" ? data.gatewayBaseUrl : "https://secure.nmi.com";
-        setNmi({
-          configured: Boolean(data.configured) && Boolean(tokenizationKey),
-          tokenizationKey,
-          gatewayBaseUrl,
-          chargesEnabled: Boolean(data.chargesEnabled),
-        });
-        if (tokenizationKey) warmGateway(gatewayBaseUrl);
-        else setCardError("Payment fields could not load. Refresh the page, or contact support if it keeps happening.");
-      })
-      .catch(() => {
-        if (!cancelled) setNmi(NMI_UNAVAILABLE);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [collectCard]);
-
-  useEffect(() => {
-    if (!ready || seededRef.current || seedProducts.length === 0) return;
-    for (const seed of seedProducts) {
-      const seededItem = cartItemFromCatalogId(seed);
-      if (!seededItem) continue;
-      const already = items.some((item) => item.id === seededItem.id || item.clientProductId === seed);
-      if (!already) addItem({ ...seededItem, quantity: 1 }, { open: false });
+    if (!ready || seededRef.current || !seedProduct) return;
+    const already = items.some(
+      (item) => item.slug === seedProduct && (!seedVariant || item.variant === seedVariant),
+    );
+    if (!already) {
+      const seededItem = cartItemFromSlug(seedProduct, seedVariant);
+      if (seededItem) addItem({ ...seededItem, quantity: 1 }, { open: false });
     }
     seededRef.current = true;
-  }, [addItem, items, ready, seedProducts]);
+  }, [addItem, items, ready, seedProduct, seedVariant]);
+
+  const selected = useMemo(() => {
+    const list = Array.isArray(catalog) ? catalog : [];
+    for (const line of items) {
+      const match = matchCatalogItem(list, { product: line.slug, variant: line.variant });
+      if (match) return match;
+    }
+    return undefined;
+  }, [catalog, items]);
 
   const hasLabs = items.some((item) => isLabSlug(item.slug));
   const hasHormone = items.some((item) => isHormoneSlug(item.slug));
@@ -207,10 +204,7 @@ export function CheckoutForm({ catalog, seedProducts = [] }: CheckoutFormProps) 
   const shippingDone = isShippingComplete(shipping) && !blockedByState && !(hasLabs && isPoBoxAddress(shipping.address1));
   const subtotal = cartSubtotal(items);
   const bagNotice = rejection || cartRuleIssue(items);
-  const payableTotal = matches
-    .filter((item) => item.kind !== "lab" || ALLOW_LIVE_NMI_CHARGES)
-    .reduce((sum, item) => sum + (item.amount ?? 0), 0);
-  const payLabel = collectCard && payableTotal > 0 ? `PAY ${formatPrice(payableTotal)}` : "COMPLETE CHECKOUT";
+  const payLabel = ALLOW_LIVE_NMI_CHARGES && subtotal > 0 ? `PAY ${formatPrice(subtotal)}` : "COMPLETE CHECKOUT";
 
   function patchContact(update: Partial<ContactState>) {
     setContact((current) => ({ ...current, ...update }));
@@ -303,19 +297,23 @@ export function CheckoutForm({ catalog, seedProducts = [] }: CheckoutFormProps) 
       return;
     }
 
-    if (collectCard && (!nmi?.configured || !collectReady)) {
-      setOpenStep("payment");
-      setCardError(
-        nmi && !nmi.configured
-          ? "Payment fields could not load. Refresh the page, or contact support if it keeps happening."
-          : "Payment is still loading. Please wait a moment and try again.",
-      );
-      return;
+    if (ALLOW_LIVE_NMI_CHARGES) {
+      if (nmi?.configured) {
+        if (!collectReady) {
+          setOpenStep("payment");
+          setError("Payment is still loading. Please wait a moment and try again.");
+          return;
+        }
+      } else if (!nmi || nmi.chargesEnabled) {
+        setOpenStep("payment");
+        setCardError("Payment fields could not load. Refresh the page, or contact support if it keeps happening.");
+        return;
+      }
     }
 
     setPending(true);
     let token = "";
-    if (collectCard) {
+    if (ALLOW_LIVE_NMI_CHARGES && nmi?.configured) {
       try {
         token = await requestPaymentToken();
       } catch (tokenErr) {
@@ -327,7 +325,6 @@ export function CheckoutForm({ catalog, seedProducts = [] }: CheckoutFormProps) 
     }
     const payload = {
       clientProductId: selected.clientProductId,
-      clientProductIds: matches.map((item) => item.clientProductId),
       product: items[0]?.slug,
       variant: items[0]?.variant,
       firstName: contact.firstName,
@@ -379,8 +376,6 @@ export function CheckoutForm({ catalog, seedProducts = [] }: CheckoutFormProps) 
           productName: items.map((item) => item.name).join(", ") || data.productName,
         }),
       );
-      markCheckoutSettled();
-      clear();
       router.push("/checkout/success");
     } catch {
       setError("Network error. Try again in a moment.");
@@ -389,7 +384,7 @@ export function CheckoutForm({ catalog, seedProducts = [] }: CheckoutFormProps) 
     }
   }
 
-  const paymentReady = !collectCard || Boolean(nmi?.configured && collectReady);
+  const paymentReady = !ALLOW_LIVE_NMI_CHARGES || (nmi ? (nmi.configured ? collectReady : !nmi.chargesEnabled) : false);
   const submitDisabled =
     pending || !ready || items.length === 0 || blockedByScreening || blockedByState || !paymentReady;
 
@@ -675,7 +670,7 @@ export function CheckoutForm({ catalog, seedProducts = [] }: CheckoutFormProps) 
                       Try a different shipping state, or remove the hormone therapy item to continue.
                     </p>
                   </div>
-                ) : collectCard ? (
+                ) : ALLOW_LIVE_NMI_CHARGES ? (
                   <ContinueButton onClick={() => advance("shipping")}>Continue to payment</ContinueButton>
                 ) : (
                   <p className="mt-4 text-sm text-white/75">
@@ -686,7 +681,7 @@ export function CheckoutForm({ catalog, seedProducts = [] }: CheckoutFormProps) 
             ) : null}
           </AccordionCard>
 
-          {collectCard ? (
+          {ALLOW_LIVE_NMI_CHARGES ? (
           <AccordionCard
             step={4}
             title="Payment"
@@ -758,7 +753,7 @@ export function CheckoutForm({ catalog, seedProducts = [] }: CheckoutFormProps) 
           <span aria-hidden>→</span>
         </button>
         <p className="mt-3 text-center text-sm text-white/75">
-          {collectCard ? "By paying you agree to our " : "By submitting you agree to our "}
+          {ALLOW_LIVE_NMI_CHARGES ? "By paying you agree to our " : "By submitting you agree to our "}
           <Link href="/legal/terms-of-service" target="_blank" className="underline">
             terms of service
           </Link>
