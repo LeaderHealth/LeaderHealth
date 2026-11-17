@@ -176,10 +176,10 @@ function hubPost(post: ContentSubmission, accounts: SocialAccountView[], payment
     detail: copy.detail,
     metrics: post.publicationStatus === "tracking_active" ? metricLines(post, post.format === "tiktok" ? "Not available yet" : undefined) : [],
     metricsNote: metricsOriginLabel(post.metricsSource, post.metricsRecordedAt),
-    counts: { views: post.views, likes: post.likes, comments: post.comments, shares: post.shares },
+    counts: { views: post.views, likes: post.likes, comments: post.comments, shares: post.shares, saves: post.saves },
     hasManual: post.metricsSource === "manual",
     changeRequest: post.metricChange
-      ? { views: post.metricChange.views, likes: post.metricChange.likes, comments: post.metricChange.comments, shares: post.metricChange.shares, note: post.metricChange.note }
+      ? { views: post.metricChange.views, likes: post.metricChange.likes, comments: post.metricChange.comments, shares: post.metricChange.shares, saves: post.metricChange.saves, note: post.metricChange.note }
       : null,
     askManual: manualReportDue({ ...post, connected }),
     connectHref,

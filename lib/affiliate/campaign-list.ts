@@ -222,9 +222,14 @@ export function campaignListRows(input: {
           { label: "Waiting for review", value: String(pending) },
           { label: "Base earned so far", value: money(earned) },
         ],
-        affiliates: affiliates.map(({ earned, verified: _verified, ...affiliate }) => ({
-          ...affiliate,
-          earnedLabel: money(earned),
+        affiliates: affiliates.map((affiliate) => ({
+          code: affiliate.code,
+          name: affiliate.name,
+          initials: affiliate.initials,
+          state: affiliate.state,
+          posts: affiliate.posts,
+          terms: affiliate.terms,
+          earnedLabel: money(affiliate.earned),
         })),
       };
     });

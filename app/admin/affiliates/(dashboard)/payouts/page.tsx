@@ -26,7 +26,7 @@ import {
 } from "@/lib/affiliate/payouts";
 import { AffiliateStoreError, loadAffiliateOverview } from "@/lib/affiliate/store";
 import { adminHasFullAccess, adminSessionActor } from "@/lib/affiliate/session";
-import { approveDeliverablePaymentAction, adjustDeliverableAction, approvePayoutAction, forfeitDeliverableAction, markDeliverablePaidAction, recheckDeliverableAction, reinstateDeliverableAction } from "../../actions";
+import { approveDeliverablePaymentAction, adjustDeliverableAction, approvePayoutAction, forfeitDeliverableAction, markDeliverablePaidAction, markPayoutPaidAction, recheckDeliverableAction, reinstateDeliverableAction } from "../../actions";
 import { approveWebsitePayoutAction, markWebsitePayoutPaidAction } from "../../payment-actions";
 import { ADMIN_ERRORS } from "../../messages";
 

@@ -210,6 +210,7 @@ export async function requestMetricChangeAction(formData: FormData) {
       likes: String(formData.get("likes") ?? ""),
       comments: String(formData.get("comments") ?? ""),
       shares: String(formData.get("shares") ?? ""),
+      saves: String(formData.get("saves") ?? ""),
       note: String(formData.get("note") ?? ""),
     });
   } catch (error) {

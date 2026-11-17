@@ -27,7 +27,7 @@ export function lockedOfferFee(existingFee: number | null, offerFee: number | nu
 }
 
 export function lockedPayTerms(
-  existing: { viewRateCents: number | null; maxPayCents?: number | null; trackingDays?: number | null },
+  existing: { viewRateCents: number | null; maxPayCents?: number | null; trackingDays?: number | null; engagementRateCents?: number | null },
   incoming: LockedPayTerms,
 ): LockedPayTerms {
   if (existing.viewRateCents != null) {
@@ -35,6 +35,7 @@ export function lockedPayTerms(
       viewRateCents: existing.viewRateCents,
       maxPayCents: existing.maxPayCents ?? null,
       trackingDays: existing.trackingDays ?? DEFAULT_TRACKING_DAYS,
+      engagementRateCents: existing.engagementRateCents ?? 0,
     };
   }
   return incoming;

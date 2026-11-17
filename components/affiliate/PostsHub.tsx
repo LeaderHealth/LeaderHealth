@@ -53,6 +53,7 @@ function MetricChangeForm({ post }: { post: HubPost }) {
     likes: countFieldValue(post.changeRequest?.likes ?? post.counts.likes),
     comments: countFieldValue(post.changeRequest?.comments ?? post.counts.comments),
     shares: countFieldValue(post.changeRequest?.shares ?? post.counts.shares),
+    saves: countFieldValue(post.changeRequest?.saves ?? post.counts.saves),
     note: post.changeRequest?.note ?? "",
   }));
   const [draft, setDraft] = useState<ChangeDraft | null>(null);
@@ -66,6 +67,7 @@ function MetricChangeForm({ post }: { post: HubPost }) {
           <div><dt className="text-[#7A5C58]">Likes</dt><dd className="mt-1">{countText(draft.likes)}</dd></div>
           <div><dt className="text-[#7A5C58]">Comments</dt><dd className="mt-1">{countText(draft.comments)}</dd></div>
           <div><dt className="text-[#7A5C58]">Shares</dt><dd className="mt-1">{countText(draft.shares)}</dd></div>
+          <div><dt className="text-[#7A5C58]">Saves</dt><dd className="mt-1">{countText(draft.saves)}</dd></div>
         </dl>
         {draft.note.trim() ? <p className="text-sm text-[#4A3A37]">{draft.note.trim()}</p> : null}
         <form action={requestMetricChangeAction} className="flex flex-col gap-2.5 sm:flex-row">
@@ -97,9 +99,9 @@ function MetricChangeForm({ post }: { post: HubPost }) {
           <CountField name="likes" label="Likes" value={values.likes} onChange={(value) => setValues((current) => ({ ...current, likes: value }))} />
           <CountField name="comments" label="Comments" value={values.comments} onChange={(value) => setValues((current) => ({ ...current, comments: value }))} />
           <CountField name="shares" label="Shares" value={values.shares} onChange={(value) => setValues((current) => ({ ...current, shares: value }))} />
+          <CountField name="saves" label="Saves" value={values.saves} onChange={(value) => setValues((current) => ({ ...current, saves: value }))} />
         </div>
         <label className="block text-sm font-medium text-ink">
-          <CountField name="saves" label="Saves" value={values.saves} onChange={(value) => setValues((current) => ({ ...current, saves: value }))} />
           Note
           <textarea name="note" value={values.note} onChange={(event) => setValues((current) => ({ ...current, note: event.target.value }))} rows={3} className={`${fieldClass} mt-1`} />
         </label>
@@ -139,11 +141,11 @@ export type HubPost = {
   detail: string;
   metrics: { label: string; value: string }[];
   metricsNote: string;
-  counts: { views: number | null; likes: number | null; comments: number | null; shares: number | null };
-  hasManual: boolean;
   counts: { views: number | null; likes: number | null; comments: number | null; shares: number | null; saves: number | null };
   hasManual: boolean;
   changeRequest: { views: number | null; likes: number | null; comments: number | null; shares: number | null; saves: number | null; note: string } | null;
+  askManual: boolean;
+  connectHref: string | null;
   history: HistoryEvent[];
   slides: { href: string; downloadHref: string; media: "photo" | "video"; caption: string }[];
   batchId: string;
@@ -1351,6 +1353,9 @@ function PostDetail({
     saves: post.counts.saves == null ? "" : String(post.counts.saves),
   }));
   const [countDraft, setCountDraft] = useState<{ views: string; likes: string; comments: string; shares: string; saves: string } | null>(null);
+  const joinedEdit = carousel
+    ? editSlides.map((slide) => slide.caption.trim()).filter(Boolean).join("\n\n")
+    : editCaption;
   const disclosed = hasDisclosure(joinedEdit, disclosureLine);
   const linked = hasTracking(joinedEdit, trackingUrl, affiliateCode);
   const singleIssue = !carousel && editFile ? (post.format ? formatUploadIssue(post.format, editFile) : fileIssue(editFile)) : "";
@@ -1707,17 +1712,17 @@ function PostDetail({
                     <div><dt className="text-[#7A5C58]">Likes</dt><dd className="mt-1">{countText(countDraft.likes)}</dd></div>
                     <div><dt className="text-[#7A5C58]">Comments</dt><dd className="mt-1">{countText(countDraft.comments)}</dd></div>
                     <div><dt className="text-[#7A5C58]">Shares</dt><dd className="mt-1">{countText(countDraft.shares)}</dd></div>
+                    <div><dt className="text-[#7A5C58]">Saves</dt><dd className="mt-1">{countText(countDraft.saves)}</dd></div>
                   </dl>
                   <form action={saveManualMetricsAction} className="flex flex-col gap-2.5 sm:flex-row">
-                    <div><dt className="text-[#7A5C58]">Saves</dt><dd className="mt-1">{countText(countDraft.saves)}</dd></div>
                     <input type="hidden" name="id" value={post.id} />
                     <input type="hidden" name="views" value={countDraft.views} />
                     <input type="hidden" name="likes" value={countDraft.likes} />
                     <input type="hidden" name="comments" value={countDraft.comments} />
                     <input type="hidden" name="shares" value={countDraft.shares} />
+                    <input type="hidden" name="saves" value={countDraft.saves} />
                     <button type="submit" className="inline-flex h-11 items-center justify-center rounded-full bg-ink px-[22px] text-sm font-medium text-white">Confirm</button>
                     <button type="button" onClick={() => setCountDraft(null)} className="inline-flex h-11 items-center justify-center rounded-full border border-[#CDBDBA] bg-white px-[22px] text-sm font-medium text-ink">Cancel</button>
-                    <input type="hidden" name="saves" value={countDraft.saves} />
                   </form>
                 </div>
               ) : null}
@@ -1735,9 +1740,9 @@ function PostDetail({
                     <CountField name="likes" label="Likes" value={counts.likes} onChange={(value) => setCounts((current) => ({ ...current, likes: value }))} />
                     <CountField name="comments" label="Comments" value={counts.comments} onChange={(value) => setCounts((current) => ({ ...current, comments: value }))} />
                     <CountField name="shares" label="Shares" value={counts.shares} onChange={(value) => setCounts((current) => ({ ...current, shares: value }))} />
+                    <CountField name="saves" label="Saves" value={counts.saves} onChange={(value) => setCounts((current) => ({ ...current, saves: value }))} />
                   </div>
                   <button type="submit" className="inline-flex h-11 w-full items-center justify-center rounded-full bg-ink px-[22px] text-sm font-medium text-white sm:w-auto sm:self-start">Save numbers</button>
-                    <CountField name="saves" label="Saves" value={counts.saves} onChange={(value) => setCounts((current) => ({ ...current, saves: value }))} />
                 </form>
                 {post.connectHref ? (
                   <a href={post.connectHref} className="inline-flex h-11 w-full items-center justify-center rounded-full border border-[#CDBDBA] bg-white px-[22px] text-sm font-medium text-ink sm:w-auto sm:self-start">Connect account</a>
@@ -1799,11 +1804,11 @@ function PostDetail({
       <section className="flex flex-col gap-3">
         <h3 className="text-base font-semibold">History</h3>
         <ol className="flex flex-col">
-          {history.map((event, index) => (
+          {post.history.map((event, index) => (
             <li key={`${event.label}-${event.when}-${index}`} className="flex gap-3.5">
               <div className="flex w-3.5 shrink-0 flex-col items-center">
                 <span className={`mt-[5px] size-2.5 rounded-full ${event.tone === "good" ? "bg-[#1D6340]" : event.tone === "bad" ? "bg-[#9B2C1F]" : "bg-ink"}`} />
-                <span className={`w-0.5 flex-1 ${index === history.length - 1 ? "bg-transparent" : "bg-[#E8DEDC]"}`} />
+                <span className={`w-0.5 flex-1 ${index === post.history.length - 1 ? "bg-transparent" : "bg-[#E8DEDC]"}`} />
               </div>
               <div className="flex flex-col gap-0.5 pb-4">
                 <span className="text-sm font-medium">{event.label}</span>

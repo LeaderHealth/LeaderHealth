@@ -39,6 +39,7 @@ const ready = {
   linkInstructions: "Put your tracking link in the caption.",
   baseMode: "post",
   amount: "150",
+  performancePay: false,
   affiliates: [{ code: "88h4dcji", amount: "150" }],
 };
 

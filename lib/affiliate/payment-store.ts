@@ -7,7 +7,6 @@ import {
   categoryLabel,
   defaultPaymentRates,
   storedRateCents,
-  type PaymentCategory,
   type PaymentRates,
 } from "./payment-rates";
 
