@@ -421,22 +421,20 @@ export async function markDeliverablePaid(input: { postId: string; amount: unkno
   const reference = payoutReference(input.reference);
   const db = requireStore();
   const payRef = db.collection("deliverablePayments").doc(input.postId);
-  let paid: { code: string; paidCents: number; reference: string } | null = null;
-  await db.runTransaction(async (tx) => {
+  return db.runTransaction(async (tx) => {
     const paySnap = await tx.get(payRef);
     const payment = paymentFrom(input.postId, paySnap.data());
     if (markPaidDecision(payment) !== "pay" || !payment) {
       throw new DeliverablePaymentError("status", "Approve the marketing payment before marking it paid.");
     }
-    paid = { code: payment.code, paidCents, reference };
     tx.update(payRef, {
       status: "paid",
       paidCents,
       paidAt,
       reference,
     });
+    return { code: payment.code, paidCents, reference };
   });
-  return paid;
 }
 
 export async function recheckDeliverable(postId: string) {

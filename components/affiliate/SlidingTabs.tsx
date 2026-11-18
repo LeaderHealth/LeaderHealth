@@ -39,12 +39,9 @@ export function SlidingTabs({
   const [travel, setTravel] = useState<string | null>(null);
   const layoutKey = items.map((item) => `${item.id}:${item.label}:${item.note ?? ""}:${item.badge ?? ""}:${item.disabled ? 1 : 0}`).join("|");
   const active = items.find((item) => item.current && !item.disabled);
+  if (travel && active?.id === travel) setTravel(null);
   const shownId = travel ?? active?.id;
   const activeBox = shownId ? frames[shownId] : undefined;
-
-  useEffect(() => {
-    if (travel && active?.id === travel) setTravel(null);
-  }, [travel, active?.id]);
 
   useEffect(() => {
     return () => {
