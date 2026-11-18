@@ -101,7 +101,12 @@ export async function submitPostsAction(formData: FormData) {
   try {
     const posts = batchFrom(formData);
     count = posts.length;
-    await submitContentBatch({ code: affiliate.code, posts, termsAccepted: String(formData.get("terms") ?? "") === "yes" });
+    await submitContentBatch({
+      code: affiliate.code,
+      posts,
+      termsAccepted: String(formData.get("terms") ?? "") === "yes",
+      agreementId: String(formData.get("agreement") ?? ""),
+    });
   } catch (error) {
     if (error instanceof PostReviewError) linkFail(error.code, formData);
     console.error("[affiliate] post batch failed", error instanceof Error ? error.message : "unknown");

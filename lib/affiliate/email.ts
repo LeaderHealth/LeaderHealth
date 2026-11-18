@@ -170,6 +170,34 @@ function affiliatePostsUrl() {
   return `${affiliateSiteOrigin()}/affiliates/posts`;
 }
 
+function affiliatePayoutsUrl() {
+  return `${affiliateSiteOrigin()}/affiliates/payouts`;
+}
+
+function payoutMoney(cents: number) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
+}
+
+function payoutEmailHtml(input: { preview: string; eyebrow: string; heading: string; body: string; amount: string; note: string }) {
+  const url = affiliatePayoutsUrl();
+  return affiliateEmailFrame(
+    input.preview,
+    `<p style="margin:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;line-height:14px;text-transform:uppercase;color:#e33d4d;">${escapeHtml(input.eyebrow)}</p>
+                <h1 class="lh-title" style="margin:0 0 12px;font-family:'Instrument Serif',Georgia,'Times New Roman',serif;font-size:36px;line-height:1.15;font-weight:400;font-style:normal;color:#321110;">${escapeHtml(input.heading)}</h1>
+                <p style="margin:0 0 24px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#4a2a26;">${escapeHtml(input.body)}</p>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+                  <tr>
+                    <td style="background:#f7f3f5;border-radius:18px;padding:18px 20px;">
+                      <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;line-height:14px;text-transform:uppercase;color:#7a5a56;">Amount</p>
+                      <p class="lh-title" style="margin:6px 0 0;font-family:'Instrument Serif',Georgia,'Times New Roman',serif;font-size:32px;line-height:1.2;font-weight:400;color:#321110;">${escapeHtml(input.amount)}</p>
+                    </td>
+                  </tr>
+                </table>
+                <p style="margin:0 0 28px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#7a5a56;">${escapeHtml(input.note)}</p>
+                ${emailButton("View payouts", url)}`,
+  );
+}
+
 export function postApprovalExcerpt(caption: string) {
   const excerpt = caption.replace(/\s+/g, " ").trim();
   if (excerpt.length <= 140) return excerpt;
@@ -234,6 +262,49 @@ export async function sendAffiliateWeeklySalesEmail(input: {
 
 function formatWeeklyMoney(cents: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
+}
+
+export async function sendPayoutApprovedEmail(email: string, label: string, amountCents: number) {
+  const amount = payoutMoney(amountCents);
+  const url = affiliatePayoutsUrl();
+  const body = `${label} is approved for ${amount}. Leader Health sends payouts manually. You will get another email when it goes out.`;
+  await deliverAffiliateEmail(
+    email,
+    "Your Leader Health payout was approved",
+    [body, "", "This is not an automatic deposit.", "", url].join("\n"),
+    "Payout approval email failed",
+    payoutEmailHtml({
+      preview: `${label} was approved.`,
+      eyebrow: "Payout approved",
+      heading: "Approved, not sent yet",
+      body,
+      amount,
+      note: "This is not an automatic deposit. Leader Health sends each payout manually.",
+    }),
+    [logoAttachment()],
+  );
+}
+
+export async function sendPayoutSentEmail(email: string, label: string, amountCents: number, reference = "") {
+  const amount = payoutMoney(amountCents);
+  const url = affiliatePayoutsUrl();
+  const note = reference.trim() ? `Reference: ${reference.trim()}.` : "The payment is recorded on your payouts page.";
+  const body = `Leader Health sent ${amount} for ${label}. This payout was sent manually.`;
+  await deliverAffiliateEmail(
+    email,
+    "Your Leader Health payout was sent",
+    [body, "", note, "", url].join("\n"),
+    "Payout sent email failed",
+    payoutEmailHtml({
+      preview: `${amount} was sent for ${label}.`,
+      eyebrow: "Payout sent",
+      heading: "Your payout was sent",
+      body,
+      amount,
+      note,
+    }),
+    [logoAttachment()],
+  );
 }
 
 export async function sendPostApprovedEmail(email: string, caption: string) {

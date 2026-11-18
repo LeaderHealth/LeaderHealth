@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { saveCampaignFlowAction } from "@/app/admin/affiliates/actions";
 import {
   CAMPAIGN_CONTENT_TYPES,
@@ -103,11 +103,11 @@ export function CampaignCreate({ affiliates, rates = EMPTY_RATES }: { affiliates
   const [guide, setGuide] = useState("");
   const [disc, setDisc] = useState(DEFAULT_CAMPAIGN_DISCLOSURE);
   const [linkI, setLinkI] = useState(DEFAULT_CAMPAIGN_LINK_INSTRUCTIONS);
-  const [baseMode, setBaseMode] = useState<"post" | "campaign">("post");
   const [performance, setPerformance] = useState(false);
   const [amt, setAmt] = useState("");
   const [sel, setSel] = useState<string[]>([]);
   const [over, setOver] = useState<Record<string, string>>({});
+  const campaignPrice = useRef(amt);
   const [err, setErr] = useState("");
   const [toast, setToast] = useState("");
   const [sent, setSent] = useState(false);
@@ -128,18 +128,45 @@ export function CampaignCreate({ affiliates, rates = EMPTY_RATES }: { affiliates
     guidelines: guide,
     disclosure: disc,
     linkInstructions: linkI,
-    baseMode,
+    baseMode: "campaign",
     amount: amt,
     performancePay: performance,
     affiliates: sel.map((code) => ({ code, amount: over[code] ?? amt })),
   });
   const firstBad = [0, 1, 2, 3].find((item) => campaignStepError(item, flow())) ?? -1;
   const badBorder = (empty: boolean) => (err && empty ? "#9B2C1F" : "#CDBDBA");
-  const unitCents = (code: string) => paymentCents(over[code] ?? amt);
-  const eachCents = (code: string) => (baseMode === "post" ? unitCents(code) * postsN : unitCents(code));
-  const budget = sel.reduce((sum, code) => sum + eachCents(code), 0);
+  const priceFor = (code: string) => over[code] ?? amt;
+  const unitCents = (code: string) => paymentCents(priceFor(code));
+  const budget = sel.reduce((sum, code) => sum + unitCents(code), 0);
   const baseCents = paymentCents(amt);
-  const estimate = baseCents * (baseMode === "post" ? postsN : 1);
+  const estimate = baseCents;
+
+  useEffect(() => {
+    if (campaignPrice.current === amt) return;
+    const previous = campaignPrice.current;
+    campaignPrice.current = amt;
+    setOver((current) => {
+      let changed = false;
+      const next = { ...current };
+      for (const [code, value] of Object.entries(next)) {
+        if (value === previous) {
+          delete next[code];
+          changed = true;
+        }
+      }
+      return changed ? next : current;
+    });
+  }, [amt]);
+
+  function setAffiliatePrice(code: string, value: string) {
+    setOver((current) => {
+      const next = { ...current };
+      if (value === amt) delete next[code];
+      else next[code] = value;
+      return next;
+    });
+    setErr("");
+  }
 
   function toggle(list: string[], value: string, setList: (next: string[]) => void) {
     setList(list.includes(value) ? list.filter((item) => item !== value) : [...list, value]);
@@ -347,13 +374,10 @@ export function CampaignCreate({ affiliates, rates = EMPTY_RATES }: { affiliates
                   <h3 className="text-[22px] font-semibold">Payment</h3>
                   <div className="flex flex-col gap-2">
                     <span className="text-sm font-semibold">Fixed base payment <span className="text-[#9B2C1F]">*</span></span>
-                    <div role="group" aria-label="Paid" className="flex flex-wrap gap-2">
-                      <Chip pressed={baseMode === "post"} onClick={() => { setBaseMode("post"); setErr(""); }}>Per post</Chip>
-                      <Chip pressed={baseMode === "campaign"} onClick={() => { setBaseMode("campaign"); setErr(""); }}>Per campaign</Chip>
-                    </div>
+                    <p className="inline-flex h-10 w-fit items-center rounded-full bg-ink px-4 text-sm font-medium text-white">Per campaign</p>
                   </div>
                   <label htmlFor="cAmt" className="flex max-w-xs flex-col gap-1.5 text-sm font-semibold">
-                    <span>{baseMode === "post" ? "Amount per post" : "Amount for the whole campaign"}</span>
+                    <span>Amount for the whole campaign</span>
                     <span className="flex h-[50px] items-center rounded-xl border bg-white px-3.5" style={{ borderColor: badBorder(paymentCents(amt) === 0) }}>
                       <span aria-hidden="true" className="pr-1.5 text-lg text-[#6B5A57]">$</span>
                       <input id="cAmt" inputMode="decimal" value={amt} onChange={(event) => { setAmt(event.target.value); setErr(""); }} className="min-w-0 flex-1 border-0 bg-transparent text-lg font-normal text-ink outline-none" />
@@ -395,7 +419,7 @@ export function CampaignCreate({ affiliates, rates = EMPTY_RATES }: { affiliates
                     <span className="text-sm text-[#4A3A37]">Estimated payment per affiliate</span>
                     <span className="text-[26px] font-semibold">{money(estimate)}</span>
                     <span className="text-[13px] text-[#6B5A57]">
-                      {baseMode === "post" ? `${money(baseCents)} × ${postsN} ${postsN === 1 ? "post" : "posts"}` : "One payment when all posts are verified"}
+                      One payment when all posts are verified
                       {performance ? " · performance pay is added after results" : ""}
                     </span>
                   </div>
@@ -404,7 +428,7 @@ export function CampaignCreate({ affiliates, rates = EMPTY_RATES }: { affiliates
               {step === 3 ? (
                 <div className="flex flex-col gap-4">
                   <h3 className="text-[22px] font-semibold">Assign affiliates</h3>
-                  <p className="text-sm text-[#4A3A37]">Only these affiliates will see the campaign. You can change one affiliate’s payment before sending.</p>
+                  <p className="text-sm text-[#4A3A37]">Only these affiliates will see the campaign. Each one is paid the campaign price. Change the amount only when that affiliate has a different price.</p>
                   {affiliates.length === 0 ? <p className="text-sm text-[#6B5A57]">No affiliate accounts yet.</p> : null}
                   {affiliates.map((affiliate) => {
                     const on = sel.includes(affiliate.code);
@@ -428,21 +452,17 @@ export function CampaignCreate({ affiliates, rates = EMPTY_RATES }: { affiliates
                         </label>
                         {on ? (
                           <div className="flex items-center gap-2">
-                            <span className="text-[13px] text-[#6B5A57]">{baseMode === "post" ? "per post" : "for the campaign"}</span>
+                            <span className="text-[13px] text-[#6B5A57]">for the campaign</span>
                             <span className="flex h-10 items-center rounded-[10px] border border-[#CDBDBA] px-2.5">
                               <span aria-hidden="true" className="text-[#6B5A57]">$</span>
                               <input
                                 aria-label={`Payment for ${affiliate.name}`}
                                 inputMode="decimal"
-                                value={over[affiliate.code] ?? amt}
-                                onChange={(event) => {
-                                  setOver({ ...over, [affiliate.code]: event.target.value });
-                                  setErr("");
-                                }}
+                                value={priceFor(affiliate.code)}
+                                onChange={(event) => setAffiliatePrice(affiliate.code, event.target.value)}
                                 className="w-[70px] border-0 bg-transparent text-[15px] font-semibold text-ink outline-none"
                               />
                             </span>
-                            <span className="w-[90px] text-right text-sm font-semibold">{money(eachCents(affiliate.code))}</span>
                           </div>
                         ) : null}
                       </div>
@@ -456,13 +476,13 @@ export function CampaignCreate({ affiliates, rates = EMPTY_RATES }: { affiliates
                   {[
                     { title: "Details", lines: [name, `${showDay(start)} – ${showDay(end)} · ${plats.join(", ")}`, ...(goal.trim() ? [`Goal: ${goal.trim()}`] : [])], edit: 0 },
                     { title: "Content", lines: [`${postsN} × ${types.join(" or ")} per affiliate`, `Disclosure: “${disc}”`], edit: 1 },
-                    { title: "Payment", lines: [`${money(baseCents)} ${baseMode === "post" ? "per post" : "per campaign"}, fixed`, performance ? "Performance-based pay: on. Views, engagements, verified link clicks, and eligible page views." : "Performance-based pay: off"], edit: 2 },
+                    { title: "Payment", lines: [`${money(baseCents)} per campaign, fixed`, performance ? "Performance-based pay: on. Views, engagements, verified link clicks, and eligible page views." : "Performance-based pay: off"], edit: 2 },
                     {
                       title: "Affiliates",
                       lines: sel.map((code) => {
                         const affiliate = affiliates.find((item) => item.code === code);
                         const unit = money(unitCents(code));
-                        const total = baseMode === "post" ? `${unit} per post × ${postsN} = ${money(eachCents(code))}` : `${unit} for the campaign`;
+                        const total = `${unit} for the campaign`;
                         return `${affiliate?.name ?? code} · ${total}`;
                       }),
                       edit: 3,

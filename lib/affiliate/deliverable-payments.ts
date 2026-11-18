@@ -330,7 +330,7 @@ export async function approveDeliverablePayment(postId: string) {
   const db = requireStore();
   const postRef = db.collection("contentSubmissions").doc(postId);
   const payRef = db.collection("deliverablePayments").doc(postId);
-  await db.runTransaction(async (tx) => {
+  const saved = await db.runTransaction(async (tx) => {
     const postSnap = await tx.get(postRef);
     const paySnap = await tx.get(payRef);
     if (!postSnap.exists) throw new DeliverablePaymentError("missing", "That post was not found.");
@@ -373,7 +373,7 @@ export async function approveDeliverablePayment(postId: string) {
       },
       paySnap.exists ? { postId } : null,
     );
-    if (decision === "exists") return;
+    if (decision === "exists") return null;
     if (decision === "window") throw new DeliverablePaymentError("window", `This rate can be paid after the post has been live for ${resolvedTrackingDays(trackingDays)} days and the views are on file.`);
     if (decision === "hold") throw new DeliverablePaymentError("hold", "This fee stays on hold until the post has been live for 14 days.");
     if (decision === "recheck") throw new DeliverablePaymentError("recheck", "Re-check that the post is still up before approving this fee.");
@@ -406,7 +406,9 @@ export async function approveDeliverablePayment(postId: string) {
       paidAt: null,
       reference: "",
     });
+    return { code, amountCents };
   });
+  return saved;
 }
 
 export async function markDeliverablePaid(input: { postId: string; amount: unknown; paidOn: unknown; reference: unknown }) {
@@ -419,10 +421,10 @@ export async function markDeliverablePaid(input: { postId: string; amount: unkno
   const reference = payoutReference(input.reference);
   const db = requireStore();
   const payRef = db.collection("deliverablePayments").doc(input.postId);
-  await db.runTransaction(async (tx) => {
+  return db.runTransaction(async (tx) => {
     const paySnap = await tx.get(payRef);
     const payment = paymentFrom(input.postId, paySnap.data());
-    if (markPaidDecision(payment) !== "pay") {
+    if (markPaidDecision(payment) !== "pay" || !payment) {
       throw new DeliverablePaymentError("status", "Approve the marketing payment before marking it paid.");
     }
     tx.update(payRef, {
@@ -431,6 +433,7 @@ export async function markDeliverablePaid(input: { postId: string; amount: unkno
       paidAt,
       reference,
     });
+    return { code: payment.code, paidCents, reference };
   });
 }
 

@@ -123,7 +123,7 @@ function recordFrom(data: DocumentData | undefined): MarketingCampaignRecord | n
     guidelines: storedText(data?.guidelines),
     disclosure: storedText(data?.disclosure),
     linkInstructions: storedText(data?.linkInstructions),
-    baseMode: data?.baseMode === "campaign" ? "campaign" : "post",
+    baseMode: "campaign",
     baseAmountCents: storedCents(data?.baseAmountCents),
     performancePay: data?.performancePay === true,
     affiliatePay: storedPay(data?.affiliatePay),

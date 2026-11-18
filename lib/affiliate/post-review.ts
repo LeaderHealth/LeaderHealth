@@ -18,6 +18,8 @@ import { loadMarketingCampaignRecords } from "./roi-store";
 import { DEFAULT_TRACKING_DAYS, MANUAL_REPORT_MS, REPORT_WINDOW_MS, manualReportDue, networkConnectedForPost, trackingDaysOf, type MetricsOrigin } from "./manual-checkpoint";
 import { rateFor, standingViewRateCents } from "./payment-rates";
 import { loadPaymentRates } from "./payment-store";
+import { loadAffiliateAgreement, utcAgreementToday } from "./agreements";
+import { agreementMatchesPost, postingAgreement, type PostingAgreement } from "./post-agreement";
 export { MANUAL_REPORT_MS, REPORT_WINDOW_MS, manualReportDue, networkConnectedForPost };
 export type { MetricsOrigin };
 
@@ -49,7 +51,7 @@ export type ContentStep = "approve" | "request" | "reject" | "revise";
 export type VerificationFailure = "not_connected" | "not_found" | "missing_disclosure" | "missing_link" | "unavailable";
 
 export class PostReviewError extends Error {
-  code: "invalid" | "file" | "storage" | "missing" | "unavailable" | "status" | "url" | "note" | "disclosure" | "link" | "fee" | "campaign" | "offer" | "terms" | "date";
+  code: "invalid" | "file" | "storage" | "missing" | "unavailable" | "status" | "url" | "note" | "disclosure" | "link" | "fee" | "campaign" | "offer" | "terms" | "date" | "agreement";
 
   constructor(code: PostReviewError["code"]) {
     super(code);
@@ -116,6 +118,8 @@ export type ContentSubmission = {
   maxPayCents: number | null;
   trackingDays: number | null;
   offerId: string;
+  agreementId: string;
+  agreementLabel: string;
   offerKind: string;
   offerBrief: string;
   publishBy: string;
@@ -492,6 +496,8 @@ function submissionFrom(id: string, data: DocumentData | undefined): ContentSubm
     maxPayCents: deliverableFeeCents(data.maxPayCents),
     trackingDays: trackingDaysOf(data.trackingDays),
     offerId: typeof data.offerId === "string" && !data.offerId.includes("/") ? data.offerId : "",
+    agreementId: typeof data.agreementId === "string" && !data.agreementId.includes("/") ? data.agreementId.slice(0, 128) : "",
+    agreementLabel: typeof data.agreementLabel === "string" ? data.agreementLabel.trim().slice(0, 200) : "",
     offerKind: typeof data.offerKind === "string" ? data.offerKind : "",
     offerBrief: typeof data.offerBrief === "string" ? data.offerBrief.slice(0, 800) : "",
     publishBy: typeof data.publishBy === "string" ? data.publishBy : "",
@@ -804,6 +810,17 @@ async function currentPaymentRates() {
   }
 }
 
+async function requirePostingAgreement(code: string, id: string): Promise<PostingAgreement> {
+  const trimmed = id.trim();
+  if (!trimmed || trimmed.includes("/") || trimmed.length > 128) throw new PostReviewError("agreement");
+  const agreement = await loadAffiliateAgreement(trimmed);
+  const today = utcAgreementToday();
+  if (!agreement || !agreementMatchesPost(agreement, code, trimmed, today)) throw new PostReviewError("agreement");
+  const choice = postingAgreement([agreement], today);
+  if (!choice) throw new PostReviewError("agreement");
+  return choice;
+}
+
 async function requireStandingTerms(code: string): Promise<LockedPayTerms> {
   const snap = await requireDb().collection("affiliates").doc(code).get();
   const data = snap.data();
@@ -879,7 +896,7 @@ export async function saveContentDrafts(input: { code: string; posts: BatchPostI
   return ids;
 }
 
-export async function submitContentBatch(input: { code: string; posts: BatchPostInput[]; termsAccepted: boolean }) {
+export async function submitContentBatch(input: { code: string; posts: BatchPostInput[]; termsAccepted: boolean; agreementId: string }) {
   const code = normalizeAffiliateCode(input.code);
   if (!code || input.posts.length < 1 || input.posts.length > POST_BATCH_LIMIT) throw new PostReviewError("invalid");
   const db = requireDb();
@@ -914,6 +931,8 @@ export async function submitContentBatch(input: { code: string; posts: BatchPost
   const offerIds = new Set(ready.map((entry) => entry.existing?.offerId || entry.item.offerId.trim()).filter(Boolean));
   if (offerIds.size > 1 || (offerIds.size === 1 && ready.length > 1)) throw new PostReviewError("offer");
   const standing = needsStandingFee ? await requireStandingTerms(code) : null;
+  const needsAgreement = ready.some((entry) => !(entry.existing?.offerId || entry.item.offerId.trim()));
+  const postedUnder = needsAgreement ? await requirePostingAgreement(code, input.agreementId) : null;
   const engagementRateCents = standing?.engagementRateCents ?? (await currentPaymentRates().then((rates) => (rates ? rateFor(rates, "engagements") : 0)));
   const allowed = await campaignNamesFor(code);
   const freshBatch = crypto.randomUUID();
@@ -956,7 +975,12 @@ export async function submitContentBatch(input: { code: string; posts: BatchPost
     const savedCampaign = offer?.campaign
       ? { campaign: offer.campaign }
       : campaignFields(entry.item.campaign, allowed, entry.existing ? "update" : "set");
-    const extras = { ...savedCampaign, ...proposedDateFields(entry.item.proposedPublishOn), ...revisionFields(entry.existing) };
+    const extras = {
+      ...savedCampaign,
+      ...proposedDateFields(entry.item.proposedPublishOn),
+      ...revisionFields(entry.existing),
+      ...(offer || !postedUnder ? {} : { agreementId: postedUnder.id, agreementLabel: postedUnder.label }),
+    };
     if (offer) {
       await db.runTransaction(async (tx) => {
         const offerSnap = await tx.get(db.collection("marketingOffers").doc(offer.id));

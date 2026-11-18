@@ -23,8 +23,8 @@ function record(patch: Partial<ReturnType<typeof blankCampaignRecord>>) {
 test("an assigned campaign starts as an invitation and moves when the affiliate answers", () => {
   const invited = affiliateCampaignBoard({ today: "2026-11-16", code: "aa", records: [record({})], posts: [] });
   assert.equal(invited.newCount, 1);
-  assert.equal(invited.invites[0]?.total, "$300");
-  assert.equal(invited.invites[0]?.terms, "$150 per post · total");
+  assert.equal(invited.invites[0]?.total, "$150");
+  assert.equal(invited.invites[0]?.terms, "$150 for the campaign · total");
   assert.equal(invited.invites[0]?.content, "2 Instagram reels");
 
   const accepted = affiliateCampaignBoard({

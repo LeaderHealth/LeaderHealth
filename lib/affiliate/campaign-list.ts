@@ -175,15 +175,15 @@ export function campaignListRows(input: {
         }
         if (chips.length === 0) chips.push({ text: state === "declined" ? "Declined" : "Waiting for answer", state: "todo" });
         const rate = rateCents(record, code);
-        const earned = record.baseMode === "campaign" ? (required > 0 && verified >= required ? rate : 0) : verified * rate;
-        const terms = record.baseMode === "campaign" || required < 1 ? money(rate) : `${money(rate)} × ${required} = ${money(rate * required)}`;
+        const earned = required > 0 && verified >= required ? rate : 0;
+        const terms = money(rate);
         return {
           code,
           name: names.get(code) ?? code,
           initials: initials(names.get(code) ?? code),
           state,
           posts: chips,
-          terms: record.baseMode === "campaign" ? `${terms} for the campaign` : terms,
+          terms: `${terms} for the campaign`,
           earned,
           verified,
         };
@@ -198,12 +198,12 @@ export function campaignListRows(input: {
         record.status === "draft" ? "draft" : (ended && (required === 0 || done)) || (!record.endsOn && done) ? "completed" : joined.length > 0 ? "active" : "sent";
       const budget = joined.reduce((sum, affiliate) => {
         const rate = rateCents(record, affiliate.code);
-        return sum + (record.baseMode === "campaign" ? rate : rate * record.postsRequired);
+        return sum + rate;
       }, 0);
       const earned = affiliates.reduce((sum, affiliate) => sum + affiliate.earned, 0);
       const platforms = record.platforms.join(", ");
       const content = record.postsRequired > 0 ? `${record.postsRequired} × ${record.contentTypes.join(" or ") || "post"}` : "";
-      const pay = record.baseAmountCents > 0 ? `${money(record.baseAmountCents)} ${record.baseMode === "post" ? "per post" : "per campaign"}` : "";
+      const pay = record.baseAmountCents > 0 ? `${money(record.baseAmountCents)} per campaign` : "";
       return {
         id: record.name.toLowerCase(),
         name: record.name,

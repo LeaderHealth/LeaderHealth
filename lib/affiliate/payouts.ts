@@ -333,6 +333,7 @@ export async function approvePayout(code: string, period: string) {
   const db = await requireStore();
   const affiliateRef = db.collection("affiliates").doc(normalized);
 
+  let approvedCents = 0;
   await db.runTransaction(async (tx) => {
     const affiliate = await tx.get(affiliateRef);
     if (!affiliate.exists) throw new PayoutError("missing", "That affiliate was not found.");
@@ -361,6 +362,7 @@ export async function approvePayout(code: string, period: string) {
       period: month,
     });
     if (pending <= 0) throw new PayoutError("empty", "There is no new commission to approve for that month.");
+    approvedCents = pending;
     const records = saved.filter((item) => item.record.period === month);
     const approved = records.find((item) => item.record.status === "approved");
     if (approved) {
@@ -381,6 +383,7 @@ export async function approvePayout(code: string, period: string) {
       reference: "",
     });
   });
+  return approvedCents;
 }
 
 export async function markPayoutPaid(input: { code: string; period: string; amount: unknown; paidOn: unknown; reference: unknown }) {
@@ -409,4 +412,5 @@ export async function markPayoutPaid(input: { code: string; period: string; amou
       reference,
     });
   });
+  return { paidCents, reference };
 }

@@ -29,7 +29,8 @@ import {
 } from "@/lib/affiliate/email";
 import { noteComplianceEvent } from "@/lib/affiliate/compliance-log";
 import { adjustDeliverablePayment, approveDeliverablePayment, canReleaseDeliverablePayment, DeliverablePaymentError, forfeitDeliverable, markDeliverablePaid, recheckDeliverable, reinstateDeliverable } from "@/lib/affiliate/deliverable-payments";
-import { approvePayout, markPayoutPaid, PayoutError } from "@/lib/affiliate/payouts";
+import { approvePayout, formatPayoutMonth, markPayoutPaid, PayoutError } from "@/lib/affiliate/payouts";
+import { notifyAffiliatePayout } from "@/lib/affiliate/payout-mail";
 import { readCampaignFlow, type CampaignFlowInput } from "@/lib/affiliate/campaign-record";
 import { RoiStoreError, saveCampaignBrief, saveMarketingCampaign, saveMarketingCost } from "@/lib/affiliate/roi-store";
 import { roiRange } from "@/lib/affiliate/roi";
@@ -414,8 +415,9 @@ function payoutDone(period: string, notice: string): never {
 export async function approvePayoutAction(formData: FormData) {
   await requireFullAdmin(PAYOUT_PATH);
   const period = String(formData.get("period") ?? "");
+  let amountCents = 0;
   try {
-    await approvePayout(String(formData.get("code") ?? ""), period);
+    amountCents = await approvePayout(String(formData.get("code") ?? ""), period);
   } catch (error) {
     if (error instanceof PayoutError) payoutFail(error.code, period);
     console.error("[affiliate] payout approve failed", error instanceof Error ? error.message : "unknown");
@@ -427,6 +429,12 @@ export async function approvePayoutAction(formData: FormData) {
     code: formData.get("code"),
     detail: `Approved the ${period} payout.`,
   });
+  await notifyAffiliatePayout({
+    code: String(formData.get("code") ?? ""),
+    stage: "approved",
+    label: `${formatPayoutMonth(period)} lab commission`,
+    amountCents,
+  });
   refreshPayouts();
   payoutDone(period, "approved");
 }
@@ -434,8 +442,9 @@ export async function approvePayoutAction(formData: FormData) {
 export async function markPayoutPaidAction(formData: FormData) {
   await requireFullAdmin(PAYOUT_PATH);
   const period = String(formData.get("period") ?? "");
+  let paid: { paidCents: number; reference: string } | undefined;
   try {
-    await markPayoutPaid({
+    paid = await markPayoutPaid({
       code: String(formData.get("code") ?? ""),
       period,
       amount: formData.get("amount"),
@@ -453,6 +462,15 @@ export async function markPayoutPaidAction(formData: FormData) {
     code: formData.get("code"),
     detail: `Marked the ${period} payout paid.`,
   });
+  if (paid) {
+    await notifyAffiliatePayout({
+      code: String(formData.get("code") ?? ""),
+      stage: "sent",
+      label: `${formatPayoutMonth(period)} lab commission`,
+      amountCents: paid.paidCents,
+      reference: paid.reference,
+    });
+  }
   refreshPayouts();
   payoutDone(period, "paid");
 }
@@ -550,8 +568,9 @@ export async function withdrawMarketingOfferAction(formData: FormData) {
 export async function approveDeliverablePaymentAction(formData: FormData) {
   await requirePaymentAdmin();
   const postId = String(formData.get("postId") ?? "");
+  let approved: { code: string; amountCents: number } | null = null;
   try {
-    await approveDeliverablePayment(postId);
+    approved = await approveDeliverablePayment(postId);
   } catch (error) {
     if (error instanceof DeliverablePaymentError) deliverableFail(error.code);
     console.error("[affiliate] deliverable approve failed", error instanceof Error ? error.message : "unknown");
@@ -563,14 +582,23 @@ export async function approveDeliverablePaymentAction(formData: FormData) {
     code: formData.get("code"),
     detail: "Approved the calculated view payment for a live post.",
   });
+  if (approved) {
+    await notifyAffiliatePayout({
+      code: approved.code,
+      stage: "approved",
+      label: "Marketing payment",
+      amountCents: approved.amountCents,
+    });
+  }
   refreshPayouts();
   payoutDone("", "deliverable-approved");
 }
 
 export async function markDeliverablePaidAction(formData: FormData) {
   await requirePaymentAdmin();
+  let paid: { code: string; paidCents: number; reference: string } | null = null;
   try {
-    await markDeliverablePaid({
+    paid = await markDeliverablePaid({
       postId: String(formData.get("postId") ?? ""),
       amount: formData.get("amount"),
       paidOn: formData.get("paidOn"),
@@ -587,6 +615,15 @@ export async function markDeliverablePaidAction(formData: FormData) {
     code: formData.get("code"),
     detail: "Marked a marketing payment paid.",
   });
+  if (paid) {
+    await notifyAffiliatePayout({
+      code: paid.code,
+      stage: "sent",
+      label: "Marketing payment",
+      amountCents: paid.paidCents,
+      reference: paid.reference,
+    });
+  }
   refreshPayouts();
   payoutDone("", "deliverable-paid");
 }

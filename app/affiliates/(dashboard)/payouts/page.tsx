@@ -1,23 +1,19 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { EarningsMonth, type EarningsMonthRow } from "@/components/affiliate/EarningsMonth";
-import { LAB_COMMISSIONS_ENABLED } from "@/lib/affiliate/code";
-import { deliverableLines, loadDeliverablePayments, marketingTotals, type DeliverableLine } from "@/lib/affiliate/deliverable-payments";
-import { deliverableStatusLabel } from "@/lib/affiliate/deliverable-flow";
-import { formatCents } from "@/lib/affiliate/format";
+import { AffiliatePayoutsBoard } from "@/components/affiliate/AffiliatePayoutsBoard";
+import { loadDeliverablePayments } from "@/lib/affiliate/deliverable-payments";
 import { loadMarketingEvents, loadWebsitePayoutsForCode } from "@/lib/affiliate/marketing-events";
-import { eventPeriod, socialMonthCents, websiteMonthAmount } from "@/lib/affiliate/payment-rates";
+import { eventPeriod, websiteMonthAmount } from "@/lib/affiliate/payment-rates";
 import { loadPaymentRates } from "@/lib/affiliate/payment-store";
+import { LAB_COMMISSIONS_ENABLED } from "@/lib/affiliate/code";
+import { formatCommissionRate } from "@/lib/affiliate/format";
+import { toAffiliateOrder } from "@/lib/affiliate/order-view";
+import { buildPayoutItems, labPayoutRows, type PayoutBoardWebsite, type PayoutLabInput, type PayoutLabPeriod } from "@/lib/affiliate/payout-board";
+import { currentPayoutPeriod, loadPayoutRecords, payoutLines, payoutPeriod, type PayoutLine } from "@/lib/affiliate/payouts";
 import { loadContentSubmissions } from "@/lib/affiliate/post-review";
-import {
-  currentPayoutPeriod,
-  formatPayoutDate,
-  formatPayoutMonth,
-  loadPayoutRecords,
-  payoutLines,
-  type PayoutLine,
-} from "@/lib/affiliate/payouts";
-import { AffiliateStoreError, loadAffiliateActivity } from "@/lib/affiliate/store";
+import { adjustedCommissionCents, remainingSalesCents } from "@/lib/affiliate/refunds";
+import { AffiliateStoreError, loadAffiliateConversions, type ConversionSummary } from "@/lib/affiliate/store";
+import { utcDay } from "@/lib/affiliate/stats-board";
 import { currentAffiliate } from "../../current";
 
 export const metadata: Metadata = {
@@ -27,124 +23,128 @@ export const metadata: Metadata = {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function labNote(line: PayoutLine | undefined) {
-  if (!line || (line.earnedCents === 0 && line.status === "pending")) return "";
-  if (line.status === "paid") {
-    const date = formatPayoutDate(line.paidAt);
-    const reference = line.reference ? ` · ${line.reference}` : "";
-    return date === "—" ? `Paid${reference}` : `Paid ${date}${reference}`;
-  }
-  if (line.status === "approved") return "Approved";
-  return "Pending";
-}
-
 export default async function AffiliatePayoutHistoryPage() {
   const affiliate = await currentAffiliate();
   if (!affiliate) redirect("/affiliates");
-
-  let lines: PayoutLine[] = [];
-  let marketing: DeliverableLine[] = [];
-  let earningRows: EarningsMonthRow[] = [];
+  const today = utcDay();
+  let items = buildPayoutItems({ posts: [], payments: [], websites: [], today });
+  let labs: PayoutLabPeriod[] = [];
   let loadError = "";
   try {
-    const activity = await loadAffiliateActivity(affiliate.code);
-    const payouts = await loadPayoutRecords(affiliate.code);
-    lines = payoutLines({
-      affiliates: [{ code: affiliate.code, name: affiliate.name }],
-      orders: activity.conversions,
-      payouts,
-    });
-    const [posts, payments, events, websitePayouts, rates] = await Promise.all([
-      loadContentSubmissions(),
+    const [posts, payments, events, websitePayouts, rates, conversions, payouts] = await Promise.all([
+      loadContentSubmissions(affiliate.code),
       loadDeliverablePayments(affiliate.code),
       loadMarketingEvents({ code: affiliate.code }),
       loadWebsitePayoutsForCode(affiliate.code),
       loadPaymentRates(),
+      LAB_COMMISSIONS_ENABLED ? loadAffiliateConversions(affiliate.code) : Promise.resolve([]),
+      LAB_COMMISSIONS_ENABLED ? loadPayoutRecords(affiliate.code) : Promise.resolve([]),
     ]);
-    const ownPosts = posts.filter((post) => post.code === affiliate.code);
-    marketing = deliverableLines({
-      affiliates: [{ code: affiliate.code, name: affiliate.name }],
-      posts: ownPosts,
-      payments,
-    });
-    const periods = new Set<string>([currentPayoutPeriod(), ...lines.map((line) => line.period), ...websitePayouts.map((row) => row.period)]);
-    for (const payment of payments) {
-      const period = eventPeriod(payment.approvedAt ?? payment.paidAt ?? "");
+    const periods = new Set<string>([currentPayoutPeriod(), ...websitePayouts.map((row) => row.period)]);
+    for (const event of events) {
+      const period = eventPeriod(event.createdAt);
       if (period) periods.add(period);
     }
-    earningRows = [...periods]
-      .sort((left, right) => right.localeCompare(left))
-      .flatMap((period) => {
-        const social = socialMonthCents({ period, posts: ownPosts, payments });
-        const snapshot = websitePayouts.find((row) => row.period === period) ?? null;
-        const website = websiteMonthAmount({ events, code: affiliate.code, period, rates, snapshot });
-        const lab = lines.find((line) => line.period === period);
-        const labCents = lines.filter((line) => line.period === period).reduce((sum, line) => sum + line.earnedCents, 0);
-        const totalCents = social.socialCents + website.amountCents + labCents + social.adjustmentCents;
-        if (totalCents === 0 && !snapshot && !lab) return [];
-        const websiteState = website.status === "paid" ? "Paid" : website.status === "approved" ? "Approved" : "";
-        const counts = website.clicks + website.pageViews;
-        return [
-          {
-            key: period,
-            name: formatPayoutMonth(period),
-            socialCents: social.socialCents,
-            websiteCents: website.amountCents,
-            labCents,
-            adjustmentCents: social.adjustmentCents,
-            totalCents,
-            websiteLabel: counts === 0 && !websiteState ? "" : `${website.clicks} clicks, ${website.pageViews} page views${websiteState ? ` · ${websiteState}` : ""}`,
-            labNote: labNote(lab),
-          },
-        ];
-      });
+    const websites: PayoutBoardWebsite[] = [...periods].map((period) => {
+      const snapshot = websitePayouts.find((row) => row.period === period) ?? null;
+      const website = websiteMonthAmount({ events, code: affiliate.code, period, rates, snapshot });
+      return {
+        period,
+        clicks: website.clicks,
+        pageViews: website.pageViews,
+        amountCents: website.amountCents,
+        status: website.status,
+        clickRateCents: website.clickRateCents,
+        pageViewRateCents: website.pageViewRateCents,
+        paidAt: snapshot?.paidAt ?? null,
+        approvedAt: snapshot?.approvedAt ?? null,
+        reference: snapshot?.reference ?? "",
+      };
+    });
+    const labRows = labInputs(
+      conversions,
+      payoutLines({ affiliates: [{ code: affiliate.code, name: affiliate.name }], orders: conversions, payouts }),
+      `${formatCommissionRate(affiliate)} of each completed lab order`,
+    );
+    items = buildPayoutItems({
+      today,
+      posts: posts.map((post) => ({
+        id: post.id,
+        caption: post.caption,
+        format: post.format,
+        campaign: post.campaign,
+        publishedAt: post.publishedAt,
+        createdAt: post.createdAt,
+        agreedFeeCents: post.agreedFeeCents,
+        viewRateCents: post.viewRateCents,
+        engagementRateCents: post.engagementRateCents,
+        maxPayCents: post.maxPayCents,
+        trackingDays: post.trackingDays,
+        views: post.views,
+        likes: post.likes,
+        comments: post.comments,
+        shares: post.shares,
+        saves: post.saves,
+        contentStatus: post.contentStatus,
+        publicationStatus: post.publicationStatus,
+        deliverableHoldStartedAt: post.deliverableHoldStartedAt,
+        deliverableRecheckedAt: post.deliverableRecheckedAt,
+        deliverableForfeitedAt: post.deliverableForfeitedAt,
+      })),
+      payments: payments.map((payment) => ({
+        postId: payment.postId,
+        amountCents: payment.amountCents,
+        status: payment.status,
+        approvedAt: payment.approvedAt,
+        paidCents: payment.paidCents,
+        paidAt: payment.paidAt,
+        reference: payment.reference,
+        adjustmentCents: payment.adjustmentCents,
+        adjustmentReason: payment.adjustmentReason,
+      })),
+      websites,
+      labs: labRows,
+    });
+    labs = labPayoutRows(labRows, today).periods;
   } catch (caught) {
     loadError = caught instanceof AffiliateStoreError ? caught.message : "Could not load payouts.";
   }
-  const marketingSummary = marketingTotals(marketing);
-
-  const marketingSummaryText = [
-    marketingSummary.pendingCents ? `To approve ${formatCents(marketingSummary.pendingCents)}` : "",
-    marketingSummary.heldCents ? `On hold ${formatCents(marketingSummary.heldCents)}` : "",
-    marketingSummary.approvedCents ? `Approved ${formatCents(marketingSummary.approvedCents)}` : "",
-    marketingSummary.paidCents ? `Paid ${formatCents(marketingSummary.paidCents)}` : "",
-  ]
-    .filter(Boolean)
-    .join(" · ");
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-2xl">Payouts</h2>
-        <p className="mt-1 text-sm text-brown">
-          Social, website traffic, and lab for each month.{LAB_COMMISSIONS_ENABLED ? "" : " Lab commission is not active."}
-        </p>
-      </div>
-      {loadError ? <p className="text-ink">{loadError}</p> : null}
-      {marketing.length > 0 ? (
-        <section className="min-w-0 rounded-[28px] bg-white">
-          <h3 className="px-4 pt-4 text-xl">Posts</h3>
-          {marketingSummaryText ? <p className="px-4 pt-1 text-sm text-brown">{marketingSummaryText}</p> : null}
-          <ul>
-            {marketing.map((line) => {
-              const waiting = line.amountCents === 0 && (line.status === "review" || line.status === "changes" || line.status === "waiting" || line.status === "measuring");
-              const amount = line.status === "closed" ? "Closed" : waiting ? "After the tracking period" : formatCents(line.status === "paid" ? (line.paidCents ?? 0) + (line.adjustmentCents ?? 0) : line.amountCents);
-              return (
-                <li key={line.postId} className="border-t border-ink/10 px-4 py-3 text-sm">
-                  <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                    <div className="font-medium">{line.label}</div>
-                    <div>{amount}</div>
-                  </div>
-                  <p className="mt-1 text-brown">{deliverableStatusLabel(line.status, line.adjustmentCents != null)}</p>
-                  {line.detail ? <p className="mt-1 text-brown">{line.detail}</p> : null}
-                  {line.adjustmentReason ? <p className="mt-1 text-brown">{line.adjustmentReason}</p> : null}
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ) : null}
-      <EarningsMonth title="Months" rows={earningRows} emptyLabel="Nothing to show yet." nameLabel="Month" />
-    </div>
+    <section className="min-w-0" aria-labelledby="portal-payouts-title">
+      {loadError ? <p className="text-ink">{loadError}</p> : <AffiliatePayoutsBoard today={today} items={items} labs={labs} />}
+    </section>
   );
+}
+
+function labInputs(conversions: ConversionSummary[], lines: PayoutLine[], terms: string): PayoutLabInput[] {
+  const groups = new Map<string, { amountCents: number; refs: PayoutLabInput["refs"] }>();
+  for (const conversion of conversions) {
+    if (conversion.dryRun || conversion.orderKind !== "lab") continue;
+    if (remainingSalesCents(conversion.amountCents, conversion.refundedAmountCents) <= 0) continue;
+    const period = payoutPeriod(conversion.createdAt);
+    if (!period) continue;
+    const current = groups.get(period) ?? { amountCents: 0, refs: [] };
+    current.amountCents += adjustedCommissionCents(conversion.commissionCents, conversion.commissionRefundedCents);
+    current.refs.push({
+      id: toAffiliateOrder({ orderId: conversion.orderId }).ref,
+      source: conversion.promoCode ? "Promo code" : "Tracking link",
+    });
+    groups.set(period, current);
+  }
+  return [...groups.entries()].map(([period, group]) => {
+    const periodLines = lines.filter((line) => line.period === period);
+    const paid = periodLines.filter((line) => line.status === "paid");
+    const approved = periodLines.find((line) => line.status === "approved");
+    const pending = periodLines.find((line) => line.status === "pending");
+    const paidCents = paid.reduce((sum, line) => sum + (line.paidCents ?? line.earnedCents), 0);
+    const latest = [...paid].sort((left, right) => (right.paidAt ?? "").localeCompare(left.paidAt ?? ""))[0];
+    if (group.amountCents > 0 && paidCents >= group.amountCents && !approved && !pending) {
+      return { period, amountCents: group.amountCents, conversions: group.refs.length, status: "paid" as const, paidOn: latest?.paidAt ?? null, approvedOn: latest?.paidAt ?? null, reference: latest?.reference ?? "", terms, refs: group.refs };
+    }
+    if (approved && !pending) {
+      return { period, amountCents: group.amountCents, conversions: group.refs.length, status: "approved" as const, paidOn: null, approvedOn: approved.approvedAt, reference: "", terms, refs: group.refs };
+    }
+    return { period, amountCents: group.amountCents, conversions: group.refs.length, status: "pending" as const, paidOn: null, approvedOn: null, reference: "", terms, refs: group.refs };
+  });
 }

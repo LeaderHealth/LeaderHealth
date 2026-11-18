@@ -1,15 +1,9 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { SocialConnections } from "@/components/affiliate/MarketingSections";
-import { TikTokVideos } from "@/components/affiliate/TikTokVideos";
-import { TrackedPosts, type TrackedPostCard } from "@/components/affiliate/TrackedPosts";
-import { loadTikTokReviewList, type TikTokReviewList } from "@/lib/affiliate/tiktok-review";
-import { formatCents } from "@/lib/affiliate/format";
-import { metaConfigured, tiktokConfigured, youtubeConfigured } from "@/lib/affiliate/social-oauth";
-import { loadSocialAccounts, type SocialAccountView } from "@/lib/affiliate/social-store";
-import { loadContentSubmissions, metricLines, metricsOriginLabel, refreshDueMetrics } from "@/lib/affiliate/post-review";
-import { conversionLabel, dailyAffiliateStats, earningsPerClickCents } from "@/lib/affiliate/stats";
-import { AffiliateStoreError, loadAffiliateActivity } from "@/lib/affiliate/store";
+import { AffiliateStatsBoard } from "@/components/affiliate/AffiliateStatsBoard";
+import { loadMarketingEvents } from "@/lib/affiliate/marketing-events";
+import { loadContentSubmissions, refreshDueMetrics, type ContentSubmission } from "@/lib/affiliate/post-review";
+import { utcDay, type StatsBoardDay, type StatsBoardPost } from "@/lib/affiliate/stats-board";
 import { currentAffiliate } from "../../current";
 
 export const metadata: Metadata = {
@@ -19,8 +13,6 @@ export const metadata: Metadata = {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const columns = ["Date", "Visits", "Referring page", "Landing page", "Orders", "Conversion", "Earnings per click"] as const;
-
 const socialErrors: Record<string, string> = {
   social: "That social account could not be connected.",
   "social-setup": "Reporting is not set up for that network.",
@@ -28,21 +20,67 @@ const socialErrors: Record<string, string> = {
   "social-page": "Connect a Facebook Page to import posts.",
 };
 
-function formatStatDay(value: string) {
-  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`));
+function titleOf(caption: string) {
+  const line = caption.split("\n").map((part) => part.trim()).find(Boolean) ?? "";
+  return line.slice(0, 80) || "Untitled post";
 }
 
-function Pages({ pages }: { pages: string[] }) {
-  if (pages.length === 0) return "—";
-  return (
-    <ul>
-      {pages.map((page) => (
-        <li key={page} className="break-all">
-          {page}
-        </li>
-      ))}
-    </ul>
-  );
+function postedOn(post: ContentSubmission) {
+  return (post.publishedAt || post.createdAt || "").slice(0, 10);
+}
+
+function boardPlatform(post: ContentSubmission): StatsBoardPost["platform"] {
+  if (post.format === "tiktok") return "tiktok";
+  if (post.format === "instagram_reel" || post.format === "instagram_post") return "instagram";
+  const host = (() => {
+    try {
+      return new URL(post.postUrl ?? "").hostname.toLowerCase().replace(/^www\./, "");
+    } catch {
+      return "";
+    }
+  })();
+  if (host.endsWith("tiktok.com")) return "tiktok";
+  if (host.endsWith("instagram.com")) return "instagram";
+  if (host.endsWith("facebook.com") || host === "fb.com" || host === "fb.watch") return "facebook";
+  if (host.endsWith("youtube.com") || host === "youtu.be") return "youtube";
+  return "other";
+}
+
+function boardPost(post: ContentSubmission): StatsBoardPost | null {
+  const day = postedOn(post);
+  if (!day) return null;
+  const platform = boardPlatform(post);
+  const kind = platform === "tiktok" || platform === "youtube" ? "Video" : platform === "instagram" && post.format === "instagram_reel" ? "Reel" : post.files.length > 1 ? "Carousel" : "Post";
+  return {
+    id: post.id,
+    title: titleOf(post.caption),
+    platform,
+    kind,
+    campaign: post.campaign,
+    postedOn: day,
+    views: post.views ?? 0,
+    likes: post.likes ?? 0,
+    comments: post.comments ?? 0,
+    shares: post.shares ?? 0,
+    saves: post.saves ?? 0,
+  };
+}
+
+function published(post: ContentSubmission) {
+  return post.contentStatus === "approved" && (post.publicationStatus === "tracking_active" || Boolean(post.postUrl));
+}
+
+function trafficDays(events: { kind: string; payable: boolean; excluded?: boolean; createdAt: string }[]): StatsBoardDay[] {
+  const days = new Map<string, StatsBoardDay>();
+  for (const event of events) {
+    if (!event.payable || event.excluded || (event.kind !== "click" && event.kind !== "page_view")) continue;
+    const day = event.createdAt.slice(0, 10);
+    const current = days.get(day) ?? { day, clicks: 0, pageViews: 0 };
+    if (event.kind === "click") current.clicks += 1;
+    else current.pageViews += 1;
+    days.set(day, current);
+  }
+  return [...days.values()];
 }
 
 export default async function AffiliateStatsPage({
@@ -54,167 +92,26 @@ export default async function AffiliateStatsPage({
   if (!affiliate) redirect("/affiliates");
   const query = await searchParams;
   const socialError = query.error ? socialErrors[query.error] ?? "" : "";
-
-  let loadError = "";
-  let rows = dailyAffiliateStats([], []);
-  let accounts: SocialAccountView[] = [];
-  let tracked: TrackedPostCard[] = [];
-  let trackedUnavailable = false;
-  let tiktokVideos: TikTokReviewList | null = null;
+  let posts: StatsBoardPost[] = [];
+  let traffic: StatsBoardDay[] = [];
+  let unavailable = "";
   try {
-    const activity = await loadAffiliateActivity(affiliate.code);
-    rows = dailyAffiliateStats(activity.clicks, activity.conversions);
-  } catch (error) {
-    loadError = error instanceof AffiliateStoreError ? error.message : "Could not load your stats.";
+    await refreshDueMetrics(affiliate.code, 8);
+    posts = (await loadContentSubmissions(affiliate.code)).filter(published).map(boardPost).filter((post): post is StatsBoardPost => post !== null);
+    traffic = trafficDays(await loadMarketingEvents({ code: affiliate.code }));
+  } catch {
+    unavailable = "Stats are unavailable right now.";
   }
-  if (!loadError) {
-    try {
-      accounts = await loadSocialAccounts(affiliate.code);
-    } catch {
-      accounts = [];
-    }
-    if (accounts.some((account) => account.network === "tiktok")) {
-      try {
-        tiktokVideos = await loadTikTokReviewList(affiliate.code);
-      } catch {
-        tiktokVideos = { accountName: "TikTok", status: "unavailable", videos: [] };
-      }
-    }
-    try {
-      await refreshDueMetrics(affiliate.code, 8);
-      tracked = (await loadContentSubmissions(affiliate.code))
-        .filter((post) => post.publicationStatus === "tracking_active")
-        .map((post) => ({
-          id: post.id,
-          caption: post.caption,
-          postUrl: post.postUrl,
-          metrics: metricLines(post, post.format === "tiktok" ? "Not available yet" : undefined),
-          note: metricsOriginLabel(post.metricsSource, post.metricsRecordedAt),
-        }));
-    } catch {
-      trackedUnavailable = true;
-    }
-  }
-
-  if (loadError) return <p className="text-ink">{loadError}</p>;
 
   return (
-    <section className="min-w-0 rounded-[28px] bg-white" aria-labelledby="portal-stats-title">
-      <h2 id="portal-stats-title" className="px-4 pt-4 text-2xl sm:px-6">
-        Stats
-      </h2>
-      <p className="px-4 pt-2 text-sm text-brown sm:px-6">All time. Each person counts once a day.</p>
-      <div className="px-4 pt-6 sm:px-6">
-        <h3 className="text-lg">Advertising reports</h3>
-        <p className="mt-1 text-sm text-brown">Connect a Facebook Page or TikTok account.</p>
-        {socialError ? (
-          <p role="alert" className="mt-4 rounded-2xl bg-rose px-4 py-3 text-sm text-ink">
-            {socialError}
-          </p>
-        ) : null}
-        {query.notice === "connected" ? (
-          <p role="status" className="mt-4 rounded-2xl bg-background px-4 py-3 text-sm text-ink">
-            Account connected.
-          </p>
-        ) : null}
-        {query.notice === "disconnected" ? (
-          <p role="status" className="mt-4 rounded-2xl bg-background px-4 py-3 text-sm text-ink">
-            Account disconnected.
-          </p>
-        ) : null}
-        {query.notice === "disconnected-facebook" ? (
-          <p role="status" className="mt-4 rounded-2xl bg-background px-4 py-3 text-sm text-ink">
-            Leader Health is disconnected. You can also remove Leader Health in Facebook under Settings, Security, Apps and websites.
-          </p>
-        ) : null}
-        {query.notice === "disconnected-tiktok" ? (
-          <p role="status" className="mt-4 rounded-2xl bg-background px-4 py-3 text-sm text-ink">
-            Leader Health is disconnected. You can also remove Leader Health in TikTok under Settings, Security, Manage app permissions.
-          </p>
-        ) : null}
-        <div className="mt-4">
-          <SocialConnections metaReady={metaConfigured()} tiktokReady={tiktokConfigured()} youtubeReady={youtubeConfigured()} accounts={accounts} />
-        </div>
-        {tiktokVideos ? <TikTokVideos list={tiktokVideos} /> : null}
-        {trackedUnavailable ? <p className="mt-6 text-sm text-ink">Tracked posts are unavailable right now.</p> : <TrackedPosts posts={tracked} />}
-      </div>
-      {rows.length === 0 ? <p className="px-4 py-6 text-sm text-brown sm:px-6">No visits or paid orders yet.</p> : null}
-      {rows.length > 0 ? (
-        <ul className="xl:hidden" aria-labelledby="portal-stats-title">
-          {rows.map((row) => {
-            const perClick = earningsPerClickCents(row.commissionCents, row.visits);
-            return (
-              <li key={row.date} className="border-t border-rose/60 px-4 py-5 text-sm sm:px-6">
-                <p className="font-medium">{formatStatDay(row.date)}</p>
-                <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-4 leading-6">
-                  <div>
-                    <dt className="text-xs text-brown">Visits</dt>
-                    <dd className="mt-1">{row.visits}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs text-brown">Orders</dt>
-                    <dd className="mt-1">{row.orders}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs text-brown">Conversion</dt>
-                    <dd className="mt-1">{conversionLabel(row.orders, row.visits)}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs text-brown">Earnings per click</dt>
-                    <dd className="mt-1">{perClick == null ? "—" : formatCents(perClick)}</dd>
-                  </div>
-                  <div className="col-span-2">
-                    <dt className="text-xs text-brown">Referring page</dt>
-                    <dd className="mt-1"><Pages pages={row.referringPages} /></dd>
-                  </div>
-                  <div className="col-span-2">
-                    <dt className="text-xs text-brown">Landing page</dt>
-                    <dd className="mt-1"><Pages pages={row.landingPages} /></dd>
-                  </div>
-                </dl>
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
-      {rows.length > 0 ? (
-        <table className="mt-4 hidden w-full table-fixed border-collapse text-left text-sm leading-6 xl:table">
-          <colgroup>
-            <col className="w-[14%]" />
-            <col className="w-[8%]" />
-            <col className="w-[22%]" />
-            <col className="w-[16%]" />
-            <col className="w-[10%]" />
-            <col className="w-[12%]" />
-            <col className="w-[18%]" />
-          </colgroup>
-          <thead className="bg-background text-brown">
-            <tr>
-              {columns.map((column) => (
-                <th key={column} scope="col" className="px-3 py-3 align-bottom font-medium leading-snug">
-                  {column}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => {
-              const perClick = earningsPerClickCents(row.commissionCents, row.visits);
-              return (
-                <tr key={row.date} className="border-t border-rose/60">
-                  <td className="px-3 py-4 align-top">{formatStatDay(row.date)}</td>
-                  <td className="px-3 py-4 align-top">{row.visits}</td>
-                  <td className="px-3 py-4 align-top"><Pages pages={row.referringPages} /></td>
-                  <td className="px-3 py-4 align-top"><Pages pages={row.landingPages} /></td>
-                  <td className="px-3 py-4 align-top">{row.orders}</td>
-                  <td className="px-3 py-4 align-top">{conversionLabel(row.orders, row.visits)}</td>
-                  <td className="px-3 py-4 align-top">{perClick == null ? "—" : formatCents(perClick)}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      ) : null}
+    <section className="min-w-0" aria-labelledby="portal-stats-title">
+      <h2 id="portal-stats-title" className="sr-only">Stats</h2>
+      {socialError ? <p role="alert" className="mb-4 rounded-2xl bg-rose px-4 py-3 text-sm text-ink">{socialError}</p> : null}
+      {query.notice === "connected" ? <p role="status" className="mb-4 rounded-2xl bg-white px-4 py-3 text-sm text-ink">Account connected.</p> : null}
+      {query.notice === "disconnected" ? <p role="status" className="mb-4 rounded-2xl bg-white px-4 py-3 text-sm text-ink">Account disconnected.</p> : null}
+      {query.notice === "disconnected-facebook" ? <p role="status" className="mb-4 rounded-2xl bg-white px-4 py-3 text-sm text-ink">Leader Health is disconnected. You can also remove Leader Health in Facebook under Settings, Security, Apps and websites.</p> : null}
+      {query.notice === "disconnected-tiktok" ? <p role="status" className="mb-4 rounded-2xl bg-white px-4 py-3 text-sm text-ink">Leader Health is disconnected. You can also remove Leader Health in TikTok under Settings, Security, Manage app permissions.</p> : null}
+      {unavailable ? <p className="text-ink">{unavailable}</p> : <AffiliateStatsBoard today={utcDay()} posts={posts} traffic={traffic} />}
     </section>
   );
 }

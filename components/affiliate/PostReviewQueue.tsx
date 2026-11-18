@@ -43,6 +43,7 @@ export type ReviewPost = {
   pastHref: string;
   suggestedNote: string;
   campaign: string;
+  agreement: string;
   platform: string;
   submittedOn: string;
   dateLabel: string;
@@ -240,6 +241,7 @@ export function PostReviewQueue({ posts, initialId, notice, view }: { posts: Rev
                         <span className="rounded-full bg-[#EFEAE9] px-2 py-0.5 text-[11px] text-[#4A3A37]">{post.kindShort}</span>
                         <span className="rounded-full bg-[#F3E6E3] px-2 py-0.5 text-[11px] text-[#4A3A37]">{post.source}</span>
                         {post.campaign ? <span className="rounded-full bg-[#EFEAE9] px-2 py-0.5 text-[11px] text-[#4A3A37]">{post.campaign}</span> : null}
+                        {post.agreement ? <span className="rounded-full bg-[#EFEAE9] px-2 py-0.5 text-[11px] text-[#4A3A37]">Agreement</span> : null}
                         {post.flagCount ? <span className="rounded-full bg-[#FBEFD6] px-2 py-0.5 text-[11px] font-medium text-[#7A4E00]">{post.flagCount} flag{post.flagCount === 1 ? "" : "s"}</span> : null}
                         {!post.flagCount && post.checksPass ? <span className="rounded-full bg-[#DDF0E4] px-2 py-0.5 text-[11px] font-medium text-[#1D6340]">Checks pass</span> : null}
                         {post.batchLabel ? <span className="text-[11px] text-brown">{post.batchLabel}</span> : null}
@@ -265,8 +267,8 @@ export function PostReviewQueue({ posts, initialId, notice, view }: { posts: Rev
                     {selected.email} · ref {selected.code} · sent {selected.sent} · version {selected.version}
                     {selected.batchLabel ? ` · post ${selected.batchLabel}` : ""}
                   </p>
-                  {selected.campaign || selected.dateValue ? (
-                    <p className="mt-1 text-[13px] text-brown">{[selected.campaign, selected.dateValue ? `${selected.dateLabel} ${selected.dateValue}` : ""].filter(Boolean).join(" · ")}</p>
+                  {selected.campaign || selected.agreement || selected.dateValue ? (
+                    <p className="mt-1 text-[13px] text-brown">{[selected.campaign, selected.agreement, selected.dateValue ? `${selected.dateLabel} ${selected.dateValue}` : ""].filter(Boolean).join(" · ")}</p>
                   ) : null}
                   {selected.reviewedBy ? <p className="mt-1 text-[13px] text-brown">Reviewed by {selected.reviewedBy}</p> : null}
                 </div>

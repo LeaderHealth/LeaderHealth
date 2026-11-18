@@ -129,6 +129,11 @@ function NetworkRow({
             Connect {title}
           </a>
         ) : null}
+        {ready && disconnect === "tiktok" && status === "Connected" ? (
+          <a href={connectHref} className={quietClass}>
+            Change TikTok account
+          </a>
+        ) : null}
         {!ready && accounts.length === 0 ? (
           <button type="button" disabled className={`${buttonClass} cursor-not-allowed opacity-70`}>
             {unsetLabel}

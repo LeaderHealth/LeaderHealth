@@ -3,10 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { approveWebsitePayout, excludeTrafficSpike, keepTrafficSpike, loadMarketingEvents, markWebsitePayoutPaid } from "@/lib/affiliate/marketing-events";
+import { notifyAffiliatePayout } from "@/lib/affiliate/payout-mail";
 import { findClickSpike } from "@/lib/affiliate/traffic-review";
 import { PAYMENT_CATEGORIES, defaultPaymentRates, paymentRateCents } from "@/lib/affiliate/payment-rates";
 import { savePaymentRates } from "@/lib/affiliate/payment-store";
-import { normalizePayoutPeriod, payoutAmountCents, payoutPaidAt, payoutReference } from "@/lib/affiliate/payouts";
+import { formatPayoutMonth, normalizePayoutPeriod, payoutAmountCents, payoutPaidAt, payoutReference } from "@/lib/affiliate/payouts";
 import { adminHasFullAccess, adminSessionActor } from "@/lib/affiliate/session";
 
 const SETTINGS = "/admin/affiliates/settings/payments";
@@ -51,11 +52,20 @@ function payoutRedirect(period: string, key: "notice" | "error", value: string):
 export async function approveWebsitePayoutAction(formData: FormData) {
   await requireRatesAdmin();
   const period = String(formData.get("period") ?? "");
+  let amountCents: number | null = null;
   try {
-    await approveWebsitePayout(String(formData.get("code") ?? ""), period);
+    amountCents = await approveWebsitePayout(String(formData.get("code") ?? ""), period);
   } catch (error) {
     console.error("[affiliate] website payout approve failed", error instanceof Error ? error.message : "unknown");
     payoutRedirect(period, "error", "website");
+  }
+  if (amountCents != null) {
+    await notifyAffiliatePayout({
+      code: String(formData.get("code") ?? ""),
+      stage: "approved",
+      label: `${formatPayoutMonth(period)} website traffic`,
+      amountCents,
+    });
   }
   revalidatePath("/admin/affiliates/payouts");
   revalidatePath("/affiliates/payouts");
@@ -81,6 +91,13 @@ export async function markWebsitePayoutPaidAction(formData: FormData) {
     console.error("[affiliate] website payout paid failed", error instanceof Error ? error.message : "unknown");
     payoutRedirect(period, "error", "website");
   }
+  await notifyAffiliatePayout({
+    code: String(formData.get("code") ?? ""),
+    stage: "sent",
+    label: `${formatPayoutMonth(period)} website traffic`,
+    amountCents: paidCents,
+    reference,
+  });
   revalidatePath("/admin/affiliates/payouts");
   revalidatePath("/affiliates/payouts");
   payoutRedirect(period, "notice", "website-paid");

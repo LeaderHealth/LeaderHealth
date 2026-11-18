@@ -7,6 +7,7 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { cancelMetricChangeAction, confirmManualMetricsAction, requestMetricChangeAction, saveManualMetricsAction, submitLiveLinkAction, submitPostsAction, withdrawPostAction } from "@/app/affiliates/post-actions";
 import { MediaExpand, MediaPreview } from "@/components/affiliate/MediaExpand";
+import { SlidingTabs } from "@/components/affiliate/SlidingTabs";
 import { viewPayTerms } from "@/lib/affiliate/format";
 import { POST_FILE_ACCEPT, VIDEO_FILE_ACCEPT, postUploadIssue } from "@/lib/affiliate/post-files";
 import { formatTitle, formatUploadIssue, liveLinkFor, type PostFormat } from "@/lib/affiliate/post-format";
@@ -157,6 +158,7 @@ export type HubPost = {
   payAmount: string;
   trackingDays: number;
   source: string;
+  agreement: string;
   offerId: string;
   offerBrief: string;
   publishBy: string;
@@ -590,6 +592,8 @@ export function PostsHub({
   focusPostId,
   startCompose = false,
   startCampaign = "",
+  posting = null,
+  agreementsUnavailable = false,
 }: {
   posts: HubPost[];
   trackingUrl: string;
@@ -606,6 +610,8 @@ export function PostsHub({
   focusPostId: string;
   startCompose?: boolean;
   startCampaign?: string;
+  posting?: { id: string; label: string } | null;
+  agreementsUnavailable?: boolean;
 }) {
   const router = useRouter();
   const motionEase = useSoftMotion();
@@ -727,18 +733,17 @@ export function PostsHub({
 
           <section className="flex flex-col gap-3.5">
             <h3 className="text-base font-semibold">All submissions</h3>
-            <div role="group" aria-label="Filter by status" className="flex flex-wrap gap-2">
-              {FILTERS.map((item) => {
-                const count = item.id === "all" ? groups.length : groups.filter((group) => stageOf(groupLead(group)) === item.id).length;
-                const current = filter === item.id;
-                return (
-                  <button key={item.id} type="button" aria-pressed={current} onClick={() => setFilter(item.id)} className={`inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-medium transition-colors duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${current ? "border-ink bg-ink text-white" : "border-[#CDBDBA] bg-white text-ink hover:bg-background"}`}>
-                    {item.label}
-                    <span className="opacity-75">{count}</span>
-                  </button>
-                );
-              })}
-            </div>
+            <SlidingTabs
+              variant="outline"
+              label="Filter by status"
+              items={FILTERS.map((item) => ({
+                id: item.id,
+                label: item.label,
+                note: String(item.id === "all" ? groups.length : groups.filter((group) => stageOf(groupLead(group)) === item.id).length),
+                current: filter === item.id,
+                onSelect: () => setFilter(item.id),
+              }))}
+            />
             <div className="flex flex-col">
               <AnimatePresence initial={false}>
                 {groups.filter((group) => filter === "all" || stageOf(groupLead(group)) === filter).map((group) => {
@@ -747,7 +752,7 @@ export function PostsHub({
                   const slides = slideTotal(group);
                   const label = submissionLabel(post, slides);
                   const sent = post.status === "draft" ? "Not sent yet" : post.sent ? `Sent ${post.sent}` : "";
-                  const meta = [post.source, post.campaign, label, sent].filter(Boolean).join(" · ");
+                  const meta = [post.source, post.agreement, post.campaign, label, sent].filter(Boolean).join(" · ");
                   return (
                     <motion.div key={post.batchId || post.id} layout initial={motionEase.reduced ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={motionEase.fade}>
                       <div className="flex min-h-11 w-full items-center gap-3.5 border-t border-[#F0E8E6] px-1 py-3 text-left text-ink">
@@ -783,6 +788,8 @@ export function PostsHub({
             standingTrackingDays={standingTrackingDays}
             campaign={composeCampaign}
             offer={offer}
+            posting={posting}
+            agreementsUnavailable={agreementsUnavailable}
             termsAccepted={termsAccepted}
             onTerms={setTermsAccepted}
             onBack={() => (startCompose ? router.push("/affiliates/posts") : setScreen("hub"))}
@@ -800,6 +807,8 @@ export function PostsHub({
             onBack={() => setScreen("hub")}
             onReuse={() => openCompose(selected)}
             campaigns={campaigns}
+            posting={posting}
+            agreementsUnavailable={agreementsUnavailable}
             onComposeCampaign={(name) => openCompose(undefined, name)}
           />
         </motion.div>
@@ -819,6 +828,8 @@ function Composer({
   standingTrackingDays,
   campaign,
   offer,
+  posting,
+  agreementsUnavailable,
   termsAccepted,
   onTerms,
   onBack,
@@ -833,6 +844,8 @@ function Composer({
   standingTrackingDays: number;
   campaign: string;
   offer: OfferComposer | null;
+  posting: { id: string; label: string } | null;
+  agreementsUnavailable: boolean;
   termsAccepted: boolean;
   onTerms: (value: boolean) => void;
   onBack: () => void;
@@ -857,12 +870,16 @@ function Composer({
         : `Post ${blocked.index + 1}: ${blocked.problem}`
       : offer
         ? `Marketing offer: ${viewPayTerms(offer.feeCents, offer.maxPayCents, offer.trackingDays)}. These terms are locked. Publish by ${offer.publishLabel}.`
+        : agreementsUnavailable
+          ? "Your agreement could not be loaded. Try again before sending."
+          : !posting
+            ? "A signed agreement has to be on your account before you can send a post."
         : agreedFeeCents == null
           ? "A full admin needs to set your rate per 1,000 views before you can send a post."
           : !termsAccepted
             ? "Accept the rate, maximum, and tracking period before sending."
             : `Standing terms: ${viewPayTerms(agreedFeeCents, standingMaxPayCents, standingTrackingDays)}. They lock when you send the post.`;
-  const canSend = cards.length > 0 && !blocked && !slideProblem && !pending && (offer != null || (agreedFeeCents != null && termsAccepted));
+  const canSend = cards.length > 0 && !blocked && !slideProblem && !pending && (offer != null || (posting != null && agreedFeeCents != null && termsAccepted));
 
   function update(key: string, patch: Partial<Card>) {
     setCards(cards.map((card) => (card.key === key ? { ...card, ...patch } : card)));
@@ -963,6 +980,7 @@ function Composer({
     const data = new FormData();
     data.set("count", String(cards.length));
     if (offer) data.set("offerId", offer.id);
+    if (posting) data.set("agreement", posting.id);
     if (termsAccepted) data.set("terms", "yes");
     data.set("proposedPublishOn", offer ? "" : proposedOn);
     cards.forEach((card, index) => {
@@ -995,6 +1013,7 @@ function Composer({
         <h2 className="text-[28px] font-medium tracking-tight">{cards.length === 1 && !cards[0]?.format ? "What are you sending?" : "New posts"}</h2>
         <p className="text-sm leading-normal text-brown">{cards.length === 1 && !cards[0]?.format ? "Pick TikTok, an Instagram post or carousel, or an Instagram reel. The next step matches that choice." : "Each post is reviewed on its own, so you can publish them as they’re approved. A link in your bio doesn’t count: both lines below go in every caption."}</p>
       </div>
+      {offer ? null : <AgreementLine posting={posting} unavailable={agreementsUnavailable} />}
       {offer ? null : (
         <label className="flex max-w-xs flex-col gap-2 text-sm font-medium" htmlFor="proposed-publish-on">
           Proposed publishing date
@@ -1211,6 +1230,26 @@ function Composer({
   );
 }
 
+function AgreementLine({ posting, unavailable }: { posting: { id: string; label: string } | null; unavailable: boolean }) {
+  if (unavailable) {
+    return <p className="rounded-[18px] bg-background px-4 py-3.5 text-sm text-ink">Your agreement could not be loaded. Try again before sending.</p>;
+  }
+  if (!posting) {
+    return (
+      <p className="rounded-[18px] bg-background px-4 py-3.5 text-sm leading-normal text-ink">
+        A signed agreement has to be on your account before you can send a post.{" "}
+        <Link href="/affiliates/contracts" className="font-medium underline underline-offset-4">Open agreements</Link>
+      </p>
+    );
+  }
+  return (
+    <section className="rounded-[18px] bg-background px-4 py-3.5">
+      <p className="text-[13px] font-semibold text-brown">Posting under your agreement</p>
+      <p className="mt-1 text-sm font-medium">{posting.label}</p>
+    </section>
+  );
+}
+
 function FormatPicker({ onChoose }: { onChoose: (format: PostFormat) => void }) {
   return (
     <div className="grid gap-3 sm:grid-cols-3">
@@ -1319,6 +1358,8 @@ function PostDetail({
   disclosureLine,
   affiliateCode,
   campaigns,
+  posting,
+  agreementsUnavailable,
   onBack,
   onReuse,
   onComposeCampaign,
@@ -1329,6 +1370,8 @@ function PostDetail({
   disclosureLine: string;
   affiliateCode: string;
   campaigns: string[];
+  posting: { id: string; label: string } | null;
+  agreementsUnavailable: boolean;
   onBack: () => void;
   onReuse: () => void;
   onComposeCampaign: (campaign: string) => void;
@@ -1363,8 +1406,13 @@ function PostDetail({
   const changed = carousel
     ? editSlides.some((slide, index) => slide.caption !== (post.slides[index]?.caption ?? "") || Boolean(slide.file))
     : editCaption !== post.caption || Boolean(editFile);
-  const canResubmit = disclosed && linked && changed && !pending && !fileProblem && joinedEdit.length <= CAPTION_LIMIT;
-  const editHint = fileProblem
+  const needsAgreement = !post.offerId;
+  const canResubmit = disclosed && linked && changed && !pending && !fileProblem && joinedEdit.length <= CAPTION_LIMIT && (!needsAgreement || posting != null);
+  const editHint = needsAgreement && agreementsUnavailable
+    ? "Your agreement could not be loaded. Try again before resubmitting."
+    : needsAgreement && !posting
+      ? "A signed agreement has to be on your account before you can resubmit."
+      : fileProblem
     ? fileProblem
     : joinedEdit.length > CAPTION_LIMIT
       ? "These captions together need to stay under 2,200 characters."
@@ -1407,6 +1455,7 @@ function PostDetail({
     const data = new FormData();
     data.set("count", "1");
     data.set("id0", post.id);
+    if (needsAgreement && posting) data.set("agreement", posting.id);
     if (post.format) data.set("format0", post.format);
     if (carousel) {
       data.set("caption0", joinedEdit);
@@ -1447,6 +1496,12 @@ function PostDetail({
           {post.sent ? <span className="text-[13px] text-brown">Sent {post.sent}</span> : null}
         </div>
         <h2 className="text-2xl font-medium tracking-tight">{post.title}</h2>
+        {post.agreement ? (
+          <section className="rounded-[18px] bg-background p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-brown">Agreement</p>
+            <p className="mt-1 text-sm font-medium">{post.agreement}</p>
+          </section>
+        ) : null}
         {post.payLabel ? (
           <section className="rounded-[18px] bg-background p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-brown">Marketing pay</p>

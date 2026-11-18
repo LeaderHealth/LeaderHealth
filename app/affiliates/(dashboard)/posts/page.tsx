@@ -17,6 +17,8 @@ import { affiliateCanAttachCampaign } from "@/lib/affiliate/campaign-record";
 import { loadMarketingCampaignRecords } from "@/lib/affiliate/roi-store";
 import { metaConfigured, tiktokConfigured } from "@/lib/affiliate/social-oauth";
 import { loadSocialAccounts, type SocialAccountView } from "@/lib/affiliate/social-store";
+import { loadAffiliateAgreements, utcAgreementToday } from "@/lib/affiliate/agreements";
+import { postingAgreement, type PostingAgreement } from "@/lib/affiliate/post-agreement";
 import { currentAffiliate } from "../../current";
 
 export const metadata: Metadata = {
@@ -45,6 +47,7 @@ const postErrors: Record<string, string> = {
   terms: "Accept the rate and payment terms before sending the post.",
   campaign: "Choose a campaign assigned to you, or leave it blank.",
   date: "Enter the proposed publishing date as YYYY-MM-DD, or leave it blank.",
+  agreement: "A signed agreement has to be on your account before you can send a post.",
 };
 
 const notices: Record<string, string> = {
@@ -189,6 +192,7 @@ function hubPost(post: ContentSubmission, accounts: SocialAccountView[], payment
     mediaKey: (post.files.length ? post.files : []).map((file) => file.name || file.path).join("\n"),
     format: post.format,
     source: postSourceLabel(post.offerId),
+    agreement: post.agreementLabel,
     offerId: post.offerId,
     offerBrief: post.offerBrief,
     publishBy: post.publishBy ? formatPublishDate(post.publishBy) : "",
@@ -229,6 +233,15 @@ export default async function AffiliatePostsPage({
         .map((record) => record.name);
     } catch {
       assignedCampaigns = [];
+    }
+  }
+  let posting: PostingAgreement | null = null;
+  let agreementsUnavailable = false;
+  if (acknowledged) {
+    try {
+      posting = postingAgreement(await loadAffiliateAgreements(affiliate.code), utcAgreementToday());
+    } catch {
+      agreementsUnavailable = true;
     }
   }
   const paymentByPost = new Map(payments.map((payment) => [payment.postId, payment]));
@@ -321,6 +334,8 @@ export default async function AffiliatePostsPage({
           focusPostId={focusPostId}
           startCompose={query.compose === "1"}
           startCampaign={query.campaign ?? ""}
+          posting={posting}
+          agreementsUnavailable={agreementsUnavailable}
         />
       ) : null}
     </div>

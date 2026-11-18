@@ -31,6 +31,7 @@ export function AffiliateCampaigns({
   trackingUrl,
   terms,
   canSend,
+  posting,
   toast,
   error,
 }: {
@@ -41,6 +42,7 @@ export function AffiliateCampaigns({
   trackingUrl: string;
   terms: string;
   canSend: boolean;
+  posting: { id: string; label: string } | null;
   toast: string;
   error: string;
 }) {
@@ -174,6 +176,11 @@ export function AffiliateCampaigns({
                           setProblem("Add both required lines to the caption.");
                           return;
                         }
+                        if (!posting) {
+                          event.preventDefault();
+                          setProblem("A signed agreement has to be on your account before you can send a post.");
+                          return;
+                        }
                         if (!canSend || !(event.currentTarget.elements.namedItem("terms") as HTMLInputElement | null)?.checked) {
                           event.preventDefault();
                           setProblem(canSend ? "Accept the rate and payment terms before sending the post." : "The social rate is not set yet.");
@@ -183,6 +190,7 @@ export function AffiliateCampaigns({
                       <input type="hidden" name="returnTo" value="campaigns" />
                       <input type="hidden" name="count" value="1" />
                       <input type="hidden" name="campaign" value={campaign.name} />
+                      {posting ? <input type="hidden" name="agreement" value={posting.id} /> : null}
                       <input type="hidden" name="id0" value={slot.postId} />
                       <input type="hidden" name="format0" value={format} />
                       <input type="hidden" name="caption0" value={caption} />
@@ -207,6 +215,7 @@ export function AffiliateCampaigns({
                         <CheckLine ok={hasDisclosure} label={disclosure} onInsert={hasDisclosure ? undefined : () => setCaption((current) => `${current.trim() ? `${current.replace(/\s+$/, "")}\n\n` : ""}${disclosure}`)} />
                         <CheckLine ok={hasLink} label={trackingUrl} mono onInsert={hasLink ? undefined : () => setCaption((current) => `${current.trim() ? `${current.replace(/\s+$/, "")}\n` : ""}${trackingUrl}`)} />
                       </div>
+                      {posting ? <p className="text-sm text-[#4A3A37]">Posting under your agreement: {posting.label}</p> : <p className="text-sm text-[#9B2C1F]">A signed agreement has to be on your account before you can send a post.</p>}
                       {canSend ? (
                         <label className="flex items-start gap-2 text-sm">
                           <input name="terms" type="checkbox" value="yes" className="mt-1 size-4 accent-ink" />
@@ -215,7 +224,7 @@ export function AffiliateCampaigns({
                       ) : <p className="text-sm text-[#9B2C1F]">The social rate is not set yet.</p>}
                       {problem ? <p role="alert" className="text-sm text-[#9B2C1F]">{problem}</p> : null}
                       <div className="flex flex-wrap gap-2.5">
-                        <button type="submit" className="inline-flex h-[46px] items-center rounded-full bg-ink px-[22px] text-[15px] font-medium text-white">Submit for approval</button>
+                        <button type="submit" disabled={!canSend || !posting} className="inline-flex h-[46px] items-center rounded-full bg-ink px-[22px] text-[15px] font-medium text-white disabled:opacity-50">Submit for approval</button>
                         <button type="button" onClick={() => { setOpen(""); setProblem(""); }} className="inline-flex h-[46px] items-center rounded-full border border-[#CDBDBA] bg-white px-5 text-[15px] font-medium text-ink">Cancel</button>
                       </div>
                     </form>
