@@ -9,6 +9,8 @@ import { standingViewRateCents } from "@/lib/affiliate/payment-rates";
 import { loadPaymentRates } from "@/lib/affiliate/payment-store";
 import { DISCLOSURE_LINE, loadContentSubmissions } from "@/lib/affiliate/post-review";
 import { loadMarketingCampaignRecords } from "@/lib/affiliate/roi-store";
+import { loadAffiliateAgreements, utcAgreementToday } from "@/lib/affiliate/agreements";
+import { postingAgreement } from "@/lib/affiliate/post-agreement";
 import { currentAffiliate } from "../../current";
 
 export const metadata: Metadata = {
@@ -29,6 +31,7 @@ const errors: Record<string, string> = {
   status: "That post can no longer be changed that way.",
   invalid: "Add a caption and a picture or video.",
   unavailable: "That could not be saved right now.",
+  agreement: "A signed agreement has to be on your account before you can send a post.",
 };
 
 export default async function AffiliateCampaignsPage({
@@ -59,6 +62,7 @@ export default async function AffiliateCampaignsPage({
     unavailable = true;
   }
   const board = affiliateCampaignBoard({ records, posts, code: affiliate.code });
+  const posting = await loadAffiliateAgreements(affiliate.code).then((rows) => postingAgreement(rows, utcAgreementToday())).catch(() => null);
   const viewRate = await loadPaymentRates().then(standingViewRateCents).catch(() => null);
   const name = query.campaign?.trim() ?? "";
   const toast =
@@ -87,6 +91,7 @@ export default async function AffiliateCampaignsPage({
         trackingUrl={affiliateTrackingLink(affiliate.code)}
         terms={viewRate == null ? "" : `I accept ${viewPayTerms(viewRate, affiliate.deliverableMaxPayCents, affiliate.deliverableTrackingDays)}. These terms lock when I send the post.`}
         canSend={viewRate != null}
+        posting={posting}
         toast={toast}
         error={query.error ? errors[query.error] ?? "That could not be saved right now." : ""}
       />

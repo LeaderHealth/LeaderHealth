@@ -86,13 +86,6 @@ export default async function AffiliateDashboardLayout({ children }: { children:
       items: [createItem, submissionsItem, { href: myCampaigns, label: "My campaigns", badge: campaignBadge }],
     },
     {
-      paths: [payments, orders],
-      items: [
-        { href: payments, label: "Payments" },
-        { href: orders, label: "Lab commission by month" },
-      ],
-    },
-    {
       paths: [agreements, acknowledgments],
       items: [
         { href: agreements, label: "Agreements" },
@@ -104,7 +97,7 @@ export default async function AffiliateDashboardLayout({ children }: { children:
 
   return (
     <section className="bg-background px-4 pt-32 pb-[calc(max(0.5rem,env(safe-area-inset-bottom))+7.5rem)] text-ink sm:px-6 min-[765px]:pb-20">
-      <div className="mx-auto max-w-6xl">
+      <div className="mx-auto max-w-[96rem]">
         <h1>
           <PortalBrand badge="Affiliates" />
         </h1>

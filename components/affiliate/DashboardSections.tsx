@@ -20,7 +20,7 @@ export function DashboardSections({ groups, children }: { groups: DashboardGroup
     <div className="flex min-w-0 flex-col gap-4">
       {group && group.items.length > 0 ? (
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <Subnav label="Section" items={group.items} />
+          <Subnav key={group.paths.join("|")} label="Section" items={group.items} />
           {group.note ? (
             <Link href={group.note.href} className="text-sm font-medium text-ink underline underline-offset-4">
               {group.note.label}

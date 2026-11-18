@@ -1,0 +1,124 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { buildPayoutItems, itemsInRange, labPayoutRows, payoutCents, payoutMonths, payoutReceipts, type PayoutBoardPost } from "./payout-board";
+
+const today = "2026-11-17";
+
+function post(overrides: Partial<PayoutBoardPost> = {}): PayoutBoardPost {
+  return {
+    id: "post1",
+    caption: "Morning routine",
+    format: "tiktok",
+    campaign: "",
+    publishedAt: "2026-11-08T00:00:00.000Z",
+    createdAt: "2026-11-01T00:00:00.000Z",
+    agreedFeeCents: null,
+    viewRateCents: 200,
+    engagementRateCents: 5,
+    maxPayCents: null,
+    trackingDays: 14,
+    views: 1000,
+    likes: 4,
+    comments: 0,
+    shares: 0,
+    saves: 0,
+    contentStatus: "approved",
+    publicationStatus: "tracking_active",
+    deliverableHoldStartedAt: null,
+    deliverableRecheckedAt: null,
+    deliverableForfeitedAt: null,
+    ...overrides,
+  };
+}
+
+test("payout items use real social, website, and paid amounts", () => {
+  const items = buildPayoutItems({
+    today,
+    posts: [
+      post(),
+      post({
+        id: "flat",
+        caption: "Announcement",
+        format: "instagram_post",
+        viewRateCents: null,
+        agreedFeeCents: 15000,
+        views: null,
+        publishedAt: "2026-09-20T00:00:00.000Z",
+        contentStatus: "approved",
+        publicationStatus: "tracking_active",
+      }),
+      post({ id: "closed", caption: "Declined", contentStatus: "rejected", publicationStatus: null, publishedAt: null }),
+    ],
+    payments: [
+      {
+        postId: "flat",
+        amountCents: 15000,
+        status: "paid",
+        approvedAt: "2026-10-21T00:00:00.000Z",
+        paidCents: 15000,
+        paidAt: "2026-11-15T00:00:00.000Z",
+        reference: "ACH · October",
+        adjustmentCents: null,
+        adjustmentReason: "",
+      },
+    ],
+    websites: [
+      {
+        period: "2026-11",
+        clicks: 10,
+        pageViews: 2000,
+        amountCents: 500,
+        status: "pending",
+        clickRateCents: 10,
+        pageViewRateCents: 200,
+        paidAt: null,
+        approvedAt: null,
+        reference: "",
+      },
+      {
+        period: "2026-09",
+        clicks: 0,
+        pageViews: 0,
+        amountCents: 0,
+        status: "pending",
+        clickRateCents: 10,
+        pageViewRateCents: 200,
+        paidAt: null,
+        approvedAt: null,
+        reference: "",
+      },
+    ],
+  });
+  const social = items.find((item) => item.id === "post1");
+  const base = items.find((item) => item.id === "flat");
+  const web = items.find((item) => item.id === "web-2026-11");
+  assert.equal(social?.kind, "social");
+  assert.equal(social?.status, "review");
+  assert.equal(social?.amountCents, 220);
+  assert.equal(base?.kind, "base");
+  assert.equal(base?.status, "paid");
+  assert.equal(base?.amountCents, 15000);
+  assert.equal(web?.status, "review");
+  assert.equal(web?.amountCents, 500);
+  assert.equal(items.some((item) => item.id === "closed" || item.id === "web-2026-09"), false);
+  const recent = itemsInRange(items, today, "30");
+  assert.deepEqual(recent.map((item) => item.id).sort(), ["post1", "web-2026-11"]);
+  const months = payoutMonths(items, today, "90");
+  assert.equal(months.find((month) => month.period === "2026-09")?.base, 15000);
+  assert.equal(payoutCents(items.filter((item) => item.status === "paid")), 15000);
+  const receipts = payoutReceipts(items, today, "90");
+  assert.equal(receipts.length, 1);
+  assert.equal(receipts[0]?.reference, "ACH · October");
+  assert.equal(receipts[0]?.amountCents, 15000);
+  assert.equal(payoutReceipts(items, today, "30").length, 1);
+  const lab = labPayoutRows(
+    [{ period: "2026-10", amountCents: 4905, conversions: 3, status: "paid", paidOn: "2026-11-15T00:00:00.000Z", approvedOn: "2026-11-03T00:00:00.000Z", reference: "ACH", terms: "15% of each completed lab order", refs: [{ id: "abc123def456", source: "Tracking link" }] }],
+    today,
+  );
+  assert.equal(lab.items[0]?.kind, "lab");
+  assert.equal(lab.items[0]?.amountCents, 4905);
+  assert.equal(lab.periods[0]?.tone, "paid");
+  assert.equal(lab.periods[0]?.refs[0]?.id, "abc123def456");
+  const withLab = buildPayoutItems({ today, posts: [], payments: [], websites: [], labs: [{ period: "2026-10", amountCents: 4905, conversions: 3, status: "paid", paidOn: "2026-11-15T00:00:00.000Z", approvedOn: null, reference: "", terms: "15%", refs: [] }] });
+  assert.equal(payoutMonths(withLab, today, "90").find((month) => month.period === "2026-10")?.lab, 4905);
+});

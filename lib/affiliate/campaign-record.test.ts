@@ -55,9 +55,15 @@ test("campaign send requires each step before it stores a brief", () => {
   assert.equal(saved.name, "Holiday TRT push");
   assert.equal(saved.brief.status, "sent");
   assert.equal(saved.brief.baseAmountCents, 15000);
+  assert.equal(saved.brief.baseMode, "campaign");
   assert.equal(saved.brief.performancePay, false);
   assert.equal(saved.brief.postsRequired, 2);
   assert.deepEqual(saved.brief.assignedCodes, ["88h4dcji"]);
+  assert.deepEqual(saved.brief.affiliatePay, []);
+  const custom = readCampaignFlow({ ...ready, affiliates: [{ code: "88h4dcji", amount: "200" }, { code: "88h4dckk", amount: "150" }] });
+  assert.ok(!("error" in custom));
+  if ("error" in custom) return;
+  assert.deepEqual(custom.brief.affiliatePay, [{ code: "88h4dcji", amountCents: 20000 }]);
   const draft = readCampaignFlow({ ...ready, mode: "draft", name: "Draft push", description: "", affiliates: [] });
   assert.ok(!("error" in draft));
   if ("error" in draft) return;

@@ -139,7 +139,7 @@ export function blankCampaignRecord(name: string): MarketingCampaignRecord {
     guidelines: "",
     disclosure: "",
     linkInstructions: "",
-    baseMode: "post",
+    baseMode: "campaign",
     baseAmountCents: 0,
     performancePay: false,
     affiliatePay: [],
@@ -246,12 +246,12 @@ export function readCampaignFlow(input: CampaignFlowInput): { name: string; brie
     }
   }
   const rows = affiliateRows(input.affiliates);
+  const amount = paymentCents(input.amount);
   const affiliatePay: CampaignAffiliatePay[] = [];
   for (const row of rows) {
     const cents = paymentCents(row.amount);
-    if (cents != null) affiliatePay.push({ code: row.code, amountCents: cents });
+    if (cents != null && cents !== amount) affiliatePay.push({ code: row.code, amountCents: cents });
   }
-  const amount = paymentCents(input.amount);
   return {
     name,
     brief: {
@@ -267,7 +267,7 @@ export function readCampaignFlow(input: CampaignFlowInput): { name: string; brie
       guidelines: text(input.guidelines),
       disclosure: text(input.disclosure),
       linkInstructions: text(input.linkInstructions),
-      baseMode: input.baseMode === "campaign" ? "campaign" : "post",
+      baseMode: "campaign",
       baseAmountCents: amount ?? 0,
       performancePay: input.performancePay === true,
       affiliatePay,

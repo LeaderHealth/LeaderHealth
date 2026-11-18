@@ -26,9 +26,9 @@ test("campaign list counts joined affiliates, verified posts, and base pay", () 
   assert.equal(rows[0]?.status, "active");
   assert.equal(rows[0]?.affiliateLine, "1 of 2 joined");
   assert.equal(rows[0]?.progress, "1 of 2");
-  assert.equal(rows[0]?.budgetLabel, "$300");
+  assert.equal(rows[0]?.budgetLabel, "$150");
   assert.equal(rows[0]?.pending, 1);
-  assert.equal(rows[0]?.stats[3]?.value, "$150");
+  assert.equal(rows[0]?.stats[3]?.value, "$0");
   assert.equal(rows[0]?.affiliates[0]?.state, "progress");
   assert.equal(rows[0]?.affiliates[1]?.state, "invited");
   assert.equal(rows[0]?.dates, "Nov 15 – Dec 31, 2026");
@@ -61,7 +61,7 @@ test("accepting a campaign counts as joined and declining does not", () => {
   });
   assert.equal(rows[0]?.affiliateLine, "1 of 2 joined");
   assert.equal(rows[0]?.status, "active");
-  assert.equal(rows[0]?.budgetLabel, "$300");
+  assert.equal(rows[0]?.budgetLabel, "$150");
   assert.equal(rows[0]?.affiliates[0]?.state, "progress");
   assert.equal(rows[0]?.affiliates[1]?.state, "declined");
 });

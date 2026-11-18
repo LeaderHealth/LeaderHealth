@@ -184,6 +184,7 @@ function reviewGroup(group: ContentSubmission[], affiliate: AffiliateSummary | u
     pastHref: `/admin/affiliates/accounts?code=${encodeURIComponent(primary.code)}`,
     suggestedNote: suggestedNote(slides),
     campaign: primary.campaign,
+    agreement: primary.agreementLabel,
     platform: kindShort,
     submittedOn: submittedDay(whenStamp(primary)),
     dateLabel: primary.proposedPublishOn ? "Proposed" : primary.publishBy ? "Publish by" : "",

@@ -186,8 +186,8 @@ export function affiliateCampaignBoard(input: { records: MarketingCampaignRecord
     const answer = campaignAnswer(record, input.code);
     const rate = rateCents(record, input.code);
     const required = record.postsRequired;
-    const totalCents = record.baseMode === "campaign" || required < 1 ? rate : rate * required;
-    const terms = `${money(rate)} ${record.baseMode === "campaign" ? "for the campaign" : "per post"}`;
+    const totalCents = rate;
+    const terms = `${money(rate)} for the campaign`;
     const performance = record.performancePay
       ? "Also paid from recorded views, engagements, verified link clicks, and eligible page views."
       : "";
@@ -222,7 +222,7 @@ export function affiliateCampaignBoard(input: { records: MarketingCampaignRecord
     const slots = own.map((post, index) => slotFor(post, index, record.name));
     const slotsNeeded = required > 0 ? required : slots.length === 0 ? 1 : slots.length;
     for (let index = slots.length; index < slotsNeeded; index += 1) slots.push(slotFor(null, index, record.name));
-    const earned = record.baseMode === "campaign" ? (required > 0 && verified >= required ? rate : 0) : verified * rate;
+    const earned = required > 0 && verified >= required ? rate : 0;
     active.push({
       name: record.name,
       content,

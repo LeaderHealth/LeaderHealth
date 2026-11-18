@@ -91,6 +91,15 @@ export async function loadMarketingEvents(input: { code?: string; period?: strin
     .filter((event) => !period || !input.code || eventPeriod(event.createdAt) === period);
 }
 
+function payoutStamp(data: DocumentData | undefined) {
+  const reference = typeof data?.reference === "string" ? data.reference.trim().slice(0, 80) : "";
+  return {
+    paidAt: asIso(data?.paidAt) || null,
+    approvedAt: asIso(data?.approvedAt) || null,
+    reference,
+  };
+}
+
 function snapshotFrom(data: DocumentData | undefined): WebsiteSnapshot | null {
   if (!data || (data.status !== "approved" && data.status !== "paid")) return null;
   const count = (value: unknown) => (typeof value === "number" && Number.isInteger(value) && value >= 0 ? value : 0);
@@ -123,9 +132,9 @@ export async function loadWebsitePayoutsForCode(code: string) {
       const data = doc.data();
       const period = typeof data.period === "string" ? data.period : "";
       const snapshot = snapshotFrom(data);
-      return /^\d{4}-\d{2}$/.test(period) && snapshot ? { code: normalized, period, ...snapshot } : null;
+      return /^\d{4}-\d{2}$/.test(period) && snapshot ? { code: normalized, period, ...snapshot, ...payoutStamp(data) } : null;
     })
-    .filter((row): row is { code: string; period: string } & WebsiteSnapshot => row != null);
+    .filter((row): row is { code: string; period: string; paidAt: string | null; approvedAt: string | null; reference: string } & WebsiteSnapshot => row != null);
 }
 
 export async function loadAllWebsitePayouts() {
@@ -162,7 +171,7 @@ export async function approveWebsitePayout(code: string, period: string) {
   const db = affiliateFirestore();
   const ref = db.collection("websitePayouts").doc(`${normalized}_${period}`);
   const existing = snapshotFrom((await ref.get()).data());
-  if (existing) return existing;
+  if (existing) return null;
   if (await trafficMonthLocked(period)) throw new Error("locked");
   const [events, rates] = await Promise.all([loadMarketingEvents({ code: normalized, period }), loadPaymentRates()]);
   const quote = websiteMonthAmount({ events, code: normalized, period, rates, snapshot: null });
@@ -180,7 +189,7 @@ export async function approveWebsitePayout(code: string, period: string) {
     approvedAt: new Date(),
   };
   await ref.set(saved);
-  return snapshotFrom(saved);
+  return quote.amountCents;
 }
 
 export async function markWebsitePayoutPaid(input: { code: string; period: string; paidCents: number; paidAt: Date; reference: string }) {
