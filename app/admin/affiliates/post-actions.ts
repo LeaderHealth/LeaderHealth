@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { clearAffiliateMemo } from "@/lib/affiliate/memo";
 import { redirect } from "next/navigation";
 import { noteComplianceEvent } from "@/lib/affiliate/compliance-log";
 import { affiliateEmailConfigured, sendPostApprovedEmail } from "@/lib/affiliate/email";
@@ -51,6 +52,7 @@ function decisionDetail(name: string, campaign: string, sentence: string) {
 }
 
 function refresh() {
+  clearAffiliateMemo();
   revalidatePath(ACCOUNTS);
   revalidatePath(REVIEW);
   revalidatePath("/admin/affiliates/records");

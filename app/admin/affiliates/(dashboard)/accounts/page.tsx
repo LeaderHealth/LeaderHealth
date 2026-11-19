@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { accountColumnTotals } from "@/lib/affiliate/account-figures";
 import { normalizeAffiliateCode } from "@/lib/affiliate/code";
@@ -6,9 +7,9 @@ import { LAB_COMMISSIONS_ENABLED } from "@/lib/affiliate/code";
 import { loadDeliverablePayments, type DeliverablePayment } from "@/lib/affiliate/deliverable-payments";
 import { formatCents, formatCommissionRate } from "@/lib/affiliate/format";
 import { loadAllWebsitePayouts, loadMarketingEvents } from "@/lib/affiliate/marketing-events";
-import { eventPeriod, socialMonthCents, standingViewRateCents, websiteMonthAmount, type PaymentRates } from "@/lib/affiliate/payment-rates";
+import { eventPeriod, rateFor, socialMonthCents, standingViewRateCents, websiteMonthAmount, type PaymentRates } from "@/lib/affiliate/payment-rates";
 import { loadPaymentRates } from "@/lib/affiliate/payment-store";
-import { currentPayoutPeriod, formatPayoutMonth, payoutLines, previousPayoutPeriod } from "@/lib/affiliate/payouts";
+import { currentPayoutPeriod, formatPayoutMonth, normalizePayoutPeriod, payoutLines, payoutPeriod } from "@/lib/affiliate/payouts";
 import { affiliateTrackingLink } from "@/lib/affiliate/link";
 import { loadPayoutRecords, type PayoutRecord } from "@/lib/affiliate/payouts";
 import { reportHandledAffiliateError } from "@/lib/affiliate/report";
@@ -23,25 +24,27 @@ import {
   type ConversionSummary,
 } from "@/lib/affiliate/store";
 import { AccountAgreement } from "@/components/affiliate/AccountAgreement";
+import { SlidingTabs, TabPanel } from "@/components/affiliate/SlidingTabs";
 import { AccountReports } from "@/components/affiliate/AccountReports";
-import { AccountSettings } from "@/components/affiliate/AccountSettings";
 import { AccountTracking } from "@/components/affiliate/AccountTracking";
 import { loadAffiliateAgreements, type AffiliateAgreement } from "@/lib/affiliate/agreements";
+import { agreementMonthEarning, agreementMonthPeriods, agreementPostMonth } from "@/lib/affiliate/agreement-earnings";
+import { loadAllAgreementPayouts, type AgreementPayoutRow } from "@/lib/affiliate/agreement-payouts";
 import { agreementEditorState, agreementSeed, presentAgreement } from "@/lib/affiliate/agreement-view";
+import { AGREEMENT_PLATFORMS, type AgreementPlatform } from "@/lib/affiliate/agreement-partnership";
 import { visibleReportSections } from "@/lib/affiliate/marketing";
 import { loadMarketingReports, type MarketingReport } from "@/lib/affiliate/marketing-store";
 import {
   loadContentSubmissions,
-  metricLines,
   refreshDueMetrics,
   type ContentSubmission,
 } from "@/lib/affiliate/post-review";
-import type { TrackedPostCard } from "@/components/affiliate/TrackedPosts";
 import { loadSocialAccounts, type SocialAccountView } from "@/lib/affiliate/social-store";
 import { loadWebsiteEvents, websiteReportMonths, type WebsiteOrder, type WebsiteVisit } from "@/lib/affiliate/website-report";
 import type { AffiliatePromoDetail } from "@/components/affiliate/AffiliatePromoCodes";
 import { listPromoCodes, promoRowsForAffiliate, type PromoCodeRow } from "@/lib/genhealth/promocodes";
 import { AccountActions } from "@/components/affiliate/AccountActions";
+import { replaceAgreementAction } from "../../agreement-actions";
 import { adminHasFullAccess, adminSessionActor } from "@/lib/affiliate/session";
 import { ADMIN_ERRORS } from "../../messages";
 
@@ -52,14 +55,117 @@ export const metadata: Metadata = {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function accountStatus(affiliate: AffiliateSummary) {
-  if (!affiliate.active) return "Inactive";
-  if (affiliate.pendingInvite) return "Invited";
-  return "Active";
+type StatusKey = "active" | "invited" | "inactive";
+
+const STATUS: Record<StatusKey, { label: string; pill: string; dot: string }> = {
+  active: { label: "Active", pill: "bg-[#DDF0E4] text-[#1D6340]", dot: "bg-[#1D6340]" },
+  invited: { label: "Invited", pill: "bg-[#FBEFD6] text-[#7A4E00]", dot: "bg-[#C98A1A]" },
+  inactive: { label: "Inactive", pill: "bg-[#EFEAE9] text-[#4A3A37]", dot: "bg-[#B3A5A2]" },
+};
+
+const FILTERS: { id: "all" | StatusKey; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "active", label: "Active" },
+  { id: "invited", label: "Invited" },
+  { id: "inactive", label: "Inactive" },
+];
+
+const GRID =
+  "grid grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)_repeat(3,minmax(0,0.75fr))_repeat(4,minmax(0,0.85fr))_96px] items-center gap-3";
+const muted = "text-[#B3A5A2]";
+const focusRing = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
+const textLink = `text-sm font-medium text-ink underline underline-offset-4 hover:text-brown ${focusRing}`;
+
+function statusKey(affiliate: AffiliateSummary): StatusKey {
+  if (!affiliate.active) return "inactive";
+  if (affiliate.pendingInvite) return "invited";
+  return "active";
 }
 
-function statusClass(affiliate: AffiliateSummary) {
-  return affiliate.active && !affiliate.pendingInvite ? "bg-rose text-ink" : "border border-ink/20 text-brown";
+function initials(name: string) {
+  return (
+    name
+      .trim()
+      .split(/\s+/)
+      .map((word) => word[0] ?? "")
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "?"
+  );
+}
+
+function shortDate(value: string | null, withYear = false) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("en-US", withYear ? { month: "short", day: "numeric", year: "numeric" } : { month: "short", day: "numeric" }).format(date);
+}
+
+function sumKnown(values: (number | null)[]) {
+  const known = values.filter((value): value is number => value != null);
+  return known.length ? known.reduce((sum, value) => sum + value, 0) : null;
+}
+
+function accountsHref(status: string, q: string) {
+  const params = new URLSearchParams();
+  if (status !== "all") params.set("status", status);
+  if (q) params.set("q", q);
+  const text = params.toString();
+  return text ? `/admin/affiliates/accounts?${text}` : "/admin/affiliates/accounts";
+}
+
+function Avatar({ name, large = false }: { name: string; large?: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`flex flex-none items-center justify-center rounded-full bg-[#F3CFCB] font-semibold text-ink ${large ? "size-13 text-base" : "size-9.5 text-[13px]"}`}
+    >
+      {initials(name)}
+    </span>
+  );
+}
+
+const zero = "text-[#D3C8C5]";
+
+function Amount({ cents, strong = false, divider = false }: { cents: number | null; strong?: boolean; divider?: boolean }) {
+  return (
+    <span role="cell" className={`text-right text-[15px] tabular-nums ${cents ? "" : zero} ${strong ? "font-semibold" : ""} ${divider ? "pl-6" : ""}`}>
+      {money(cents)}
+    </span>
+  );
+}
+
+function Count({ value, tone = "", divider = false }: { value: number | null; tone?: string; divider?: boolean }) {
+  return (
+    <span role="cell" className={`text-right text-[15px] tabular-nums ${value ? tone : zero} ${divider ? "pl-6" : ""}`}>
+      {value == null ? "—" : value}
+    </span>
+  );
+}
+
+function MonthStep({ href, label, direction }: { href: string | null; label: string; direction: "previous" | "next" }) {
+  const icon = (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={direction === "previous" ? "M15 6l-6 6 6 6" : "M9 6l6 6-6 6"} />
+    </svg>
+  );
+  const className = `flex size-8 items-center justify-center rounded-full ${focusRing}`;
+  if (!href) return <span aria-hidden="true" className={`${className} text-[#CDBDBA]`}>{icon}</span>;
+  return (
+    <Link href={href} aria-label={label} className={`${className} text-ink hover:bg-[#F7F3F2]`}>
+      {icon}
+    </Link>
+  );
+}
+
+function Tile({ label, value, note, white = false, tone = "" }: { label: string; value: string; note: string; white?: boolean; tone?: string }) {
+  return (
+    <div className={`flex flex-col gap-0.5 ${white ? "rounded-[20px] bg-white px-5 py-[18px]" : "rounded-[18px] bg-[#F7F3F2] px-4 py-3.5"}`}>
+      <span className="text-sm text-[#4A3A37]">{label}</span>
+      <span className={`text-[26px] font-medium tabular-nums ${tone}`}>{value}</span>
+      <span className="text-[13px] text-[#6B5A57]">{note}</span>
+    </div>
+  );
 }
 
 function discountText(promo: PromoCodeRow) {
@@ -74,6 +180,11 @@ function paidEarningsCents(code: string, payouts: PayoutRecord[]) {
   }, 0);
 }
 
+function payFormula(terms: [number, string][]) {
+  const parts = terms.filter(([cents]) => cents > 0).map(([cents, unit]) => `${formatCents(cents)} / ${unit}`.replace(/ /g, "\u00a0"));
+  return parts.length ? parts.join(" + ") : "Not set";
+}
+
 function money(cents: number | null) {
   return cents == null ? "—" : formatCents(cents);
 }
@@ -84,41 +195,23 @@ function marketingPayText(rates: PaymentRates | null) {
   return LAB_COMMISSIONS_ENABLED ? `${fee}. Lab commission applies to lab orders.` : `${fee}. Lab commission is not active.`;
 }
 
-function MonthBlock({
-  label,
-  social,
-  website,
-  lab,
-}: {
-  label: string;
-  social: string;
-  website: string;
-  lab: string;
-}) {
-  return (
-    <div className="rounded-[24px] bg-background px-4 py-5">
-      <h3 className="text-lg">{label}</h3>
-      <dl className="mt-4 grid grid-cols-3 gap-3 text-sm leading-6">
-        <div>
-          <dt className="text-xs text-brown">Social</dt>
-          <dd className="mt-1">{social}</dd>
-        </div>
-        <div>
-          <dt className="text-xs text-brown">Website traffic</dt>
-          <dd className="mt-1">{website}</dd>
-        </div>
-        <div>
-          <dt className="text-xs text-brown">Lab</dt>
-          <dd className="mt-1">{lab}</dd>
-        </div>
-      </dl>
-    </div>
-  );
-}
-
-
 function editableAgreement(current: AffiliateAgreement | null, editable: boolean) {
   return editable ? current : null;
+}
+
+function shiftMonth(period: string, delta: number) {
+  const year = Number(period.slice(0, 4));
+  const month = Number(period.slice(5, 7));
+  const date = new Date(Date.UTC(year, month - 1 + delta, 1));
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+function monthProgress(posts: ContentSubmission[], code: string, agreementId: string, period = currentPayoutPeriod()) {
+  const inMonth = posts.filter((post) => post.code === code && post.agreementId === agreementId && agreementPostMonth(post) === period);
+  return {
+    verified: inMonth.filter((post) => post.contentStatus !== "rejected" && post.contentStatus !== "withdrawn" && post.publicationStatus === "tracking_active").length,
+    review: inMonth.filter((post) => post.contentStatus !== "rejected" && post.contentStatus !== "withdrawn" && post.publicationStatus !== "tracking_active" && (post.contentStatus === "submitted" || post.contentStatus === "revision_requested" || post.publicationStatus === "verification_pending" || post.publicationStatus === "awaiting_publication")).length,
+  };
 }
 
 const complianceNotices: Record<string, string> = {
@@ -126,11 +219,15 @@ const complianceNotices: Record<string, string> = {
   correction: "Correction requested.",
   resolved: "Flag resolved.",
   accepted: "Disclosure proof accepted.",
-  "agreement-saved": "Agreement saved.",
-  "agreement-waiting": "Agreement is awaiting a signature.",
-  "agreement-signed": "Signed agreement stored.",
+  "agreement-saved": "Draft saved.",
+  "agreement-deleted": "Draft deleted.",
+  "agreement-waiting": "Sent. It’s on their Contracts page to read and accept.",
+  "agreement-signed": "Signed PDF stored. It’s active.",
+  "agreement-accepted": "Marked as accepted. It’s active.",
+  "agreement-withdrawn": "Withdrawn. You can edit it again.",
   "agreement-ended": "Agreement ended.",
-  "agreement-replaced": "A new agreement draft was started. The previous agreement is still on file.",
+  "agreement-replied": "Reply sent. They can accept the agreement or ask again.",
+  "agreement-replaced": "A new draft was started. Earlier agreements stay on file.",
   "post-approved": "Post approved. The affiliate can paste the Instagram link.",
   "post-change": "Asked for a change.",
   "post-rejected": "Post rejected.",
@@ -139,18 +236,42 @@ const complianceNotices: Record<string, string> = {
   fee: "View rate saved.",
 };
 
-function trackedCards(posts: ContentSubmission[]): TrackedPostCard[] {
-  return posts
-    .filter((post) => post.publicationStatus === "tracking_active")
-    .map((post) => ({ id: post.id, caption: post.caption, postUrl: post.postUrl, metrics: metricLines(post) }));
+function postPlatform(post: ContentSubmission): AgreementPlatform | null {
+  if (post.format === "tiktok") return "TikTok";
+  if (post.format === "instagram_post" || post.format === "instagram_reel") return "Instagram";
+  let host = "";
+  try {
+    host = new URL(post.postUrl ?? "").hostname.toLowerCase().replace(/^(www|m)\./, "");
+  } catch {
+    return null;
+  }
+  if (host === "instagram.com") return "Instagram";
+  if (host.endsWith("tiktok.com")) return "TikTok";
+  if (host === "facebook.com" || host === "fb.watch") return "Facebook";
+  if (host === "youtube.com" || host === "youtu.be") return "YouTube";
+  return null;
+}
+
+function postKind(post: ContentSubmission) {
+  if (post.format === "tiktok") return "Video";
+  if (post.format === "instagram_reel") return "Reel";
+  if (post.files.length > 1) return `Carousel · ${post.files.length}`;
+  return post.files[0]?.contentType.startsWith("video/") ? "Video" : "Post";
+}
+
+function compactNumber(value: number | null) {
+  return value == null ? "—" : new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(value);
 }
 
 export default async function AffiliateAccountsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; notice?: string; created?: string; invited?: string; resent?: string; code?: string }>;
+  searchParams: Promise<{ error?: string; notice?: string; created?: string; invited?: string; resent?: string; code?: string; status?: string; q?: string; view?: string; platform?: string; step?: string; new?: string; month?: string }>;
 }) {
   const query = await searchParams;
+  const agreementsTab = query.view === "agreements";
+  const postsTab = query.view === "posts";
+  const trackingTab = query.view === "tracking";
   const actor = await adminSessionActor();
   const canInvite = Boolean(actor && adminHasFullAccess(actor));
   const error = query.error ? ADMIN_ERRORS[query.error] : "";
@@ -269,6 +390,7 @@ export default async function AffiliateAccountsPage({
   let reportsUnavailable = false;
   let agreements: AffiliateAgreement[] = [];
   let agreementsUnavailable = false;
+  let agreementPayouts: AgreementPayoutRow[] = [];
   let contentPosts: ContentSubmission[] = [];
   let deliverablePayments: DeliverablePayment[] = [];
   let marketingEvents: Awaited<ReturnType<typeof loadMarketingEvents>> = [];
@@ -287,7 +409,7 @@ export default async function AffiliateAccountsPage({
       reportHandledAffiliateError("[affiliate] marketing report load failed", caught);
     }
     try {
-      agreements = await loadAffiliateAgreements();
+      [agreements, agreementPayouts] = await Promise.all([loadAffiliateAgreements(), loadAllAgreementPayouts()]);
     } catch (caught) {
       agreementsUnavailable = true;
       reportHandledAffiliateError("[affiliate] agreement load failed", caught);
@@ -328,10 +450,13 @@ export default async function AffiliateAccountsPage({
       const period = eventPeriod(payment.approvedAt ?? payment.paidAt ?? "");
       if (period) periods.add(period);
     }
+    for (const row of agreementPayouts) {
+      if (row.code === code) periods.add(row.period);
+    }
     let socialCents = 0;
     for (const period of periods) {
       const month = socialMonthCents({ period, posts, payments });
-      socialCents += month.socialCents + month.adjustmentCents;
+      socialCents += month.socialCents + month.adjustmentCents + monthlyRate(code, period).earnedCents;
     }
     const websitePeriods = new Set<string>();
     for (const event of marketingEvents) {
@@ -352,24 +477,31 @@ export default async function AffiliateAccountsPage({
     return { socialCents, websiteCents, labCents: labByCode.get(code) ?? 0 };
   }
 
+  function monthlyRate(code: string, period: string) {
+    return agreementMonthEarning({
+      agreements,
+      posts: contentPosts,
+      code,
+      period,
+      snapshot: agreementPayouts.find((row) => row.code === code && row.period === period) ?? null,
+    });
+  }
+
   function monthPay(code: string, period: string) {
     const posts = contentPosts.filter((post) => post.code === code);
     const payments = deliverablePayments.filter((payment) => payment.code === code);
     const social = socialMonthCents({ period, posts, payments });
+    const monthly = monthlyRate(code, period).earnedCents;
     const snapshot = websiteSnapshots.find((row) => row.code === code && row.period === period) ?? null;
     const website = contentRates ? websiteMonthAmount({ events: marketingEvents, code, period, rates: contentRates, snapshot }).amountCents : null;
     const lab = payoutLines({ affiliates, orders: conversions, payouts, period })
       .filter((line) => line.code === code)
       .reduce((sum, line) => sum + line.earnedCents, 0);
     return {
-      social: postsUnavailable ? null : social.socialCents + social.adjustmentCents,
+      social: postsUnavailable ? null : social.socialCents + social.adjustmentCents + monthly,
       website: websiteUnavailable || !contentRates ? null : website,
       lab: payoutsReady ? lab : null,
     };
-  }
-
-  function monthText(cents: number | null) {
-    return cents == null ? "—" : formatCents(cents);
   }
 
   const reportSections = visibleReportSections(marketingReports, socialAccounts);
@@ -379,91 +511,535 @@ export default async function AffiliateAccountsPage({
     const current = own.find((agreement) => agreement.current) ?? null;
     const history = own.filter((agreement) => agreement.id !== current?.id);
     const editor = agreementEditorState(current, history, agreementsUnavailable);
-    const leadAgreement = current ?? history[0] ?? null;
-    const older = (current ? history : history.slice(1)).map((agreement) => presentAgreement(agreement));
     return {
       name: affiliate.name,
       code: affiliate.code,
-      commission: marketingPayText(contentRates),
+      labRate: !LAB_COMMISSIONS_ENABLED ? "Off" : affiliate.commissionMode === "fixed" ? formatCommissionRate(affiliate) : `${formatCommissionRate(affiliate)} of lab orders`,
+      standingRate: standingViewRateCents(contentRates) == null ? "Not set" : `${formatCents(standingViewRateCents(contentRates) ?? 0)} per 1,000 views`,
       unavailable: agreementsUnavailable,
-      lead: leadAgreement ? presentAgreement(leadAgreement) : null,
-      older,
+      agreements: (current ? [current, ...history] : history).map((agreement) => presentAgreement(agreement)),
+      editableId: editor.editable && current ? current.id : null,
       seed: agreementSeed(editableAgreement(current, editor.editable)),
-      ...editor,
+      canSign: editor.canSign,
+      canAccept: editor.canAccept,
+      canEnd: editor.canEnd,
+      canReplace: editor.canReplace,
+      replaceNeedsNote: editor.replaceNeedsNote,
+      progress: current && editor.canEnd ? monthProgress(contentPosts, affiliate.code, current.id) : null,
     };
   }
 
-  function settings(affiliate: AffiliateSummary) {
-    return (
-      <AccountSettings name={affiliate.name}>
-        <AccountTracking
-          name={affiliate.name}
-          code={affiliate.code}
-          commission={formatCommissionRate(affiliate)}
-          viewRate={marketingPayText(contentRates)}
-          cookieDays={cookieDays}
-          trackingLink={affiliateTrackingLink(affiliate.code)}
-          promos={trackingPromos(affiliate)}
-          unavailable={Boolean(promoError)}
-        />
-        <AccountAgreement {...agreementProps(affiliate)} />
-        <AccountReports
-          name={affiliate.name}
-          code={affiliate.code}
-          unavailable={reportsUnavailable}
-          months={websiteReportMonths({ code: affiliate.code, visits: websiteVisits, orders: websiteOrders })}
-          sections={reportSections.filter((section) => section.code === affiliate.code)}
-          tracked={trackedCards(contentPosts.filter((post) => post.code === affiliate.code))}
-        />
-        <p className="mt-6 border-t border-rose/60 pt-6 text-sm text-brown">{marketingPayText(contentRates)}</p>
-        <Link href={`/admin/affiliates/offers?code=${encodeURIComponent(affiliate.code)}`} className="mt-3 inline-flex text-sm font-medium text-ink underline underline-offset-4">
-          Monthly plan
-        </Link>
-        <AccountActions code={affiliate.code} name={affiliate.name} active={affiliate.active} pendingInvite={affiliate.pendingInvite && affiliate.active} canInvite={canInvite} />
-      </AccountSettings>
-    );
+  function agreementFor(affiliate: AffiliateSummary) {
+    const current = agreements.find((agreement) => agreement.code === affiliate.code && agreement.current) ?? null;
+    const view = current ? presentAgreement(current) : null;
+    const progress = current && view?.phase === "active" ? monthProgress(contentPosts, affiliate.code, current.id) : null;
+    return { view, progress };
   }
+
+  function earnings(affiliate: AffiliateSummary) {
+    const pay = payFor(affiliate.code);
+    const social = postsUnavailable ? null : pay.socialCents;
+    const website = websiteUnavailable || !contentRates ? null : pay.websiteCents;
+    const lab = LAB_COMMISSIONS_ENABLED && payoutsReady ? pay.labCents : null;
+    return { social, website, lab, total: sumKnown([social, website, lab]) };
+  }
+
+  const rows = affiliates.map((affiliate) => ({
+    affiliate,
+    status: statusKey(affiliate),
+    stats: figures(affiliate),
+    pay: earnings(affiliate),
+    deal: agreementFor(affiliate),
+  }));
+  type Row = (typeof rows)[number];
+  const statusFilter = FILTERS.find((filter) => filter.id === query.status)?.id ?? "all";
+  const search = (query.q ?? "").trim();
+  const needle = search.toLowerCase();
+  const visible = rows.filter(
+    (row) =>
+      (statusFilter === "all" || row.status === statusFilter) &&
+      (!needle || `${row.affiliate.name} ${row.affiliate.email} ${row.affiliate.code}`.toLowerCase().includes(needle)),
+  );
+  const unpaidKnown = rows.every((row) => row.stats.unpaidOrders != null);
+  const visibleTotal = (pick: (row: Row) => number | null) => sumKnown(visible.map(pick));
 
   const selected = requestedCode ? (affiliates.find((affiliate) => affiliate.code === requestedCode) ?? null) : null;
   const currentPeriod = currentPayoutPeriod();
-  const priorPeriod = previousPayoutPeriod(currentPeriod);
+  function agreementCell(row: Row) {
+    const { view, progress } = row.deal;
+    if (view?.phase === "active") {
+      const need = view.postTotal;
+      const done = progress?.verified ?? 0;
+      const postingNow = agreementMonthPeriods(view.effectiveValue, view.expiresValue).includes(currentPeriod);
+      return (
+        <span className="flex min-w-0 flex-col gap-1.5">
+          <span className="text-[15px]">{view.monthly ? `${view.monthly}/month · ${need} posts each month` : `${need} posts each month`}</span>
+          {need > 0 && postingNow ? (
+            <span className="flex items-center gap-2">
+              <span className="h-1.5 max-w-[90px] flex-1 overflow-hidden rounded-full bg-[#E8DEDC]">
+                <span className="block h-1.5 bg-[#1D6340]" style={{ width: `${Math.min(100, Math.round((done / need) * 100))}%` }} />
+              </span>
+              <span className="whitespace-nowrap text-[13px] text-[#4A3A37]">
+                {done} of {need} this month
+              </span>
+            </span>
+          ) : null}
+        </span>
+      );
+    }
+    const text = view?.phase === "waiting" ? (view.questions.length > 0 ? "Still negotiating" : "Waiting for signature") : view?.phase === "draft" ? "Draft" : "None";
+    return <span className={`text-[15px] ${text === "None" ? "text-[#6B5A57]" : ""}`}>{text}</span>;
+  }
+
+  function profileView(affiliate: AffiliateSummary) {
+    const row = rows.find((item) => item.affiliate.code === affiliate.code);
+    if (!row) return null;
+    const { view } = row.deal;
+    const first = affiliate.name.trim().split(/\s+/)[0] || affiliate.name;
+    const status = STATUS[row.status];
+    const agreement = agreementProps(affiliate);
+    const posts = contentPosts.filter((post) => post.code === affiliate.code);
+    const ownPayouts = payouts.filter((payout) => payout.code === affiliate.code);
+    const ownAgreements = agreements.filter((item) => item.code === affiliate.code);
+    const waitingPosts = posts.filter((post) => post.contentStatus === "submitted").length;
+    const approvedCents = ownPayouts.filter((payout) => payout.status === "approved").reduce((sum, payout) => sum + payout.earnedCents, 0);
+    const requestedMonth = normalizePayoutPeriod(query.month);
+    const selectedPeriod = requestedMonth && requestedMonth <= currentPeriod ? requestedMonth : currentPeriod;
+    const thisMonth = sumKnown(Object.values(monthPay(affiliate.code, selectedPeriod)));
+    const activeDeal = view?.phase === "active" ? (ownAgreements.find((item) => item.current) ?? null) : null;
+    const rateThisMonth = monthlyRate(affiliate.code, selectedPeriod);
+    const postsShort = rateThisMonth.requiredPosts - rateThisMonth.verifiedPosts;
+    const earnedNote =
+      rateThisMonth.status === "none"
+        ? "Social, website and lab"
+        : rateThisMonth.status === "short"
+          ? `Monthly rate needs ${postsShort} more ${postsShort === 1 ? "post" : "posts"}`
+          : "Includes the monthly rate";
+    const promoCodes = promosFor(affiliate).map((promo) => promo.code);
+    const joined = shortDate(affiliate.createdAt, true);
+    const labRate = LAB_COMMISSIONS_ENABLED ? formatCommissionRate(affiliate) : "Off";
+    const viewRate = standingViewRateCents(contentRates);
+    const profileHref = `/admin/affiliates/accounts?code=${encodeURIComponent(affiliate.code)}`;
+    const agreementsHref = `${profileHref}&view=agreements`;
+    const postsHref = `${profileHref}&view=posts`;
+
+    function livePosts() {
+      const live = posts
+        .filter((post) => post.contentStatus === "approved" && post.publicationStatus === "tracking_active")
+        .map((post) => ({ post, platform: postPlatform(post) }))
+        .sort((a, b) => (b.post.publishedAt ?? b.post.reviewedAt ?? "").localeCompare(a.post.publishedAt ?? a.post.reviewedAt ?? ""));
+      const platform = AGREEMENT_PLATFORMS.find((item) => item.toLowerCase() === (query.platform ?? "").toLowerCase()) ?? null;
+      const shown = platform ? live.filter((item) => item.platform === platform) : live;
+      const chips = [
+        { label: "All", value: null, count: live.length },
+        ...AGREEMENT_PLATFORMS.map((item) => ({ label: item, value: item, count: live.filter((row) => row.platform === item).length })),
+      ];
+      return (
+        <section aria-labelledby="live-posts-title" className="flex flex-col gap-4 rounded-[24px] bg-white px-6 py-[22px]">
+          <div className="flex flex-wrap items-baseline gap-2.5">
+            <h3 id="live-posts-title" className="flex-1 text-lg font-semibold">
+              Live posts
+            </h3>
+            <span className="text-sm text-[#4A3A37]">Approved and verified on {first}’s account</span>
+          </div>
+          <nav aria-label="Filter by platform" className="flex flex-wrap gap-2">
+            {chips.map((chip) => {
+              const on = chip.value === platform;
+              return (
+                <Link
+                  key={chip.label}
+                  href={chip.value ? `${postsHref}&platform=${chip.value.toLowerCase()}` : postsHref}
+                  aria-current={on ? "page" : undefined}
+                  className={`inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-sm font-medium ${on ? "bg-ink text-white" : `bg-[#F7F3F2] text-ink hover:bg-background ${focusRing}`}`}
+                >
+                  {chip.label}
+                  <span className={`tabular-nums ${on ? "text-white/70" : chip.count ? "text-[#6B5A57]" : muted}`}>{chip.count}</span>
+                </Link>
+              );
+            })}
+          </nav>
+          {postsUnavailable ? (
+            <p className="rounded-2xl bg-[#F7F3F2] px-4 py-3.5 text-[15px] text-[#4A3A37]">Posts are unavailable right now.</p>
+          ) : shown.length === 0 ? (
+            <p className="rounded-2xl bg-[#F7F3F2] px-4 py-3.5 text-[15px] text-[#4A3A37]">
+              {platform ? `No live ${platform} posts yet.` : `${first} has no live posts yet.`}
+            </p>
+          ) : (
+            <ul className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
+              {shown.map(({ post, platform: network }) => {
+                const file = post.files[0] ?? (post.filePath ? { contentType: post.contentType } : null);
+                const src = `/admin/affiliates/post-file?post=${encodeURIComponent(post.id)}&slide=1`;
+                const line = post.caption.replace(/\s+/g, " ").trim();
+                const published = shortDate(post.publishedAt ?? post.reviewedAt, true);
+                return (
+                  <li key={post.id} className="flex flex-col overflow-hidden rounded-[20px] border border-[#F0E8E6]">
+                    <div className="relative aspect-[4/5] bg-[#F7F3F2]">
+                      {file?.contentType.startsWith("video/") ? (
+                        <video src={src} controls muted playsInline preload="metadata" className="absolute inset-0 h-full w-full object-cover" />
+                      ) : file ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={src} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+                      ) : (
+                        <span className="absolute inset-0 grid place-items-center text-sm text-[#6B5A57]">No preview</span>
+                      )}
+                      <span className="pointer-events-none absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[12px] font-semibold text-ink">
+                        {network ?? "Social"} · {postKind(post)}
+                      </span>
+                    </div>
+                    <div className="flex flex-1 flex-col gap-3 px-4 py-3.5">
+                      <div className="flex items-center gap-2 text-[13px] text-[#4A3A37]">
+                        <span aria-hidden="true" className="size-1.5 rounded-full bg-[#1D6340]" />
+                        Live{published ? ` since ${published}` : ""}
+                      </div>
+                      {line ? <p className="line-clamp-2 text-[15px]">{line}</p> : null}
+                      <dl className="grid grid-cols-4 gap-2 rounded-2xl bg-[#F7F3F2] px-3 py-2.5 text-center">
+                        {(
+                          [
+                            ["Views", post.views],
+                            ["Likes", post.likes],
+                            ["Comments", post.comments],
+                            ["Shares", post.shares],
+                          ] as const
+                        ).map(([label, value]) => (
+                          <div key={label} className="flex flex-col-reverse">
+                            <dt className="text-[11px] text-[#6B5A57]">{label}</dt>
+                            <dd className="text-[15px] font-semibold tabular-nums">{compactNumber(value)}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                      <div className="mt-auto flex flex-wrap gap-x-4 gap-y-1">
+                        {post.postUrl ? (
+                          <a href={post.postUrl} target="_blank" rel="noopener noreferrer" className={textLink}>
+                            View on {network ?? "the platform"}
+                          </a>
+                        ) : null}
+                        <Link href={`/admin/affiliates/posts/published?post=${encodeURIComponent(post.id)}`} className={textLink}>
+                          Review details
+                        </Link>
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      );
+    }
+
+    const attention: { text: string; cta: ReactNode }[] = [];
+    if (waitingPosts > 0) {
+      attention.push({
+        text: `${waitingPosts === 1 ? "1 post is" : `${waitingPosts} posts are`} waiting for review.`,
+        cta: (
+          <Link href="/admin/affiliates/posts/pending" className={textLink}>
+            Review {waitingPosts === 1 ? "post" : "posts"}
+          </Link>
+        ),
+      });
+    }
+    if (payoutsReady && approvedCents > 0) {
+      attention.push({
+        text: `${formatCents(approvedCents)} is approved and waiting to be paid.`,
+        cta: (
+          <Link href="/admin/affiliates/payouts" className={textLink}>
+            Go to payouts
+          </Link>
+        ),
+      });
+    }
+    if (view?.phase === "waiting") {
+      attention.push({
+        text: view.openQuestion ? `${first} asked a question about the agreement.` : `The agreement is waiting for ${first} to accept.`,
+        cta: (
+          <Link href={agreementsHref} className={textLink}>
+            {view.openQuestion ? "Reply" : "Open agreement"}
+          </Link>
+        ),
+      });
+    }
+    if (row.status === "invited") {
+      attention.push({ text: `${first} has not accepted the invitation yet.`, cta: null });
+    }
+
+    const caption = (text: string) => {
+      const line = text.trim().split("\n")[0] ?? "";
+      return line ? ` · ${line.length > 40 ? `${line.slice(0, 40)}…` : line}` : "";
+    };
+    const activity: { at: string; text: string }[] = [];
+    for (const item of ownAgreements) {
+      const title = item.title || "Agreement";
+      if (item.createdAt) activity.push({ at: item.createdAt, text: `${title} drafted` });
+      if (item.sentAt) activity.push({ at: item.sentAt, text: `${title} sent to ${first}` });
+      if (item.signedAt) activity.push({ at: item.signedAt, text: `${title} signed` });
+      if (item.endedAt) activity.push({ at: item.endedAt, text: `${title} ended` });
+    }
+    for (const post of posts) {
+      if (post.submittedAt) activity.push({ at: post.submittedAt, text: `Post sent for review${caption(post.caption)}` });
+      if (post.reviewedAt && post.contentStatus === "approved") activity.push({ at: post.reviewedAt, text: `Post approved${caption(post.caption)}` });
+      if (post.publishedAt) activity.push({ at: post.publishedAt, text: `Post published${caption(post.caption)}` });
+    }
+    for (const payout of ownPayouts) {
+      if (payout.paidAt && payout.paidCents != null) {
+        activity.push({ at: payout.paidAt, text: `Paid ${formatCents(payout.paidCents)} for ${formatPayoutMonth(payout.period)}` });
+      }
+    }
+    const recent = activity
+      .filter((item) => !Number.isNaN(new Date(item.at).getTime()))
+      .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+      .slice(0, 5);
+
+    const account: { label: string; value: string }[] = [
+      { label: "Affiliate ID", value: affiliate.code },
+      { label: "Promo code", value: promoError ? "Unavailable" : promoCodes.length ? `${promoCodes.join(", ")} (GenHealth)` : "Not assigned" },
+      { label: "Tracking link", value: affiliate.active ? affiliateTrackingLink(affiliate.code) : `${affiliateTrackingLink(affiliate.code)} (off)` },
+      { label: "Lab commission", value: LAB_COMMISSIONS_ENABLED ? `${labRate} of lab orders` : "Not active" },
+      {
+        label: "Social pay",
+        value: payFormula([
+          [activeDeal?.monthlyCents ?? 0, `month (${view?.postTotal ?? 0} ${view?.postTotal === 1 ? "post" : "posts"})`],
+          [viewRate ?? 0, "1k views"],
+          [contentRates ? rateFor(contentRates, "engagements") : 0, "engagement"],
+        ]),
+      },
+      { label: "Website pay", value: payFormula([[contentRates ? rateFor(contentRates, "clicks") : 0, "click"], [contentRates ? rateFor(contentRates, "pageViews") : 0, "1k page views"]]) },
+    ];
+
+    const reportMonths = websiteReportMonths({ code: affiliate.code, visits: websiteVisits, orders: websiteOrders });
+    const monthReport = reportMonths.find((month) => month.month === selectedPeriod) ?? null;
+    const monthVisits = reportsUnavailable ? null : (monthReport ? monthReport.trackingVisits + monthReport.promoVisits : 0);
+    const monthOrders = reportsUnavailable ? null : (monthReport ? monthReport.trackingOrders + monthReport.promoOrders + monthReport.promoLinkOrders : 0);
+    const unpaidCount = row.stats.unpaidOrders;
+    const monthApproved = payoutsReady ? ownPayouts.filter((payout) => payout.period === selectedPeriod && payout.status === "approved").reduce((sum, payout) => sum + payout.earnedCents, 0) : null;
+    const covering = ownAgreements
+      .filter((item) => (item.status === "signed" || item.status === "ended") && agreementMonthPeriods(item.effectiveOn, item.expiresOn).includes(selectedPeriod))
+      .sort((a, b) => Number(b.current) - Number(a.current) || (b.effectiveOn ?? "").localeCompare(a.effectiveOn ?? ""));
+    const periodAgreement = covering[0] ? presentAgreement(covering[0]) : null;
+    const periodProgress = covering[0] ? monthProgress(contentPosts, affiliate.code, covering[0].id, selectedPeriod) : null;
+    const postingMonth = Boolean(periodAgreement && agreementMonthPeriods(periodAgreement.effectiveValue, periodAgreement.expiresValue).includes(selectedPeriod));
+    const knownMonths = [payoutPeriod(affiliate.createdAt), ...reportMonths.map((month) => month.month), ...ownPayouts.map((payout) => normalizePayoutPeriod(payout.period))].filter((period): period is string => Boolean(period));
+    const oldestKnown = knownMonths.sort()[0];
+    const yearBack = shiftMonth(currentPeriod, -23);
+    const oldestMonth = oldestKnown && oldestKnown < yearBack ? oldestKnown : yearBack;
+    const olderMonth = selectedPeriod > oldestMonth ? shiftMonth(selectedPeriod, -1) : null;
+    const newerMonth = selectedPeriod < currentPeriod ? shiftMonth(selectedPeriod, 1) : null;
+    const monthPage = (period: string) => `/admin/affiliates/accounts?code=${encodeURIComponent(affiliate.code)}${period === currentPeriod ? "" : `&month=${period}`}`;
+
+    return (
+      <div className="flex flex-col gap-[18px]">
+        <div className="flex flex-wrap items-center gap-4 rounded-[26px] bg-white px-6 py-5">
+          <Link
+            href="/admin/affiliates/accounts"
+            aria-label="All affiliates"
+            className={`flex size-10 flex-none items-center justify-center rounded-full bg-[#F7F3F2] text-ink hover:bg-background ${focusRing}`}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M15 6l-6 6 6 6" />
+            </svg>
+          </Link>
+          <Avatar name={affiliate.name} large />
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h2 id="affiliate-title" className="text-2xl font-medium">
+                {affiliate.name}
+              </h2>
+              <span className={`rounded-full px-2.5 py-0.5 text-[13px] font-semibold ${status.pill}`}>{status.label}</span>
+            </div>
+            <p className="break-all text-sm text-[#4A3A37]">
+              {affiliate.email}
+              {joined ? ` · joined ${joined}` : ""}
+            </p>
+          </div>
+          <SlidingTabs
+            variant="track"
+            label="Affiliate"
+            items={[
+              { id: "overview", href: profileHref, label: "Overview", current: !agreementsTab && !postsTab && !trackingTab },
+              { id: "tracking", href: `${profileHref}&view=tracking`, label: "Tracking", current: trackingTab },
+              { id: "agreements", href: agreementsHref, label: "Agreements", current: agreementsTab },
+              { id: "posts", href: postsHref, label: "Posts", current: postsTab },
+            ]}
+          />
+        </div>
+
+        <TabPanel tabKey={trackingTab ? "tracking" : postsTab ? "posts" : agreementsTab ? "agreements" : "overview"} className="flex flex-col gap-[18px]">
+        {trackingTab ? (
+          <AccountTracking
+            name={affiliate.name}
+            commission={formatCommissionRate(affiliate)}
+            viewRate={marketingPayText(contentRates)}
+            cookieDays={cookieDays}
+            trackingLink={affiliateTrackingLink(affiliate.code)}
+            promos={trackingPromos(affiliate)}
+            unavailable={Boolean(promoError)}
+          />
+        ) : postsTab ? (
+          livePosts()
+        ) : agreementsTab ? (
+          <AccountAgreement
+            key={`${agreement.editableId ?? "none"}-${query.notice ?? ""}-${query.error ?? ""}-${query.new ?? ""}`}
+            {...agreement}
+            toast={query.notice === "agreement-replied" ? "" : complianceNotice}
+            replyNotice={query.notice === "agreement-replied" ? complianceNotice : ""}
+            error={error}
+            initialStep={query.step === "1" || query.step === "2" || query.step === "3" ? Number(query.step) : 0}
+            startNew={query.new === "1"}
+          />
+        ) : (
+          <>
+        {attention.length ? (
+          <ul aria-label="Needs your attention" className="flex flex-col gap-2">
+            {attention.map((item) => (
+              <li key={item.text} className="flex flex-wrap items-center gap-3 rounded-[16px] bg-[#FBF6EC] px-4 py-3">
+                <span aria-hidden="true" className="size-2 flex-none rounded-full bg-[#C98A1A]" />
+                <span className="flex-[1_1_300px] text-[15px]">{item.text}</span>
+                {item.cta}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+
+        <section aria-labelledby="month-title" className="flex flex-col gap-3.5 rounded-[24px] bg-white px-6 py-[22px]">
+          <div className="flex items-baseline gap-2.5">
+            <h3 id="month-title" className="flex-1 text-lg font-semibold">
+              {selectedPeriod === currentPeriod ? "This month" : "Past month"}
+            </h3>
+            <div className="flex items-center gap-1 text-sm text-[#4A3A37]">
+              <MonthStep href={olderMonth ? monthPage(olderMonth) : null} label={olderMonth ? `Show ${formatPayoutMonth(olderMonth)}` : "No earlier month"} direction="previous" />
+              <span className="min-w-[8.5rem] text-center">{formatPayoutMonth(selectedPeriod)}</span>
+              <MonthStep href={newerMonth ? monthPage(newerMonth) : null} label={newerMonth ? `Show ${formatPayoutMonth(newerMonth)}` : "Already on the current month"} direction="next" />
+            </div>
+          </div>
+          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            <Tile label="Visits" value={monthVisits == null ? "—" : String(monthVisits)} note="Tracking + promo links" />
+            <Tile
+              label="Paid orders"
+              value={monthOrders == null ? "—" : String(monthOrders)}
+              tone={monthOrders ? "text-[#1D6340]" : ""}
+              note="Paid checkouts"
+            />
+            <Tile
+              label="Unpaid orders"
+              value={unpaidCount == null ? "—" : String(unpaidCount)}
+              tone={unpaidCount ? "text-[#7A4E00]" : ""}
+              note={selectedPeriod === currentPeriod ? "Placed, not paid yet" : "Still open now"}
+            />
+            <Tile
+              label="Posts"
+              value={postingMonth && periodProgress && periodAgreement ? `${periodProgress.verified} of ${periodAgreement.postTotal}` : "—"}
+              note={postingMonth ? (periodProgress?.review ? `Verified, ${periodProgress.review} in review` : "Verified") : view?.phase === "active" && selectedPeriod === currentPeriod ? "Not a posting month" : selectedPeriod === currentPeriod ? "No active agreement" : "No agreement that month"}
+            />
+            <Tile label="Earned" value={money(thisMonth)} note={earnedNote} />
+            <Tile label="Waiting to be paid" value={monthApproved == null ? "—" : formatCents(monthApproved)} note={monthApproved ? "Sent manually" : "Nothing pending"} />
+          </div>
+        </section>
+
+        <div className="flex flex-col gap-[18px] lg:flex-row lg:items-start">
+          <div className="flex min-w-0 flex-1 flex-col gap-[18px]">
+            <AccountReports unavailable={reportsUnavailable} months={reportMonths} sections={reportSections.filter((section) => section.code === affiliate.code)} />
+
+            <section aria-labelledby="activity-title" className="flex flex-col rounded-[24px] bg-white px-6 py-[22px]">
+              <h3 id="activity-title" className="mb-2 text-lg font-semibold">
+                Recent activity
+              </h3>
+              {recent.length ? (
+                <ul>
+                  {recent.map((item) => (
+                    <li key={`${item.at}-${item.text}`} className="flex justify-between gap-3 border-t border-[#F0E8E6] py-2.5 text-sm">
+                      <span className="min-w-0">{item.text}</span>
+                      <span className="whitespace-nowrap text-[#6B5A57]">{shortDate(item.at)}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="border-t border-[#F0E8E6] py-2.5 text-sm text-[#6B5A57]">No activity yet.</p>
+              )}
+            </section>
+          </div>
+
+          <aside className="flex w-full flex-none flex-col gap-[18px] lg:w-[340px]">
+            <section aria-labelledby="agreement-title" className="flex flex-col gap-1.5 rounded-[24px] bg-white px-[22px] py-5">
+              <h3 id="agreement-title" className="text-lg font-semibold">
+                Agreement
+              </h3>
+              {view?.phase === "active" ? (
+                <>
+                  <span className="text-[15px] font-medium">{view.monthly ? `${view.monthly}/month · ${view.postTotal} posts each month` : `${view.postTotal} posts each month`}</span>
+                  <span className="text-[13px] text-[#4A3A37]">
+                    {view.title || "Agreement"} · {view.effectiveOn} – {view.expiresOn}
+                  </span>
+                </>
+              ) : view?.phase === "waiting" || view?.phase === "draft" ? (
+                <>
+                  <span className="text-[15px] font-medium">{view.phase === "waiting" ? (view.questions.length > 0 ? "Still negotiating" : `Waiting for ${first} to accept`) : view.sentAt ? "Pulled back after it was sent" : "Draft, not sent yet"}</span>
+                  <span className="text-[13px] text-[#4A3A37]">{view.title || "Untitled agreement"}</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-[15px] font-medium">No active agreement</span>
+                  <span className="text-[13px] text-[#4A3A37]">{first} can’t send posts for approval until one is accepted.</span>
+                  {agreementsUnavailable ? null : agreement.agreements.length === 0 ? (
+                    <Link href={`${agreementsHref}&new=1`} className={`mt-2 inline-flex h-9 w-fit items-center rounded-full bg-ink px-4 text-[13px] font-medium text-white hover:bg-brown ${focusRing}`}>
+                      + New agreement
+                    </Link>
+                  ) : agreement.canReplace ? (
+                    <form action={replaceAgreementAction} className="mt-2">
+                      <input type="hidden" name="code" value={affiliate.code} />
+                      {agreement.replaceNeedsNote ? <input type="hidden" name="note" value="Replaced with a new agreement." /> : null}
+                      <button type="submit" className={`inline-flex h-9 w-fit items-center rounded-full bg-ink px-4 text-[13px] font-medium text-white hover:bg-brown ${focusRing}`}>
+                        + New agreement
+                      </button>
+                    </form>
+                  ) : (
+                    <Link href={`${agreementsHref}&new=1`} className={`mt-2 inline-flex h-9 w-fit items-center rounded-full bg-ink px-4 text-[13px] font-medium text-white hover:bg-brown ${focusRing}`}>
+                      + New agreement
+                    </Link>
+                  )}
+                </>
+              )}
+            </section>
+
+            <section aria-labelledby="account-title" className="flex flex-col rounded-[24px] bg-white px-[22px] py-5">
+              <h3 id="account-title" className="mb-2 text-lg font-semibold">
+                Account
+              </h3>
+              <dl>
+                {account.map((item) => {
+                  const link = item.label === "Tracking link";
+                  return (
+                    <div key={item.label} className={`flex gap-3 border-t border-[#F0E8E6] py-2.5 text-[13px] ${link ? "flex-col gap-1" : "justify-between"}`}>
+                      <dt className="shrink-0 whitespace-nowrap text-[#4A3A37]">{item.label}</dt>
+                      <dd className={`min-w-0 font-semibold ${link ? "break-all" : "text-right [overflow-wrap:anywhere]"}`}>{item.value}</dd>
+                    </div>
+                  );
+                })}
+              </dl>
+              <div className="flex flex-wrap gap-2 pt-2.5">
+                <AccountActions code={affiliate.code} name={affiliate.name} active={affiliate.active} pendingInvite={affiliate.pendingInvite && affiliate.active} canInvite={canInvite} layout="wrap" />
+              </div>
+            </section>
+          </aside>
+        </div>
+          </>
+        )}
+        </TabPanel>
+      </div>
+    );
+  }
+
+  const inlineMessages = Boolean(selected && agreementsTab);
 
   return (
     <div className="space-y-6">
-      {selected && priorPeriod ? (
-        <section aria-labelledby="month-figures-title" className="rounded-[28px] bg-white p-4 sm:p-8">
-          <h2 id="month-figures-title" className="text-2xl">
-            {selected.name}
-          </h2>
-          <p className="mt-1 break-all text-sm text-brown">{selected.email}</p>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            {[priorPeriod, currentPeriod].map((period) => {
-              const pay = monthPay(selected.code, period);
-              return (
-                <MonthBlock
-                  key={period}
-                  label={formatPayoutMonth(period)}
-                  social={monthText(pay.social)}
-                  website={monthText(pay.website)}
-                  lab={LAB_COMMISSIONS_ENABLED ? monthText(pay.lab) : "Not active"}
-                />
-              );
-            })}
-          </div>
-          <p className="mt-6 max-w-2xl text-sm text-brown">
-            Payouts are usually recorded around the 3rd, after the prior month has closed. These months match the Payouts page. Allotment is still your check of these numbers.
-          </p>
-        </section>
-      ) : null}
       {requestedCode && !selected && !loadError ? (
         <p className="text-ink">That affiliate was not found.</p>
       ) : null}
-      {error ? (
+      {error && !inlineMessages ? (
         <p role="alert" className="rounded-2xl bg-rose px-4 py-3 text-sm text-ink">
           {error}
         </p>
       ) : null}
-      {complianceNotice ? (
+      {complianceNotice && !inlineMessages ? (
         <p role="status" className="rounded-2xl bg-white px-4 py-3 text-sm text-ink">
           {complianceNotice}
         </p>
@@ -481,116 +1057,213 @@ export default async function AffiliateAccountsPage({
           A new invitation was sent. The previous unused link no longer works.
         </p>
       ) : null}
-      <div className="min-w-0 rounded-[28px] bg-white">
-        <h2 id="accounts-title" className="px-4 pt-6 text-2xl">
-          Accounts
-        </h2>
-        <p className="px-4 pt-2 text-sm text-brown">
-          Visits count each person once a day. Paid orders are completed checkouts. Unpaid orders are checkouts that have not been paid. Social, website traffic, and lab are the same amounts as Payouts: content pay, verified link clicks and eligible page views, and lab commission.
-        </p>
-        {affiliates.length === 0 ? (
-          <p className="px-4 py-8 text-sm text-brown">No affiliates yet.</p>
-        ) : (
-          <>
-            <ul className="xl:hidden" aria-labelledby="accounts-title">
-              {affiliates.map((affiliate) => {
-                const stats = figures(affiliate);
+      {selected ? (
+        profileView(selected)
+      ) : (
+        <section aria-labelledby="accounts-title" className="flex min-w-0 flex-col gap-[18px] rounded-[30px] bg-white px-4 py-6 sm:px-7">
+          <div className="flex flex-wrap items-end gap-3.5">
+            <div className="flex min-w-0 flex-[1_1_300px] flex-col gap-1">
+              <h2 id="accounts-title" className="text-[30px] leading-tight">
+                Affiliates
+              </h2>
+              <p className="text-[15px] text-[#4A3A37]">Everyone in the program. Click any affiliate in the table to view their profile: overview, tracking, agreements and posts.</p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <div role="group" aria-label="Status" className="flex flex-wrap gap-2">
+              {FILTERS.map((filter) => {
+                const on = filter.id === statusFilter;
+                const count = filter.id === "all" ? rows.length : rows.filter((row) => row.status === filter.id).length;
                 return (
-                  <li key={affiliate.code} className="border-t border-ink/10 px-4 py-5">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="font-medium text-ink">{affiliate.name}</div>
-                        <div className="mt-0.5 break-all text-xs text-brown">{affiliate.email}</div>
-                        <div className="mt-1 break-all text-sm text-brown">{affiliate.code}</div>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-2">
-                        <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${statusClass(affiliate)}`}>
-                          {accountStatus(affiliate)}
-                        </span>
-                        {settings(affiliate)}
-                      </div>
-                    </div>
-                    <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-5 text-sm leading-6">
-                      <div>
-                        <dt className="text-xs text-brown">Visits</dt>
-                        <dd className="mt-1">{stats.visitors}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-xs text-brown">Paid orders</dt>
-                        <dd className="mt-1">{stats.paidOrders}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-xs text-brown">Unpaid orders</dt>
-                        <dd className="mt-1">{stats.unpaidOrders == null ? "—" : stats.unpaidOrders}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-xs text-brown">Social</dt>
-                        <dd className="mt-1">{postsUnavailable ? "—" : money(payFor(affiliate.code).socialCents)}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-xs text-brown">Website traffic</dt>
-                        <dd className="mt-1">{websiteUnavailable || !contentRates ? "—" : money(payFor(affiliate.code).websiteCents)}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-xs text-brown">Lab</dt>
-                        <dd className="mt-1">{LAB_COMMISSIONS_ENABLED ? (payoutsReady ? money(payFor(affiliate.code).labCents) : "—") : "Not active"}</dd>
-                      </div>
-                    </dl>
-                  </li>
+                  <Link
+                    key={filter.id}
+                    href={accountsHref(filter.id, search)}
+                    aria-current={on ? "true" : undefined}
+                    className={`inline-flex h-10 items-center rounded-full border px-4 text-sm font-medium ${on ? "border-ink bg-ink text-white" : "border-[#CDBDBA] bg-white text-ink hover:bg-background"} ${focusRing}`}
+                  >
+                    {filter.label} {count}
+                  </Link>
                 );
               })}
-            </ul>
-            <div className="hidden overflow-x-auto xl:block">
-              <table className="w-full border-collapse text-left text-sm leading-6" aria-labelledby="accounts-title">
-                <thead className="text-brown">
-                  <tr>
-                    <th scope="col" className="px-3 py-4 align-bottom font-medium leading-snug">ID</th>
-                    <th scope="col" className="px-3 py-4 align-bottom font-medium leading-snug">Name</th>
-                    <th scope="col" className="px-3 py-4 align-bottom font-medium leading-snug">E-mail</th>
-                    <th scope="col" className="px-3 py-4 align-bottom font-medium leading-snug">Visits</th>
-                    <th scope="col" className="px-3 py-4 align-bottom font-medium leading-snug">Paid orders</th>
-                    <th scope="col" className="px-3 py-4 align-bottom font-medium leading-snug">Unpaid orders</th>
-                    <th scope="col" className="px-3 py-4 align-bottom font-medium leading-snug">Social</th>
-                    <th scope="col" className="px-3 py-4 align-bottom font-medium leading-snug">Website traffic</th>
-                    <th scope="col" className="px-3 py-4 align-bottom font-medium leading-snug">Lab</th>
-                    <th scope="col" className="px-3 py-4 align-bottom">
-                      <span className="sr-only">Settings</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {affiliates.map((affiliate) => {
-                    const stats = figures(affiliate);
-                    return (
-                      <tr key={affiliate.code} className="border-t border-ink/10">
-                        <td className="whitespace-nowrap px-3 py-5 align-middle font-medium">{affiliate.code}</td>
-                        <td className="px-3 py-5 align-middle">
-                          <div className="font-medium text-ink">{affiliate.name}</div>
-                          {accountStatus(affiliate) === "Active" ? null : (
-                            <div className="mt-1">
-                              <span className={`inline-flex items-center whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium ${statusClass(affiliate)}`}>
-                                {accountStatus(affiliate)}
-                              </span>
-                            </div>
-                          )}
-                        </td>
-                        <td className="break-all px-3 py-5 align-middle">{affiliate.email}</td>
-                        <td className="whitespace-nowrap px-3 py-5 align-middle">{stats.visitors}</td>
-                        <td className="whitespace-nowrap px-3 py-5 align-middle">{stats.paidOrders}</td>
-                        <td className="whitespace-nowrap px-3 py-5 align-middle">{stats.unpaidOrders == null ? "—" : stats.unpaidOrders}</td>
-                        <td className="whitespace-nowrap px-3 py-5 align-middle">{postsUnavailable ? "—" : money(payFor(affiliate.code).socialCents)}</td>
-                        <td className="whitespace-nowrap px-3 py-5 align-middle">{websiteUnavailable || !contentRates ? "—" : money(payFor(affiliate.code).websiteCents)}</td>
-                        <td className="whitespace-nowrap px-3 py-5 align-middle">{LAB_COMMISSIONS_ENABLED ? (payoutsReady ? money(payFor(affiliate.code).labCents) : "—") : "Not active"}</td>
-                        <td className="px-3 py-5 align-middle">{settings(affiliate)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
             </div>
-          </>
-        )}
-      </div>
+            <span className="hidden flex-1 sm:block" />
+            <form action="/admin/affiliates/accounts" role="search" className="w-full sm:w-auto">
+              {statusFilter !== "all" ? <input type="hidden" name="status" value={statusFilter} /> : null}
+              <label htmlFor="accounts-search" className="sr-only">
+                Search affiliates
+              </label>
+              <input
+                id="accounts-search"
+                type="search"
+                name="q"
+                defaultValue={search}
+                placeholder="Name, email or ID"
+                className={`h-11 w-full rounded-full border border-[#CDBDBA] bg-white px-[18px] text-[15px] text-ink sm:w-[260px] ${focusRing}`}
+              />
+            </form>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <Tile label="Total visits" value={String(rows.reduce((sum, row) => sum + row.stats.visitors, 0))} note="All affiliates, all time" />
+            <Tile
+              label="Total paid orders"
+              value={String(rows.reduce((sum, row) => sum + row.stats.paidOrders, 0))}
+              note={unpaidKnown ? `All time · ${rows.reduce((sum, row) => sum + (row.stats.unpaidOrders ?? 0), 0)} unpaid not counted` : "Unpaid count unavailable"}
+            />
+            <Tile label="Total earned" value={money(sumKnown(rows.map((row) => row.pay.total)))} note="Social + website + lab, all time" />
+            <Tile
+              label="Total active agreements"
+              value={agreementsUnavailable ? "—" : String(rows.filter((row) => row.deal.view?.phase === "active").length)}
+              note={`of ${rows.length} ${rows.length === 1 ? "affiliate" : "affiliates"}`}
+            />
+          </div>
+
+          {affiliates.length === 0 ? (
+            <p className="px-2.5 py-2.5 text-[15px] text-[#6B5A57]">No affiliates yet.</p>
+          ) : visible.length === 0 ? (
+            <p className="px-2.5 py-2.5 text-[15px] text-[#6B5A57]">No affiliates match.</p>
+          ) : (
+            <>
+              <ul aria-labelledby="accounts-title" className="divide-y divide-[#F0E8E6] overflow-hidden rounded-[20px] border border-[#E8DEDC] xl:hidden">
+                {visible.map((row) => (
+                  <li key={row.affiliate.code}>
+                    <Link href={`/admin/affiliates/accounts?code=${encodeURIComponent(row.affiliate.code)}`} className={`flex flex-col gap-3 p-4 text-ink hover:bg-background ${focusRing}`}>
+                      <span className="flex items-center gap-3">
+                        <Avatar name={row.affiliate.name} />
+                        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                          <span className="text-base font-semibold">{row.affiliate.name}</span>
+                          <span className="flex items-center gap-1.5 text-[13px] text-[#4A3A37]">
+                            <span aria-hidden="true" className={`size-2 rounded-full ${STATUS[row.status].dot}`} />
+                            {STATUS[row.status].label}
+                          </span>
+                        </span>
+                        <span className={`text-base font-bold tabular-nums ${row.pay.total ? "" : muted}`}>{money(row.pay.total)}</span>
+                      </span>
+                      {agreementCell(row)}
+                      <span className="grid grid-cols-3 gap-2 text-sm">
+                        <span>
+                          <span className="block text-xs text-[#6B5A57]">Visits</span>
+                          {row.stats.visitors}
+                        </span>
+                        <span>
+                          <span className="block text-xs text-[#6B5A57]">Paid orders</span>
+                          {row.stats.paidOrders}
+                        </span>
+                        <span>
+                          <span className="block text-xs text-[#6B5A57]">Unpaid</span>
+                          {row.stats.unpaidOrders ?? "—"}
+                        </span>
+                      </span>
+                      <span aria-hidden="true" className="inline-flex items-center gap-0.5 self-end text-[13px] font-medium underline underline-offset-4">
+                        View profile
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M9 6l6 6-6 6" />
+                        </svg>
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+
+              <div role="table" aria-labelledby="accounts-title" className="hidden overflow-hidden rounded-[20px] border border-[#E8DEDC] xl:block">
+                <div role="rowgroup" className="border-b border-[#E8DEDC] px-4">
+                  <div aria-hidden="true" className={`${GRID} items-end pt-3.5 text-xs text-[#8A7A77]`}>
+                    <span />
+                    <span />
+                    <span className="col-span-3 ml-6 border-b border-[#E8DEDC] pb-1 text-center">Activity, all time</span>
+                    <span className="col-span-4 ml-6 border-b border-[#E8DEDC] pb-1 text-center">Earned, all time</span>
+                    <span />
+                  </div>
+                  <div role="row" className={`${GRID} whitespace-nowrap pb-2.5 pt-2 text-[13px] font-medium text-[#6B5A57]`}>
+                    <span role="columnheader">Affiliate</span>
+                    <span role="columnheader">Agreement</span>
+                    <span role="columnheader" className="pl-6 text-right">
+                      Visits
+                    </span>
+                    <span role="columnheader" className="text-right">
+                      Paid orders
+                    </span>
+                    <span role="columnheader" className="text-right">
+                      Unpaid
+                    </span>
+                    <span role="columnheader" className="pl-6 text-right">
+                      Social
+                    </span>
+                    <span role="columnheader" className="text-right">
+                      Website
+                    </span>
+                    <span role="columnheader" className="text-right">
+                      Lab
+                    </span>
+                    <span role="columnheader" className="text-right">
+                      Total earned
+                    </span>
+                    <span role="columnheader">
+                      <span className="sr-only">Profile</span>
+                    </span>
+                  </div>
+                </div>
+                <div role="rowgroup">
+                  {visible.map((row) => (
+                    <div key={row.affiliate.code} role="row" className={`${GRID} group relative border-b border-[#F3EDEB] bg-white px-4 py-3.5 hover:bg-[#FBF9F8]`}>
+                      <span role="cell" className="flex min-w-0 items-center gap-3">
+                        <Avatar name={row.affiliate.name} />
+                        <span className="flex min-w-0 flex-col gap-0.5">
+                          <Link
+                            href={`/admin/affiliates/accounts?code=${encodeURIComponent(row.affiliate.code)}`}
+                            className={`truncate text-base font-semibold text-ink after:absolute after:inset-0 after:content-[''] ${focusRing}`}
+                          >
+                            {row.affiliate.name}
+                          </Link>
+                          <span className="flex items-center gap-1.5 text-[13px] text-[#4A3A37]">
+                            <span aria-hidden="true" className={`size-2 rounded-full ${STATUS[row.status].dot}`} />
+                            {STATUS[row.status].label}
+                          </span>
+                        </span>
+                      </span>
+                      <span role="cell" className="min-w-0">
+                        {agreementCell(row)}
+                      </span>
+                      <Count value={row.stats.visitors} divider />
+                      <Count value={row.stats.paidOrders} tone="text-[#1D6340]" />
+                      <Count value={row.stats.unpaidOrders} tone="text-[#7A4E00]" />
+                      <Amount cents={row.pay.social} divider />
+                      <Amount cents={row.pay.website} />
+                      {LAB_COMMISSIONS_ENABLED ? (
+                        <Amount cents={row.pay.lab} />
+                      ) : (
+                        <span role="cell" className={`text-right text-[15px] ${muted}`}>
+                          Off
+                        </span>
+                      )}
+                      <Amount cents={row.pay.total} strong />
+                      <span role="cell" aria-hidden="true" className="inline-flex items-center justify-end gap-0.5 whitespace-nowrap text-[13px] font-medium text-[#8A7A77] underline-offset-4 group-hover:text-ink group-hover:underline">
+                        View profile
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M9 6l6 6-6 6" />
+                        </svg>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div role="row" className={`${GRID} bg-[#FBF9F8] px-4 py-3.5 text-[15px] font-semibold`}>
+                  <span role="cell">Total{visible.length < rows.length ? " (shown)" : ""}</span>
+                  <span role="cell" />
+                  <Count value={visibleTotal((row) => row.stats.visitors)} divider />
+                  <Count value={visibleTotal((row) => row.stats.paidOrders)} />
+                  <Count value={visibleTotal((row) => row.stats.unpaidOrders)} />
+                  <Amount cents={visibleTotal((row) => row.pay.social)} divider />
+                  <Amount cents={visibleTotal((row) => row.pay.website)} />
+                  {LAB_COMMISSIONS_ENABLED ? <Amount cents={visibleTotal((row) => row.pay.lab)} /> : <span role="cell" />}
+                  <Amount cents={visibleTotal((row) => row.pay.total)} strong />
+                  <span role="cell" />
+                </div>
+              </div>
+            </>
+          )}
+        </section>
+      )}
     </div>
   );
 }

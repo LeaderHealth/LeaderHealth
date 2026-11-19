@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { MarketingAccountSections, WebsiteReportSection } from "@/components/affiliate/MarketingSections";
+import { MarketingAccountSections, ReportPromoCodes, reportPromos, WebsiteReportSection, type ReportPromo } from "@/components/affiliate/MarketingSections";
 import type { SocialNetwork } from "@/lib/affiliate/marketing";
 import type { WebsiteMonthReport } from "@/lib/affiliate/website-report";
 
@@ -65,7 +65,7 @@ export function ManageAffiliate({
   email: string;
   prior: MonthView;
   current: MonthView;
-  reports: { unavailable: boolean; months: WebsiteMonthReport[]; sections: ReportSection[] };
+  reports: { unavailable: boolean; months: WebsiteMonthReport[]; sections: ReportSection[]; promos?: ReportPromo[] };
   className: string;
 }) {
   const titleId = useId();
@@ -145,6 +145,7 @@ export function ManageAffiliate({
                 <section className="mt-6 border-t border-rose/60 pt-6">
                   <h3 className="text-lg">Marketing reports</h3>
                   <p className="mt-1 text-sm text-brown">These figures do not change commission or payouts.</p>
+                  <ReportPromoCodes promos={reportPromos(reports.promos ?? [], reports.months)} />
                   {reports.unavailable ? <p className="mt-4 text-sm text-ink">Marketing reports are unavailable right now.</p> : null}
                   {reports.unavailable ? null : (
                     <>

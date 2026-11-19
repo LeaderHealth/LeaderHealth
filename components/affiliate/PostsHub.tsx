@@ -11,6 +11,7 @@ import { SlidingTabs } from "@/components/affiliate/SlidingTabs";
 import { viewPayTerms } from "@/lib/affiliate/format";
 import { POST_FILE_ACCEPT, VIDEO_FILE_ACCEPT, postUploadIssue } from "@/lib/affiliate/post-files";
 import { formatTitle, formatUploadIssue, liveLinkFor, type PostFormat } from "@/lib/affiliate/post-format";
+import { openPostingMonth, postingMonthDateBounds, postingMonthOption, type PostingAgreement } from "@/lib/affiliate/post-agreement";
 
 const POST_BATCH_LIMIT = 10;
 const SLIDE_LIMIT = 20;
@@ -163,6 +164,7 @@ export type HubPost = {
   offerBrief: string;
   publishBy: string;
   proposedOn: string;
+  postingMonth: string;
 };
 
 type Slide = {
@@ -610,7 +612,7 @@ export function PostsHub({
   focusPostId: string;
   startCompose?: boolean;
   startCampaign?: string;
-  posting?: { id: string; label: string } | null;
+  posting?: PostingAgreement | null;
   agreementsUnavailable?: boolean;
 }) {
   const router = useRouter();
@@ -620,6 +622,7 @@ export function PostsHub({
   const [selectedId, setSelectedId] = useState<string | null>(focusPostId || null);
   const [cards, setCards] = useState<Card[]>([blankCard(offer ? { id: offer.draftId, format: offer.format, caption: offer.brief } : undefined)]);
   const [composeCampaign, setComposeCampaign] = useState(offer?.campaign || (campaigns.includes(startCampaign) ? startCampaign : ""));
+  const [composeMonth, setComposeMonth] = useState(() => openPostingMonth(posting?.months ?? [], new Date().toISOString().slice(0, 10)));
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [shownNotice, setShownNotice] = useState(notice);
   const [toastHidden, setToastHidden] = useState(false);
@@ -636,6 +639,10 @@ export function PostsHub({
   const actionPosts = groups.filter((group) => stageOf(groupLead(group)) === "action").map(asOnePost);
 
   function openCompose(seed?: HubPost, campaign = seed?.campaign ?? "") {
+    const months = posting?.months ?? [];
+    const today = new Date().toISOString().slice(0, 10);
+    const replacement = seed?.status === "rejected" && months.some((month) => month.period === seed.postingMonth) ? seed.postingMonth : "";
+    setComposeMonth(replacement || openPostingMonth(months, today));
     setComposeCampaign(campaigns.includes(campaign) ? campaign : "");
     setCards((current) => {
       for (const card of current) releaseSlides(card.slides);
@@ -734,7 +741,7 @@ export function PostsHub({
           <section className="flex flex-col gap-3.5">
             <h3 className="text-base font-semibold">All submissions</h3>
             <SlidingTabs
-              variant="outline"
+              variant="track"
               label="Filter by status"
               items={FILTERS.map((item) => ({
                 id: item.id,
@@ -787,6 +794,7 @@ export function PostsHub({
             standingMaxPayCents={standingMaxPayCents}
             standingTrackingDays={standingTrackingDays}
             campaign={composeCampaign}
+            initialMonth={composeMonth}
             offer={offer}
             posting={posting}
             agreementsUnavailable={agreementsUnavailable}
@@ -827,6 +835,7 @@ function Composer({
   standingMaxPayCents,
   standingTrackingDays,
   campaign,
+  initialMonth,
   offer,
   posting,
   agreementsUnavailable,
@@ -843,16 +852,26 @@ function Composer({
   standingMaxPayCents: number | null;
   standingTrackingDays: number;
   campaign: string;
+  initialMonth: string;
   offer: OfferComposer | null;
-  posting: { id: string; label: string } | null;
+  posting: PostingAgreement | null;
   agreementsUnavailable: boolean;
   termsAccepted: boolean;
   onTerms: (value: boolean) => void;
   onBack: () => void;
 }) {
   const [pending, setPending] = useState(false);
+  const [postingMonth, setPostingMonth] = useState(() => {
+    const months = posting?.months ?? [];
+    return months.some((month) => month.period === initialMonth) ? initialMonth : openPostingMonth(months, new Date().toISOString().slice(0, 10));
+  });
   const [proposedOn, setProposedOn] = useState("");
   const [limitNote, setLimitNote] = useState("");
+  const monthSlot = offer ? null : posting?.months.find((month) => month.period === postingMonth) ?? null;
+  const monthRoom = monthSlot == null || monthSlot.limit == null ? POST_BATCH_LIMIT : Math.max(0, monthSlot.limit - monthSlot.used);
+  const monthBlocked = monthSlot != null && monthSlot.limit != null && cards.length > monthRoom;
+  const noFullMonth = !offer && posting != null && posting.months.length === 0;
+  const dateBounds = monthSlot ? postingMonthDateBounds(monthSlot.period, posting?.startsOn ?? null, posting?.endsOn ?? null) : null;
   const readyCount = cards.filter((card) => cardReady(card, disclosureLine, trackingUrl, affiliateCode)).length;
   const blocked = cards
     .map((card, index) => ({ card, index, problem: cardProblem(card, disclosureLine, trackingUrl, affiliateCode) }))
@@ -860,7 +879,13 @@ function Composer({
   const slideProblem = offer
     ? cards.find((card) => card.slides.length > 0 && (card.slides.length < offer.minSlides || card.slides.length > offer.maxSlides))
     : null;
-  const hint = slideProblem
+  const hint = noFullMonth
+    ? "These dates don't include a full month, so posts can't be sent under this agreement."
+    : monthBlocked
+    ? monthRoom === 0
+      ? `${monthSlot.label} already has its ${monthSlot.limit} posts. Choose another month.`
+      : `This send is ${cards.length} ${cards.length === 1 ? "post" : "posts"}. ${monthSlot.label} can take ${monthRoom} more.`
+    : slideProblem
     ? offer && offer.minSlides > 1
       ? "This carousel needs at least two photos or videos."
       : "This offer takes one file."
@@ -868,18 +893,18 @@ function Composer({
       ? blocked.problem.startsWith("needs ")
         ? `Post ${blocked.index + 1} ${blocked.problem}.`
         : `Post ${blocked.index + 1}: ${blocked.problem}`
+      : agreementsUnavailable
+        ? "Your agreement could not be loaded. Try again before sending."
+        : !posting
+          ? "A signed agreement has to be on your account before you can send a post."
       : offer
         ? `Marketing offer: ${viewPayTerms(offer.feeCents, offer.maxPayCents, offer.trackingDays)}. These terms are locked. Publish by ${offer.publishLabel}.`
-        : agreementsUnavailable
-          ? "Your agreement could not be loaded. Try again before sending."
-          : !posting
-            ? "A signed agreement has to be on your account before you can send a post."
         : agreedFeeCents == null
           ? "A full admin needs to set your rate per 1,000 views before you can send a post."
           : !termsAccepted
             ? "Accept the rate, maximum, and tracking period before sending."
             : `Standing terms: ${viewPayTerms(agreedFeeCents, standingMaxPayCents, standingTrackingDays)}. They lock when you send the post.`;
-  const canSend = cards.length > 0 && !blocked && !slideProblem && !pending && (offer != null || (posting != null && agreedFeeCents != null && termsAccepted));
+  const canSend = cards.length > 0 && !blocked && !slideProblem && !monthBlocked && !noFullMonth && !pending && posting != null && (offer != null || (agreedFeeCents != null && termsAccepted));
 
   function update(key: string, patch: Partial<Card>) {
     setCards(cards.map((card) => (card.key === key ? { ...card, ...patch } : card)));
@@ -981,6 +1006,7 @@ function Composer({
     data.set("count", String(cards.length));
     if (offer) data.set("offerId", offer.id);
     if (posting) data.set("agreement", posting.id);
+    if (!offer && postingMonth) data.set("postingMonth", postingMonth);
     if (termsAccepted) data.set("terms", "yes");
     data.set("proposedPublishOn", offer ? "" : proposedOn);
     cards.forEach((card, index) => {
@@ -1004,7 +1030,7 @@ function Composer({
       setPending(false);
     }
   }
-  const showAnother = !offer && cards.length < POST_BATCH_LIMIT;
+  const showAnother = !offer && cards.length < POST_BATCH_LIMIT && cards.length < monthRoom;
 
   return (
     <div className="flex flex-col gap-[22px]">
@@ -1013,12 +1039,29 @@ function Composer({
         <h2 className="text-[28px] font-medium tracking-tight">{cards.length === 1 && !cards[0]?.format ? "What are you sending?" : "New posts"}</h2>
         <p className="text-sm leading-normal text-brown">{cards.length === 1 && !cards[0]?.format ? "Pick TikTok, an Instagram post or carousel, or an Instagram reel. The next step matches that choice." : "Each post is reviewed on its own, so you can publish them as they’re approved. A link in your bio doesn’t count: both lines below go in every caption."}</p>
       </div>
-      {offer ? null : <AgreementLine posting={posting} unavailable={agreementsUnavailable} />}
+      <AgreementLine posting={posting} unavailable={agreementsUnavailable} />
+      {offer || !posting?.months.length ? null : (
+        <label className="flex max-w-md flex-col gap-2 text-sm font-medium" htmlFor="posting-month">
+          Month these posts count toward
+          <select
+            id="posting-month"
+            value={postingMonth}
+            onChange={(event) => {
+              const next = event.target.value;
+              setPostingMonth(next);
+              setProposedOn((current) => (current && current.slice(0, 7) !== next ? "" : current));
+            }}
+            className={fieldClass}
+          >
+            {posting.months.map((month) => <option key={month.period} value={month.period}>{postingMonthOption(month)}</option>)}
+          </select>
+        </label>
+      )}
       {offer ? null : (
         <label className="flex max-w-xs flex-col gap-2 text-sm font-medium" htmlFor="proposed-publish-on">
           Proposed publishing date
-          <input id="proposed-publish-on" type="date" value={proposedOn} onChange={(event) => setProposedOn(event.target.value)} className={fieldClass} />
-          <span className="text-sm font-normal leading-normal text-brown">Optional. It does not change review or pay.</span>
+          <input id="proposed-publish-on" type="date" min={dateBounds?.min} max={dateBounds?.max} value={proposedOn} onChange={(event) => setProposedOn(event.target.value)} className={fieldClass} />
+          <span className="text-sm font-normal leading-normal text-brown">{posting?.months.length ? "Optional. A date has to fall in the month above." : "Optional. It does not change review or pay."}</span>
         </label>
       )}
       {cards.length === 1 && !cards[0]?.format ? (
@@ -1230,7 +1273,7 @@ function Composer({
   );
 }
 
-function AgreementLine({ posting, unavailable }: { posting: { id: string; label: string } | null; unavailable: boolean }) {
+function AgreementLine({ posting, unavailable }: { posting: PostingAgreement | null; unavailable: boolean }) {
   if (unavailable) {
     return <p className="rounded-[18px] bg-background px-4 py-3.5 text-sm text-ink">Your agreement could not be loaded. Try again before sending.</p>;
   }
@@ -1246,6 +1289,11 @@ function AgreementLine({ posting, unavailable }: { posting: { id: string; label:
     <section className="rounded-[18px] bg-background px-4 py-3.5">
       <p className="text-[13px] font-semibold text-brown">Posting under your agreement</p>
       <p className="mt-1 text-sm font-medium">{posting.label}</p>
+      {posting.postTotal > 0 ? (
+        <p className="mt-1 text-sm leading-normal text-brown">
+          {posting.months.length > 1 ? `Each month of this agreement has its own ${posting.postTotal} posts.` : `${posting.postTotal} posts this month.`}
+        </p>
+      ) : null}
     </section>
   );
 }
@@ -1370,7 +1418,7 @@ function PostDetail({
   disclosureLine: string;
   affiliateCode: string;
   campaigns: string[];
-  posting: { id: string; label: string } | null;
+  posting: PostingAgreement | null;
   agreementsUnavailable: boolean;
   onBack: () => void;
   onReuse: () => void;
@@ -1406,11 +1454,10 @@ function PostDetail({
   const changed = carousel
     ? editSlides.some((slide, index) => slide.caption !== (post.slides[index]?.caption ?? "") || Boolean(slide.file))
     : editCaption !== post.caption || Boolean(editFile);
-  const needsAgreement = !post.offerId;
-  const canResubmit = disclosed && linked && changed && !pending && !fileProblem && joinedEdit.length <= CAPTION_LIMIT && (!needsAgreement || posting != null);
-  const editHint = needsAgreement && agreementsUnavailable
+  const canResubmit = disclosed && linked && changed && !pending && !fileProblem && joinedEdit.length <= CAPTION_LIMIT && posting != null;
+  const editHint = agreementsUnavailable
     ? "Your agreement could not be loaded. Try again before resubmitting."
-    : needsAgreement && !posting
+    : !posting
       ? "A signed agreement has to be on your account before you can resubmit."
       : fileProblem
     ? fileProblem
@@ -1455,7 +1502,13 @@ function PostDetail({
     const data = new FormData();
     data.set("count", "1");
     data.set("id0", post.id);
-    if (needsAgreement && posting) data.set("agreement", posting.id);
+    if (posting) data.set("agreement", posting.id);
+    if (!post.offerId) {
+      const month = posting?.months.some((item) => item.period === post.postingMonth)
+        ? post.postingMonth
+        : openPostingMonth(posting?.months ?? [], new Date().toISOString().slice(0, 10));
+      if (month) data.set("postingMonth", month);
+    }
     if (post.format) data.set("format0", post.format);
     if (carousel) {
       data.set("caption0", joinedEdit);
@@ -1821,7 +1874,7 @@ function PostDetail({
         <section className="flex flex-col gap-3 rounded-[18px] bg-background p-5">
           <h3 className="text-[17px] font-semibold">{post.status === "rejected" ? "This post wasn’t approved" : "You withdrew this post"}</h3>
           {post.reviewNote ? <blockquote className="rounded-xl bg-white px-3.5 py-3 text-sm leading-normal text-[#4A3A37]">{post.reviewNote}</blockquote> : null}
-          <button type="button" onClick={onReuse} className={`${quietButtonClass} h-11 self-start px-5`}>Use as a starting point</button>
+          <button type="button" onClick={onReuse} className={`${quietButtonClass} h-11 self-start px-5`}>{post.status === "rejected" ? "Create Replacement Post" : "Use as a starting point"}</button>
         </section>
       ) : null}
 

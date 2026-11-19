@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { approveWebsitePayout, excludeTrafficSpike, keepTrafficSpike, loadMarketingEvents, markWebsitePayoutPaid } from "@/lib/affiliate/marketing-events";
+import { approveAgreementPayout, markAgreementPayoutPaid } from "@/lib/affiliate/agreement-payouts";
 import { notifyAffiliatePayout } from "@/lib/affiliate/payout-mail";
 import { findClickSpike } from "@/lib/affiliate/traffic-review";
 import { PAYMENT_CATEGORIES, defaultPaymentRates, paymentRateCents } from "@/lib/affiliate/payment-rates";
@@ -101,6 +102,60 @@ export async function markWebsitePayoutPaidAction(formData: FormData) {
   revalidatePath("/admin/affiliates/payouts");
   revalidatePath("/affiliates/payouts");
   payoutRedirect(period, "notice", "website-paid");
+}
+
+export async function approveAgreementPayoutAction(formData: FormData) {
+  await requireRatesAdmin();
+  const period = String(formData.get("period") ?? "");
+  let amountCents: number | null = null;
+  try {
+    amountCents = await approveAgreementPayout(String(formData.get("code") ?? ""), period);
+  } catch (error) {
+    console.error("[affiliate] monthly rate approve failed", error instanceof Error ? error.message : "unknown");
+    payoutRedirect(period, "error", "agreement");
+  }
+  if (amountCents != null) {
+    await notifyAffiliatePayout({
+      code: String(formData.get("code") ?? ""),
+      stage: "approved",
+      label: `${formatPayoutMonth(period)} monthly posting rate`,
+      amountCents,
+    });
+  }
+  revalidatePath("/admin/affiliates/payouts");
+  revalidatePath("/affiliates/payouts");
+  payoutRedirect(period, "notice", "agreement-approved");
+}
+
+export async function markAgreementPayoutPaidAction(formData: FormData) {
+  await requireRatesAdmin();
+  const period = String(formData.get("period") ?? "");
+  const paidCents = payoutAmountCents(formData.get("amount"));
+  const paidAt = payoutPaidAt(formData.get("paidOn"));
+  const reference = payoutReference(formData.get("reference"));
+  if (paidCents == null || !paidAt || reference == null) payoutRedirect(period, "error", "agreement");
+  try {
+    await markAgreementPayoutPaid({
+      code: String(formData.get("code") ?? ""),
+      period,
+      paidCents,
+      paidAt,
+      reference,
+    });
+  } catch (error) {
+    console.error("[affiliate] monthly rate paid failed", error instanceof Error ? error.message : "unknown");
+    payoutRedirect(period, "error", "agreement");
+  }
+  await notifyAffiliatePayout({
+    code: String(formData.get("code") ?? ""),
+    stage: "sent",
+    label: `${formatPayoutMonth(period)} monthly posting rate`,
+    amountCents: paidCents,
+    reference,
+  });
+  revalidatePath("/admin/affiliates/payouts");
+  revalidatePath("/affiliates/payouts");
+  payoutRedirect(period, "notice", "agreement-paid");
 }
 
 const TRAFFIC = "/admin/affiliates/reporting";

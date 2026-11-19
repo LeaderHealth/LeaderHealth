@@ -7,10 +7,11 @@ import { viewPayTerms } from "@/lib/affiliate/format";
 import { affiliateTrackingLink } from "@/lib/affiliate/link";
 import { standingViewRateCents } from "@/lib/affiliate/payment-rates";
 import { loadPaymentRates } from "@/lib/affiliate/payment-store";
-import { DISCLOSURE_LINE, loadContentSubmissions } from "@/lib/affiliate/post-review";
+import { DISCLOSURE_LINE, loadContentSubmissions, type ContentSubmission } from "@/lib/affiliate/post-review";
 import { loadMarketingCampaignRecords } from "@/lib/affiliate/roi-store";
 import { loadAffiliateAgreements, utcAgreementToday } from "@/lib/affiliate/agreements";
 import { postingAgreement } from "@/lib/affiliate/post-agreement";
+import { memo } from "@/lib/affiliate/memo";
 import { currentAffiliate } from "../../current";
 
 export const metadata: Metadata = {
@@ -32,6 +33,7 @@ const errors: Record<string, string> = {
   invalid: "Add a caption and a picture or video.",
   unavailable: "That could not be saved right now.",
   agreement: "A signed agreement has to be on your account before you can send a post.",
+  month: "Choose a full month of this agreement that still has room for these posts.",
 };
 
 export default async function AffiliateCampaignsPage({
@@ -43,11 +45,15 @@ export default async function AffiliateCampaignsPage({
   if (!affiliate) redirect("/affiliates");
   const query = await searchParams;
   let unavailable = false;
+  let submissions: ContentSubmission[] = [];
   let posts: AffiliateCampaignPost[] = [];
   let records: Awaited<ReturnType<typeof loadMarketingCampaignRecords>> = [];
   try {
-    records = await loadMarketingCampaignRecords();
-    posts = (await loadContentSubmissions(affiliate.code)).map((post) => ({
+    [records, submissions] = await Promise.all([
+      memo("campaign-records", () => loadMarketingCampaignRecords()),
+      memo(`submissions:${affiliate.code}`, () => loadContentSubmissions(affiliate.code)),
+    ]);
+    posts = submissions.map((post) => ({
       id: post.id,
       campaign: post.campaign,
       caption: post.caption,
@@ -62,8 +68,12 @@ export default async function AffiliateCampaignsPage({
     unavailable = true;
   }
   const board = affiliateCampaignBoard({ records, posts, code: affiliate.code });
-  const posting = await loadAffiliateAgreements(affiliate.code).then((rows) => postingAgreement(rows, utcAgreementToday())).catch(() => null);
-  const viewRate = await loadPaymentRates().then(standingViewRateCents).catch(() => null);
+  const [agreementRows, rates] = await Promise.all([
+    memo(`agreements:${affiliate.code}`, () => loadAffiliateAgreements(affiliate.code)).catch(() => null),
+    memo("payment-rates", () => loadPaymentRates()).catch(() => null),
+  ]);
+  const posting = agreementRows ? postingAgreement(agreementRows, utcAgreementToday(), submissions) : null;
+  const viewRate = rates ? standingViewRateCents(rates) : null;
   const name = query.campaign?.trim() ?? "";
   const toast =
     query.notice === "accepted"

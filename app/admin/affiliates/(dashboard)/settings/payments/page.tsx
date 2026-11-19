@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { PaymentRatesPanel } from "@/components/affiliate/PaymentRatesPanel";
+import { PaymentRatesPanel, type MonthlyRateRow } from "@/components/affiliate/PaymentRatesPanel";
+import { loadAffiliateAgreements } from "@/lib/affiliate/agreements";
+import { presentAgreement } from "@/lib/affiliate/agreement-view";
 import { loadPaymentRates } from "@/lib/affiliate/payment-store";
 import { adminHasFullAccess, adminSessionActor } from "@/lib/affiliate/session";
+import { loadAffiliateOverview } from "@/lib/affiliate/store";
 
 export const metadata: Metadata = {
   title: "Payment rates",
@@ -22,6 +25,25 @@ export default async function PaymentRatesPage({
   const rates = await loadPaymentRates();
   const error = query.error === "rate" ? "Enter each rate as dollars and cents." : query.error === "unavailable" ? "Payment rates could not be saved." : "";
 
+  let monthlyRates: MonthlyRateRow[] | null = null;
+  try {
+    const [agreements, overview] = await Promise.all([loadAffiliateAgreements(), loadAffiliateOverview()]);
+    const names = new Map(overview.affiliates.map((affiliate) => [affiliate.code, affiliate.name]));
+    monthlyRates = agreements
+      .filter((agreement) => agreement.current && agreement.monthlyCents != null)
+      .map((agreement) => ({ agreement, view: presentAgreement(agreement) }))
+      .filter(({ view }) => view.phase === "active")
+      .map(({ agreement, view }) => ({
+        code: agreement.code,
+        name: names.get(agreement.code) ?? agreement.code,
+        monthly: view.monthly,
+        postTotal: view.postTotal,
+      }))
+      .sort((left, right) => left.name.localeCompare(right.name));
+  } catch {
+    monthlyRates = null;
+  }
+
   return (
     <div className="space-y-4">
       <div>
@@ -35,6 +57,7 @@ export default async function PaymentRatesPage({
           clicks: rates.clicks.rateCents,
           pageViews: rates.pageViews.rateCents,
         }}
+        monthlyRates={monthlyRates}
         error={error}
       />
     </div>

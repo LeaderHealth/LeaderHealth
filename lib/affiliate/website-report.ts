@@ -12,6 +12,8 @@ export type WebsiteOrder = {
   code: string;
   createdAt: string | null;
   promoCode: string | null;
+  /** The paid order came through the promo tracking link, not a code typed later. */
+  viaPromoLink?: boolean;
   dryRun: boolean;
 };
 
@@ -27,6 +29,7 @@ export type WebsiteMonthReport = {
   trackingOrders: number;
   promoVisits: number;
   promoOrders: number;
+  promoLinkOrders: number;
   promos: WebsitePromoUse[];
 };
 
@@ -50,6 +53,7 @@ export function websiteReportMonths(input: {
       trackingOrders: 0,
       promoVisits: 0,
       promoOrders: 0,
+      promoLinkOrders: 0,
       promos: [],
     };
     months.set(month, created);
@@ -76,7 +80,8 @@ export function websiteReportMonths(input: {
       month.trackingOrders += 1;
       continue;
     }
-    month.promoOrders += 1;
+    if (order.viaPromoLink) month.promoLinkOrders += 1;
+    else month.promoOrders += 1;
     promoRow(month, promo).orders += 1;
   }
   if (months.size === 0) {
@@ -86,6 +91,7 @@ export function websiteReportMonths(input: {
       trackingOrders: 0,
       promoVisits: 0,
       promoOrders: 0,
+      promoLinkOrders: 0,
       promos: [],
     });
   }
@@ -123,6 +129,7 @@ export async function loadWebsiteEvents(code?: string) {
           code: orderCode,
           createdAt: dateText(data.createdAt),
           promoCode: textOrNull(data.promoCode),
+          viaPromoLink: data.viaPromoLink === true,
           dryRun: data.dryRun === true,
         },
       ];

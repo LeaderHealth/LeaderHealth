@@ -25,8 +25,12 @@ export const COMPLIANCE_ACTIONS = [
   "flag-replied",
   "flag-resolved",
   "agreement-saved",
+  "agreement-deleted",
   "agreement-signed",
   "agreement-ended",
+  "agreement-declined",
+  "agreement-question",
+  "agreement-answered",
   "content-submitted",
   "content-revised",
   "content-approved",
@@ -106,8 +110,12 @@ export function complianceActionLabel(action: ComplianceAction) {
   if (action === "flag-replied") return "Correction reply";
   if (action === "flag-resolved") return "Flag resolved";
   if (action === "agreement-saved") return "Agreement saved";
+  if (action === "agreement-deleted") return "Agreement draft deleted";
   if (action === "agreement-signed") return "Agreement signed";
   if (action === "agreement-ended") return "Agreement ended";
+  if (action === "agreement-declined") return "Agreement declined";
+  if (action === "agreement-question") return "Agreement question";
+  if (action === "agreement-answered") return "Agreement question answered";
   if (action === "content-submitted") return "Post submitted";
   if (action === "content-revised") return "Post updated";
   if (action === "content-approved") return "Post approved";

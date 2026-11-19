@@ -18,6 +18,7 @@ test("website reports count tracking links and promo codes separately", () => {
     orders: [
       { code, createdAt: "2026-03-06T00:00:00.000Z", promoCode: null, dryRun: false },
       { code, createdAt: "2026-03-07T00:00:00.000Z", promoCode: "TEST10", dryRun: false },
+      { code, createdAt: "2026-03-09T00:00:00.000Z", promoCode: "TEST10", viaPromoLink: true, dryRun: false },
       { code, createdAt: "2026-03-08T00:00:00.000Z", promoCode: "TEST10", dryRun: true },
       { code, createdAt: "2026-04-01T00:00:00.000Z", promoCode: "TEST21", dryRun: false },
     ],
@@ -29,7 +30,8 @@ test("website reports count tracking links and promo codes separately", () => {
   assert.equal(march.trackingOrders, 1);
   assert.equal(march.promoVisits, 2);
   assert.equal(march.promoOrders, 1);
-  assert.deepEqual(march.promos, [{ code: "TEST10", visits: 2, orders: 1 }]);
+  assert.equal(march.promoLinkOrders, 1);
+  assert.deepEqual(march.promos, [{ code: "TEST10", visits: 2, orders: 2 }]);
   assert.equal(april?.promoOrders, 1);
   assert.equal(april?.promos[0]?.code, "TEST21");
   assert.equal("commissionCents" in march, false);

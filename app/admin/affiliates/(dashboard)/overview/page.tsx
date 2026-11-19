@@ -10,6 +10,9 @@ import { loadPaymentRates } from "@/lib/affiliate/payment-store";
 import { listOpenApplications } from "@/lib/affiliate/applications";
 import { loadMarketingOffers } from "@/lib/affiliate/marketing-offers";
 import { loadContentSubmissions } from "@/lib/affiliate/post-review";
+import { agreementMonthEarning } from "@/lib/affiliate/agreement-earnings";
+import { loadAgreementPayouts } from "@/lib/affiliate/agreement-payouts";
+import { loadAffiliateAgreements } from "@/lib/affiliate/agreements";
 import { visibleReportSections } from "@/lib/affiliate/marketing";
 import { loadMarketingReports, type MarketingReport } from "@/lib/affiliate/marketing-store";
 import { loadSocialAccounts, type SocialAccountView } from "@/lib/affiliate/social-store";
@@ -18,7 +21,7 @@ import { currentPayoutPeriod, formatPayoutMonth, loadPayoutRecords, paidOutInRan
 import { periodReferralSummaries } from "@/lib/affiliate/order-view";
 import { adjustedCommissionCents, remainingSalesCents } from "@/lib/affiliate/refunds";
 import { AffiliateStoreError, loadAffiliateOverview, loadClickTimes, type AffiliateSummary, type ConversionSummary } from "@/lib/affiliate/store";
-import { listPromoCodes, promoCodesForAffiliate, type PromoCodeRow } from "@/lib/genhealth/promocodes";
+import { listPromoCodes, promoCodesForAffiliate, promoRowsForAffiliate, type PromoCodeRow } from "@/lib/genhealth/promocodes";
 import { adminHasFullAccess, adminSessionActor } from "@/lib/affiliate/session";
 
 export const metadata: Metadata = {
@@ -306,12 +309,26 @@ export default async function AffiliateOverviewPage({
   } catch {
     websiteReady = false;
   }
+  let agreements: Awaited<ReturnType<typeof loadAffiliateAgreements>> = [];
+  let agreementPayouts: Awaited<ReturnType<typeof loadAgreementPayouts>> = [];
+  try {
+    const [loadedAgreements, priorAgreementPayouts, currentAgreementPayouts] = await Promise.all([
+      loadAffiliateAgreements(),
+      loadAgreementPayouts(priorPeriod),
+      priorPeriod === currentPeriod ? Promise.resolve([]) : loadAgreementPayouts(currentPeriod),
+    ]);
+    agreements = loadedAgreements;
+    agreementPayouts = [...priorAgreementPayouts, ...currentAgreementPayouts];
+  } catch {
+    agreements = [];
+  }
 
   function manageReports(code: string) {
     return {
       unavailable: reportsUnavailable,
       months: websiteReportMonths({ code, visits: websiteVisits, orders: websiteOrders }),
       sections: reportSections.filter((section) => section.code === code),
+      promos: catalog ? promoRowsForAffiliate(catalog, code).map((promo) => ({ code: promo.code, status: promo.statusLabel })) : [],
     };
   }
 
@@ -323,9 +340,16 @@ export default async function AffiliateOverviewPage({
     });
     const snapshot = websiteSnapshots.find((row) => row.code === code && row.period === period) ?? null;
     const labCents = labLines.filter((line) => line.code === code && line.period === period).reduce((sum, line) => sum + line.earnedCents, 0);
+    const monthly = agreementMonthEarning({
+      agreements,
+      posts: contentPosts,
+      code,
+      period,
+      snapshot: agreementPayouts.find((row) => row.code === code && row.period === period) ?? null,
+    });
     return {
       label: formatPayoutMonth(period),
-      social: postsReady ? formatCents(socialMonth.socialCents + socialMonth.adjustmentCents) : "—",
+      social: postsReady ? formatCents(socialMonth.socialCents + socialMonth.adjustmentCents + monthly.earnedCents) : "—",
       website:
         websiteReady && contentRates
           ? formatCents(websiteMonthAmount({ events: marketingEvents, code, period, rates: contentRates, snapshot }).amountCents)

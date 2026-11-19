@@ -10,6 +10,7 @@ export function Subnav({ label, items }: { label: string; items: AreaNavItem[] }
 
   return (
     <SlidingTabs
+      variant="track"
       label={label}
       items={items.map((item) => ({
         id: item.href,

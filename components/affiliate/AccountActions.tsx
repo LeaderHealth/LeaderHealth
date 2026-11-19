@@ -10,6 +10,8 @@ const buttonClass =
 
 const actionClass =
   "inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-full border border-ink/20 bg-white px-4 text-sm font-medium text-ink hover:bg-background focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
+const compactClass =
+  "inline-flex h-9 items-center justify-center whitespace-nowrap rounded-full border border-[#CDBDBA] bg-white px-3.5 text-[13px] font-medium text-ink hover:bg-background focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
 
 export function AccountActions({
   code,
@@ -24,8 +26,10 @@ export function AccountActions({
   active: boolean;
   pendingInvite?: boolean;
   canInvite?: boolean;
-  layout?: "inline" | "stack";
+  layout?: "inline" | "stack" | "wrap";
 }) {
+  const wrap = layout === "wrap";
+  const button = wrap ? compactClass : `${actionClass} w-full`;
   const titleId = useId();
   const passwordButtonRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -74,14 +78,14 @@ export function AccountActions({
   return (
     <>
       <div
-        className={layout === "stack" ? "flex flex-col gap-2" : "grid grid-cols-1 gap-2 min-[420px]:grid-cols-2"}
+        className={wrap ? "contents" : layout === "stack" ? "flex flex-col gap-2" : "grid grid-cols-1 gap-2 min-[420px]:grid-cols-2"}
         role="group"
         aria-label={`Actions for ${name}`}
       >
-        <form action={setAffiliateActiveAction} className="min-w-0">
+        <form action={setAffiliateActiveAction} className={wrap ? "order-2" : "min-w-0"}>
           <input type="hidden" name="code" value={code} />
           <input type="hidden" name="active" value={active ? "false" : "true"} />
-          <button type="submit" className={`${actionClass} w-full`}>
+          <button type="submit" className={button}>
             {active ? "Deactivate" : "Activate"}
           </button>
         </form>
@@ -89,14 +93,14 @@ export function AccountActions({
           ref={passwordButtonRef}
           type="button"
           onClick={() => setPasswordOpen(true)}
-          className={`${actionClass} w-full`}
+          className={wrap ? `${button} order-1` : button}
         >
           Set password
         </button>
         {pendingInvite && canInvite ? (
-          <form action={resendAffiliateInvitationAction} className={layout === "stack" ? undefined : "min-[420px]:col-span-2"}>
+          <form action={resendAffiliateInvitationAction} className={wrap ? "order-3" : layout === "stack" ? undefined : "min-[420px]:col-span-2"}>
             <input type="hidden" name="code" value={code} />
-            <button type="submit" className={`${actionClass} w-full`}>
+            <button type="submit" className={button}>
               Resend invitation
             </button>
           </form>

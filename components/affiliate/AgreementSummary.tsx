@@ -1,5 +1,5 @@
 import type { AgreementView } from "./agreement-types";
-import { STANDARD_DELIVERABLE_DESCRIPTION, STANDARD_PAYMENT_CONDITIONS } from "@/lib/affiliate/agreement-pay";
+import { STANDARD_DELIVERABLE_DESCRIPTION, STANDARD_PAYMENT_CONDITIONS, monthlyRateCondition } from "@/lib/affiliate/agreement-pay";
 
 export function AgreementSummary({ agreement, commission, pdfHref }: { agreement: AgreementView; commission: string; pdfHref: string | null }) {
   const written = agreement.deliverables.filter((item) => item.description.trim());
@@ -20,6 +20,7 @@ export function AgreementSummary({ agreement, commission, pdfHref }: { agreement
         <p className="text-brown">Deliverables</p>
         <p className="mt-1">{STANDARD_DELIVERABLE_DESCRIPTION}</p>
         <p className="mt-2">{STANDARD_PAYMENT_CONDITIONS}</p>
+        {monthlyRateCondition(agreement.monthly, agreement.postTotal) ? <p className="mt-2">{monthlyRateCondition(agreement.monthly, agreement.postTotal)}</p> : null}
         {written.length > 0 ? (
           <ul className="mt-3 space-y-2">
             {written.map((item, index) => (

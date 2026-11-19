@@ -27,7 +27,10 @@ import {
 import { AffiliateStoreError, loadAffiliateOverview } from "@/lib/affiliate/store";
 import { adminHasFullAccess, adminSessionActor } from "@/lib/affiliate/session";
 import { approveDeliverablePaymentAction, adjustDeliverableAction, approvePayoutAction, forfeitDeliverableAction, markDeliverablePaidAction, markPayoutPaidAction, recheckDeliverableAction, reinstateDeliverableAction } from "../../actions";
-import { approveWebsitePayoutAction, markWebsitePayoutPaidAction } from "../../payment-actions";
+import { approveAgreementPayoutAction, approveWebsitePayoutAction, markAgreementPayoutPaidAction, markWebsitePayoutPaidAction } from "../../payment-actions";
+import { agreementEarningNote, agreementMonthEarning } from "@/lib/affiliate/agreement-earnings";
+import { loadAgreementPayouts } from "@/lib/affiliate/agreement-payouts";
+import { loadAffiliateAgreements } from "@/lib/affiliate/agreements";
 import { ADMIN_ERRORS } from "../../messages";
 
 export const metadata: Metadata = {
@@ -51,6 +54,8 @@ const notices: Record<string, string> = {
   "deliverable-forfeited": "Marketing fee forfeited.",
   "deliverable-reinstated": "Marketing fee reinstated.",
   "deliverable-adjusted": "Bonus or clawback recorded.",
+  "agreement-approved": "Monthly posting rate approved. Send the money, then record the payment.",
+  "agreement-paid": "Monthly posting rate payment recorded.",
 };
 
 function bucketRank(status: PayoutTableStatus) {
@@ -224,7 +229,14 @@ export default async function AffiliatePayoutsPage({
   const actor = await adminSessionActor();
   const canPay = Boolean(actor && adminHasFullAccess(actor));
   const notice = notices[query.notice ?? ""] ?? "";
-  const error = query.error === "website" ? "The website traffic payment could not be saved." : query.error ? ADMIN_ERRORS[query.error] ?? "" : "";
+  const error =
+    query.error === "website"
+      ? "The website traffic payment could not be saved."
+      : query.error === "agreement"
+        ? "The monthly posting rate payment could not be saved. Every required post must be live first."
+        : query.error
+          ? ADMIN_ERRORS[query.error] ?? ""
+          : "";
   const paidOn = new Date().toISOString().slice(0, 10);
 
   let lines: PayoutLine[] = [];
@@ -238,6 +250,8 @@ export default async function AffiliatePayoutsPage({
   let events: Awaited<ReturnType<typeof loadMarketingEvents>> = [];
   let websitePayouts: Awaited<ReturnType<typeof loadWebsitePayouts>> = [];
   let rates: Awaited<ReturnType<typeof loadPaymentRates>> | null = null;
+  let agreements: Awaited<ReturnType<typeof loadAffiliateAgreements>> = [];
+  let agreementPayouts: Awaited<ReturnType<typeof loadAgreementPayouts>> = [];
   let marketingError = "";
   const month = normalizePayoutPeriod(query.month) ?? currentPayoutPeriod();
   try {
@@ -252,13 +266,17 @@ export default async function AffiliatePayoutsPage({
     });
     lines = allLines.filter((line) => line.period === month);
     try {
-      const [loadedPosts, loadedPayments, loadedEvents, loadedWebsite, loadedRates] = await Promise.all([
+      const [loadedPosts, loadedPayments, loadedEvents, loadedWebsite, loadedRates, loadedAgreements, loadedAgreementPayouts] = await Promise.all([
         loadContentSubmissions(),
         loadDeliverablePayments(),
         loadMarketingEvents({ period: month }),
         loadWebsitePayouts(month),
         loadPaymentRates(),
+        loadAffiliateAgreements(),
+        loadAgreementPayouts(month),
       ]);
+      agreements = loadedAgreements;
+      agreementPayouts = loadedAgreementPayouts;
       posts = loadedPosts;
       payments = loadedPayments;
       events = loadedEvents;
@@ -289,14 +307,21 @@ export default async function AffiliatePayoutsPage({
     const labPaid = labLines.find((line) => line.status === "paid");
     const labCents = labLines.reduce((sum, line) => sum + line.earnedCents, 0);
     const counts = website.clicks + website.pageViews;
-    const totalCents = social.socialCents + website.amountCents + labCents + social.adjustmentCents;
+    const monthly = agreementMonthEarning({
+      agreements,
+      posts,
+      code: affiliate.code,
+      period: month,
+      snapshot: agreementPayouts.find((row) => row.code === affiliate.code) ?? null,
+    });
+    const totalCents = social.socialCents + monthly.earnedCents + website.amountCents + labCents + social.adjustmentCents;
     const monthPosts = marketing.filter((line) => {
       if (line.code !== affiliate.code) return false;
       const payment = payments.find((item) => item.postId === line.postId);
       const post = posts.find((item) => item.id === line.postId);
       return eventPeriod(line.paidAt ?? payment?.approvedAt ?? payment?.paidAt ?? post?.publishedAt ?? "") === month;
     });
-    if (totalCents === 0 && counts === 0 && monthPosts.length === 0) return [];
+    if (totalCents === 0 && counts === 0 && monthPosts.length === 0 && monthly.status === "none") return [];
     const buckets: PayoutTableStatus[] = [];
     if (labPayable?.status === "pending") buckets.push("needs");
     if (labPayable?.status === "approved") buckets.push("approved");
@@ -304,6 +329,10 @@ export default async function AffiliatePayoutsPage({
     if (website.status === "paid") buckets.push("paid");
     else if (website.status === "approved") buckets.push("approved");
     else if (counts > 0) buckets.push("needs");
+    if (monthly.status === "earned") buckets.push("needs");
+    else if (monthly.status === "approved") buckets.push("approved");
+    else if (monthly.status === "paid") buckets.push("paid");
+    else if (monthly.status === "short" && month === currentPayoutPeriod()) buckets.push("waiting");
     for (const post of monthPosts) {
       const bucket = postBucket(post.status);
       if (bucket) buckets.push(bucket);
@@ -313,18 +342,30 @@ export default async function AffiliatePayoutsPage({
     if (canPay && labPayable) steps.push("lab");
     if (canPay && website.status === "pending" && counts > 0) steps.push("website");
     if (canPay && website.status === "approved") steps.push("website-record");
+    if (canPay && monthly.status === "earned") steps.push("agreement");
+    if (canPay && monthly.status === "approved") steps.push("agreement-record");
     for (const post of monthPosts) {
       if (post.status === "pending" || post.status === "approved") steps.push(post.postId);
     }
     const primary = steps[0] ?? "";
     const websiteLabel = counts === 0 ? "" : `${website.clicks} clicks, ${website.pageViews} page views`;
-    const waitingNote = status !== "waiting" ? "" : monthPosts.some((post) => post.status === "measuring" || post.status === "hold" || post.status === "recheck") ? "Still counting" : "Still in review";
+    const waitingNote =
+      status !== "waiting"
+        ? ""
+        : monthPosts.some((post) => post.status === "measuring" || post.status === "hold" || post.status === "recheck")
+          ? "Still counting"
+          : monthly.status === "short" && !monthPosts.length
+            ? `Monthly rate: ${agreementEarningNote(monthly)}`
+            : "Still in review";
     const paidLine = labPaid ?? monthPosts.find((post) => post.status === "paid");
     const paidWhen = paidLine && "paidAt" in paidLine ? formatPayoutDate(paidLine.paidAt) : "";
     const paidRef = paidLine && "reference" in paidLine ? paidLine.reference : "";
     const detail = status === "paid" ? [paidWhen === "—" ? "" : paidWhen, paidRef].filter(Boolean).join(" · ") : status === "waiting" ? waitingNote : "";
     const parts = [
       social.socialCents ? { kind: "Social", what: monthPosts.length === 1 ? monthPosts[0].label : monthPosts.length > 1 ? `${monthPosts.length} posts this month` : "Social posts this month", amountCents: social.socialCents } : null,
+      monthly.status !== "none"
+        ? { kind: "Monthly", what: `Posting rate ${formatCents(monthly.rateCents)} · ${monthly.verifiedPosts} of ${monthly.requiredPosts} posts live`, amountCents: monthly.earnedCents }
+        : null,
       website.amountCents || counts ? { kind: "Website traffic", what: websiteLabel || "This month", amountCents: website.amountCents } : null,
       labCents ? { kind: "Lab", what: "Lab orders this month", amountCents: labCents } : null,
     ].filter((part) => part != null);
@@ -350,6 +391,28 @@ export default async function AffiliatePayoutsPage({
         triggerClass={primary === "website-record" ? primaryClass : undefined}
       />
     );
+    const agreementApprove = (
+      <form action={approveAgreementPayoutAction}>
+        <input type="hidden" name="code" value={affiliate.code} />
+        <input type="hidden" name="period" value={month} />
+        <button type="submit" className={primary === "agreement" ? primaryClass : actionClass}>
+          Approve monthly rate {formatCents(monthly.earnedCents)}
+        </button>
+      </form>
+    );
+    const agreementRecord = (
+      <MarkPaidButton
+        code={affiliate.code}
+        name={affiliate.name}
+        period={month}
+        amount={(monthly.earnedCents / 100).toFixed(2)}
+        paidOn={paidOn}
+        monthLabel={`${formatPayoutMonth(month)} monthly posting rate`}
+        action={markAgreementPayoutPaidAction}
+        label="Record monthly rate payment"
+        triggerClass={primary === "agreement-record" ? primaryClass : undefined}
+      />
+    );
     const labAction = labPayable ? <PayoutAction line={labPayable} updated={approvedCodes.has(labPayable.code)} paidOn={paidOn} canPay={canPay} /> : null;
     const primaryPost = monthPosts.find((post) => post.postId === primary);
     const record =
@@ -357,15 +420,31 @@ export default async function AffiliatePayoutsPage({
         ? { code: affiliate.code, name: affiliate.name, period: month, amountCents: labPayable.earnedCents, paidOn, action: markPayoutPaidAction }
         : status === "approved" && canPay && primary === "website-record"
           ? { code: affiliate.code, name: affiliate.name, period: month, amountCents: website.amountCents, paidOn, action: markWebsitePayoutPaidAction }
-          : status === "approved" && canPay && primaryPost?.status === "approved"
-            ? { code: affiliate.code, name: affiliate.name, period: primaryPost.postId, postId: primaryPost.postId, amountCents: primaryPost.amountCents, paidOn, action: markDeliverablePaidAction }
-            : undefined;
-    const action = record ? undefined : primary === "lab" ? labAction : primary === "website" ? websiteApprove : primary === "website-record" ? websiteRecord : primaryPost ? postControl(primaryPost, paidOn, canPay) : undefined;
+          : status === "approved" && canPay && primary === "agreement-record"
+            ? { code: affiliate.code, name: affiliate.name, period: month, amountCents: monthly.earnedCents, paidOn, action: markAgreementPayoutPaidAction }
+            : status === "approved" && canPay && primaryPost?.status === "approved"
+              ? { code: affiliate.code, name: affiliate.name, period: primaryPost.postId, postId: primaryPost.postId, amountCents: primaryPost.amountCents, paidOn, action: markDeliverablePaidAction }
+              : undefined;
+    const action = record
+      ? undefined
+      : primary === "lab"
+        ? labAction
+        : primary === "website"
+          ? websiteApprove
+          : primary === "website-record"
+            ? websiteRecord
+            : primary === "agreement"
+              ? agreementApprove
+              : primary === "agreement-record"
+                ? agreementRecord
+                : primaryPost
+                  ? postControl(primaryPost, paidOn, canPay)
+                  : undefined;
     return [
       {
         key: affiliate.code,
         name: affiliate.name,
-        socialCents: social.socialCents,
+        socialCents: social.socialCents + monthly.earnedCents,
         websiteCents: website.amountCents,
         labCents,
         totalCents,
@@ -378,6 +457,8 @@ export default async function AffiliatePayoutsPage({
           monthPosts.some((post) => post.postId !== primary && (post.detail || post.adjustmentCents != null || post.status === "recheck" || post.status === "hold" || post.status === "forfeited" || post.status === "paid")) ||
           (primary !== "website" && steps.includes("website")) ||
           (primary !== "website-record" && steps.includes("website-record")) ||
+          (primary !== "agreement" && steps.includes("agreement")) ||
+          (primary !== "agreement-record" && steps.includes("agreement-record")) ||
           (primary !== "lab" && steps.includes("lab")) ? (
             <div className="space-y-3 text-sm">
               {monthPosts.map((post) =>
@@ -400,6 +481,8 @@ export default async function AffiliatePayoutsPage({
               )}
               {primary !== "website" && steps.includes("website") ? websiteApprove : null}
               {primary !== "website-record" && steps.includes("website-record") ? <div>{websiteRecord}</div> : null}
+              {primary !== "agreement" && steps.includes("agreement") ? agreementApprove : null}
+              {primary !== "agreement-record" && steps.includes("agreement-record") ? <div>{agreementRecord}</div> : null}
               {primary !== "lab" && steps.includes("lab") ? labAction : null}
             </div>
           ) : undefined,

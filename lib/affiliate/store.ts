@@ -329,6 +329,7 @@ export async function recordAffiliateConversion(input: {
   dryRun: boolean;
   createdAt?: Date;
   promoCode?: string | null;
+  viaPromoLink?: boolean;
   productIds?: readonly string[];
 }) {
   if (!affiliateFirebaseConfigured()) return false;
@@ -370,7 +371,7 @@ export async function recordAffiliateConversion(input: {
       commissionFixedCents,
       commissionCents,
       dryRun: input.dryRun,
-      ...(promoCode ? { promoCode } : {}),
+      ...(promoCode ? { promoCode, ...(input.viaPromoLink ? { viaPromoLink: true } : {}) } : {}),
       createdAt:
         input.createdAt instanceof Date && !Number.isNaN(input.createdAt.getTime())
           ? input.createdAt
@@ -459,7 +460,7 @@ export async function applyOrderRefund(input: { orderId: string; incoming: reado
   });
 }
 
-export async function savePendingAffiliateOrder(input: { code: string; orderId: string }) {
+export async function savePendingAffiliateOrder(input: { code: string; orderId: string; campaign?: string | null }) {
   if (!affiliateFirebaseConfigured()) return "unavailable" as const;
   const code = normalizeAffiliateCode(input.code);
   const orderId = orderDocId(input.orderId);
@@ -473,9 +474,19 @@ export async function savePendingAffiliateOrder(input: { code: string; orderId: 
     if (existing.exists) return "exists" as const;
     const affiliate = await tx.get(affiliateRef);
     if (!affiliate.exists || affiliate.data()?.active !== true) return "inactive" as const;
-    tx.set(orderRef, { code, orderId, commissioned: false });
+    const campaign = storedCampaign(input.campaign, code);
+    tx.set(orderRef, { code, orderId, commissioned: false, ...(campaign ? { campaign } : {}) });
     return "saved" as const;
   });
+}
+
+export async function pendingOrderCampaign(orderId: string) {
+  if (!affiliateFirebaseConfigured()) return null;
+  const id = orderDocId(orderId);
+  if (!id) return null;
+  const snap = await affiliateFirestore().collection("pendingOrders").doc(id).get();
+  if (!snap.exists) return null;
+  return textOrNull(snap.data()?.campaign);
 }
 
 export async function pendingAffiliateCode(orderId: string) {

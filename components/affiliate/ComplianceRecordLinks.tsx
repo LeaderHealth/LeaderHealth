@@ -9,6 +9,7 @@ export function ComplianceRecordLinks({ current }: { current: "records" | "compl
   return (
     <div className="mt-4">
       <SlidingTabs
+        variant="track"
         label="Compliance records"
         items={links.map((item) => ({
           id: item.href,

@@ -122,3 +122,27 @@ test("payout items use real social, website, and paid amounts", () => {
   const withLab = buildPayoutItems({ today, posts: [], payments: [], websites: [], labs: [{ period: "2026-10", amountCents: 4905, conversions: 3, status: "paid", paidOn: "2026-11-15T00:00:00.000Z", approvedOn: null, reference: "", terms: "15%", refs: [] }] });
   assert.equal(payoutMonths(withLab, today, "90").find((month) => month.period === "2026-10")?.lab, 4905);
 });
+
+test("the monthly posting rate shows as a base payment once earned, and a short month stays until it is earned", () => {
+  const monthly = { rateCents: 30000, requiredPosts: 4, approvedAt: null, paidAt: null, reference: "" };
+  const items = buildPayoutItems({
+    today,
+    posts: [],
+    payments: [],
+    websites: [],
+    monthlies: [
+      { ...monthly, period: "2026-10", verifiedPosts: 4, earnedCents: 30000, status: "paid", paidAt: "2026-11-05T00:00:00.000Z", reference: "ACH" },
+      { ...monthly, period: "2026-11", verifiedPosts: 2, earnedCents: 0, status: "short" },
+      { ...monthly, period: "2026-09", verifiedPosts: 1, earnedCents: 0, status: "short" },
+    ],
+  });
+  const october = items.find((item) => item.id === "monthly-2026-10");
+  const november = items.find((item) => item.id === "monthly-2026-11");
+  assert.equal(october?.kind, "base");
+  assert.equal(october?.status, "paid");
+  assert.equal(october?.amountCents, 30000);
+  assert.equal(november?.status, "review");
+  assert.equal(november?.amountCents, 0);
+  assert.match(november?.work ?? "", /2 of 4 required posts live/);
+  assert.equal(items.some((item) => item.id === "monthly-2026-09"), false);
+});
