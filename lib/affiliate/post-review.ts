@@ -19,7 +19,7 @@ import { DEFAULT_TRACKING_DAYS, MANUAL_REPORT_MS, REPORT_WINDOW_MS, manualReport
 import { rateFor, standingViewRateCents } from "./payment-rates";
 import { loadPaymentRates } from "./payment-store";
 import { loadAffiliateAgreement, utcAgreementToday } from "./agreements";
-import { agreementMatchesPost, postingAgreement, type PostingAgreement } from "./post-agreement";
+import { agreementMatchesPost, postingAgreement, postsFillingMonth, type PostingAgreement } from "./post-agreement";
 export { MANUAL_REPORT_MS, REPORT_WINDOW_MS, manualReportDue, networkConnectedForPost };
 export type { MetricsOrigin };
 
@@ -51,7 +51,7 @@ export type ContentStep = "approve" | "request" | "reject" | "revise";
 export type VerificationFailure = "not_connected" | "not_found" | "missing_disclosure" | "missing_link" | "unavailable";
 
 export class PostReviewError extends Error {
-  code: "invalid" | "file" | "storage" | "missing" | "unavailable" | "status" | "url" | "note" | "disclosure" | "link" | "fee" | "campaign" | "offer" | "terms" | "date" | "agreement";
+  code: "invalid" | "file" | "storage" | "missing" | "unavailable" | "status" | "url" | "note" | "disclosure" | "link" | "fee" | "campaign" | "offer" | "terms" | "date" | "agreement" | "month";
 
   constructor(code: PostReviewError["code"]) {
     super(code);
@@ -120,6 +120,7 @@ export type ContentSubmission = {
   offerId: string;
   agreementId: string;
   agreementLabel: string;
+  postingMonth: string;
   offerKind: string;
   offerBrief: string;
   publishBy: string;
@@ -498,6 +499,7 @@ function submissionFrom(id: string, data: DocumentData | undefined): ContentSubm
     offerId: typeof data.offerId === "string" && !data.offerId.includes("/") ? data.offerId : "",
     agreementId: typeof data.agreementId === "string" && !data.agreementId.includes("/") ? data.agreementId.slice(0, 128) : "",
     agreementLabel: typeof data.agreementLabel === "string" ? data.agreementLabel.trim().slice(0, 200) : "",
+    postingMonth: typeof data.postingMonth === "string" && /^\d{4}-\d{2}$/.test(data.postingMonth) ? data.postingMonth : "",
     offerKind: typeof data.offerKind === "string" ? data.offerKind : "",
     offerBrief: typeof data.offerBrief === "string" ? data.offerBrief.slice(0, 800) : "",
     publishBy: typeof data.publishBy === "string" ? data.publishBy : "",
@@ -896,7 +898,7 @@ export async function saveContentDrafts(input: { code: string; posts: BatchPostI
   return ids;
 }
 
-export async function submitContentBatch(input: { code: string; posts: BatchPostInput[]; termsAccepted: boolean; agreementId: string }) {
+export async function submitContentBatch(input: { code: string; posts: BatchPostInput[]; termsAccepted: boolean; agreementId: string; postingMonth?: string }) {
   const code = normalizeAffiliateCode(input.code);
   if (!code || input.posts.length < 1 || input.posts.length > POST_BATCH_LIMIT) throw new PostReviewError("invalid");
   const db = requireDb();
@@ -931,8 +933,25 @@ export async function submitContentBatch(input: { code: string; posts: BatchPost
   const offerIds = new Set(ready.map((entry) => entry.existing?.offerId || entry.item.offerId.trim()).filter(Boolean));
   if (offerIds.size > 1 || (offerIds.size === 1 && ready.length > 1)) throw new PostReviewError("offer");
   const standing = needsStandingFee ? await requireStandingTerms(code) : null;
-  const needsAgreement = ready.some((entry) => !(entry.existing?.offerId || entry.item.offerId.trim()));
-  const postedUnder = needsAgreement ? await requirePostingAgreement(code, input.agreementId) : null;
+  const postedUnder = await requirePostingAgreement(code, input.agreementId);
+  const offerBatch = offerIds.size === 1;
+  let postingPeriod = "";
+  if (!offerBatch) {
+    const period = (input.postingMonth ?? "").trim();
+    const slot = postedUnder.months.find((month) => month.period === period);
+    if (!slot) throw new PostReviewError("month");
+    for (const entry of ready) {
+      if (!entry.item.proposedPublishOn) continue;
+      const date = proposedPublishDate(entry.item.proposedPublishOn);
+      if (date && date.slice(0, 7) !== slot.period) throw new PostReviewError("date");
+    }
+    if (slot.limit != null) {
+      const exclude = new Set(ready.flatMap((entry) => (entry.existing ? [entry.existing.id] : [])));
+      const used = postsFillingMonth(await loadContentSubmissions(code), postedUnder.id, slot.period, exclude);
+      if (used + ready.length > slot.limit) throw new PostReviewError("month");
+    }
+    postingPeriod = slot.period;
+  }
   const engagementRateCents = standing?.engagementRateCents ?? (await currentPaymentRates().then((rates) => (rates ? rateFor(rates, "engagements") : 0)));
   const allowed = await campaignNamesFor(code);
   const freshBatch = crypto.randomUUID();
@@ -979,7 +998,9 @@ export async function submitContentBatch(input: { code: string; posts: BatchPost
       ...savedCampaign,
       ...proposedDateFields(entry.item.proposedPublishOn),
       ...revisionFields(entry.existing),
-      ...(offer || !postedUnder ? {} : { agreementId: postedUnder.id, agreementLabel: postedUnder.label }),
+      agreementId: postedUnder.id,
+      agreementLabel: postedUnder.label,
+      ...(postingPeriod ? { postingMonth: postingPeriod } : {}),
     };
     if (offer) {
       await db.runTransaction(async (tx) => {

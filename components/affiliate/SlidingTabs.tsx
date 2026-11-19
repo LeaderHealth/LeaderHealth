@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { PrefetchKind } from "next/dist/client/components/router-reducer/router-reducer-types";
 import { useRouter } from "next/navigation";
-import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 
 type Box = { x: number; y: number; w: number; h: number };
 
@@ -18,8 +19,161 @@ export type SlidingTabItem = {
   onSelect?: () => void;
 };
 
-const ease = "duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none";
-const SLIDE_MS = 500;
+const ease = "duration-[280ms] ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none";
+const tabFocus = "focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-[#E39A93]";
+const TAB_SWITCH = "lh-tab-switch";
+
+function markTabSwitch() {
+  try {
+    sessionStorage.setItem(TAB_SWITCH, String(Date.now()));
+  } catch {
+    /* storage can be blocked */
+  }
+}
+
+function freshTabSwitch() {
+  try {
+    const stamp = Number(sessionStorage.getItem(TAB_SWITCH) || 0);
+    return stamp > 0 && Date.now() - stamp < 1500;
+  } catch {
+    return false;
+  }
+}
+
+function clearTabSwitch() {
+  try {
+    sessionStorage.removeItem(TAB_SWITCH);
+  } catch {
+    /* storage can be blocked */
+  }
+}
+
+function motionReduced() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function pathOf(href: string) {
+  const path = href.split("#")[0]?.split("?")[0] ?? href;
+  if (!path.startsWith("http")) return path;
+  try {
+    return new URL(path).pathname;
+  } catch {
+    return path;
+  }
+}
+
+function switchAge() {
+  try {
+    const stamp = Number(sessionStorage.getItem(TAB_SWITCH) || 0);
+    return stamp > 0 ? Date.now() - stamp : 0;
+  } catch {
+    return 0;
+  }
+}
+
+const PANEL_TRANSITION = "opacity 220ms ease-out, transform 220ms ease-out";
+
+export function TabPanel({
+  tabKey,
+  sync = false,
+  className = "",
+  children,
+}: {
+  tabKey: string;
+  sync?: boolean;
+  className?: string;
+  children: ReactNode;
+}) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const waitingFor = useRef<string | null>(null);
+  const fromRoute = useRef(false);
+  const [shown, setShown] = useState(tabKey);
+  const [visible, setVisible] = useState(true);
+  if (tabKey !== shown) {
+    setShown(tabKey);
+    if (typeof window === "undefined" || !motionReduced()) setVisible(false);
+  }
+  useLayoutEffect(() => {
+    if (!freshTabSwitch() || motionReduced()) return;
+    fromRoute.current = true;
+    const panel = panelRef.current;
+    if (panel) {
+      panel.style.transition = "none";
+      panel.style.opacity = "0";
+      panel.style.transform = "translateY(6px)";
+    }
+    queueMicrotask(() => setVisible(false));
+  }, []);
+  useEffect(() => {
+    if (!sync) return;
+    const onSwitch = (event: Event) => {
+      if (motionReduced()) return;
+      const target = pathOf((event as CustomEvent<string>).detail || "");
+      if (!target || target === tabKey) return;
+      waitingFor.current = target;
+      setVisible(false);
+    };
+    window.addEventListener(TAB_SWITCH, onSwitch);
+    return () => window.removeEventListener(TAB_SWITCH, onSwitch);
+  }, [sync, tabKey]);
+  useLayoutEffect(() => {
+    const panel = panelRef.current;
+    if (!panel) return;
+    if (visible) {
+      panel.style.minHeight = "";
+      return;
+    }
+    if (!panel.style.minHeight && panel.offsetHeight > 0) panel.style.minHeight = `${panel.offsetHeight}px`;
+    // Drop the outgoing section to the hidden pose in the same frame as the
+    // pill, then let the incoming section fade once it is actually here.
+    panel.style.transition = "none";
+    void panel.offsetHeight;
+    panel.style.transition = PANEL_TRANSITION;
+  }, [visible, shown]);
+  useEffect(() => {
+    if (visible) return;
+    const panel = panelRef.current;
+    let timeout = 0;
+    let settled = false;
+    const reveal = (wait: number) => {
+      if (settled) return;
+      settled = true;
+      timeout = window.setTimeout(() => {
+        waitingFor.current = null;
+        fromRoute.current = false;
+        clearTabSwitch();
+        setVisible(true);
+      }, wait);
+    };
+    const arm = () => {
+      if (settled) return;
+      if (panel?.querySelector("[data-section-pending]")) return;
+      const target = waitingFor.current;
+      if (target && target !== tabKey) return;
+      const elapsed = target || fromRoute.current ? switchAge() : null;
+      reveal(elapsed == null ? 120 : Math.max(0, 120 - elapsed));
+    };
+    arm();
+    const safety = window.setTimeout(() => reveal(0), 2000);
+    const observer = panel ? new MutationObserver(arm) : null;
+    if (panel && observer) observer.observe(panel, { childList: true, subtree: true });
+    return () => {
+      observer?.disconnect();
+      window.clearTimeout(timeout);
+      window.clearTimeout(safety);
+    };
+  }, [visible, shown, tabKey]);
+  return (
+    <div
+      ref={panelRef}
+      inert={visible ? undefined : true}
+      className={`${className} motion-reduce:translate-y-0 motion-reduce:opacity-100 motion-reduce:transition-none ${visible ? "translate-y-0 opacity-100" : "translate-y-[6px] opacity-0"}`.trim()}
+      style={{ transition: PANEL_TRANSITION }}
+    >
+      {children}
+    </div>
+  );
+}
 
 export function SlidingTabs({
   label,
@@ -33,7 +187,6 @@ export function SlidingTabs({
   const router = useRouter();
   const rootRef = useRef<HTMLElement>(null);
   const nodes = useRef(new Map<string, HTMLElement>());
-  const pending = useRef<number | null>(null);
   const [frames, setFrames] = useState<Record<string, Box>>({});
   const [hover, setHover] = useState<string | null>(null);
   const [travel, setTravel] = useState<string | null>(null);
@@ -43,26 +196,21 @@ export function SlidingTabs({
   const shownId = travel ?? active?.id;
   const activeBox = shownId ? frames[shownId] : undefined;
 
-  useEffect(() => {
-    return () => {
-      if (pending.current != null) window.clearTimeout(pending.current);
-    };
-  }, []);
-
   function follow(event: MouseEvent<HTMLAnchorElement>, item: SlidingTabItem) {
     if (!item.href || item.id === shownId) return;
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    event.preventDefault();
+    if (motionReduced()) return;
+    markTabSwitch();
+    window.dispatchEvent(new CustomEvent(TAB_SWITCH, { detail: item.href }));
     setTravel(item.id);
-    if (pending.current != null) window.clearTimeout(pending.current);
-    const href = item.href;
-    pending.current = window.setTimeout(() => {
-      pending.current = null;
-      router.push(href);
-    }, SLIDE_MS);
   }
   const ready = Object.keys(frames).length > 0;
+  const prefetchKey = items.map((item) => (item.href && !item.disabled ? item.href : "")).join("|");
+  useEffect(() => {
+    for (const href of prefetchKey.split("|")) {
+      if (href) router.prefetch(href, { kind: PrefetchKind.FULL });
+    }
+  }, [prefetchKey, router]);
 
   useLayoutEffect(() => {
     const root = rootRef.current;
@@ -96,16 +244,17 @@ export function SlidingTabs({
     <nav
       ref={rootRef}
       aria-label={label}
+      role={items.some((item) => item.href) ? undefined : "tablist"}
       className={
         variant === "track"
-          ? "relative flex w-fit max-w-full flex-wrap gap-1.5 self-start rounded-full bg-white p-1.5"
+          ? "relative flex w-fit max-w-full flex-wrap self-start rounded-full bg-white p-1.5 shadow-[0_1px_2px_rgba(51,19,15,0.06)]"
           : "relative flex flex-wrap gap-2"
       }
     >
       {activeBox ? (
         <span
           aria-hidden="true"
-          className={`pointer-events-none absolute top-0 left-0 z-10 rounded-full bg-ink transition-[transform,width,height] ${ease}`}
+          className={`pointer-events-none absolute top-0 left-0 rounded-full bg-ink transition-[transform,width,height] ${ease} ${variant === "track" ? "z-0" : "z-10"}`}
           style={{ width: activeBox.w, height: activeBox.h, transform: `translate(${activeBox.x}px, ${activeBox.y}px)` }}
         />
       ) : null}
@@ -120,15 +269,13 @@ export function SlidingTabs({
               ? raised
                 ? "bg-rose"
                 : "bg-white"
-              : raised
-                ? "bg-rose"
-                : ready
-                  ? "bg-transparent"
-                  : item.id === shownId
-                    ? "bg-ink"
-                    : "bg-white";
-        const className = `relative inline-flex items-center justify-center gap-2 rounded-full text-center font-medium whitespace-nowrap transition-colors ${ease} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${
-          variant === "track" ? "h-[42px] px-[18px] text-[15px]" : variant === "outline" ? "h-9 border px-3.5 text-[13px]" : "min-h-11 px-4 text-sm"
+              : ready
+                ? "bg-transparent"
+                : item.id === shownId
+                  ? "bg-ink"
+                  : "bg-transparent";
+        const className = `relative z-[1] inline-flex cursor-pointer items-center justify-center gap-2 rounded-full text-center font-medium whitespace-nowrap transition-colors ${ease} ${tabFocus} ${
+          variant === "track" ? "h-[46px] px-5 text-base" : variant === "outline" ? "h-9 border px-3.5 text-[13px]" : "min-h-11 px-4 text-sm"
         } ${background} ${
           item.disabled ? "cursor-not-allowed text-brown" : item.id === shownId ? "text-white" : "text-ink"
         }`;
@@ -156,7 +303,8 @@ export function SlidingTabs({
               key={item.id}
               ref={ref}
               type="button"
-              aria-current={item.current ? "page" : undefined}
+              role="tab"
+              aria-selected={item.current}
               className={className}
               onClick={item.onSelect}
               onMouseEnter={() => setHover(item.id)}
@@ -171,6 +319,7 @@ export function SlidingTabs({
             key={item.id}
             ref={ref}
             href={item.href}
+            prefetch
             aria-current={item.current ? "page" : undefined}
             title={item.hint}
             className={className}

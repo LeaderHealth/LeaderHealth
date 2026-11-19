@@ -45,7 +45,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await savePendingAffiliateOrder({ code, orderId });
+    const result = await savePendingAffiliateOrder({ code, orderId, campaign: text(record.utm_campaign) });
     if (result === "saved" || result === "exists") return NextResponse.json({ ok: true });
     if (result === "inactive") {
       return NextResponse.json({ ok: false, error: "Unknown affiliate." }, { status: 404 });

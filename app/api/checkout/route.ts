@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { affiliateCodeFromCookies, savePendingAffiliateOrder } from "@/lib/affiliate/store";
+import { affiliateCampaignFromCookies, affiliateCodeFromCookies, savePendingAffiliateOrder } from "@/lib/affiliate/store";
 import { CheckoutHttpError, parseCheckoutPaymentInput, settleCheckout } from "@/lib/checkout/complete";
 import { genHealthConfigured } from "@/lib/genhealth/client";
 
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     const result = await settleCheckout(parsed.value, code);
     if (code && !result.dryRun) {
       try {
-        await savePendingAffiliateOrder({ code, orderId: result.orderId });
+        await savePendingAffiliateOrder({ code, orderId: result.orderId, campaign: await affiliateCampaignFromCookies() });
       } catch (error) {
         console.error("[affiliate] pending order failed", error instanceof Error ? error.message : "unknown");
       }

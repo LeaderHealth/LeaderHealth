@@ -2,7 +2,7 @@ import { normalizeAffiliateCode } from "./code";
 import { reportHandledAffiliateError } from "./report";
 import { affiliateFirebaseConfigured, affiliateFirestore } from "./firebase";
 import { refundObservations } from "./refunds";
-import { applyOrderRefund, loadUncommissionedPendingOrders, markPendingOrderCommissioned, pendingAffiliateCode, recordAffiliateConversion } from "./store";
+import { applyOrderRefund, loadUncommissionedPendingOrders, markPendingOrderCommissioned, pendingAffiliateCode, pendingOrderCampaign, recordAffiliateConversion } from "./store";
 import { attributableOrderStatus, getOrderSettlement, listClientOrders, type ClientOrder, type PaidOrder } from "@/lib/genhealth/payment";
 import { creditedAffiliate, listPromoCodes, personalAffiliateForCode, promoByCode, type PromoCodeRow } from "@/lib/genhealth/promocodes";
 
@@ -23,6 +23,9 @@ async function settleRecordedOrder(order: ClientOrder) {
 }
 
 async function recordPaidOrder(order: PaidOrder, code: string) {
+  const campaign = await pendingOrderCampaign(order.orderId);
+  const promo = order.promoCode.trim();
+  const viaPromoLink = Boolean(promo && campaign && campaign.toLowerCase() === promo.toLowerCase());
   await recordAffiliateConversion({
     code,
     orderId: order.orderId,
@@ -30,6 +33,7 @@ async function recordPaidOrder(order: PaidOrder, code: string) {
     dryRun: false,
     createdAt: order.createdAt,
     promoCode: order.promoCode,
+    viaPromoLink,
     productIds: order.productIds,
   });
 }

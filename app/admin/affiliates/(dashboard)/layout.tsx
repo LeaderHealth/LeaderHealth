@@ -94,7 +94,6 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
         { href: roi, label: "ROI" },
         { href: website, label: "Website traffic" },
       ],
-      note: { href: accounts, label: "Per-affiliate social counts" },
     },
     {
       paths: [payouts, orders],

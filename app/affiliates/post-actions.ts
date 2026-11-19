@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { clearAffiliateMemo } from "@/lib/affiliate/memo";
 import { redirect } from "next/navigation";
 import { currentAffiliate } from "@/app/affiliates/current";
 import { noteComplianceEvent } from "@/lib/affiliate/compliance-log";
@@ -20,6 +21,7 @@ function donePath(formData: FormData, query: string) {
 }
 
 function refresh() {
+  clearAffiliateMemo();
   revalidatePath(LINK);
   revalidatePath("/affiliates/posts/new");
   revalidatePath("/affiliates/campaigns");
@@ -106,6 +108,7 @@ export async function submitPostsAction(formData: FormData) {
       posts,
       termsAccepted: String(formData.get("terms") ?? "") === "yes",
       agreementId: String(formData.get("agreement") ?? ""),
+      postingMonth: String(formData.get("postingMonth") ?? ""),
     });
   } catch (error) {
     if (error instanceof PostReviewError) linkFail(error.code, formData);

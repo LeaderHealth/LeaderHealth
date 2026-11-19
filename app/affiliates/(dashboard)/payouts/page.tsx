@@ -8,7 +8,10 @@ import { loadPaymentRates } from "@/lib/affiliate/payment-store";
 import { LAB_COMMISSIONS_ENABLED } from "@/lib/affiliate/code";
 import { formatCommissionRate } from "@/lib/affiliate/format";
 import { toAffiliateOrder } from "@/lib/affiliate/order-view";
-import { buildPayoutItems, labPayoutRows, type PayoutBoardWebsite, type PayoutLabInput, type PayoutLabPeriod } from "@/lib/affiliate/payout-board";
+import { buildPayoutItems, labPayoutRows, type PayoutBoardMonthly, type PayoutBoardWebsite, type PayoutLabInput, type PayoutLabPeriod } from "@/lib/affiliate/payout-board";
+import { agreementMonthEarning } from "@/lib/affiliate/agreement-earnings";
+import { loadAgreementPayoutsForCode } from "@/lib/affiliate/agreement-payouts";
+import { loadAffiliateAgreements } from "@/lib/affiliate/agreements";
 import { currentPayoutPeriod, loadPayoutRecords, payoutLines, payoutPeriod, type PayoutLine } from "@/lib/affiliate/payouts";
 import { loadContentSubmissions } from "@/lib/affiliate/post-review";
 import { adjustedCommissionCents, remainingSalesCents } from "@/lib/affiliate/refunds";
@@ -31,7 +34,7 @@ export default async function AffiliatePayoutHistoryPage() {
   let labs: PayoutLabPeriod[] = [];
   let loadError = "";
   try {
-    const [posts, payments, events, websitePayouts, rates, conversions, payouts] = await Promise.all([
+    const [posts, payments, events, websitePayouts, rates, conversions, payouts, agreements, agreementPayouts] = await Promise.all([
       loadContentSubmissions(affiliate.code),
       loadDeliverablePayments(affiliate.code),
       loadMarketingEvents({ code: affiliate.code }),
@@ -39,7 +42,32 @@ export default async function AffiliatePayoutHistoryPage() {
       loadPaymentRates(),
       LAB_COMMISSIONS_ENABLED ? loadAffiliateConversions(affiliate.code) : Promise.resolve([]),
       LAB_COMMISSIONS_ENABLED ? loadPayoutRecords(affiliate.code) : Promise.resolve([]),
+      loadAffiliateAgreements(affiliate.code),
+      loadAgreementPayoutsForCode(affiliate.code),
     ]);
+    const monthlyPeriods = new Set<string>([currentPayoutPeriod(), ...agreementPayouts.map((row) => row.period)]);
+    for (const post of posts) {
+      const period = eventPeriod(post.publishedAt ?? "");
+      if (period) monthlyPeriods.add(period);
+    }
+    const monthlies: PayoutBoardMonthly[] = [...monthlyPeriods].flatMap((period) => {
+      const snapshot = agreementPayouts.find((row) => row.period === period) ?? null;
+      const earning = agreementMonthEarning({ agreements, posts, code: affiliate.code, period, snapshot });
+      if (earning.status === "none") return [];
+      return [
+        {
+          period,
+          rateCents: earning.rateCents,
+          requiredPosts: earning.requiredPosts,
+          verifiedPosts: earning.verifiedPosts,
+          earnedCents: earning.earnedCents,
+          status: earning.status,
+          approvedAt: snapshot?.approvedAt ?? null,
+          paidAt: snapshot?.paidAt ?? null,
+          reference: snapshot?.reference ?? "",
+        },
+      ];
+    });
     const periods = new Set<string>([currentPayoutPeriod(), ...websitePayouts.map((row) => row.period)]);
     for (const event of events) {
       const period = eventPeriod(event.createdAt);
@@ -104,6 +132,7 @@ export default async function AffiliatePayoutHistoryPage() {
       })),
       websites,
       labs: labRows,
+      monthlies,
     });
     labs = labPayoutRows(labRows, today).periods;
   } catch (caught) {

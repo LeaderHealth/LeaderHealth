@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { formatCents } from "@/lib/affiliate/format";
-import { SlidingTabs } from "./SlidingTabs";
+import { SlidingTabs, TabPanel } from "./SlidingTabs";
 import {
   PAYOUT_KINDS,
   PAYOUT_STATUSES,
@@ -95,6 +95,7 @@ export function AffiliatePayoutsBoard({ today, items, labs }: { today: string; i
         }))}
       />
 
+      <TabPanel tabKey={tab} className="flex flex-col gap-5">
       {tab === "earnings" ? <div className="flex flex-col gap-5">
       <section aria-labelledby="payout-breakdown-title" className="flex flex-col gap-4 rounded-3xl bg-white px-4 py-6 sm:px-6">
         <div className="flex flex-wrap items-baseline gap-3">
@@ -305,6 +306,7 @@ export function AffiliatePayoutsBoard({ today, items, labs }: { today: string; i
         })}
       </section>
       ) : null}
+      </TabPanel>
       <p className="text-[13px] text-[#6B5A57]">Lab commission shows monthly totals only. No patient, order or treatment details are ever shown.</p>
     </div>
   );

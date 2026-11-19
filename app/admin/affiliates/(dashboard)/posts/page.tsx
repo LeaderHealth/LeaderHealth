@@ -179,7 +179,7 @@ function reviewGroup(group: ContentSubmission[], affiliate: AffiliateSummary | u
     slides,
     checks,
     queue,
-    canDecide: queue === "waiting" || reviewable.some((post) => post.contentStatus === "submitted"),
+    canDecide: queue === "waiting" || queue === "changes" || reviewable.some((post) => post.contentStatus === "submitted"),
     canMark: queue === "link",
     pastHref: `/admin/affiliates/accounts?code=${encodeURIComponent(primary.code)}`,
     suggestedNote: suggestedNote(slides),

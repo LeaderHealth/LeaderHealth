@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { SlidingTabs } from "./SlidingTabs";
 import { disconnectSocialAction } from "@/app/affiliates/social-actions";
 import { currentReportMonth, formatReportMonth, networkLabel, reportMetricsBlank, type SocialNetwork } from "@/lib/affiliate/marketing";
 import type { SocialAccountView } from "@/lib/affiliate/social-store";
 import type { WebsiteMonthReport } from "@/lib/affiliate/website-report";
 
-const MONTHS_ON_SCREEN = 3;
+const MONTHS_ON_SCREEN = 6;
 const MONTHS_AVAILABLE = 12;
 const buttonClass =
   "inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-5 text-sm font-medium text-white hover:bg-brown focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
@@ -153,23 +154,137 @@ function NetworkRow({
 }
 
 export function WebsiteReportSection({ months }: { months: WebsiteMonthReport[] }) {
-  const shown = recentWebsiteMonths(months);
+  const shown = activeWebsiteMonths(months);
+  const [view, setView] = useState<"visits" | "orders">("visits");
   const columns = shown.map((month) => ({ id: month.month, label: shortReportMonth(month.month) }));
+  const visits = view === "visits";
   return (
-    <section className="mt-4 border-t border-rose/60 pt-4">
+    <section className="mt-6">
       <h3 className="text-lg">Website traffic</h3>
       <p className="mt-1 text-sm text-brown">Visits come from tracking links. A promo code is counted when the link carries that code, or when a paid order uses it.</p>
-      <MonthCompare
+      <div className="mt-4">
+        <SlidingTabs
+          variant="track"
+          label="Website traffic"
+          items={(
+            [
+              ["visits", "Visits"],
+              ["orders", "Orders"],
+            ] as const
+          ).map(([id, label]) => ({
+            id,
+            label,
+            current: view === id,
+            onSelect: () => setView(id),
+          }))}
+        />
+      </div>
+      <MonthChart
         months={columns}
-        rows={[
-          { label: "Tracking link visits", values: shown.map((month) => month.trackingVisits) },
-          { label: "Tracking link orders", values: shown.map((month) => month.trackingOrders) },
-          { label: "Promo link visits", values: shown.map((month) => month.promoVisits) },
-          { label: "Promo code orders", values: shown.map((month) => month.promoOrders) },
-          { label: "Promo code", values: shown.map((month) => month.promos.map((promo) => promo.code).join(", ") || "—") },
-        ]}
+        series={
+          visits
+            ? [
+                { id: "tracking", label: "Tracking link", color: "#33130F", values: shown.map((month) => month.trackingVisits) },
+                { id: "promo", label: "Promo link", color: "#E39A93", values: shown.map((month) => month.promoVisits) },
+              ]
+            : [
+                { id: "tracking", label: "Tracking link", color: "#33130F", values: shown.map((month) => month.trackingOrders) },
+                { id: "promo-code", label: "Promo code", color: "#A8706A", values: shown.map((month) => month.promoOrders) },
+                { id: "promo-link", label: "Promo tracking link", color: "#E39A93", values: shown.map((month) => month.promoLinkOrders) },
+              ]
+        }
       />
     </section>
+  );
+}
+
+export type ReportPromo = {
+  code: string;
+  status?: "Active" | "Inactive" | "Expired";
+};
+
+export function reportPromos(assigned: readonly ReportPromo[], months: readonly WebsiteMonthReport[]) {
+  const byCode = new Map<string, ReportPromo>();
+  for (const promo of assigned) {
+    const code = promo.code.trim();
+    if (code) byCode.set(code.toLowerCase(), { code, status: promo.status });
+  }
+  for (const month of months) {
+    for (const promo of month.promos) {
+      const code = promo.code.trim();
+      if (code && !byCode.has(code.toLowerCase())) byCode.set(code.toLowerCase(), { code });
+    }
+  }
+  return [...byCode.values()];
+}
+
+export function ReportPromoCodes({ promos }: { promos: readonly ReportPromo[] }) {
+  if (promos.length === 0) {
+    return (
+      <div className="mt-4 flex min-h-12 items-center rounded-full bg-background px-4 text-sm text-brown">
+        Promo code <span className="ml-3 font-medium text-ink">None assigned</span>
+      </div>
+    );
+  }
+  return (
+    <div className="mt-4 grid gap-2">
+      {promos.map((promo) => (
+        <ReportPromoRow key={promo.code} promo={promo} />
+      ))}
+    </div>
+  );
+}
+
+function ReportPromoRow({ promo }: { promo: ReportPromo }) {
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    let ok = false;
+    try {
+      await navigator.clipboard.writeText(promo.code);
+      ok = true;
+    } catch {
+      const area = document.createElement("textarea");
+      area.value = promo.code;
+      area.setAttribute("readonly", "");
+      area.style.position = "fixed";
+      area.style.left = "-9999px";
+      document.body.append(area);
+      area.select();
+      ok = document.execCommand("copy");
+      area.remove();
+    }
+    if (!ok) return;
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 2000);
+  }
+
+  const statusClass = promo.status === "Active"
+    ? "bg-[#E6F4EC] text-[#1D6340]"
+    : promo.status
+      ? "bg-background text-brown"
+      : "";
+
+  return (
+    <div className="flex min-h-12 flex-wrap items-center justify-between gap-3 rounded-full bg-background px-3 py-2">
+      <div className="flex flex-wrap items-center gap-2.5">
+        <span className="pl-1 text-sm text-brown">Promo code</span>
+        <span className="inline-flex items-center rounded-full bg-rose px-3 py-1 text-sm font-semibold text-ink">{promo.code}</span>
+        <button
+          type="button"
+          onClick={copy}
+          className="inline-flex h-8 items-center rounded-full border border-[#CDBDBA] bg-white px-3.5 text-sm font-medium text-ink hover:bg-white"
+        >
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
+      {promo.status ? (
+        <div className="flex items-center gap-3 pr-1">
+          <span className="text-sm text-brown">From Gen Health</span>
+          <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${statusClass}`}>{promo.status}</span>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -195,7 +310,7 @@ export function MarketingAccountSections({
     }[];
   }[];
 }) {
-  if (sections.length === 0) return <p className="mt-4 text-sm text-brown">No connected social account yet.</p>;
+  if (sections.length === 0) return null;
   return (
     <div className="mt-4 space-y-6">
       {sections.map((section) => (
@@ -203,15 +318,15 @@ export function MarketingAccountSections({
           <h3 className="text-lg">
             {networkLabel(section.network)} · {section.accountName}
           </h3>
-          <MonthCompare
+          <MonthChart
             months={section.months.map((month) => ({ id: month.month, label: shortReportMonth(month.month) }))}
-            rows={[
-              { label: "Impressions", values: section.months.map((month) => month.impressions) },
-              { label: "Reach", values: section.months.map((month) => month.reach) },
-              { label: "Likes", values: section.months.map((month) => month.likes) },
-              { label: "Comments", values: section.months.map((month) => month.comments) },
-              { label: "Shares", values: section.months.map((month) => month.shares) },
-              { label: "Saves", values: section.months.map((month) => month.saves) },
+            series={[
+              { id: "impressions", label: "Impressions", color: "#33130F", values: section.months.map((month) => month.impressions) },
+              { id: "reach", label: "Reach", color: "#33130F", values: section.months.map((month) => month.reach) },
+              { id: "likes", label: "Likes", color: "#33130F", values: section.months.map((month) => month.likes) },
+              { id: "comments", label: "Comments", color: "#33130F", values: section.months.map((month) => month.comments) },
+              { id: "shares", label: "Shares", color: "#33130F", values: section.months.map((month) => month.shares) },
+              { id: "saves", label: "Saves", color: "#33130F", values: section.months.map((month) => month.saves) },
             ]}
           />
           {section.months.length > 0 && section.months.every((month) => reportMetricsBlank(month)) ? (
@@ -245,66 +360,123 @@ function recentWebsiteMonths(months: WebsiteMonthReport[]) {
   const oldest = oldestData < oldestWindow ? oldestData : oldestWindow;
   const filled: WebsiteMonthReport[] = [];
   for (let month = newest; month >= oldest; month = shiftMonth(month, -1)) {
-    filled.push(byMonth.get(month) ?? { month, trackingVisits: 0, trackingOrders: 0, promoVisits: 0, promoOrders: 0, promos: [] });
+    filled.push(byMonth.get(month) ?? { month, trackingVisits: 0, trackingOrders: 0, promoVisits: 0, promoOrders: 0, promoLinkOrders: 0, promos: [] });
     if (filled.length > 36) break;
   }
   return filled;
 }
 
-function MonthCompare({ months, rows }: { months: { id: string; label: string }[]; rows: { label: string; values: (number | string)[] }[] }) {
+function monthHasTraffic(month: WebsiteMonthReport) {
+  return month.trackingVisits + month.trackingOrders + month.promoVisits + month.promoOrders + month.promoLinkOrders > 0 || month.promos.length > 0;
+}
+
+function activeWebsiteMonths(months: WebsiteMonthReport[]) {
+  const filled = recentWebsiteMonths(months);
+  let last = filled.length - 1;
+  while (last > 0 && !monthHasTraffic(filled[last])) last -= 1;
+  return filled.slice(0, last + 1);
+}
+
+function MonthChart({
+  months,
+  series,
+  notes = [],
+}: {
+  months: { id: string; label: string }[];
+  series: { id: string; label: string; color: string; values: number[] }[];
+  notes?: string[];
+}) {
   const [page, setPage] = useState(0);
+  const [metric, setMetric] = useState(series[0]?.id ?? "");
   if (months.length === 0) return <p className="mt-3 text-sm text-brown">No months yet.</p>;
   const pageCount = Math.ceil(months.length / MONTHS_ON_SCREEN);
   const safePage = Math.min(page, pageCount - 1);
   const start = safePage * MONTHS_ON_SCREEN;
-  const visible = months.slice(start, start + MONTHS_ON_SCREEN);
-  const last = visible[visible.length - 1];
+  const windowMonths = [...months.slice(start, start + MONTHS_ON_SCREEN)].reverse();
+  const drawn = series.length > 3 ? series.filter((item) => item.id === (series.some((entry) => entry.id === metric) ? metric : series[0]?.id)) : series;
+  const bars = windowMonths.map((month) => {
+    const index = months.findIndex((item) => item.id === month.id);
+    return { ...month, axis: axisMonth(month.id), values: drawn.map((item) => item.values[index] ?? 0), note: notes[index] ?? "" };
+  });
+  const peak = Math.max(1, ...bars.flatMap((month) => month.values));
+  const newest = windowMonths[windowMonths.length - 1];
+  const oldest = windowMonths[0];
+  const codes = [...new Set(bars.map((month) => month.note).filter(Boolean))];
+  const promoLine = codes.length === 0 ? "" : codes.length === 1 ? `Promo code: ${codes[0]}` : bars.filter((month) => month.note).map((month) => `${month.label} ${month.note}`).join(" · ");
   return (
-    <div className="mt-3">
-      {pageCount > 1 ? (
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <button type="button" disabled={safePage === 0} onClick={() => setPage(safePage - 1)} className={`${quietClass} disabled:cursor-not-allowed disabled:opacity-40`}>
-            Newer
-          </button>
-          <p className="text-sm text-brown">
-            {visible[0]?.label} – {last?.label}
-          </p>
-          <button type="button" disabled={safePage >= pageCount - 1} onClick={() => setPage(safePage + 1)} className={`${quietClass} disabled:cursor-not-allowed disabled:opacity-40`}>
-            Older
-          </button>
-        </div>
-      ) : null}
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-sm">
-          <thead>
-            <tr>
-              <th className="sticky left-0 bg-white py-2 pr-4 text-left">
-                <span className="sr-only">Stat</span>
-              </th>
-              {visible.map((month) => (
-                <th key={month.id} className="whitespace-nowrap px-3 py-2 text-right font-semibold">
-                  {month.label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.label} className="border-t border-rose/60">
-                <th className="sticky left-0 bg-white py-3 pr-4 text-left font-normal text-brown">{row.label}</th>
-                {visible.map((month, index) => {
-                  const value = row.values[start + index];
-                  return (
-                    <td key={month.id} className="whitespace-nowrap px-3 py-3 text-right font-medium tabular-nums">
-                      {typeof value === "number" ? count(value) : value}
-                    </td>
-                  );
-                })}
-              </tr>
+    <div className="mt-4">
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        {series.length > 3 ? (
+          <div role="group" aria-label="Metric" className="flex flex-wrap gap-2">
+            {series.map((item) => {
+              const selected = drawn[0]?.id === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => setMetric(item.id)}
+                  className={`inline-flex h-9 items-center rounded-full px-3.5 text-sm font-medium ${selected ? "bg-ink text-white" : "border border-[#CDBDBA] bg-white text-ink"}`}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-4 text-sm text-brown">
+            {drawn.map((item) => (
+              <span key={item.id} className="inline-flex items-center gap-2">
+                <span className="size-2.5 rounded-sm" style={{ background: item.color }} />
+                {item.label}
+                <span className="font-medium text-ink">{count(item.values.slice(start, start + MONTHS_ON_SCREEN).reduce((sum, value) => sum + value, 0))}</span>
+              </span>
             ))}
-          </tbody>
-        </table>
+          </div>
+        )}
+        <div className="flex items-center gap-2">
+          <p className="text-sm text-brown">{oldest && newest && oldest.id !== newest.id ? `${oldest.label} – ${newest.label}` : newest?.label}</p>
+          {pageCount > 1 ? (
+            <>
+              <button type="button" disabled={safePage >= pageCount - 1} onClick={() => setPage(safePage + 1)} className={`${quietClass} disabled:cursor-not-allowed disabled:opacity-40`}>
+                Older
+              </button>
+              <button type="button" disabled={safePage === 0} onClick={() => setPage(safePage - 1)} className={`${quietClass} disabled:cursor-not-allowed disabled:opacity-40`}>
+                Newer
+              </button>
+            </>
+          ) : null}
+        </div>
       </div>
+      <p className="sr-only">
+        {oldest?.label} through {newest?.label}. {drawn.map((item) => `${item.label} ${count(item.values.slice(start, start + MONTHS_ON_SCREEN).reduce((sum, value) => sum + value, 0))}`).join(". ")}.
+      </p>
+      <div className="flex items-end gap-4 sm:gap-10">
+        {bars.map((month) => (
+          <div key={month.id} className="flex min-w-0 flex-1 flex-col items-center gap-3">
+            <div className="flex h-56 w-full items-end justify-center gap-3">
+              {month.values.map((value, index) => (
+                <div key={drawn[index]?.id ?? index} className={`flex flex-col items-center justify-end ${month.values.length > 2 ? "w-6 sm:w-8" : "w-8 sm:w-11"}`}>
+                  <span className="mb-2 text-sm font-medium tabular-nums">{count(value)}</span>
+                  {value > 0 ? (
+                    <div className="w-full rounded-t-lg" style={{ height: Math.max(12, Math.round((value / peak) * 176)), background: drawn[index]?.color ?? "#33130F" }} />
+                  ) : (
+                    <div className="h-0.5 w-full rounded-full bg-[#E8DEDC]" />
+                  )}
+                </div>
+              ))}
+            </div>
+            <span className="pb-3 text-sm text-brown">{month.axis}</span>
+          </div>
+        ))}
+      </div>
+      {promoLine ? <p className="mt-5 text-sm text-brown">{promoLine}</p> : null}
     </div>
   );
+}
+
+function axisMonth(month: string) {
+  const match = /^(\d{4})-(\d{2})$/.exec(month);
+  if (!match) return month;
+  return new Intl.DateTimeFormat("en-US", { month: "short", timeZone: "UTC" }).format(new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, 1)));
 }

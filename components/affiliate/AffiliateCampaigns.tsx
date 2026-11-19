@@ -6,6 +6,7 @@ import { submitLiveLinkAction, submitPostsAction } from "@/app/affiliates/post-a
 import type { AffiliateActiveCampaign, AffiliateCampaignInvite, AffiliateCampaignSlot, AffiliatePastCampaign } from "@/lib/affiliate/affiliate-campaigns";
 import type { CampaignPostState } from "@/lib/affiliate/campaign-list";
 import type { PostFormat } from "@/lib/affiliate/post-format";
+import { openPostingMonth, postingMonthOption, type PostingAgreement } from "@/lib/affiliate/post-agreement";
 
 const TONE: Record<CampaignPostState, string> = {
   todo: "bg-[#EFEAE9] text-[#4A3A37]",
@@ -42,7 +43,7 @@ export function AffiliateCampaigns({
   trackingUrl: string;
   terms: string;
   canSend: boolean;
-  posting: { id: string; label: string } | null;
+  posting: PostingAgreement | null;
   toast: string;
   error: string;
 }) {
@@ -181,6 +182,18 @@ export function AffiliateCampaigns({
                           setProblem("A signed agreement has to be on your account before you can send a post.");
                           return;
                         }
+                        if (posting.months.length === 0) {
+                          event.preventDefault();
+                          setProblem("These dates don't include a full month, so posts can't be sent under this agreement.");
+                          return;
+                        }
+                        const selected = String(new FormData(event.currentTarget).get("postingMonth") ?? "");
+                        const monthSlot = posting.months.find((month) => month.period === selected);
+                        if (monthSlot && monthSlot.limit != null && monthSlot.used >= monthSlot.limit) {
+                          event.preventDefault();
+                          setProblem(`${monthSlot.label} already has its ${monthSlot.limit} posts. Choose another month.`);
+                          return;
+                        }
                         if (!canSend || !(event.currentTarget.elements.namedItem("terms") as HTMLInputElement | null)?.checked) {
                           event.preventDefault();
                           setProblem(canSend ? "Accept the rate and payment terms before sending the post." : "The social rate is not set yet.");
@@ -216,6 +229,16 @@ export function AffiliateCampaigns({
                         <CheckLine ok={hasLink} label={trackingUrl} mono onInsert={hasLink ? undefined : () => setCaption((current) => `${current.trim() ? `${current.replace(/\s+$/, "")}\n` : ""}${trackingUrl}`)} />
                       </div>
                       {posting ? <p className="text-sm text-[#4A3A37]">Posting under your agreement: {posting.label}</p> : <p className="text-sm text-[#9B2C1F]">A signed agreement has to be on your account before you can send a post.</p>}
+                      {posting?.postTotal && posting.months.length > 1 ? <p className="text-sm text-[#4A3A37]">Each month of this agreement has its own {posting.postTotal} posts.</p> : null}
+                      {posting && posting.months.length === 0 ? <p className="text-sm text-[#9B2C1F]">These dates don&apos;t include a full month, so posts can&apos;t be sent under this agreement.</p> : null}
+                      {posting?.months.length ? (
+                        <label className="flex flex-col gap-1.5 text-sm font-semibold">
+                          Month this post counts toward
+                          <select name="postingMonth" defaultValue={openPostingMonth(posting.months, new Date().toISOString().slice(0, 10))} className="h-11 rounded-xl border border-[#CDBDBA] bg-white px-3 text-[15px] font-normal">
+                            {posting.months.map((month) => <option key={month.period} value={month.period}>{postingMonthOption(month)}</option>)}
+                          </select>
+                        </label>
+                      ) : null}
                       {canSend ? (
                         <label className="flex items-start gap-2 text-sm">
                           <input name="terms" type="checkbox" value="yes" className="mt-1 size-4 accent-ink" />
@@ -224,7 +247,7 @@ export function AffiliateCampaigns({
                       ) : <p className="text-sm text-[#9B2C1F]">The social rate is not set yet.</p>}
                       {problem ? <p role="alert" className="text-sm text-[#9B2C1F]">{problem}</p> : null}
                       <div className="flex flex-wrap gap-2.5">
-                        <button type="submit" disabled={!canSend || !posting} className="inline-flex h-[46px] items-center rounded-full bg-ink px-[22px] text-[15px] font-medium text-white disabled:opacity-50">Submit for approval</button>
+                        <button type="submit" disabled={!canSend || !posting || posting.months.length === 0} className="inline-flex h-[46px] items-center rounded-full bg-ink px-[22px] text-[15px] font-medium text-white disabled:opacity-50">Submit for approval</button>
                         <button type="button" onClick={() => { setOpen(""); setProblem(""); }} className="inline-flex h-[46px] items-center rounded-full border border-[#CDBDBA] bg-white px-5 text-[15px] font-medium text-ink">Cancel</button>
                       </div>
                     </form>

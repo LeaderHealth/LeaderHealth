@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
-import { SlidingTabs } from "./SlidingTabs";
+import { SlidingTabs, TabPanel } from "./SlidingTabs";
 import {
   barPath,
   chartMax,
@@ -159,6 +159,7 @@ export function AffiliateStatsBoard({ today, posts, traffic }: { today: string; 
         }))}
       />
 
+      <TabPanel tabKey={tab} className="flex flex-col gap-[18px]">
       {tab === "social" ? (
         <section aria-labelledby="social-stats-title" className="flex flex-col gap-[18px] rounded-3xl bg-white px-4 py-6 sm:px-6">
           <div className="flex flex-wrap items-center gap-3">
@@ -293,6 +294,7 @@ export function AffiliateStatsBoard({ today, posts, traffic }: { today: string; 
           })}
         </section>
       ) : null}
+      </TabPanel>
 
       <p className="text-[13px] text-[#6B5A57]">Shows only your own marketing results. No patient, purchase or order information is included.</p>
     </div>

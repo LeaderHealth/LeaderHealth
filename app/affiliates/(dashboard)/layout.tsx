@@ -6,6 +6,7 @@ import { AreaNav, type AreaNavItem } from "@/components/affiliate/AreaNav";
 import { DashboardSections, type DashboardGroup } from "@/components/affiliate/DashboardSections";
 import { PortalBrand } from "@/components/affiliate/PortalBrand";
 import { ProfileCard } from "@/components/affiliate/ProfileCard";
+import { loadAffiliateAgreements } from "@/lib/affiliate/agreements";
 import { disclosureAcknowledged } from "@/lib/affiliate/disclosures";
 import { remindManualReports } from "@/lib/affiliate/manual-report";
 import { newCampaignInvitations } from "@/lib/affiliate/affiliate-campaigns";
@@ -60,6 +61,12 @@ export default async function AffiliateDashboardLayout({ children }: { children:
       postsNeedingAction = 0;
     }
   }
+  let agreementWaiting = false;
+  try {
+    agreementWaiting = (await loadAffiliateAgreements(affiliate.code)).some((agreement) => agreement.status === "awaiting_signature");
+  } catch {
+    agreementWaiting = false;
+  }
   let campaignInvites = 0;
   try {
     campaignInvites = newCampaignInvitations(await loadMarketingCampaignRecords(), affiliate.code, ownPosts);
@@ -75,20 +82,19 @@ export default async function AffiliateDashboardLayout({ children }: { children:
     : { href: submissions, label: "My posts", ...closed };
   const nav: AreaNavItem[] = [
     { href: overview, label: "Overview", active: [overview, "/affiliates/tracking-link"] },
-    { href: submissions, label: "Content", active: [submissions, createPost, myCampaigns, plans], badge: submissionBadge },
+    { href: submissions, label: "Content", active: [submissions, createPost, myCampaigns, plans, agreements], badge: submissionBadge },
     { href: stats, label: "Stats", active: [stats] },
     { href: payments, label: "Payouts", active: [payments, orders] },
-    { href: agreements, label: "Settings", active: [agreements, acknowledgments] },
+    { href: acknowledgments, label: "Settings", active: [acknowledgments] },
   ];
   const groups: DashboardGroup[] = [
     {
-      paths: [submissions, createPost, myCampaigns, plans],
-      items: [createItem, submissionsItem, { href: myCampaigns, label: "My campaigns", badge: campaignBadge }],
+      paths: [submissions, createPost, myCampaigns, plans, agreements],
+      items: [createItem, submissionsItem, { href: myCampaigns, label: "My campaigns", badge: campaignBadge }, { href: agreements, label: "My agreement", badge: agreementWaiting ? 1 : undefined }],
     },
     {
-      paths: [agreements, acknowledgments],
+      paths: [acknowledgments],
       items: [
-        { href: agreements, label: "Agreements" },
         { href: acknowledgments, label: "Acknowledgments" },
         { href: connected, label: "Connected accounts" },
       ],

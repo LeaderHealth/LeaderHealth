@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { clearAffiliateMemo } from "@/lib/affiliate/memo";
 import { redirect } from "next/navigation";
 import { currentAffiliate } from "@/app/affiliates/current";
 import { RoiStoreError, respondToCampaign } from "@/lib/affiliate/roi-store";
@@ -16,6 +17,7 @@ export async function respondToCampaignAction(formData: FormData) {
     const code = error instanceof RoiStoreError ? error.code : "unavailable";
     redirect(`/affiliates/campaigns?error=${encodeURIComponent(code === "choose" ? "choose" : "unavailable")}`);
   }
+  clearAffiliateMemo();
   revalidatePath("/affiliates/campaigns");
   revalidatePath("/affiliates/posts");
   revalidatePath("/admin/affiliates/campaigns");

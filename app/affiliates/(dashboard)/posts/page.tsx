@@ -18,7 +18,9 @@ import { loadMarketingCampaignRecords } from "@/lib/affiliate/roi-store";
 import { metaConfigured, tiktokConfigured } from "@/lib/affiliate/social-oauth";
 import { loadSocialAccounts, type SocialAccountView } from "@/lib/affiliate/social-store";
 import { loadAffiliateAgreements, utcAgreementToday } from "@/lib/affiliate/agreements";
+import { agreementPostMonth } from "@/lib/affiliate/agreement-earnings";
 import { postingAgreement, type PostingAgreement } from "@/lib/affiliate/post-agreement";
+import { memo } from "@/lib/affiliate/memo";
 import { currentAffiliate } from "../../current";
 
 export const metadata: Metadata = {
@@ -48,6 +50,7 @@ const postErrors: Record<string, string> = {
   campaign: "Choose a campaign assigned to you, or leave it blank.",
   date: "Enter the proposed publishing date as YYYY-MM-DD, or leave it blank.",
   agreement: "A signed agreement has to be on your account before you can send a post.",
+  month: "Choose a full month of this agreement that still has room for these posts.",
 };
 
 const notices: Record<string, string> = {
@@ -197,6 +200,7 @@ function hubPost(post: ContentSubmission, accounts: SocialAccountView[], payment
     offerBrief: post.offerBrief,
     publishBy: post.publishBy ? formatPublishDate(post.publishBy) : "",
     proposedOn: post.proposedPublishOn ? formatPublishDate(post.proposedPublishOn) : "",
+    postingMonth: agreementPostMonth(post),
     ...paymentCopy(post, payment),
     trackingDays: resolvedTrackingDays(post.trackingDays),
   };
@@ -210,38 +214,44 @@ export default async function AffiliatePostsPage({
   const affiliate = await currentAffiliate();
   if (!affiliate) redirect("/affiliates");
   const query = await searchParams;
-  const acknowledged = await disclosureAcknowledged(affiliate.code).catch(() => false);
+  const code = affiliate.code;
+  const acknowledged = await memo(`disclosure-ack:${code}`, () => disclosureAcknowledged(code).catch(() => false));
   let posts: ContentSubmission[] = [];
   let accounts: SocialAccountView[] = [];
   let payments: DeliverablePayment[] = [];
   let assignedCampaigns: string[] = [];
   let postsUnavailable = false;
-  if (acknowledged) {
-    try {
-      [posts, accounts, payments] = await Promise.all([
-        loadContentSubmissions(affiliate.code),
-        loadSocialAccounts(affiliate.code),
-        loadDeliverablePayments(affiliate.code),
-      ]);
-    } catch {
-      postsUnavailable = true;
-    }
-    try {
-      const records = await loadMarketingCampaignRecords();
-      assignedCampaigns = records
-        .filter((record) => affiliateCanAttachCampaign(record, affiliate.code, posts.some((post) => post.contentStatus !== "withdrawn" && post.campaign.trim().toLowerCase() === record.name.toLowerCase())))
-        .map((record) => record.name);
-    } catch {
-      assignedCampaigns = [];
-    }
-  }
   let posting: PostingAgreement | null = null;
   let agreementsUnavailable = false;
+  let viewRate: Awaited<ReturnType<typeof loadPaymentRates>> | null = null;
   if (acknowledged) {
-    try {
-      posting = postingAgreement(await loadAffiliateAgreements(affiliate.code), utcAgreementToday());
-    } catch {
-      agreementsUnavailable = true;
+    const [loadedPosts, loadedAccounts, loadedPayments, records, agreements, rates] = await Promise.all([
+      memo(`submissions:${code}`, () => loadContentSubmissions(code)).catch(() => null),
+      memo(`accounts:${code}`, () => loadSocialAccounts(code)).catch(() => null),
+      memo(`payments:${code}`, () => loadDeliverablePayments(code)).catch(() => null),
+      memo("campaign-records", () => loadMarketingCampaignRecords()).catch(() => null),
+      memo(`agreements:${code}`, () => loadAffiliateAgreements(code)).catch(() => null),
+      memo("payment-rates", () => loadPaymentRates().catch(() => null)),
+    ]);
+    if (!loadedPosts || !loadedAccounts || !loadedPayments) postsUnavailable = true;
+    else {
+      posts = loadedPosts;
+      accounts = loadedAccounts;
+      payments = loadedPayments;
+    }
+    viewRate = rates;
+    if (records) {
+      assignedCampaigns = records
+        .filter((record) => affiliateCanAttachCampaign(record, code, posts.some((post) => post.contentStatus !== "withdrawn" && post.campaign.trim().toLowerCase() === record.name.toLowerCase())))
+        .map((record) => record.name);
+    }
+    if (!agreements) agreementsUnavailable = true;
+    else {
+      try {
+        posting = postingAgreement(agreements, utcAgreementToday(), posts);
+      } catch {
+        agreementsUnavailable = true;
+      }
     }
   }
   const paymentByPost = new Map(payments.map((payment) => [payment.postId, payment]));
@@ -326,7 +336,7 @@ export default async function AffiliatePostsPage({
           email={affiliate.email}
           notice={notice}
           noticeTone={query.notice === "check" ? "warn" : "ok"}
-          agreedFeeCents={standingViewRateCents(await loadPaymentRates().catch(() => null))}
+          agreedFeeCents={standingViewRateCents(viewRate)}
           standingMaxPayCents={affiliate.deliverableMaxPayCents}
           standingTrackingDays={affiliate.deliverableTrackingDays}
           campaigns={assignedCampaigns}

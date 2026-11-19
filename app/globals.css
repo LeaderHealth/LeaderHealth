@@ -76,14 +76,30 @@ html {
   }
 }
 
+@keyframes lh-tab-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .lh-page-fade {
   animation: lh-page-fade-in 640ms ease-in-out both;
+}
+
+.lh-tab-panel {
+  animation: lh-tab-panel-in 220ms ease-out both;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .lh-popup-backdrop,
   .lh-popup-panel,
-  .lh-page-fade {
+  .lh-page-fade,
+  .lh-tab-panel {
     animation: none;
   }
 }

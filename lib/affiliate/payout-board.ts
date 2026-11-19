@@ -71,7 +71,7 @@ export type PayoutBoardWebsite = {
 };
 
 export const PAYOUT_KINDS: Record<PayoutBoardKind, { label: string; color: string; detail: string }> = {
-  base: { label: "Base payments", color: "#33130F", detail: "For approved, verified posts" },
+  base: { label: "Base payments", color: "#33130F", detail: "Monthly posting rate and fixed post fees" },
   social: { label: "Social performance", color: "#A8706A", detail: "Views and engagement" },
   web: { label: "Website performance", color: "#E39A93", detail: "Clicks and page views" },
   lab: { label: "Lab commission", color: "#C9A27E", detail: "Monthly total from lab orders" },
@@ -259,6 +259,39 @@ function websiteItem(row: PayoutBoardWebsite, today: string): PayoutBoardItem | 
   };
 }
 
+export type PayoutBoardMonthly = {
+  period: string;
+  rateCents: number;
+  requiredPosts: number;
+  verifiedPosts: number;
+  earnedCents: number;
+  status: "earned" | "short" | "approved" | "paid";
+  approvedAt: string | null;
+  paidAt: string | null;
+  reference: string;
+};
+
+function monthlyItem(row: PayoutBoardMonthly, today: string): PayoutBoardItem | null {
+  const status: PayoutBoardStatus = row.status === "paid" ? "paid" : row.status === "approved" ? "approved" : "review";
+  const paidOn = payoutDay(row.paidAt);
+  const approvedOn = payoutDay(row.approvedAt) || paidOn;
+  const live = `${row.verifiedPosts} of ${row.requiredPosts} required posts live.`;
+  return {
+    id: `monthly-${row.period}`,
+    title: `${payoutMonthLabel(row.period)} monthly posting rate`,
+    kind: "base",
+    amountCents: Math.max(0, row.earnedCents),
+    earnedOn: paidOn || periodDay(row.period, today),
+    status,
+    terms: `${formatCents(row.rateCents)} for each month all ${row.requiredPosts} required posts are live`,
+    work: row.status === "short" ? `${live} The monthly rate is earned once every required post is live.` : live,
+    approved: approvedOn ? payoutDateLabel(approvedOn) : "Not yet",
+    paymentNote: paymentNote(status, paidOn),
+    paidOn: paidOn || null,
+    reference: row.reference,
+  };
+}
+
 export type PayoutLabRef = { id: string; source: "Promo code" | "Tracking link" };
 
 export type PayoutLabInput = {
@@ -335,7 +368,14 @@ function monthEnd(period: string) {
   return `${period}-${String(last).padStart(2, "0")}`;
 }
 
-export function buildPayoutItems(input: { posts: PayoutBoardPost[]; payments: PayoutBoardPayment[]; websites: PayoutBoardWebsite[]; labs?: PayoutLabInput[]; today: string }) {
+export function buildPayoutItems(input: {
+  posts: PayoutBoardPost[];
+  payments: PayoutBoardPayment[];
+  websites: PayoutBoardWebsite[];
+  labs?: PayoutLabInput[];
+  monthlies?: PayoutBoardMonthly[];
+  today: string;
+}) {
   const payments = new Map(input.payments.map((payment) => [payment.postId, payment]));
   const seen = new Set<string>();
   const items: PayoutBoardItem[] = [];
@@ -366,6 +406,10 @@ export function buildPayoutItems(input: { posts: PayoutBoardPost[]; payments: Pa
   }
   for (const website of input.websites) {
     const item = websiteItem(website, input.today);
+    if (item) items.push(item);
+  }
+  for (const monthly of input.monthlies ?? []) {
+    const item = monthlyItem(monthly, input.today);
     if (item) items.push(item);
   }
   items.push(...labPayoutRows(input.labs ?? [], input.today).items);
