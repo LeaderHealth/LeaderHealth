@@ -15,7 +15,7 @@ import { formatForOfferKind, offerSlideBounds, postSourceLabel } from "@/lib/aff
 import { DISCLOSURE_LINE, instagramCheckCopy, instagramLinkChecks, loadContentSubmissions, manualReportDue, metricLines, metricsOriginLabel, networkConnectedForPost, type ContentSubmission } from "@/lib/affiliate/post-review";
 import { affiliateCanAttachCampaign } from "@/lib/affiliate/campaign-record";
 import { loadMarketingCampaignRecords } from "@/lib/affiliate/roi-store";
-import { metaConfigured, tiktokConfigured } from "@/lib/affiliate/social-oauth";
+import { instagramConfigured, tiktokConfigured } from "@/lib/affiliate/social-oauth";
 import { loadSocialAccounts, type SocialAccountView } from "@/lib/affiliate/social-store";
 import { loadAffiliateAgreements, utcAgreementToday } from "@/lib/affiliate/agreements";
 import { agreementPostMonth } from "@/lib/affiliate/agreement-earnings";
@@ -156,7 +156,7 @@ function hubPost(post: ContentSubmission, accounts: SocialAccountView[], payment
   const files = post.files.length ? post.files : post.filePath ? [{ path: post.filePath, contentType: post.contentType }] : [];
   const captions = captionsForSlides(post, files.length);
   const connected = networkConnectedForPost(post.format, accounts);
-  const connectHref = post.format === "tiktok" ? (tiktokConfigured() ? "/api/affiliate/social/tiktok/start" : null) : metaConfigured() ? "/api/affiliate/social/meta/start" : null;
+  const connectHref = post.format === "tiktok" ? (tiktokConfigured() ? "/api/affiliate/social/tiktok/start" : null) : instagramConfigured() ? "/api/affiliate/social/instagram/start" : null;
   return {
     id: post.id,
     title: titleOf(post.caption),

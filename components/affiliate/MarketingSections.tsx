@@ -16,11 +16,13 @@ const quietClass =
 
 export function SocialConnections({
   metaReady,
+  instagramReady,
   tiktokReady,
   youtubeReady,
   accounts,
 }: {
   metaReady: boolean;
+  instagramReady: boolean;
   tiktokReady: boolean;
   youtubeReady: boolean;
   accounts: SocialAccountView[];
@@ -49,13 +51,13 @@ export function SocialConnections({
       />
       <NetworkRow
         title="Instagram"
-        ready={metaReady}
+        ready={instagramReady}
         accounts={instagram}
-        connectHref="/api/affiliate/social/meta/start"
+        connectHref="/api/affiliate/social/instagram/start"
         unsetLabel="Instagram reporting is not set up."
         detail={
           <p className="mt-2 text-sm leading-relaxed text-brown">
-            Instagram connects with the Facebook Page. A professional account linked to that Page is included. Disconnecting Facebook removes it.{" "}
+            Instagram uses its own login. A professional account linked to a Facebook Page is included.{" "}
             <a href="/affiliates/privacy#facebook-instagram-accounts" className="underline underline-offset-4">
               Affiliate Privacy Policy
             </a>

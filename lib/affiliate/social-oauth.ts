@@ -16,7 +16,11 @@ const VERIFIER = /^[A-Za-z0-9\-._~]{43,128}$/;
 export const TIKTOK_PKCE_COOKIE = "lh_tiktok_pkce";
 
 export function metaConfigured() {
-  return Boolean(process.env.META_APP_ID?.trim() && process.env.META_APP_SECRET?.trim());
+  return Boolean(process.env.FACEBOOK_APP_ID?.trim() && process.env.FACEBOOK_APP_SECRET?.trim());
+}
+
+export function instagramConfigured() {
+  return Boolean(process.env.INSTAGRAM_APP_ID?.trim() && process.env.INSTAGRAM_APP_SECRET?.trim() && process.env.INSTAGRAM_CONFIG_ID?.trim());
 }
 
 export function youtubeConfigured() {
@@ -31,6 +35,11 @@ export function metaRedirectUri() {
   return absoluteUrl("/api/affiliate/social/meta/callback");
 }
 
+export function instagramRedirectUri() {
+  const configured = process.env.INSTAGRAM_REDIRECT_URI?.trim();
+  return configured || metaRedirectUri();
+}
+
 export function tiktokRedirectUri() {
   return absoluteUrl("/api/affiliate/social/tiktok/callback");
 }
@@ -39,7 +48,7 @@ export function youtubeRedirectUri() {
   return absoluteUrl("/api/affiliate/social/youtube/callback");
 }
 
-export function signSocialState(input: { code: string; network: "facebook" | "tiktok" | "youtube"; now?: number }) {
+export function signSocialState(input: { code: string; network: "facebook" | "instagram" | "tiktok" | "youtube"; now?: number }) {
   const code = normalizeAffiliateCode(input.code);
   const secret = sessionSecret();
   if (!code || !secret) return null;
@@ -61,7 +70,7 @@ export function readSocialState(value: string, now = Date.now()) {
   try {
     const parsed = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as { code?: unknown; network?: unknown; exp?: unknown };
     const code = normalizeAffiliateCode(parsed.code);
-    const network = parsed.network === "facebook" || parsed.network === "tiktok" || parsed.network === "youtube" ? parsed.network : null;
+    const network = parsed.network === "facebook" || parsed.network === "instagram" || parsed.network === "tiktok" || parsed.network === "youtube" ? parsed.network : null;
     if (!code || !network || typeof parsed.exp !== "number" || parsed.exp < now) return null;
     return { code, network };
   } catch {
@@ -71,11 +80,21 @@ export function readSocialState(value: string, now = Date.now()) {
 
 export function metaAuthorizeUrl(state: string) {
   const url = new URL("https://www.facebook.com/v21.0/dialog/oauth");
-  url.searchParams.set("client_id", process.env.META_APP_ID?.trim() ?? "");
+  url.searchParams.set("client_id", process.env.FACEBOOK_APP_ID?.trim() ?? "");
   url.searchParams.set("redirect_uri", metaRedirectUri());
   url.searchParams.set("state", state);
   url.searchParams.set("response_type", "code");
-  url.searchParams.set("scope", "pages_show_list,pages_read_engagement,pages_read_user_content,instagram_basic,instagram_manage_insights");
+  url.searchParams.set("scope", "pages_show_list,pages_read_engagement,pages_read_user_content");
+  return url.toString();
+}
+
+export function instagramAuthorizeUrl(state: string) {
+  const url = new URL("https://www.facebook.com/v21.0/dialog/oauth");
+  url.searchParams.set("client_id", env("INSTAGRAM_APP_ID"));
+  url.searchParams.set("redirect_uri", instagramRedirectUri());
+  url.searchParams.set("state", state);
+  url.searchParams.set("response_type", "code");
+  url.searchParams.set("config_id", env("INSTAGRAM_CONFIG_ID"));
   return url.toString();
 }
 
@@ -139,16 +158,25 @@ export function tiktokAuthorizeUrl(state: string, verifier: string) {
 
 export async function exchangeMetaCode(oauthCode: string) {
   if (!metaConfigured()) throw new SocialError("setup");
+  return exchangeMetaApp(env("FACEBOOK_APP_ID"), env("FACEBOOK_APP_SECRET"), metaRedirectUri(), oauthCode);
+}
+
+export async function exchangeInstagramCode(oauthCode: string) {
+  if (!instagramConfigured()) throw new SocialError("setup");
+  return exchangeMetaApp(env("INSTAGRAM_APP_ID"), env("INSTAGRAM_APP_SECRET"), instagramRedirectUri(), oauthCode);
+}
+
+async function exchangeMetaApp(clientId: string, clientSecret: string, redirectUri: string, oauthCode: string) {
   const shortToken = await metaAccessToken({
-    client_id: env("META_APP_ID"),
-    client_secret: env("META_APP_SECRET"),
-    redirect_uri: metaRedirectUri(),
+    client_id: clientId,
+    client_secret: clientSecret,
+    redirect_uri: redirectUri,
     code: oauthCode,
   });
   const userToken = await metaAccessToken({
     grant_type: "fb_exchange_token",
-    client_id: env("META_APP_ID"),
-    client_secret: env("META_APP_SECRET"),
+    client_id: clientId,
+    client_secret: clientSecret,
     fb_exchange_token: shortToken,
   });
   const pages = await metaPages(userToken);

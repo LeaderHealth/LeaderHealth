@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { absoluteUrl } from "@/lib/seo/schema";
 import { portalAffiliateCode } from "@/lib/affiliate/session";
-import { exchangeMetaCode, readSocialState } from "@/lib/affiliate/social-oauth";
+import { exchangeInstagramCode, exchangeMetaCode, readSocialState } from "@/lib/affiliate/social-oauth";
 import { setSocialOnboarding } from "@/lib/affiliate/social-onboarding";
-import { saveFacebookConnection, SocialError } from "@/lib/affiliate/social-store";
+import { loadConnectionSecrets, saveFacebookConnection, SocialError, type FacebookConnectionSecret, type FacebookPageSecret } from "@/lib/affiliate/social-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,9 +19,10 @@ export async function GET(request: Request) {
   if (url.searchParams.get("error")) return stats("error=social-denied");
   const state = readSocialState(url.searchParams.get("state") ?? "");
   const oauthCode = cleanCode(url.searchParams.get("code"));
-  if (!state || state.network !== "facebook" || state.code !== code || !oauthCode) return stats("error=social");
+  if (!state || (state.network !== "facebook" && state.network !== "instagram") || state.code !== code || !oauthCode) return stats("error=social");
   try {
-    const connection = await exchangeMetaCode(oauthCode);
+    const exchanged = state.network === "instagram" ? await exchangeInstagramCode(oauthCode) : await exchangeMetaCode(oauthCode);
+    const connection = state.network === "instagram" ? await keepFacebookPages(code, exchanged) : exchanged;
     await saveFacebookConnection(code, connection);
     try {
       await setSocialOnboarding(code, "done");
@@ -31,10 +32,19 @@ export async function GET(request: Request) {
   } catch (error) {
     if (error instanceof SocialError && error.code === "page") return stats("error=social-page");
     if (error instanceof SocialError && error.code === "setup") return stats("error=social-setup");
-    console.error("[affiliate] facebook connect failed", error instanceof SocialError ? error.code : "unavailable");
+    console.error("[affiliate] meta connect failed", state.network, error instanceof SocialError ? error.code : "unavailable");
     return stats("error=social");
   }
   return stats("notice=connected");
+}
+
+async function keepFacebookPages(code: string, incoming: { userAccessToken: string | null; pages: FacebookPageSecret[] }) {
+  const secrets = await loadConnectionSecrets(code);
+  const current = secrets.find((item): item is FacebookConnectionSecret => item.network === "facebook");
+  if (!current) return incoming;
+  const pages = new Map(current.pages.map((page) => [page.accountId, page]));
+  for (const page of incoming.pages) pages.set(page.accountId, page);
+  return { userAccessToken: current.userAccessToken ?? incoming.userAccessToken, pages: [...pages.values()] };
 }
 
 function cleanCode(value: string | null) {
