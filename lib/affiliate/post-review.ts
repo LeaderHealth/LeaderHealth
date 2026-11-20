@@ -1131,7 +1131,16 @@ export function rejectContentPost(id: string, note: unknown, reviewer: unknown) 
 async function instagramPages(code: string) {
   try {
     const secrets = await loadConnectionSecrets(code);
-    return secrets.flatMap((secret) => (secret.network === "facebook" ? secret.pages.filter((page) => page.instagramAccountId) : []));
+    const linked = secrets.flatMap((secret) => (secret.network === "facebook" ? secret.pages.filter((page) => page.instagramAccountId) : []));
+    const direct = secrets.flatMap((secret) => (secret.network === "instagram" ? [{
+      accountId: secret.accountId,
+      accountName: secret.accountName,
+      accessToken: secret.accessToken,
+      instagramAccountId: secret.accountId,
+      instagramAccountName: secret.accountName,
+      graphHost: "instagram" as const,
+    }] : []));
+    return [...linked, ...direct];
   } catch (error) {
     if (error instanceof SocialError && error.code === "expired") throw error;
     if (error instanceof SocialError) throw new PostReviewError("unavailable");
@@ -1139,10 +1148,17 @@ async function instagramPages(code: string) {
   }
 }
 
+async function rememberInstagramReconnect(code: string, pages: ReadonlyArray<{ graphHost?: "instagram" }>, needed: boolean) {
+  const networks = new Set<"facebook" | "instagram">();
+  for (const page of pages) networks.add(page.graphHost === "instagram" ? "instagram" : "facebook");
+  await Promise.all([...networks].map((network) => markSocialReconnect(code, network, needed)));
+}
+
 async function finishVerification(id: string, code: string, url: string) {
   const ref = requireDb().collection("contentSubmissions").doc(id);
+  let pages: Awaited<ReturnType<typeof instagramPages>> = [];
   try {
-    const pages = await instagramPages(code);
+    pages = await instagramPages(code);
     if (pages.length === 0) {
       await ref.update({ publicationStatus: "verification_failed", verificationNote: verificationFailureNote("not_connected"), instagramMediaId: null });
       return "verification_failed" as const;
@@ -1166,11 +1182,11 @@ async function finishVerification(id: string, code: string, url: string) {
       deliverableForfeitedAt: FieldValue.delete(),
       deliverableForfeitNote: FieldValue.delete(),
     });
-    await markSocialReconnect(code, "facebook", false);
+    await rememberInstagramReconnect(code, pages, false);
     return "tracking_active" as const;
   } catch (error) {
     if (error instanceof SocialError && error.code === "expired") {
-      await markSocialReconnect(code, "facebook", true);
+      await rememberInstagramReconnect(code, pages, true);
     }
     await ref.update({ publicationStatus: "verification_failed", verificationNote: verificationFailureNote("unavailable"), instagramMediaId: null });
     if (!(error instanceof SocialError) && !(error instanceof PostReviewError)) {

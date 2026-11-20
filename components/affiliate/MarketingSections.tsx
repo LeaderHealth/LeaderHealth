@@ -57,7 +57,7 @@ export function SocialConnections({
         unsetLabel="Instagram reporting is not set up."
         detail={
           <p className="mt-2 text-sm leading-relaxed text-brown">
-            Instagram uses its own login. A professional account linked to a Facebook Page is included.{" "}
+            Instagram opens its own login. Use a professional Instagram account.{" "}
             <a href="/affiliates/privacy#facebook-instagram-accounts" className="underline underline-offset-4">
               Affiliate Privacy Policy
             </a>

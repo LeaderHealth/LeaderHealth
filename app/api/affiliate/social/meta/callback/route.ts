@@ -3,7 +3,7 @@ import { absoluteUrl } from "@/lib/seo/schema";
 import { portalAffiliateCode } from "@/lib/affiliate/session";
 import { exchangeInstagramCode, exchangeMetaCode, readSocialState } from "@/lib/affiliate/social-oauth";
 import { setSocialOnboarding } from "@/lib/affiliate/social-onboarding";
-import { loadConnectionSecrets, saveFacebookConnection, SocialError, type FacebookConnectionSecret, type FacebookPageSecret } from "@/lib/affiliate/social-store";
+import { saveFacebookConnection, saveInstagramConnection, SocialError } from "@/lib/affiliate/social-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,9 +21,12 @@ export async function GET(request: Request) {
   const oauthCode = cleanCode(url.searchParams.get("code"));
   if (!state || (state.network !== "facebook" && state.network !== "instagram") || state.code !== code || !oauthCode) return stats("error=social");
   try {
-    const exchanged = state.network === "instagram" ? await exchangeInstagramCode(oauthCode) : await exchangeMetaCode(oauthCode);
-    const connection = state.network === "instagram" ? await keepFacebookPages(code, exchanged) : exchanged;
-    await saveFacebookConnection(code, connection);
+    if (state.network === "instagram") {
+      const account = await exchangeInstagramCode(oauthCode);
+      await saveInstagramConnection({ code, network: "instagram", ...account });
+    } else {
+      await saveFacebookConnection(code, await exchangeMetaCode(oauthCode));
+    }
     try {
       await setSocialOnboarding(code, "done");
     } catch (error) {
@@ -36,15 +39,6 @@ export async function GET(request: Request) {
     return stats("error=social");
   }
   return stats("notice=connected");
-}
-
-async function keepFacebookPages(code: string, incoming: { userAccessToken: string | null; pages: FacebookPageSecret[] }) {
-  const secrets = await loadConnectionSecrets(code);
-  const current = secrets.find((item): item is FacebookConnectionSecret => item.network === "facebook");
-  if (!current) return incoming;
-  const pages = new Map(current.pages.map((page) => [page.accountId, page]));
-  for (const page of incoming.pages) pages.set(page.accountId, page);
-  return { userAccessToken: current.userAccessToken ?? incoming.userAccessToken, pages: [...pages.values()] };
 }
 
 function cleanCode(value: string | null) {

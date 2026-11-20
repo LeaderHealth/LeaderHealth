@@ -37,7 +37,7 @@ export default async function ConnectAccountsPage() {
     {
       name: "Instagram",
       accounts: instagram,
-      detail: "Instagram uses its own login. A professional account linked to a Facebook Page is included.",
+      detail: "Instagram opens its own login. Use a professional Instagram account.",
       href: instagramConfigured() ? "/api/affiliate/social/instagram/start" : null,
       unavailable: instagramConfigured() ? "" : "Instagram reporting is not set up.",
       changeLabel: "Change Instagram account",
