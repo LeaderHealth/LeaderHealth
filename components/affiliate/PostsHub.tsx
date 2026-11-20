@@ -903,8 +903,10 @@ function Composer({
           ? "A full admin needs to set your rate per 1,000 views before you can send a post."
           : !termsAccepted
             ? "Accept the rate, maximum, and tracking period before sending."
-            : `Standing terms: ${viewPayTerms(agreedFeeCents, standingMaxPayCents, standingTrackingDays)}. They lock when you send the post.`;
-  const canSend = cards.length > 0 && !blocked && !slideProblem && !monthBlocked && !noFullMonth && !pending && posting != null && (offer != null || (agreedFeeCents != null && termsAccepted));
+            : !proposedOn
+              ? "Choose a proposed publishing date."
+              : `Standing terms: ${viewPayTerms(agreedFeeCents, standingMaxPayCents, standingTrackingDays)}. They lock when you send the post.`;
+  const canSend = cards.length > 0 && !blocked && !slideProblem && !monthBlocked && !noFullMonth && !pending && posting != null && (offer != null || (agreedFeeCents != null && termsAccepted && proposedOn !== ""));
 
   function update(key: string, patch: Partial<Card>) {
     setCards(cards.map((card) => (card.key === key ? { ...card, ...patch } : card)));
@@ -1032,6 +1034,19 @@ function Composer({
   }
   const showAnother = !offer && cards.length < POST_BATCH_LIMIT && cards.length < monthRoom;
 
+  if (!posting) {
+    return (
+      <div className="flex flex-col gap-[22px]">
+        <BackButton onClick={onBack} />
+        <div className="flex flex-col gap-1.5">
+          <h2 className="text-[28px] font-medium tracking-tight">New posts</h2>
+          <p className="text-sm leading-normal text-brown">Sign an agreement before you can send a post.</p>
+        </div>
+        <AgreementLine posting={posting} unavailable={agreementsUnavailable} />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-[22px]">
       <BackButton onClick={onBack} />
@@ -1060,8 +1075,8 @@ function Composer({
       {offer ? null : (
         <label className="flex max-w-xs flex-col gap-2 text-sm font-medium" htmlFor="proposed-publish-on">
           Proposed publishing date
-          <input id="proposed-publish-on" type="date" min={dateBounds?.min} max={dateBounds?.max} value={proposedOn} onChange={(event) => setProposedOn(event.target.value)} className={fieldClass} />
-          <span className="text-sm font-normal leading-normal text-brown">{posting?.months.length ? "Optional. A date has to fall in the month above." : "Optional. It does not change review or pay."}</span>
+          <input id="proposed-publish-on" type="date" required min={dateBounds?.min} max={dateBounds?.max} value={proposedOn} onChange={(event) => setProposedOn(event.target.value)} className={fieldClass} />
+          <span className="text-sm font-normal leading-normal text-brown">{posting?.months.length ? "Required. The date has to fall in the month above." : "Required. It does not change review or pay."}</span>
         </label>
       )}
       {cards.length === 1 && !cards[0]?.format ? (
@@ -1261,7 +1276,7 @@ function Composer({
         <div className="min-w-0 flex-1 basis-60">
           <p className="text-sm font-semibold">{cards.length === 1 ? "1 post" : `${cards.length} posts`} · {readyCount} ready</p>
           {limitNote ? <p className="text-[13px] text-[#9B2C1F]">{limitNote}</p> : null}
-          <p className={`text-[13px] ${blocked || slideProblem || (!offer && !termsAccepted) ? "text-[#9B2C1F]" : "text-[#1D6340]"}`}>{hint}</p>
+          <p className={`text-[13px] ${blocked || slideProblem || (!offer && (!termsAccepted || !proposedOn)) ? "text-[#9B2C1F]" : "text-[#1D6340]"}`}>{hint}</p>
         </div>
         <button type="button" onClick={send} disabled={!canSend} className={`inline-flex h-11 items-center rounded-full px-[22px] text-sm font-medium ${canSend ? "bg-ink text-white hover:bg-brown" : "cursor-not-allowed bg-[#E8DEDC] text-[#5E4E4B]"}`}>
           {pending ? "Sending…" : cards.length === 1 ? "Send for review" : `Send ${cards.length} for review`}

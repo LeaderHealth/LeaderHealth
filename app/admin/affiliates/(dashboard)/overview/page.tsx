@@ -15,7 +15,7 @@ import { loadAgreementPayouts } from "@/lib/affiliate/agreement-payouts";
 import { loadAffiliateAgreements } from "@/lib/affiliate/agreements";
 import { visibleReportSections } from "@/lib/affiliate/marketing";
 import { loadMarketingReports, type MarketingReport } from "@/lib/affiliate/marketing-store";
-import { loadSocialAccounts, type SocialAccountView } from "@/lib/affiliate/social-store";
+import { loadSocialAccounts, reportingAccounts, type SocialAccountView } from "@/lib/affiliate/social-store";
 import { loadWebsiteEvents, websiteReportMonths, type WebsiteOrder, type WebsiteVisit } from "@/lib/affiliate/website-report";
 import { currentPayoutPeriod, formatPayoutMonth, loadPayoutRecords, paidOutInRange, payoutLines, previousPayoutPeriod, type PayoutRecord } from "@/lib/affiliate/payouts";
 import { periodReferralSummaries } from "@/lib/affiliate/order-view";
@@ -221,7 +221,7 @@ export default async function AffiliateOverviewPage({
   } else {
     reportsUnavailable = true;
   }
-  const reportSections = visibleReportSections(marketingReports, socialAccounts);
+  const reportSections = visibleReportSections(marketingReports, reportingAccounts(socialAccounts));
   const applicationCount = applications.count;
   const applicationsUnavailable = applications.unavailable;
   let contentRates: PaymentRates | null = null;

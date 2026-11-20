@@ -19,6 +19,7 @@ const socialErrors: Record<string, string> = {
   "social-setup": "Reporting is not set up for that network.",
   "social-denied": "The connection was cancelled.",
   "social-page": "Connect a Facebook Page to import posts.",
+  "social-channel": "This Google account has no YouTube channel.",
 };
 
 function titleOf(caption: string) {
@@ -112,6 +113,7 @@ export default async function AffiliateStatsPage({
       {query.notice === "disconnected" ? <p role="status" className="mb-4 rounded-2xl bg-white px-4 py-3 text-sm text-ink">Account disconnected.</p> : null}
       {query.notice === "disconnected-facebook" ? <p role="status" className="mb-4 rounded-2xl bg-white px-4 py-3 text-sm text-ink">Leader Health is disconnected. You can also remove Leader Health in Facebook under Settings, Security, Apps and websites.</p> : null}
       {query.notice === "disconnected-tiktok" ? <p role="status" className="mb-4 rounded-2xl bg-white px-4 py-3 text-sm text-ink">Leader Health is disconnected. You can also remove Leader Health in TikTok under Settings, Security, Manage app permissions.</p> : null}
+      {query.notice === "disconnected-youtube" ? <p role="status" className="mb-4 rounded-2xl bg-white px-4 py-3 text-sm text-ink">Leader Health is disconnected. You can also remove Leader Health in your Google Account under Security, Third-party apps and services.</p> : null}
       {unavailable ? <p className="text-ink">{unavailable}</p> : <AffiliateStatsBoard today={utcDay()} posts={posts} traffic={traffic} />}
     </section>
   );

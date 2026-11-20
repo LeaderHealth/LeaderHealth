@@ -28,6 +28,7 @@ export function SocialConnections({
   const facebook = accounts.filter((account) => account.network === "facebook");
   const instagram = accounts.filter((account) => account.network === "instagram");
   const tiktok = accounts.filter((account) => account.network === "tiktok");
+  const youtube = accounts.filter((account) => account.network === "youtube");
 
   return (
     <div className="grid gap-4">
@@ -79,13 +80,17 @@ export function SocialConnections({
       />
       <NetworkRow
         title="YouTube"
-        ready={false}
-        accounts={[]}
-        connectHref=""
-        unsetLabel={youtubeReady ? "YouTube reporting is not available yet." : "YouTube reporting is not set up."}
+        ready={youtubeReady}
+        accounts={youtube}
+        connectHref="/api/affiliate/social/youtube/start"
+        unsetLabel="YouTube reporting is not set up."
+        disconnect="youtube"
         detail={
           <p className="mt-2 text-sm leading-relaxed text-brown">
-            {youtubeReady ? "YouTube reporting stays off until Google approves the app." : "YouTube reporting is not set up."}
+            Connecting is optional. Leader Health reads the YouTube channel name. Leader Health does not post to YouTube.{" "}
+            <a href="/affiliates/privacy#youtube-accounts" className="underline underline-offset-4">
+              Affiliate Privacy Policy
+            </a>
           </p>
         }
       />
@@ -114,7 +119,7 @@ function NetworkRow({
   connectHref: string;
   unsetLabel: string;
   detail?: ReactNode;
-  disconnect?: "facebook" | "tiktok";
+  disconnect?: "facebook" | "tiktok" | "youtube";
 }) {
   const status = connectionStatus(accounts);
   const offerConnect = ready && status !== "Connected";
@@ -130,9 +135,9 @@ function NetworkRow({
             Connect {title}
           </a>
         ) : null}
-        {ready && disconnect === "tiktok" && status === "Connected" ? (
+        {ready && (disconnect === "tiktok" || disconnect === "youtube") && status === "Connected" ? (
           <a href={connectHref} className={quietClass}>
-            Change TikTok account
+            {disconnect === "youtube" ? "Change YouTube channel" : "Change TikTok account"}
           </a>
         ) : null}
         {!ready && accounts.length === 0 ? (

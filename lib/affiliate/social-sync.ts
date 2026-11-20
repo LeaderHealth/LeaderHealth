@@ -55,6 +55,7 @@ export async function syncAffiliateSocialReports(code: string) {
       }
       continue;
     }
+    if (connection.network === "youtube") continue;
     await syncAccount({
       code: normalized,
       proofUrls,

@@ -4,7 +4,7 @@ import { affiliateFirebaseConfigured, affiliateFirestore } from "./firebase";
 import { type SocialNetwork } from "./marketing";
 
 export class SocialError extends Error {
-  code: "invalid" | "unavailable" | "unconnected" | "denied" | "page" | "setup" | "expired";
+  code: "invalid" | "unavailable" | "unconnected" | "denied" | "page" | "channel" | "setup" | "expired";
 
   constructor(code: SocialError["code"]) {
     super(code);
@@ -15,7 +15,7 @@ export class SocialError extends Error {
 
 export type SocialAccountView = {
   code: string;
-  network: SocialNetwork;
+  network: SocialNetwork | "youtube";
   accountId: string;
   accountName: string;
   needsReconnect: boolean;
@@ -46,7 +46,19 @@ export type TikTokConnectionSecret = {
   expiresAt: string | null;
 };
 
-export type ConnectionSecret = FacebookConnectionSecret | TikTokConnectionSecret;
+export type YouTubeConnectionSecret = {
+  code: string;
+  network: "youtube";
+  accountId: string;
+  accountName: string;
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: string | null;
+};
+
+export type ConnectionSecret = FacebookConnectionSecret | TikTokConnectionSecret | YouTubeConnectionSecret;
+
+type StoredNetwork = "facebook" | "tiktok" | "youtube";
 
 const ACCOUNT_ID = /^[A-Za-z0-9._-]{1,128}$/;
 
@@ -55,7 +67,7 @@ function requireDb() {
   return affiliateFirestore();
 }
 
-function documentId(code: string, network: "facebook" | "tiktok") {
+function documentId(code: string, network: StoredNetwork) {
   return `${code}_${network}`;
 }
 
@@ -96,10 +108,10 @@ function viewsFrom(data: DocumentData | undefined): SocialAccountView[] {
   if (!data) return [];
   const code = normalizeAffiliateCode(data.code);
   if (!code) return [];
-  if (data.network === "tiktok") {
+  if (data.network === "tiktok" || data.network === "youtube") {
     const accountId = accountIdOf(data.accountId);
     if (!accountId) return [];
-    return [{ code, network: "tiktok", accountId, accountName: labelOf(data.accountName) ?? accountId, needsReconnect: data.needsReconnect === true }];
+    return [{ code, network: data.network, accountId, accountName: labelOf(data.accountName) ?? accountId, needsReconnect: data.needsReconnect === true }];
   }
   if (data.network !== "facebook" || !Array.isArray(data.pages)) return [];
   return data.pages.flatMap((page) => {
@@ -125,13 +137,13 @@ function secretFrom(data: DocumentData | undefined): ConnectionSecret | null {
   if (!data) return null;
   const code = normalizeAffiliateCode(data.code);
   if (!code) return null;
-  if (data.network === "tiktok") {
+  if (data.network === "tiktok" || data.network === "youtube") {
     const accountId = accountIdOf(data.accountId);
     const accessToken = tokenOf(data.accessToken);
     if (!accountId || !accessToken) return null;
     return {
       code,
-      network: "tiktok",
+      network: data.network,
       accountId,
       accountName: labelOf(data.accountName) ?? accountId,
       accessToken,
@@ -146,6 +158,15 @@ function secretFrom(data: DocumentData | undefined): ConnectionSecret | null {
   });
   if (pages.length === 0) return null;
   return { code, network: "facebook", pages, userAccessToken: tokenOf(data.userAccessToken) };
+}
+
+export function reportingAccounts(accounts: readonly SocialAccountView[]) {
+  const reports: Array<Omit<SocialAccountView, "network"> & { network: SocialNetwork }> = [];
+  for (const account of accounts) {
+    if (account.network === "youtube") continue;
+    reports.push({ ...account, network: account.network });
+  }
+  return reports;
 }
 
 export async function loadSocialAccounts(code?: string) {
@@ -217,13 +238,31 @@ export async function saveTikTokConnection(input: TikTokConnectionSecret) {
   });
 }
 
-export async function deleteSocialConnection(code: string, network: "facebook" | "tiktok") {
+export async function saveYouTubeConnection(input: YouTubeConnectionSecret) {
+  const code = normalizeAffiliateCode(input.code);
+  const accountId = accountIdOf(input.accountId);
+  const accessToken = tokenOf(input.accessToken);
+  if (!code || !accountId || !accessToken) throw new SocialError("invalid");
+  await requireDb().collection("socialConnections").doc(documentId(code, "youtube")).set({
+    code,
+    network: "youtube",
+    accountId,
+    accountName: labelOf(input.accountName) ?? accountId,
+    accessToken,
+    refreshToken: tokenOf(input.refreshToken) ?? "",
+    expiresAt: input.expiresAt,
+    needsReconnect: false,
+    updatedAt: new Date(),
+  });
+}
+
+export async function deleteSocialConnection(code: string, network: StoredNetwork) {
   const normalized = normalizeAffiliateCode(code);
   if (!normalized) throw new SocialError("invalid");
   await requireDb().collection("socialConnections").doc(documentId(normalized, network)).delete();
 }
 
-export async function markSocialReconnect(code: string, network: "facebook" | "tiktok", needed: boolean) {
+export async function markSocialReconnect(code: string, network: StoredNetwork, needed: boolean) {
   const normalized = normalizeAffiliateCode(code);
   if (!normalized) return;
   const ref = requireDb().collection("socialConnections").doc(documentId(normalized, network));

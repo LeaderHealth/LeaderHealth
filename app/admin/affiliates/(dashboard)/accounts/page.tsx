@@ -40,7 +40,7 @@ import {
   refreshDueMetrics,
   type ContentSubmission,
 } from "@/lib/affiliate/post-review";
-import { loadSocialAccounts, type SocialAccountView } from "@/lib/affiliate/social-store";
+import { loadSocialAccounts, reportingAccounts, type SocialAccountView } from "@/lib/affiliate/social-store";
 import { loadWebsiteEvents, websiteReportMonths, type WebsiteOrder, type WebsiteVisit } from "@/lib/affiliate/website-report";
 import type { AffiliatePromoDetail } from "@/components/affiliate/AffiliatePromoCodes";
 import { listPromoCodes, promoRowsForAffiliate, type PromoCodeRow } from "@/lib/genhealth/promocodes";
@@ -323,11 +323,11 @@ export default async function AffiliateAccountsPage({
   let payoutsReady = false;
   if (!loadError && unpaidResult.ok) {
     for (const code of unpaidResult.value.values()) unpaidOrders.set(code, (unpaidOrders.get(code) ?? 0) + 1);
-    unpaidOrdersReady = true;
-  }
+      unpaidOrdersReady = true;
+    }
   if (!loadError && payoutResult.ok) {
     payouts = payoutResult.value;
-    payoutsReady = true;
+      payoutsReady = true;
   }
   const catalog: PromoCodeRow[] | null = catalogResult.ok ? catalogResult.value : null;
   const promoError = catalogResult.ok ? "" : "Promo codes are unavailable right now.";
@@ -544,7 +544,7 @@ export default async function AffiliateAccountsPage({
     };
   }
 
-  const reportSections = visibleReportSections(marketingReports, socialAccounts);
+  const reportSections = visibleReportSections(marketingReports, reportingAccounts(socialAccounts));
 
   function agreementProps(affiliate: AffiliateSummary) {
     const own = agreements.filter((agreement) => agreement.code === affiliate.code);
@@ -611,7 +611,7 @@ export default async function AffiliateAccountsPage({
       const need = view.postTotal;
       const done = progress?.verified ?? 0;
       const postingNow = agreementMonthPeriods(view.effectiveValue, view.expiresValue).includes(currentPeriod);
-      return (
+    return (
         <span className="flex min-w-0 flex-col gap-1.5">
           <span className="text-[15px]">{view.monthly ? `${view.monthly}/month · ${need} posts each month` : `${need} posts each month`}</span>
           {need > 0 && postingNow ? (
@@ -904,15 +904,15 @@ export default async function AffiliateAccountsPage({
 
         <TabPanel tabKey={trackingTab ? "tracking" : postsTab ? "posts" : agreementsTab ? "agreements" : "overview"} className="flex flex-col gap-[18px]">
         {trackingTab ? (
-          <AccountTracking
-            name={affiliate.name}
+        <AccountTracking
+          name={affiliate.name}
             commission={formatCommissionRate(affiliate)}
             viewRate={marketingPayText(contentRates)}
-            cookieDays={cookieDays}
-            trackingLink={affiliateTrackingLink(affiliate.code)}
-            promos={trackingPromos(affiliate)}
-            unavailable={Boolean(promoError)}
-          />
+          cookieDays={cookieDays}
+          trackingLink={affiliateTrackingLink(affiliate.code)}
+          promos={trackingPromos(affiliate)}
+          unavailable={Boolean(promoError)}
+        />
         ) : postsTab ? (
           livePosts()
         ) : agreementsTab ? (
@@ -1028,9 +1028,9 @@ export default async function AffiliateAccountsPage({
                       {agreement.replaceNeedsNote ? <input type="hidden" name="note" value="Replaced with a new agreement." /> : null}
                       <button type="submit" className={`inline-flex h-9 w-fit items-center rounded-full bg-ink px-4 text-[13px] font-medium text-white hover:bg-brown ${focusRing}`}>
                         + New agreement
-                      </button>
-                    </form>
-                  ) : (
+            </button>
+          </form>
+        ) : (
                     <Link href={`${agreementsHref}&new=1`} className={`mt-2 inline-flex h-9 w-fit items-center rounded-full bg-ink px-4 text-[13px] font-medium text-white hover:bg-brown ${focusRing}`}>
                       + New agreement
                     </Link>
@@ -1107,8 +1107,8 @@ export default async function AffiliateAccountsPage({
                 Affiliates
               </h2>
               <p className="text-[15px] text-[#4A3A37]">Everyone in the program. Click any affiliate in the table to view their profile: overview, tracking, agreements and posts.</p>
-            </div>
-          </div>
+                      </div>
+                      </div>
 
           <div className="flex flex-wrap items-center gap-3">
             <div role="group" aria-label="Status" className="flex flex-wrap gap-2">
@@ -1126,7 +1126,7 @@ export default async function AffiliateAccountsPage({
                   </Link>
                 );
               })}
-            </div>
+                    </div>
             <span className="hidden flex-1 sm:block" />
             <form action="/admin/affiliates/accounts" role="search" className="w-full sm:w-auto">
               {statusFilter !== "all" ? <input type="hidden" name="status" value={statusFilter} /> : null}
@@ -1142,7 +1142,7 @@ export default async function AffiliateAccountsPage({
                 className={`h-11 w-full rounded-full border border-[#CDBDBA] bg-white px-[18px] text-[15px] text-ink sm:w-[260px] ${focusRing}`}
               />
             </form>
-          </div>
+                      </div>
 
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <Tile label="Total visits" value={String(rows.reduce((sum, row) => sum + row.stats.visitors, 0))} note="All affiliates, all time" />
@@ -1157,7 +1157,7 @@ export default async function AffiliateAccountsPage({
               value={agreementsUnavailable ? "—" : String(rows.filter((row) => row.deal.view?.phase === "active").length)}
               note={`of ${rows.length} ${rows.length === 1 ? "affiliate" : "affiliates"}`}
             />
-          </div>
+                      </div>
 
           {affiliates.length === 0 ? (
             <p className="px-2.5 py-2.5 text-[15px] text-[#6B5A57]">No affiliates yet.</p>
@@ -1204,7 +1204,7 @@ export default async function AffiliateAccountsPage({
                     </Link>
                   </li>
                 ))}
-              </ul>
+            </ul>
 
               <div role="table" aria-labelledby="accounts-title" className="hidden overflow-hidden rounded-[20px] border border-[#E8DEDC] xl:block">
                 <div role="rowgroup" className="border-b border-[#E8DEDC] px-4">
@@ -1241,8 +1241,8 @@ export default async function AffiliateAccountsPage({
                     </span>
                     <span role="columnheader">
                       <span className="sr-only">Profile</span>
-                    </span>
-                  </div>
+                              </span>
+                            </div>
                 </div>
                 <div role="rowgroup">
                   {visible.map((row) => (
@@ -1299,11 +1299,11 @@ export default async function AffiliateAccountsPage({
                   <Amount cents={visibleTotal((row) => row.pay.total)} strong />
                   <span role="cell" />
                 </div>
-              </div>
-            </>
+            </div>
+          </>
           )}
         </section>
-      )}
+        )}
     </div>
   );
 }

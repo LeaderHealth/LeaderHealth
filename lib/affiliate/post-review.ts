@@ -945,9 +945,8 @@ export async function submitContentBatch(input: { code: string; posts: BatchPost
     const slot = postedUnder.months.find((month) => month.period === period);
     if (!slot) throw new PostReviewError("month");
     for (const entry of ready) {
-      if (!entry.item.proposedPublishOn) continue;
       const date = proposedPublishDate(entry.item.proposedPublishOn);
-      if (date && date.slice(0, 7) !== slot.period) throw new PostReviewError("date");
+      if (!date || date.slice(0, 7) !== slot.period) throw new PostReviewError("date");
     }
     if (slot.limit != null) {
       const exclude = new Set(ready.flatMap((entry) => (entry.existing ? [entry.existing.id] : [])));

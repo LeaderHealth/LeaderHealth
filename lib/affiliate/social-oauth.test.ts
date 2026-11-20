@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import test from "node:test";
-import { openTikTokVerifier, sealTikTokVerifier, tiktokAuthorizeUrl, tiktokCodeChallenge, tiktokCodeVerifier } from "./social-oauth";
+import { openTikTokVerifier, readSocialState, sealTikTokVerifier, signSocialState, tiktokAuthorizeUrl, tiktokCodeChallenge, tiktokCodeVerifier, youtubeAuthorizeUrl } from "./social-oauth";
 
 test("tiktok login sends a hex S256 code challenge and keeps the verifier", () => {
   const verifier = tiktokCodeVerifier();
@@ -23,4 +23,23 @@ test("tiktok login sends a hex S256 code challenge and keeps the verifier", () =
   assert.equal(openTikTokVerifier(sealed, now), verifier);
   assert.equal(openTikTokVerifier(sealed, now + 11 * 60 * 1000), null);
   assert.equal(openTikTokVerifier(`${sealed}x`, now), null);
+});
+
+test("youtube login asks Google for read-only channel access", () => {
+  process.env.GOOGLE_CLIENT_ID = "google-client";
+  process.env.NEXT_PUBLIC_SITE_URL = "https://leaderhealth.example";
+  process.env.AFFILIATE_SESSION_SECRET = "youtube-test-secret";
+  const now = 1_700_000_000_000;
+  const state = signSocialState({ code: "88h4dcji", network: "youtube", now });
+  assert.ok(state);
+  assert.deepEqual(readSocialState(state, now), { code: "88h4dcji", network: "youtube" });
+  const url = new URL(youtubeAuthorizeUrl(state));
+  assert.equal(url.origin + url.pathname, "https://accounts.google.com/o/oauth2/v2/auth");
+  assert.equal(url.searchParams.get("client_id"), "google-client");
+  assert.equal(url.searchParams.get("redirect_uri"), "https://leaderhealth.example/api/affiliate/social/youtube/callback");
+  assert.equal(url.searchParams.get("response_type"), "code");
+  assert.equal(url.searchParams.get("scope"), "https://www.googleapis.com/auth/youtube.readonly");
+  assert.equal(url.searchParams.get("access_type"), "offline");
+  assert.equal(url.searchParams.get("prompt"), "consent");
+  assert.equal(url.searchParams.get("state"), state);
 });

@@ -1207,11 +1207,23 @@ export const privacyPolicy: LegalPage = {
         },
         {
           "kind": "p",
-          "text": "An affiliate can connect a TikTok account from the Stats page. Connecting is optional. When an affiliate connects TikTok, Leader Health receives the TikTok display name and that account’s video list. The video list includes each video’s caption, link, and public counts for views, likes, comments, and shares. Leader Health uses this information to show that affiliate which of their videos include their Leader Health tracking link or match a post URL they submitted. Leader Health does not post, edit, or delete TikTok videos."
+          "text": "An affiliate can connect a TikTok account from Connected accounts. Connecting is optional. When an affiliate connects TikTok, Leader Health receives the TikTok display name and that account’s video list. The video list includes each video’s caption, link, and public counts for views, likes, comments, and shares. Leader Health uses this information to show that affiliate which of their videos include their Leader Health tracking link or match a post URL they submitted. Leader Health does not post, edit, or delete TikTok videos."
         },
         {
           "kind": "p",
-          "text": "Leader Health keeps the display name and video list while the TikTok account stays connected. Choosing Disconnect on the affiliate Stats page removes that information from Leader Health. The affiliate can also remove Leader Health in the TikTok app under Settings, Security, Manage app permissions."
+          "text": "To delete this information, email privacy@myleaderhealth.com from the email on the affiliate account and ask Leader Health to delete the TikTok connection. Leader Health then deletes the display name and video list. The affiliate can also remove Leader Health in the TikTok app under Settings, Security, Manage app permissions. Removing Leader Health there stops new access. The email deletes the copy Leader Health already stored."
+        },
+        {
+          "kind": "h3",
+          "text": "YouTube accounts"
+        },
+        {
+          "kind": "p",
+          "text": "An affiliate can connect a YouTube channel from Connected accounts. Connecting is optional. When an affiliate connects YouTube, Leader Health receives the channel name. Leader Health uses the channel name to recognize that channel when the affiliate submits a YouTube link. Leader Health does not post, edit, or delete YouTube videos."
+        },
+        {
+          "kind": "p",
+          "text": "To delete this information, email privacy@myleaderhealth.com from the email on the affiliate account and ask Leader Health to delete the YouTube connection. Leader Health then deletes the channel name. The affiliate can also remove Leader Health in their Google Account under Security, Third-party apps and services. Removing Leader Health there stops new access. The email deletes the copy Leader Health already stored."
         },
         {
           "kind": "h3",
@@ -1219,11 +1231,11 @@ export const privacyPolicy: LegalPage = {
         },
         {
           "kind": "p",
-          "text": "An affiliate can connect Facebook and Instagram from the Stats page. Connecting is optional. Instagram connects through a Facebook Page, and a professional Instagram account linked to that Page is included. Leader Health receives the Page name and that Page’s posts. Each post includes its caption, link, and counts for reactions, comments, shares, impressions, and reach. For a linked Instagram account, Leader Health receives the account name and that account’s media. Each media item includes its caption, link, and counts for likes, comments, shares, saves, reach, and views. Leader Health uses this information to show that affiliate which of their Facebook or Instagram posts include their Leader Health tracking link or match a post URL they submitted. Leader Health does not post, edit, or delete Facebook or Instagram content."
+          "text": "An affiliate can connect Facebook and Instagram from Connected accounts. Connecting is optional. Instagram connects through a Facebook Page, and a professional Instagram account linked to that Page is included. Leader Health receives the Page name and that Page’s posts. Each post includes its caption, link, and counts for reactions, comments, shares, impressions, and reach. For a linked Instagram account, Leader Health receives the account name and that account’s media. Each media item includes its caption, link, and counts for likes, comments, shares, saves, reach, and views. Leader Health uses this information to show that affiliate which of their Facebook or Instagram posts include their Leader Health tracking link or match a post URL they submitted. Leader Health does not post, edit, or delete Facebook or Instagram content."
         },
         {
           "kind": "p",
-          "text": "Leader Health keeps the Page name, the Instagram account name, and those post and media lists while the Facebook connection stays connected. Choosing Disconnect on the Facebook row of the affiliate Stats page removes the Facebook Page and the linked Instagram account from Leader Health. The affiliate can also remove Leader Health in Facebook under Settings and privacy, Settings, Apps and websites."
+          "text": "To delete this information, email privacy@myleaderhealth.com from the email on the affiliate account and ask Leader Health to delete the Facebook and Instagram connection. Leader Health then deletes the Page name, the Instagram account name, and the saved post and media lists. The affiliate can also remove Leader Health in Facebook under Settings and privacy, Settings, Apps and websites. Removing Leader Health there stops new access. The email deletes the copy Leader Health already stored."
         }
       ]
     },

@@ -16,14 +16,14 @@ export default function AffiliateTermsPage() {
       <div className="mx-auto max-w-3xl">
         <PortalReturnLink />
         <h1 className="mt-6 text-4xl">Affiliate Terms of Service</h1>
-        <p className="mt-3 text-sm text-taupe">Effective Date: November 13, 2026</p>
+        <p className="mt-3 text-sm text-taupe">Effective Date: November 20, 2026</p>
         <p className="mt-10 leading-relaxed text-brown">
           These terms cover the Leader Health affiliate portal, operated by LH Ventures LLC d/b/a Leader Health. They apply to affiliates and to team admins who use the portal. They are separate from the patient Terms of Service on the public site.
         </p>
 
         <h2 className="mt-10 text-2xl">Your account</h2>
         <p className="mt-4 leading-relaxed text-brown">
-          An affiliate account is created after an application is approved or from an invitation. A team admin account is created from an invitation. You choose the portal password. Connecting TikTok, Facebook, or Instagram is optional and does not ask for that network’s password.
+          An affiliate account is created after an application is approved or from an invitation. A team admin account is created from an invitation. You choose the portal password. Connecting TikTok, YouTube, Facebook, or Instagram is optional and does not ask for that network’s password.
         </p>
 
         <h2 className="mt-10 text-2xl">Posts</h2>
@@ -38,11 +38,11 @@ export default function AffiliateTermsPage() {
 
         <h2 className="mt-10 text-2xl">Connected accounts</h2>
         <p className="mt-4 leading-relaxed text-brown">
-          TikTok, Facebook, and Instagram connections are optional. Leader Health reads the account and post information described in the{" "}
+          TikTok, YouTube, Facebook, and Instagram connections are optional. Leader Health reads the account and post information described in the{" "}
           <Link href="/affiliates/privacy" className={linkClass}>
             Affiliate Privacy Policy
           </Link>
-          . Leader Health does not post, edit, or delete content on those accounts. Choosing Disconnect removes that connection from Leader Health. YouTube stays unavailable until Google approves the app.
+          . Leader Health does not post, edit, or delete content on those accounts. To delete a connection, follow the deletion steps in that policy.
         </p>
 
         <h2 className="mt-10 text-2xl">Post numbers</h2>

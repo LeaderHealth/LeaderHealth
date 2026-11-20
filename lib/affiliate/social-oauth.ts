@@ -6,6 +6,7 @@ import {
   oauthTokenExpired,
   type FacebookPageSecret,
   type TikTokConnectionSecret,
+  type YouTubeConnectionSecret,
 } from "./social-store";
 
 const GRAPH = "https://graph.facebook.com/v21.0";
@@ -34,7 +35,11 @@ export function tiktokRedirectUri() {
   return absoluteUrl("/api/affiliate/social/tiktok/callback");
 }
 
-export function signSocialState(input: { code: string; network: "facebook" | "tiktok"; now?: number }) {
+export function youtubeRedirectUri() {
+  return absoluteUrl("/api/affiliate/social/youtube/callback");
+}
+
+export function signSocialState(input: { code: string; network: "facebook" | "tiktok" | "youtube"; now?: number }) {
   const code = normalizeAffiliateCode(input.code);
   const secret = sessionSecret();
   if (!code || !secret) return null;
@@ -56,7 +61,7 @@ export function readSocialState(value: string, now = Date.now()) {
   try {
     const parsed = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as { code?: unknown; network?: unknown; exp?: unknown };
     const code = normalizeAffiliateCode(parsed.code);
-    const network = parsed.network === "facebook" || parsed.network === "tiktok" ? parsed.network : null;
+    const network = parsed.network === "facebook" || parsed.network === "tiktok" || parsed.network === "youtube" ? parsed.network : null;
     if (!code || !network || typeof parsed.exp !== "number" || parsed.exp < now) return null;
     return { code, network };
   } catch {
@@ -106,6 +111,18 @@ export function openTikTokVerifier(value: string, now = Date.now()) {
   } catch {
     return null;
   }
+}
+
+export function youtubeAuthorizeUrl(state: string) {
+  const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
+  url.searchParams.set("client_id", env("GOOGLE_CLIENT_ID"));
+  url.searchParams.set("redirect_uri", youtubeRedirectUri());
+  url.searchParams.set("response_type", "code");
+  url.searchParams.set("scope", "https://www.googleapis.com/auth/youtube.readonly");
+  url.searchParams.set("state", state);
+  url.searchParams.set("access_type", "offline");
+  url.searchParams.set("prompt", "consent");
+  return url.toString();
 }
 
 export function tiktokAuthorizeUrl(state: string, verifier: string) {
@@ -160,6 +177,27 @@ export async function exchangeTikTokCode(oauthCode: string, verifier: string): P
   };
 }
 
+export async function exchangeYouTubeCode(oauthCode: string): Promise<Omit<YouTubeConnectionSecret, "code">> {
+  if (!youtubeConfigured()) throw new SocialError("setup");
+  const token = await googleToken({
+    code: oauthCode,
+    client_id: env("GOOGLE_CLIENT_ID"),
+    client_secret: env("GOOGLE_CLIENT_SECRET"),
+    redirect_uri: youtubeRedirectUri(),
+    grant_type: "authorization_code",
+  });
+  const channel = await youtubeChannel(token.accessToken);
+  if (!channel) throw new SocialError("channel");
+  return {
+    network: "youtube",
+    accountId: channel.accountId,
+    accountName: channel.accountName,
+    accessToken: token.accessToken,
+    refreshToken: token.refreshToken,
+    expiresAt: token.expiresAt,
+  };
+}
+
 export async function refreshTikTokToken(refreshToken: string) {
   if (!tiktokConfigured()) throw new SocialError("setup");
   return tiktokToken({
@@ -187,6 +225,21 @@ export async function revokeTikTokToken(token: string) {
     const error = body && typeof body === "object" && "error" in body ? body.error : null;
     if (!response.ok) return false;
     return typeof error !== "string" || error === "" || error === "ok";
+  } catch {
+    return false;
+  }
+}
+
+export async function revokeYouTubeToken(token: string) {
+  if (!token.trim()) return false;
+  try {
+    const response = await fetch("https://oauth2.googleapis.com/revoke", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ token }),
+      signal: AbortSignal.timeout(15000),
+    });
+    return response.ok;
   } catch {
     return false;
   }
@@ -244,6 +297,42 @@ function pageFromGraph(value: unknown): FacebookPageSecret[] {
       instagramAccountName: instagramRecord ? label(instagramRecord.username) : null,
     },
   ];
+}
+
+async function googleToken(params: Record<string, string>) {
+  const response = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams(params),
+    signal: AbortSignal.timeout(15000),
+  });
+  const body = await response.json().catch(() => null);
+  if (oauthTokenExpired(body)) throw new SocialError("expired");
+  if (!response.ok || !body || typeof body !== "object") throw new SocialError("unavailable");
+  const record = body as Record<string, unknown>;
+  const accessToken = typeof record.access_token === "string" ? record.access_token : "";
+  if (!accessToken) throw new SocialError("unavailable");
+  const expiresIn = typeof record.expires_in === "number" ? record.expires_in : 0;
+  return {
+    accessToken,
+    refreshToken: typeof record.refresh_token === "string" ? record.refresh_token : "",
+    expiresAt: expiresIn > 0 ? new Date(Date.now() + expiresIn * 1000).toISOString() : null,
+  };
+}
+
+async function youtubeChannel(token: string) {
+  const url = new URL("https://www.googleapis.com/youtube/v3/channels");
+  url.searchParams.set("part", "snippet");
+  url.searchParams.set("mine", "true");
+  const body = await readJson(url, token);
+  const items = Array.isArray(body.items) ? body.items : [];
+  const first = items[0];
+  if (!first || typeof first !== "object") return null;
+  const record = first as Record<string, unknown>;
+  const accountId = asAccountId(record.id);
+  if (!accountId) return null;
+  const snippet = record.snippet && typeof record.snippet === "object" ? (record.snippet as Record<string, unknown>) : null;
+  return { accountId, accountName: label(snippet?.title) ?? accountId };
 }
 
 async function tiktokToken(params: Record<string, string>) {

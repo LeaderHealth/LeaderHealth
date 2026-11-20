@@ -48,7 +48,7 @@ const postErrors: Record<string, string> = {
   offer: "That marketing offer is already attached to a post.",
   terms: "Accept the rate and payment terms before sending the post.",
   campaign: "Choose a campaign assigned to you, or leave it blank.",
-  date: "Enter the proposed publishing date as YYYY-MM-DD, or leave it blank.",
+  date: "Choose a proposed publishing date in the month these posts count toward.",
   agreement: "A signed agreement has to be on your account before you can send a post.",
   month: "Choose a full month of this agreement that still has room for these posts.",
 };

@@ -177,6 +177,8 @@ export function PostReviewQueue({ posts, initialId, notice, view }: { posts: Rev
   const activeNote = selected && notedFor === selected.id ? note : selected?.suggestedNote ?? "";
   const nextId = selected ? visible.find((post) => post.id !== selected.id && visible.indexOf(post) > visible.indexOf(selected))?.id ?? visible.find((post) => post.id !== selected.id)?.id ?? "" : "";
   const noteReady = activeNote.trim().length > 0;
+  const livePanel = view === "published" && !!selected && (!!selected.postUrl || selected.queue === "live" || selected.queue === "link");
+  const matchHeights = livePanel && selected.slides.length === 1 && selected.revisions.length === 0;
 
   function choose(id: string) {
     setSelectedId(id);
@@ -294,38 +296,57 @@ export function PostReviewQueue({ posts, initialId, notice, view }: { posts: Rev
               </div>
               <a href={selected.pastHref} className="text-sm underline underline-offset-4">Affiliate’s past posts</a>
             </header>
-            <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
+            <div className={`grid gap-4 xl:grid-cols-[minmax(0,1fr)_18rem] ${matchHeights ? "xl:items-stretch" : "items-start"}`}>
               <div className="flex min-w-0 flex-col gap-3">
                 <p className="text-[11px] font-semibold tracking-wide text-brown">SLIDES AND CAPTIONS · IN POSTING ORDER</p>
-                <div className="flex min-w-0 flex-col gap-3">
+                <div className={`flex min-w-0 flex-col gap-3 ${matchHeights ? "xl:flex-1 xl:*:flex-1" : ""}`}>
                 {selected.slides.map((slide) => (
                   <SlideCard key={`${selected.id}-${slide.index}`} slide={slide} canDecide={selected.canDecide} onAdd={addReply} />
                 ))}
                 </div>
               </div>
               <div className="flex flex-col gap-3">
-                <div className="rounded-2xl bg-background p-4">
-                  <h4 className="text-sm font-semibold">Automatic checks</h4>
-                  <ul className="mt-3 flex flex-col gap-2">
-                    {selected.checks.map((check) => (
-                      <li key={check.label} className={`text-sm ${check.tone === "warn" ? "text-[#7A4E00]" : "text-[#1D6340]"}`}>
-                        {check.tone === "warn" ? "!" : "✓"} {check.label}
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="mt-3 text-[13px] leading-relaxed text-brown">Checks help, but every slide and caption still needs a look.</p>
-                </div>
+                {livePanel ? <p className="text-[11px] font-semibold tracking-wide text-brown">PUBLISHED POST</p> : null}
+                {view === "published" ? null : (
+                  <div className="rounded-2xl bg-background p-4">
+                    <h4 className="text-sm font-semibold">Automatic checks</h4>
+                    <ul className="mt-3 flex flex-col gap-2">
+                      {selected.checks.map((check) => (
+                        <li key={check.label} className={`text-sm ${check.tone === "warn" ? "text-[#7A4E00]" : "text-[#1D6340]"}`}>
+                          {check.tone === "warn" ? "!" : "✓"} {check.label}
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-3 text-[13px] leading-relaxed text-brown">Checks help, but every slide and caption still needs a look.</p>
+                  </div>
+                )}
                 {selected.postUrl || selected.queue === "live" || selected.queue === "link" ? (
-                  <div className="rounded-2xl bg-background p-4 text-sm">
-                    <h4 className="font-semibold">Published post</h4>
-                    {selected.postUrl ? (
-                      <a href={selected.postUrl} target="_blank" rel="noopener noreferrer" className="mt-2 block break-all underline underline-offset-4">{selected.postUrl}</a>
-                    ) : (
-                      <p className="mt-2 text-[#7A4E00]">No live link on file.</p>
-                    )}
-                    {selected.queue === "link" ? <p className="mt-2 text-[#7A4E00]">The live link could not be confirmed.</p> : null}
-                    {selected.queue === "live" && selected.views == null ? <p className="mt-2 text-[#7A4E00]">Views are not on file yet.</p> : null}
-                    {selected.queue === "live" && selected.views != null ? <p className="mt-2 text-brown">{selected.views.toLocaleString("en-US")} views on file.</p> : null}
+                  <div className={`flex flex-col rounded-[18px] border border-[#E8DEDC] bg-white p-4 text-sm shadow-[0_12px_32px_-20px_rgba(51,19,15,0.35)] ${matchHeights ? "xl:flex-1 xl:justify-between xl:gap-4" : "gap-3"}`}>
+                    <div className="flex flex-col gap-3">
+                      {livePanel ? null : <h4 className="font-semibold">Published post</h4>}
+                      {selected.queue === "link" ? (
+                        <span className="self-start rounded-full bg-[#FBEFD6] px-2.5 py-1 text-[11px] font-medium text-[#7A4E00]">Link needs a check</span>
+                      ) : selected.queue === "live" ? (
+                        <span className="self-start rounded-full bg-[#DDF0E4] px-2.5 py-1 text-[11px] font-medium text-[#1D6340]">Live</span>
+                      ) : null}
+                      {selected.postUrl ? (
+                        <a href={selected.postUrl} target="_blank" rel="noopener noreferrer" className="block break-all text-[13px] leading-relaxed underline decoration-[#CDBDBA] underline-offset-4">{selected.postUrl}</a>
+                      ) : (
+                        <p className="text-[#7A4E00]">No live link on file.</p>
+                      )}
+                      {selected.queue === "link" ? <p className="text-[13px] leading-relaxed text-brown">The live link could not be confirmed.</p> : null}
+                      {selected.queue === "live" && selected.views == null ? <p className="text-[13px] leading-relaxed text-brown">Views are not on file yet.</p> : null}
+                      {selected.queue === "live" && selected.views != null ? <p className="text-[13px] leading-relaxed text-brown">{selected.views.toLocaleString("en-US")} views on file.</p> : null}
+                    </div>
+                    {selected.canMark ? (
+                      <form action={markPostCheckedAction} className="flex flex-col gap-3 border-t border-[#E8DEDC] pt-3">
+                        <input type="hidden" name="id" value={selected.id} />
+                        <input type="hidden" name="return" value={view === "all" ? "" : view} />
+                        <input type="hidden" name="next" value={openNext ? nextId : ""} />
+                        <p className="text-[13px] leading-relaxed text-brown">Open the link and confirm the post is live with the sponsorship line and tracking link.</p>
+                        <button type="submit" className="inline-flex h-10 w-full items-center justify-center rounded-full bg-ink px-4 text-sm font-medium text-white">Mark as checked</button>
+                      </form>
+                    ) : null}
                   </div>
                 ) : null}
                 {selected.revisions.length ? (
@@ -353,10 +374,12 @@ export function PostReviewQueue({ posts, initialId, notice, view }: { posts: Rev
                     </div>
                   </div>
                 ) : null}
-                <div className="rounded-2xl bg-background p-4 text-sm leading-relaxed text-brown">
-                  <p className="font-semibold text-ink">The whole post is one decision</p>
-                  <p className="mt-1">{selected.slides.length === 1 ? "Approving covers the slide and its caption." : `Approving covers all ${selected.slides.length} slides and their captions.`} To fix one slide, request changes and name it in the note.</p>
-                </div>
+                {selected.postUrl ? null : (
+                  <div className="rounded-2xl bg-background p-4 text-sm leading-relaxed text-brown">
+                    <p className="font-semibold text-ink">The whole post is one decision</p>
+                    <p className="mt-1">{selected.slides.length === 1 ? "Approving covers the slide and its caption." : `Approving covers all ${selected.slides.length} slides and their captions.`} To fix one slide, request changes and name it in the note.</p>
+                  </div>
+                )}
               </div>
             </div>
             {selected.canDecide ? (
@@ -386,14 +409,6 @@ export function PostReviewQueue({ posts, initialId, notice, view }: { posts: Rev
                   <button type="submit" className={quietButton}>{selected.slides.length > 1 ? `Approve all ${selected.slides.length} slides` : "Approve"}</button>
                 </form>
               </footer>
-            ) : null}
-            {selected.canMark ? (
-              <form action={markPostCheckedAction}>
-                <input type="hidden" name="id" value={selected.id} />
-                <input type="hidden" name="return" value={view === "all" ? "" : view} />
-                <input type="hidden" name="next" value={openNext ? nextId : ""} />
-                <button type="submit" className="inline-flex h-10 items-center rounded-full bg-ink px-4 text-sm font-medium text-white">Mark as checked</button>
-              </form>
             ) : null}
           </section>
         ) : (
