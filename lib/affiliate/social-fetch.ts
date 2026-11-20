@@ -3,32 +3,49 @@ import type { SocialPost } from "./social-match";
 
 const GRAPH = "https://graph.facebook.com/v21.0";
 
+const FACEBOOK_POST_FIELDS = "id,message,permalink_url,created_time,shares,comments.summary(true).limit(0),reactions.type(LIKE).limit(0).summary(true)";
+
 export async function fetchFacebookPosts(page: FacebookPageSecret) {
-  const fields = "id,message,permalink_url,created_time,shares,comments.summary(true).limit(0),reactions.type(LIKE).limit(0).summary(true)";
   const fallback = "id,message,permalink_url,created_time,shares,comments.summary(true).limit(0)";
-  const posts = await graphList(`/${page.accountId}/published_posts`, page.accessToken, fields, fallback);
-  return mapPool(posts, 4, async (item) => {
-    const id = text(item.id);
-    if (!id) return null;
-    const insights = await insightValues(id, page.accessToken, ["post_impressions", "post_impressions_unique"], ["post_media_view", "post_total_media_view_unique"]);
-    const caption = text(item.message);
-    return {
-      id,
-      network: "facebook" as const,
-      accountId: page.accountId,
-      accountName: page.accountName,
-      caption,
-      links: urlsIn(caption),
-      permalink: text(item.permalink_url),
-      createdAt: text(item.created_time),
-      impressions: insights.get("post_impressions") ?? insights.get("post_media_view") ?? 0,
-      reach: insights.get("post_impressions_unique") ?? insights.get("post_total_media_view_unique") ?? 0,
-      likes: summaryCount(item.reactions),
-      comments: summaryCount(item.comments),
-      shares: nestedCount(item.shares),
-      saves: 0,
-    } satisfies SocialPost;
+  const posts = await graphList(`/${page.accountId}/published_posts`, page.accessToken, FACEBOOK_POST_FIELDS, fallback);
+  return mapPool(posts, 4, (item) => facebookPost(page, item));
+}
+
+export async function readFacebookPost(page: FacebookPageSecret, postId: string) {
+  if (!/^[0-9_]{5,128}$/.test(postId)) return null;
+  const url = new URL(`${GRAPH}/${postId}`);
+  url.searchParams.set("fields", FACEBOOK_POST_FIELDS);
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${page.accessToken}` },
+    signal: AbortSignal.timeout(15000),
   });
+  const body: unknown = await response.json().catch(() => null);
+  if (oauthTokenExpired(body)) throw new SocialError("expired");
+  if (!response.ok || !body || typeof body !== "object") return null;
+  return facebookPost(page, body as Record<string, unknown>);
+}
+
+async function facebookPost(page: FacebookPageSecret, item: Record<string, unknown>): Promise<SocialPost | null> {
+  const id = text(item.id);
+  if (!id) return null;
+  const insights = await insightValues(id, page.accessToken, ["post_impressions", "post_impressions_unique"], ["post_media_view", "post_total_media_view_unique"]);
+  const caption = text(item.message);
+  return {
+    id,
+    network: "facebook",
+    accountId: page.accountId,
+    accountName: page.accountName,
+    caption,
+    links: urlsIn(caption),
+    permalink: text(item.permalink_url),
+    createdAt: text(item.created_time),
+    impressions: insights.get("post_impressions") ?? insights.get("post_media_view") ?? 0,
+    reach: insights.get("post_impressions_unique") ?? insights.get("post_total_media_view_unique") ?? 0,
+    likes: summaryCount(item.reactions),
+    comments: summaryCount(item.comments),
+    shares: nestedCount(item.shares),
+    saves: 0,
+  };
 }
 
 export type InstagramMediaSnapshot = {
@@ -133,28 +150,49 @@ export async function fetchInstagramPosts(page: FacebookPageSecret) {
   });
 }
 
+const TIKTOK_VIDEO_FIELDS = "id,title,video_description,share_url,create_time,like_count,comment_count,share_count,view_count";
+
 export async function fetchTikTokPosts(connection: Pick<TikTokConnectionSecret, "accountId" | "accountName" | "accessToken">) {
   const videos: Record<string, unknown>[] = [];
   let cursor: number | null = 0;
   for (let page = 0; page < 3 && cursor != null; page += 1) {
-    const url = new URL("https://open.tiktokapis.com/v2/video/list/");
-    url.searchParams.set("fields", "id,title,video_description,share_url,create_time,like_count,comment_count,share_count,view_count");
-    const response: Response = await fetch(url, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${connection.accessToken}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ max_count: 20, cursor }),
-      signal: AbortSignal.timeout(15000),
-    });
-    const body: unknown = await response.json().catch(() => null);
-    if (oauthTokenExpired(body)) throw new SocialError("expired");
-    if (!response.ok || !body || typeof body !== "object") throw new SocialError("unavailable");
-    const data: Record<string, unknown> = "data" in body && body.data && typeof body.data === "object" ? (body.data as Record<string, unknown>) : {};
+    const data = await tiktokVideoRequest(connection.accessToken, "https://open.tiktokapis.com/v2/video/list/", { max_count: 20, cursor });
     const batch = Array.isArray(data.videos) ? data.videos : [];
     for (const video of batch) {
       if (video && typeof video === "object") videos.push(video as Record<string, unknown>);
     }
     cursor = data.has_more === true && typeof data.cursor === "number" ? data.cursor : null;
   }
+  return tiktokPosts(videos, connection);
+}
+
+export async function queryTikTokVideos(connection: Pick<TikTokConnectionSecret, "accountId" | "accountName" | "accessToken">, videoIds: readonly string[]) {
+  const ids = [...new Set(videoIds.filter((id) => /^[0-9]{8,30}$/.test(id)))].slice(0, 20);
+  if (ids.length === 0) return [];
+  const data = await tiktokVideoRequest(connection.accessToken, "https://open.tiktokapis.com/v2/video/query/", { filters: { video_ids: ids } });
+  const videos = Array.isArray(data.videos) ? data.videos : [];
+  return tiktokPosts(
+    videos.filter((video): video is Record<string, unknown> => Boolean(video) && typeof video === "object"),
+    connection,
+  );
+}
+
+async function tiktokVideoRequest(accessToken: string, endpoint: string, body: unknown) {
+  const url = new URL(endpoint);
+  url.searchParams.set("fields", TIKTOK_VIDEO_FIELDS);
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(15000),
+  });
+  const payload: unknown = await response.json().catch(() => null);
+  if (oauthTokenExpired(payload)) throw new SocialError("expired");
+  if (!response.ok || !payload || typeof payload !== "object") throw new SocialError("unavailable");
+  return "data" in payload && payload.data && typeof payload.data === "object" ? (payload.data as Record<string, unknown>) : {};
+}
+
+function tiktokPosts(videos: Record<string, unknown>[], connection: Pick<TikTokConnectionSecret, "accountId" | "accountName">) {
   return videos.flatMap((video) => {
     const id = text(video.id);
     if (!id) return [];

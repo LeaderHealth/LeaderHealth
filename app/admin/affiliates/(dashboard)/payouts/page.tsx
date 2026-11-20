@@ -11,7 +11,7 @@ import {
 import { deliverableStatusLabel } from "@/lib/affiliate/deliverable-flow";
 import { formatCents } from "@/lib/affiliate/format";
 import { loadMarketingEvents, loadWebsitePayouts } from "@/lib/affiliate/marketing-events";
-import { eventPeriod, socialMonthCents, websiteMonthAmount } from "@/lib/affiliate/payment-rates";
+import { eventPeriod, marketingPayoutParts, socialMonthCents, websiteMonthAmount } from "@/lib/affiliate/payment-rates";
 import { loadPaymentRates } from "@/lib/affiliate/payment-store";
 import { loadContentSubmissions } from "@/lib/affiliate/post-review";
 import {
@@ -24,6 +24,7 @@ import {
   payoutMonths,
   type PayoutLine,
 } from "@/lib/affiliate/payouts";
+import { memo } from "@/lib/affiliate/memo";
 import { AffiliateStoreError, loadAffiliateOverview } from "@/lib/affiliate/store";
 import { adminHasFullAccess, adminSessionActor } from "@/lib/affiliate/session";
 import { approveDeliverablePaymentAction, adjustDeliverableAction, approvePayoutAction, forfeitDeliverableAction, markDeliverablePaidAction, markPayoutPaidAction, recheckDeliverableAction, reinstateDeliverableAction } from "../../actions";
@@ -255,9 +256,11 @@ export default async function AffiliatePayoutsPage({
   let marketingError = "";
   const month = normalizePayoutPeriod(query.month) ?? currentPayoutPeriod();
   try {
-    const overview = await loadAffiliateOverview();
+    const [overview, payouts] = await Promise.all([
+      memo("admin-overview", () => loadAffiliateOverview()),
+      memo("payout-records:all", () => loadPayoutRecords()),
+    ]);
     affiliates = overview.affiliates.map((affiliate) => ({ code: affiliate.code, name: affiliate.name }));
-    const payouts = await loadPayoutRecords();
     months = [...new Set([month, ...payoutMonths(overview.conversions, payouts)])].sort((left, right) => right.localeCompare(left));
     allLines = payoutLines({
       affiliates: overview.affiliates,
@@ -267,13 +270,13 @@ export default async function AffiliatePayoutsPage({
     lines = allLines.filter((line) => line.period === month);
     try {
       const [loadedPosts, loadedPayments, loadedEvents, loadedWebsite, loadedRates, loadedAgreements, loadedAgreementPayouts] = await Promise.all([
-        loadContentSubmissions(),
-        loadDeliverablePayments(),
-        loadMarketingEvents({ period: month }),
-        loadWebsitePayouts(month),
-        loadPaymentRates(),
-        loadAffiliateAgreements(),
-        loadAgreementPayouts(month),
+        memo("submissions:all", () => loadContentSubmissions()),
+        memo("payments:all", () => loadDeliverablePayments()),
+        memo(`marketing-events:${month}`, () => loadMarketingEvents({ period: month })),
+        memo(`website-payouts-period:${month}`, () => loadWebsitePayouts(month)),
+        memo("payment-rates", () => loadPaymentRates()),
+        memo("agreements:all", () => loadAffiliateAgreements()),
+        memo(`agreement-payouts-period:${month}`, () => loadAgreementPayouts(month)),
       ]);
       agreements = loadedAgreements;
       agreementPayouts = loadedAgreementPayouts;
@@ -314,13 +317,20 @@ export default async function AffiliatePayoutsPage({
       period: month,
       snapshot: agreementPayouts.find((row) => row.code === affiliate.code) ?? null,
     });
-    const totalCents = social.socialCents + monthly.earnedCents + website.amountCents + labCents + social.adjustmentCents;
     const monthPosts = marketing.filter((line) => {
       if (line.code !== affiliate.code) return false;
       const payment = payments.find((item) => item.postId === line.postId);
       const post = posts.find((item) => item.id === line.postId);
       return eventPeriod(line.paidAt ?? payment?.approvedAt ?? payment?.paidAt ?? post?.publishedAt ?? "") === month;
     });
+    const marketingPay = marketingPayoutParts({
+      socialCents: social.socialCents,
+      adjustmentCents: social.adjustmentCents,
+      baseCents: monthly.earnedCents,
+      socialNote: monthPosts.length === 1 ? monthPosts[0].label : monthPosts.length > 1 ? `${monthPosts.length} posts this month` : "Views and engagements this month",
+      baseNote: monthly.status === "none" ? "No monthly posting rate this month" : `Posting rate ${formatCents(monthly.rateCents)} · ${monthly.verifiedPosts} of ${monthly.requiredPosts} posts live`,
+    });
+    const totalCents = marketingPay.socialAndBaseCents + website.amountCents + labCents;
     if (totalCents === 0 && counts === 0 && monthPosts.length === 0 && monthly.status === "none") return [];
     const buckets: PayoutTableStatus[] = [];
     if (labPayable?.status === "pending") buckets.push("needs");
@@ -362,10 +372,7 @@ export default async function AffiliatePayoutsPage({
     const paidRef = paidLine && "reference" in paidLine ? paidLine.reference : "";
     const detail = status === "paid" ? [paidWhen === "—" ? "" : paidWhen, paidRef].filter(Boolean).join(" · ") : status === "waiting" ? waitingNote : "";
     const parts = [
-      social.socialCents ? { kind: "Social", what: monthPosts.length === 1 ? monthPosts[0].label : monthPosts.length > 1 ? `${monthPosts.length} posts this month` : "Social posts this month", amountCents: social.socialCents } : null,
-      monthly.status !== "none"
-        ? { kind: "Monthly", what: `Posting rate ${formatCents(monthly.rateCents)} · ${monthly.verifiedPosts} of ${monthly.requiredPosts} posts live`, amountCents: monthly.earnedCents }
-        : null,
+      ...marketingPay.parts,
       website.amountCents || counts ? { kind: "Website traffic", what: websiteLabel || "This month", amountCents: website.amountCents } : null,
       labCents ? { kind: "Lab", what: "Lab orders this month", amountCents: labCents } : null,
     ].filter((part) => part != null);
@@ -444,7 +451,7 @@ export default async function AffiliatePayoutsPage({
       {
         key: affiliate.code,
         name: affiliate.name,
-        socialCents: social.socialCents + monthly.earnedCents,
+        socialCents: marketingPay.socialAndBaseCents,
         websiteCents: website.amountCents,
         labCents,
         totalCents,
@@ -517,7 +524,7 @@ export default async function AffiliatePayoutsPage({
         <div className="min-w-[16rem] flex-1">
           <h2 className="text-[30px] font-normal">Payouts</h2>
           <p className="mt-1.5 max-w-xl text-[15px] text-[#4a3a37]">
-            {canPay ? "Approve each affiliate's total, send the money, then record it here." : "Approving and recording a payment is limited to main admins and admins."}
+            {canPay ? "Each total adds social performance and base pay, then website traffic and lab commission. Approve it, send the money, then record it here." : "Approving and recording a payment is limited to main admins and admins."}
             {LAB_COMMISSIONS_ENABLED ? "" : " Lab commission is not active."}
           </p>
         </div>

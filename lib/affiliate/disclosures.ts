@@ -2,7 +2,7 @@ import { getStorage } from "firebase-admin/storage";
 import type { DocumentData, Timestamp } from "firebase-admin/firestore";
 import { normalizeAffiliateCode } from "./code";
 import { affiliateFirebaseConfigured, affiliateFirestore } from "./firebase";
-import { disclosurePostUrl } from "./compliance-rules";
+import { disclosurePostUrl, youtubeVideoId } from "./compliance-rules";
 
 const SCREENSHOT_BYTES = 5 * 1024 * 1024;
 const SCREENSHOT_TYPES = {
@@ -25,6 +25,7 @@ export type DisclosureProof = {
   id: string;
   code: string;
   postUrl: string | null;
+  youtubeVideoId: string | null;
   screenshotPath: string | null;
   contentType: string | null;
   status: "submitted" | "accepted";
@@ -78,11 +79,13 @@ function proofFrom(id: string, data: DocumentData | undefined): DisclosureProof 
   const code = normalizeAffiliateCode(data.code);
   if (!code) return null;
   const postUrl = typeof data.postUrl === "string" && data.postUrl ? data.postUrl : null;
+  const storedVideoId = typeof data.youtubeVideoId === "string" ? youtubeVideoId(`https://youtu.be/${data.youtubeVideoId}`) : null;
   const screenshotPath = typeof data.screenshotPath === "string" && data.screenshotPath ? data.screenshotPath : null;
   return {
     id,
     code,
     postUrl,
+    youtubeVideoId: storedVideoId ?? youtubeVideoId(postUrl),
     screenshotPath,
     contentType: typeof data.contentType === "string" ? data.contentType : null,
     status: data.status === "accepted" ? "accepted" : "submitted",
@@ -142,6 +145,7 @@ export async function submitDisclosureProof(input: { code: string; postUrl: unkn
   await ref.set({
     code,
     postUrl,
+    youtubeVideoId: youtubeVideoId(postUrl),
     screenshotPath: screenshot?.path ?? null,
     contentType: screenshot?.contentType ?? null,
     status: "submitted",

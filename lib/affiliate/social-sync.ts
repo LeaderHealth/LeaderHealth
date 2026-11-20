@@ -2,14 +2,16 @@ import { normalizeAffiliateCode } from "./code";
 import { loadDisclosureProofs } from "./disclosures";
 import { currentReportMonth, reportMonth } from "./marketing";
 import { MarketingReportError, saveMarketingReport } from "./marketing-store";
-import { campaignReports, type SocialPost } from "./social-match";
-import { fetchFacebookPosts, fetchInstagramPosts, fetchTikTokPosts } from "./social-fetch";
+import { loadMatchedFacebookPosts, saveMatchedFacebookPosts } from "./matched-posts";
+import { campaignReports, rememberedFacebookPosts, type SocialPost } from "./social-match";
+import { fetchFacebookPosts, fetchInstagramPosts, fetchTikTokPosts, readFacebookPost } from "./social-fetch";
 import { refreshTikTokToken } from "./social-oauth";
 import {
   SocialError,
   loadConnectionSecrets,
   markSocialReconnect,
   saveTikTokConnection,
+  type FacebookPageSecret,
   type TikTokConnectionSecret,
 } from "./social-store";
 
@@ -32,13 +34,10 @@ export async function syncAffiliateSocialReports(code: string) {
   for (const connection of connections) {
     if (connection.network === "facebook") {
       for (const page of connection.pages) {
-        await syncAccount({
+        await syncFacebookPage({
           code: normalized,
           proofUrls,
-          network: "facebook",
-          accountId: page.accountId,
-          accountName: page.accountName,
-          load: () => fetchFacebookPosts(page),
+          page,
           accounts,
           failed,
         });
@@ -72,6 +71,55 @@ export async function syncAffiliateSocialReports(code: string) {
   }
   if (accounts.length === 0) throw new SocialError("unavailable");
   return { code: normalized, accounts, failed };
+}
+
+async function syncFacebookPage(input: {
+  code: string;
+  proofUrls: string[];
+  page: FacebookPageSecret;
+  accounts: SocialSyncAccount[];
+  failed: SocialSyncAccount[];
+}) {
+  const page = input.page;
+  try {
+    const saved = await loadMatchedFacebookPosts(input.code, page.accountId);
+    const feed = await fetchFacebookPosts(page);
+    const refreshed: SocialPost[] = [];
+    for (const post of saved) {
+      const next = await readFacebookPost(page, post.id);
+      if (next) refreshed.push(next);
+    }
+    const posts = rememberedFacebookPosts({
+      saved,
+      refreshed,
+      feed,
+      code: input.code,
+      proofUrls: input.proofUrls,
+    });
+    await saveMatchedFacebookPosts(input.code, posts);
+    const rows = campaignReports({
+      code: input.code,
+      posts,
+      proofUrls: input.proofUrls,
+      accounts: [{ network: "facebook", accountId: page.accountId, accountName: page.accountName }],
+      monthsByAccount: new Map([[`facebook:${page.accountId}`, monthsIn(posts)]]),
+      alreadyMatched: true,
+    });
+    if (rows.length === 0) throw new SocialError("invalid");
+    for (const row of rows) await saveMarketingReport(row);
+    await markSocialReconnect(input.code, "facebook", false);
+    input.accounts.push({
+      network: "facebook",
+      accountId: page.accountId,
+      accountName: page.accountName,
+      months: rows.map((row) => row.month),
+    });
+  } catch (error) {
+    if (error instanceof MarketingReportError && error.code === "missing") throw new SocialError("invalid");
+    if (error instanceof SocialError && error.code === "expired") await markSocialReconnect(input.code, "facebook", true);
+    console.error("[affiliate] social sync failed", "facebook", error instanceof SocialError ? error.code : "unavailable");
+    input.failed.push({ network: "facebook", accountId: page.accountId, accountName: page.accountName, months: [] });
+  }
 }
 
 async function syncAccount(input: {

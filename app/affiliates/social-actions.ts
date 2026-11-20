@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { clearAffiliateMemo } from "@/lib/affiliate/memo";
 import { redirect } from "next/navigation";
 import { currentAffiliate } from "@/app/affiliates/current";
 import { revokeMetaPermissions, revokeTikTokToken } from "@/lib/affiliate/social-oauth";
@@ -30,6 +31,7 @@ export async function disconnectSocialAction(formData: FormData) {
     console.error("[affiliate] social disconnect failed", error instanceof Error ? error.name : "unknown");
     redirect("/affiliates/stats?error=social");
   }
+  clearAffiliateMemo();
   revalidatePath("/affiliates/stats");
   revalidatePath("/admin/affiliates/reporting");
   redirect(`/affiliates/stats?notice=${notice}`);

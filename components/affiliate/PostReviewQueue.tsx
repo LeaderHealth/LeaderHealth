@@ -2,6 +2,8 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import { approvePostAction, markPostCheckedAction, rejectPostAction, requestPostChangeAction } from "@/app/admin/affiliates/post-actions";
+import { FilterDatePicker } from "@/components/affiliate/FilterDatePicker";
+import { FilterDropdown } from "@/components/affiliate/FilterDropdown";
 import { MediaExpand, MediaPreview } from "@/components/affiliate/MediaExpand";
 
 export type ReviewSlide = {
@@ -137,7 +139,7 @@ function captionPieces(caption: string): CaptionPiece[] {
   return pieces.filter((piece) => piece.kind === "link" || piece.value.trim());
 }
 
-const selectClass = "h-11 rounded-full border border-[#CDBDBA] bg-white px-4 text-sm";
+const filterFocus = "focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-[#E39A93]";
 
 export function PostReviewQueue({ posts, initialId, notice, view }: { posts: ReviewPost[]; initialId: string; notice: string; view: "all" | "pending" | "published" }) {
   const [affiliate, setAffiliate] = useState("");
@@ -198,23 +200,40 @@ export function PostReviewQueue({ posts, initialId, notice, view }: { posts: Rev
       <div className="flex flex-col gap-3">
         <h2 className="text-[28px] font-medium tracking-tight">{VIEW_TITLE[view]}</h2>
         <div className="flex flex-wrap gap-2">
-          <select aria-label="Affiliate" value={affiliate} onChange={(event) => { setAffiliate(event.target.value); setSelectedId(""); }} className={selectClass}>
-            <option value="">All affiliates</option>
-            {affiliates.map(([code, name]) => <option key={code} value={code}>{name}</option>)}
-          </select>
-          <select aria-label="Platform" value={platform} onChange={(event) => { setPlatform(event.target.value); setSelectedId(""); }} className={selectClass}>
-            <option value="">All platforms</option>
-            {platforms.map((item) => <option key={item} value={item}>{item}</option>)}
-          </select>
-          <select aria-label="Campaign" value={campaign} onChange={(event) => { setCampaign(event.target.value); setSelectedId(""); }} className={selectClass}>
-            <option value="">All campaigns</option>
-            {campaigns.map((item) => <option key={item} value={item}>{item}</option>)}
-          </select>
-          <select aria-label="Status" value={status} onChange={(event) => { setStatus(event.target.value); setSelectedId(""); }} className={selectClass}>
-            <option value="">All statuses</option>
-            {statuses.map((item) => <option key={item} value={item}>{STATUS_LABEL[item]}</option>)}
-          </select>
-          <input aria-label="Submitted date" type="date" value={day} onChange={(event) => { setDay(event.target.value); setSelectedId(""); }} className={selectClass} />
+          <FilterDropdown
+            label="Affiliate"
+            value={affiliate}
+            onChange={(value) => { setAffiliate(value); setSelectedId(""); }}
+            options={[{ value: "", label: "All affiliates" }, ...affiliates.map(([code, name]) => ({ value: code, label: name }))]}
+          />
+          <FilterDropdown
+            label="Platform"
+            value={platform}
+            onChange={(value) => { setPlatform(value); setSelectedId(""); }}
+            options={[{ value: "", label: "All platforms" }, ...platforms.map((item) => ({ value: item, label: item }))]}
+          />
+          <FilterDropdown
+            label="Campaign"
+            value={campaign}
+            onChange={(value) => { setCampaign(value); setSelectedId(""); }}
+            options={[{ value: "", label: "All campaigns" }, ...campaigns.map((item) => ({ value: item, label: item }))]}
+          />
+          <FilterDropdown
+            label="Status"
+            value={status}
+            onChange={(value) => { setStatus(value); setSelectedId(""); }}
+            options={[{ value: "", label: "All statuses" }, ...statuses.map((item) => ({ value: item, label: STATUS_LABEL[item] }))]}
+          />
+          <FilterDatePicker label="Submitted date" placeholder="Any date" value={day} onChange={(value) => { setDay(value); setSelectedId(""); }} />
+          {affiliate || platform || campaign || status || day ? (
+            <button
+              type="button"
+              onClick={() => { setAffiliate(""); setPlatform(""); setCampaign(""); setStatus(""); setDay(""); setSelectedId(""); }}
+              className={`h-11 rounded-full px-3 text-sm font-medium text-ink underline underline-offset-4 ${filterFocus}`}
+            >
+              Clear filters
+            </button>
+          ) : null}
         </div>
       </div>
       {notice ? <p role="status" className="rounded-2xl bg-white px-4 py-3 text-sm text-ink">{notice}</p> : null}

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { clearAffiliateMemo } from "@/lib/affiliate/memo";
 import { redirect } from "next/navigation";
 import { approveWebsitePayout, excludeTrafficSpike, keepTrafficSpike, loadMarketingEvents, markWebsitePayoutPaid } from "@/lib/affiliate/marketing-events";
 import { approveAgreementPayout, markAgreementPayoutPaid } from "@/lib/affiliate/agreement-payouts";
@@ -40,7 +41,9 @@ export async function savePaymentRatesAction(formData: FormData) {
     console.error("[affiliate] payment rates save failed", error instanceof Error ? error.message : "unknown");
     redirect(`${SETTINGS}?error=unavailable`);
   }
+  clearAffiliateMemo();
   revalidatePath(SETTINGS);
+  clearAffiliateMemo();
   revalidatePath("/admin/affiliates/records");
   redirect(`${SETTINGS}?notice=saved`);
 }
@@ -68,7 +71,9 @@ export async function approveWebsitePayoutAction(formData: FormData) {
       amountCents,
     });
   }
+  clearAffiliateMemo();
   revalidatePath("/admin/affiliates/payouts");
+  clearAffiliateMemo();
   revalidatePath("/affiliates/payouts");
   payoutRedirect(period, "notice", "website-approved");
 }
@@ -99,7 +104,9 @@ export async function markWebsitePayoutPaidAction(formData: FormData) {
     amountCents: paidCents,
     reference,
   });
+  clearAffiliateMemo();
   revalidatePath("/admin/affiliates/payouts");
+  clearAffiliateMemo();
   revalidatePath("/affiliates/payouts");
   payoutRedirect(period, "notice", "website-paid");
 }
@@ -122,7 +129,9 @@ export async function approveAgreementPayoutAction(formData: FormData) {
       amountCents,
     });
   }
+  clearAffiliateMemo();
   revalidatePath("/admin/affiliates/payouts");
+  clearAffiliateMemo();
   revalidatePath("/affiliates/payouts");
   payoutRedirect(period, "notice", "agreement-approved");
 }
@@ -153,7 +162,9 @@ export async function markAgreementPayoutPaidAction(formData: FormData) {
     amountCents: paidCents,
     reference,
   });
+  clearAffiliateMemo();
   revalidatePath("/admin/affiliates/payouts");
+  clearAffiliateMemo();
   revalidatePath("/affiliates/payouts");
   payoutRedirect(period, "notice", "agreement-paid");
 }
@@ -190,8 +201,10 @@ export async function excludeTrafficAction(formData: FormData) {
     const spike = await spikeHour(code, period);
     if (!spike) trafficFail(period);
     const count = await excludeTrafficSpike(code, period, spike.hour);
-    revalidatePath(TRAFFIC);
-    revalidatePath("/admin/affiliates/payouts");
+    clearAffiliateMemo();
+  revalidatePath(TRAFFIC);
+    clearAffiliateMemo();
+  revalidatePath("/admin/affiliates/payouts");
     trafficRedirect(period, "excluded", { count: String(count) });
   } catch (error) {
     console.error("[affiliate] traffic exclude failed", error instanceof Error ? error.message : "unknown");
@@ -212,6 +225,7 @@ export async function keepTrafficAction(formData: FormData) {
     console.error("[affiliate] traffic keep failed", error instanceof Error ? error.message : "unknown");
     trafficFail(period);
   }
+  clearAffiliateMemo();
   revalidatePath(TRAFFIC);
   trafficRedirect(period, "kept");
 }

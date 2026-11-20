@@ -4,6 +4,7 @@ import { formatPublishDate, formatWhen, publishDateValue } from "@/lib/affiliate
 import { DISCLOSURE_LINE, loadContentSubmissions, treatmentClaims, type ContentSubmission } from "@/lib/affiliate/post-review";
 import { postSourceLabel } from "@/lib/affiliate/offer-post";
 import { textHasTrackingCode } from "@/lib/affiliate/social-match";
+import { memo } from "@/lib/affiliate/memo";
 import { loadAffiliateOverview, type AffiliateSummary } from "@/lib/affiliate/store";
 import { ADMIN_ERRORS } from "../../messages";
 
@@ -212,7 +213,10 @@ export async function AdminSubmissions({
   let affiliates: AffiliateSummary[] = [];
   let unavailable = false;
   try {
-    const [loaded, overview] = await Promise.all([loadContentSubmissions(), loadAffiliateOverview()]);
+    const [loaded, overview] = await Promise.all([
+      memo("submissions:all", () => loadContentSubmissions()),
+      memo("admin-overview", () => loadAffiliateOverview()),
+    ]);
     posts = loaded;
     affiliates = overview.affiliates;
   } catch {

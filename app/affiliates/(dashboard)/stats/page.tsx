@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AffiliateStatsBoard } from "@/components/affiliate/AffiliateStatsBoard";
+import { memo } from "@/lib/affiliate/memo";
 import { loadMarketingEvents } from "@/lib/affiliate/marketing-events";
 import { loadContentSubmissions, refreshDueMetrics, type ContentSubmission } from "@/lib/affiliate/post-review";
 import { utcDay, type StatsBoardDay, type StatsBoardPost } from "@/lib/affiliate/stats-board";
@@ -96,9 +97,9 @@ export default async function AffiliateStatsPage({
   let traffic: StatsBoardDay[] = [];
   let unavailable = "";
   try {
-    await refreshDueMetrics(affiliate.code, 8);
-    posts = (await loadContentSubmissions(affiliate.code)).filter(published).map(boardPost).filter((post): post is StatsBoardPost => post !== null);
-    traffic = trafficDays(await loadMarketingEvents({ code: affiliate.code }));
+    await memo(`stats-refresh:${affiliate.code}`, () => refreshDueMetrics(affiliate.code, 8));
+    posts = (await memo(`submissions:${affiliate.code}`, () => loadContentSubmissions(affiliate.code))).filter(published).map(boardPost).filter((post): post is StatsBoardPost => post !== null);
+    traffic = trafficDays(await memo(`marketing-events:${affiliate.code}`, () => loadMarketingEvents({ code: affiliate.code })));
   } catch {
     unavailable = "Stats are unavailable right now.";
   }

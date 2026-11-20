@@ -12,10 +12,11 @@ import { deliverableLines, loadDeliverablePayments, marketingTotals } from "@/li
 import { disclosureAcknowledged } from "@/lib/affiliate/disclosures";
 import { formatCents, formatPublishDate, publishDateValue } from "@/lib/affiliate/format";
 import { affiliateTrackingLink } from "@/lib/affiliate/link";
-import { eventPeriod } from "@/lib/affiliate/payment-rates";
+import { eventPeriod, socialMonthCents } from "@/lib/affiliate/payment-rates";
 import { currentPayoutPeriod, formatPayoutMonth, loadPayoutRecords, type PayoutRecord } from "@/lib/affiliate/payouts";
 import { contentStatusLabel, loadContentSubmissions, publicationStatusLabel, type ContentSubmission } from "@/lib/affiliate/post-review";
 import { remainingSalesCents } from "@/lib/affiliate/refunds";
+import { memo } from "@/lib/affiliate/memo";
 import { loadMarketingCampaignRecords } from "@/lib/affiliate/roi-store";
 import { AffiliateStoreError, loadAffiliateActivity, loadUncommissionedPendingOrders, type ConversionSummary } from "@/lib/affiliate/store";
 import { listPromoCodes, personalPromoForAffiliate } from "@/lib/genhealth/promocodes";
@@ -157,11 +158,13 @@ function pipState(index: number, verified: number, review: number) {
   return { color: "#E8DEDC", label: "Not posted" };
 }
 
-function paymentLine(earning: AgreementMonthEarning, left: number) {
-  if (earning.status === "paid") return { text: `Paid · ${formatCents(earning.earnedCents)}`, className: "bg-[#DDF0E4] text-[#1D6340]" };
-  if (earning.status === "earned" || earning.status === "approved") {
-    return { text: `Requirements met · ${formatCents(earning.earnedCents || earning.rateCents)} approved`, className: "bg-[#DDF0E4] text-[#1D6340]" };
-  }
+function paymentLine(earning: AgreementMonthEarning, left: number, socialCents: number) {
+  const base = earning.status === "none" ? 0 : earning.earnedCents;
+  const total = base + socialCents;
+  const sum = `${formatCents(total)} · ${formatCents(base)} base + ${formatCents(socialCents)} social`;
+  if (earning.status === "paid") return { text: `Paid · ${sum}`, className: "bg-[#DDF0E4] text-[#1D6340]" };
+  if (earning.status === "earned" || earning.status === "approved") return { text: `Requirements met · ${sum}`, className: "bg-[#DDF0E4] text-[#1D6340]" };
+  if (socialCents > 0) return { text: sum, className: "bg-[#F7F3F2] text-ink" };
   if (earning.status === "short") return { text: `Not yet · ${left} more to verify`, className: "bg-[#FBF6EC] text-[#7A4E00]" };
   return { text: "No monthly rate this month", className: "bg-[#F7F3F2] text-ink" };
 }
@@ -201,21 +204,25 @@ export default async function AffiliatePortalOverviewPage({
   let ownPosts: ContentSubmission[] = [];
   let agreements: AffiliateAgreement[] = [];
   let agreementPayouts: AgreementPayoutRow[] = [];
+  let socialPerformanceCents = 0;
   let loadError = "";
   try {
-    const activity = await loadAffiliateActivity(affiliate.code);
+    const [activity, loadedPayouts, posts, payments, loadedAgreements, loadedAgreementPayouts] = await Promise.all([
+      memo(`activity:${affiliate.code}`, () => loadAffiliateActivity(affiliate.code)),
+      memo(`payout-records:${affiliate.code}`, () => loadPayoutRecords(affiliate.code)),
+      memo("submissions:all", () => loadContentSubmissions()),
+      memo(`payments:${affiliate.code}`, () => loadDeliverablePayments(affiliate.code)),
+      memo(`agreements:${affiliate.code}`, () => loadAffiliateAgreements(affiliate.code)),
+      memo(`agreement-payouts:${affiliate.code}`, () => loadAgreementPayoutsForCode(affiliate.code)),
+    ]);
     conversions = activity.conversions;
     clickTimes = activity.clickTimes;
-    payouts = await loadPayoutRecords(affiliate.code);
-    const [posts, payments, loadedAgreements, loadedPayouts] = await Promise.all([
-      loadContentSubmissions(),
-      loadDeliverablePayments(affiliate.code),
-      loadAffiliateAgreements(affiliate.code),
-      loadAgreementPayoutsForCode(affiliate.code),
-    ]);
+    payouts = loadedPayouts;
     agreements = loadedAgreements;
-    agreementPayouts = loadedPayouts;
+    agreementPayouts = loadedAgreementPayouts;
     ownPosts = posts.filter((post) => post.code === affiliate.code);
+    const socialMonth = socialMonthCents({ period: selectedPeriod, posts: ownPosts, payments });
+    socialPerformanceCents = socialMonth.socialCents + socialMonth.adjustmentCents;
     const lines = deliverableLines({
       affiliates: [{ code: affiliate.code, name: affiliate.name }],
       posts: ownPosts,
@@ -239,17 +246,15 @@ export default async function AffiliatePortalOverviewPage({
   }
 
   let unpaidOrders = 0;
-  try {
-    const pending = await loadUncommissionedPendingOrders();
-    unpaidOrders = [...pending.values()].filter((code) => code === affiliate.code).length;
-  } catch {
-    unpaidOrders = 0;
-  }
+  const pending = await memo("unpaid-orders", () => loadUncommissionedPendingOrders()).catch(() => null);
+  if (pending) unpaidOrders = [...pending.values()].filter((code) => code === affiliate.code).length;
 
   let inviteName = "";
+  const records = await memo("campaign-records", () => loadMarketingCampaignRecords()).catch(() => null);
   try {
+    if (!records) throw new Error("unavailable");
     const board = affiliateCampaignBoard({
-      records: await loadMarketingCampaignRecords(),
+      records,
       posts: ownPosts.map((post) => ({
         id: post.id,
         campaign: post.campaign,
@@ -272,12 +277,12 @@ export default async function AffiliatePortalOverviewPage({
   let promosUnavailable = false;
   let acknowledged = false;
   try {
-    personalCode = personalPromoForAffiliate(await listPromoCodes(), affiliate.code)?.code ?? null;
+    personalCode = personalPromoForAffiliate(await memo("promo-codes", () => listPromoCodes()), affiliate.code)?.code ?? null;
   } catch {
     promosUnavailable = true;
   }
   try {
-    acknowledged = await disclosureAcknowledged(affiliate.code);
+    acknowledged = await memo(`disclosure-ack:${affiliate.code}`, () => disclosureAcknowledged(affiliate.code));
   } catch {
     acknowledged = false;
   }
@@ -330,7 +335,7 @@ export default async function AffiliatePortalOverviewPage({
   const negotiating = Boolean(waiting && waiting.questions.length > 0);
   const payState = waiting
     ? { text: "Not active until you accept", className: "bg-[#FBF6EC] text-[#7A4E00]" }
-    : paymentLine(earning, left);
+    : paymentLine(earning, left, socialPerformanceCents);
   const agreementTitle = shownAgreement?.title?.trim() || (agreement ? `${formatPayoutMonth(selectedPeriod)} content partnership` : waiting ? "Agreement to review" : "No active agreement");
   const agreementStart = shownAgreement?.effectiveOn ?? "";
   const agreementFinish = shownAgreement?.expiresOn ?? "";

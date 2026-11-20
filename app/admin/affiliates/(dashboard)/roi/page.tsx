@@ -2,8 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { saveMarketingCostAction } from "@/app/admin/affiliates/actions";
 import { ADMIN_ERRORS } from "@/app/admin/affiliates/messages";
+import { FilterDatePicker } from "@/components/affiliate/FilterDatePicker";
+import { FilterDropdown } from "@/components/affiliate/FilterDropdown";
 import { formatCents } from "@/lib/affiliate/format";
 import { roiRange, type RoiRange, type RoiReport } from "@/lib/affiliate/roi";
+import { memo } from "@/lib/affiliate/memo";
 import { loadMarketingCampaigns, loadRoiReport, RoiStoreError } from "@/lib/affiliate/roi-store";
 
 export const metadata: Metadata = {
@@ -49,7 +52,10 @@ export default async function AffiliateRoiPage({
   let campaigns: string[] = [];
   let loadError = "";
   try {
-    [report, campaigns] = await Promise.all([loadRoiReport(range), loadMarketingCampaigns()]);
+    [report, campaigns] = await Promise.all([
+      memo(`roi:${range}`, () => loadRoiReport(range)),
+      memo("marketing-campaigns", () => loadMarketingCampaigns()),
+    ]);
   } catch (caught) {
     loadError = caught instanceof RoiStoreError ? caught.message : "Could not load campaign ROI.";
   }
@@ -113,16 +119,15 @@ export default async function AffiliateRoiPage({
                 <span className="ml-1">first.</span>
               </span>
             ) : (
-              <select name="campaign" required defaultValue="" className={`${fieldClass} mt-2`}>
-                <option value="" disabled>
-                  Choose a campaign
-                </option>
-                {campaigns.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-              </select>
+              <FilterDropdown
+                variant="field"
+                className="mt-2"
+                label="Campaign"
+                name="campaign"
+                required
+                placeholder="Choose a campaign"
+                options={campaigns.map((name) => ({ value: name, label: name }))}
+              />
             )}
           </label>
           <label className="block text-sm text-brown">
@@ -131,7 +136,9 @@ export default async function AffiliateRoiPage({
           </label>
           <label className="block text-sm text-brown">
             Date spent
-            <input name="spentOn" type="date" required defaultValue={spentOn} className={`${fieldClass} mt-2`} />
+            <span className="mt-2 flex">
+              <FilterDatePicker variant="field" label="Date spent" placeholder="Choose a date" name="spentOn" required defaultValue={spentOn} />
+            </span>
           </label>
           <div className="flex items-end">
             <button type="submit" className={`${buttonClass} disabled:cursor-not-allowed disabled:opacity-50`} disabled={campaigns.length === 0}>

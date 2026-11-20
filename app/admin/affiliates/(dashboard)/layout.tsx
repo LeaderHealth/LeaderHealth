@@ -7,6 +7,7 @@ import { PortalBrand } from "@/components/affiliate/PortalBrand";
 import { ProfileCard } from "@/components/affiliate/ProfileCard";
 import { adminAccountProfile } from "@/lib/affiliate/admin-profile";
 import { listOpenApplications } from "@/lib/affiliate/applications";
+import { memo } from "@/lib/affiliate/memo";
 import { affiliateFirebaseConfigured } from "@/lib/affiliate/firebase";
 import { loadContentSubmissions } from "@/lib/affiliate/post-review";
 import { adminHasFullAccess, adminSessionActor } from "@/lib/affiliate/session";
@@ -21,7 +22,6 @@ const applications = "/admin/affiliates/add-an-affiliate";
 const pendingApplications = "/admin/affiliates/applications";
 const promoCodes = "/admin/affiliates/promo-codes";
 const trackingLinks = "/admin/affiliates/tracking-links";
-const plans = "/admin/affiliates/offers";
 const submissions = "/admin/affiliates/posts";
 const pending = "/admin/affiliates/posts/pending";
 const published = "/admin/affiliates/posts/published";
@@ -41,7 +41,7 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
   if (!actor) redirect("/admin/affiliates");
   let waitingPosts = 0;
   try {
-    const posts = await loadContentSubmissions();
+    const posts = await memo("submissions:all", () => loadContentSubmissions());
     waitingPosts = posts.filter((post) => post.contentStatus === "submitted").length;
   } catch {
     waitingPosts = 0;
@@ -50,7 +50,7 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
   let openApplications = 0;
   if (fullAccess) {
     try {
-      openApplications = (await listOpenApplications()).length;
+      openApplications = (await memo("open-applications", () => listOpenApplications())).length;
     } catch {
       openApplications = 0;
     }
@@ -63,7 +63,7 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
       label: "Affiliates",
       active: [accounts, applications, pendingApplications, "/admin/affiliates/add", promoCodes, trackingLinks],
     },
-    { href: submissions, label: "Content", active: [submissions, pending, published, campaigns, campaignNew, plans], badge: reviewBadge },
+    { href: submissions, label: "Content", active: [submissions, pending, published, campaigns, campaignNew], badge: reviewBadge },
     { href: roi, label: "Stats", active: [roi, website] },
     { href: payouts, label: "Payouts", active: [payouts, orders] },
     { href: records, label: "Settings", active: [records, compliance, team, payments] },
@@ -80,7 +80,7 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
       ],
     },
     {
-      paths: [submissions, pending, published, campaigns, campaignNew, plans],
+      paths: [submissions, pending, published, campaigns, campaignNew],
       items: [
         { href: submissions, label: "All submissions" },
         { href: pending, label: "Pending approvals", badge: reviewBadge },

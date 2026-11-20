@@ -6,6 +6,7 @@ import { normalizeAffiliateCode } from "@/lib/affiliate/code";
 import { LAB_COMMISSIONS_ENABLED } from "@/lib/affiliate/code";
 import { loadDeliverablePayments, type DeliverablePayment } from "@/lib/affiliate/deliverable-payments";
 import { formatCents, formatCommissionRate } from "@/lib/affiliate/format";
+import { memo } from "@/lib/affiliate/memo";
 import { loadAllWebsitePayouts, loadMarketingEvents } from "@/lib/affiliate/marketing-events";
 import { eventPeriod, rateFor, socialMonthCents, standingViewRateCents, websiteMonthAmount, type PaymentRates } from "@/lib/affiliate/payment-rates";
 import { loadPaymentRates } from "@/lib/affiliate/payment-store";
@@ -279,51 +280,57 @@ export default async function AffiliateAccountsPage({
   const created = normalizeAffiliateCode(query.created);
   const requestedCode = normalizeAffiliateCode(query.code);
 
-  let contentRates: PaymentRates | null = null;
+  const [ratesResult, coreResult, unpaidResult, payoutResult, catalogResult] = await Promise.all([
+    memo("payment-rates", () => loadPaymentRates()).then(
+      (value) => value as PaymentRates | null,
+      () => null,
+    ),
+    Promise.all([
+      memo("admin-overview", () => loadAffiliateOverview()),
+      memo("click-counts", () => loadClickCounts()),
+    ]).then(
+      (value) => ({ ok: true as const, value }),
+      (caught: unknown) => ({ ok: false as const, caught }),
+    ),
+    memo("unpaid-orders", () => loadUncommissionedPendingOrders()).then(
+      (value) => ({ ok: true as const, value }),
+      () => ({ ok: false as const }),
+    ),
+    memo("payout-records:all", () => loadPayoutRecords()).then(
+      (value) => ({ ok: true as const, value }),
+      () => ({ ok: false as const }),
+    ),
+    memo("promo-codes", () => listPromoCodes()).then(
+      (value) => ({ ok: true as const, value }),
+      () => ({ ok: false as const }),
+    ),
+  ]);
+  const contentRates = ratesResult;
   let affiliates: AffiliateSummary[] = [];
   let conversions: ConversionSummary[] = [];
   let clickCounts = new Map<string, number>();
   let loadError = "";
+  if (coreResult.ok) {
+    affiliates = coreResult.value[0].affiliates;
+    conversions = coreResult.value[0].conversions;
+    clickCounts = coreResult.value[1];
+  } else {
+    loadError = coreResult.caught instanceof AffiliateStoreError ? coreResult.caught.message : "Could not load affiliate records.";
+  }
   const unpaidOrders = new Map<string, number>();
   let unpaidOrdersReady = false;
   let payouts: PayoutRecord[] = [];
   let payoutsReady = false;
-  try {
-    contentRates = await loadPaymentRates();
-  } catch {
-    contentRates = null;
+  if (!loadError && unpaidResult.ok) {
+    for (const code of unpaidResult.value.values()) unpaidOrders.set(code, (unpaidOrders.get(code) ?? 0) + 1);
+    unpaidOrdersReady = true;
   }
-  try {
-    const overview = await loadAffiliateOverview();
-    affiliates = overview.affiliates;
-    conversions = overview.conversions;
-    clickCounts = await loadClickCounts();
-  } catch (caught) {
-    loadError = caught instanceof AffiliateStoreError ? caught.message : "Could not load affiliate records.";
+  if (!loadError && payoutResult.ok) {
+    payouts = payoutResult.value;
+    payoutsReady = true;
   }
-  if (!loadError) {
-    try {
-      const pending = await loadUncommissionedPendingOrders();
-      for (const code of pending.values()) unpaidOrders.set(code, (unpaidOrders.get(code) ?? 0) + 1);
-      unpaidOrdersReady = true;
-    } catch {
-      unpaidOrdersReady = false;
-    }
-    try {
-      payouts = await loadPayoutRecords();
-      payoutsReady = true;
-    } catch {
-      payoutsReady = false;
-    }
-  }
-
-  let catalog: PromoCodeRow[] | null = null;
-  let promoError = "";
-  try {
-    catalog = await listPromoCodes();
-  } catch {
-    promoError = "Promo codes are unavailable right now.";
-  }
+  const catalog: PromoCodeRow[] | null = catalogResult.ok ? catalogResult.value : null;
+  const promoError = catalogResult.ok ? "" : "Promo codes are unavailable right now.";
 
   function promosFor(affiliate: AffiliateSummary): AffiliatePromoDetail[] {
     if (!catalog) return [];
@@ -398,38 +405,71 @@ export default async function AffiliateAccountsPage({
   let postsUnavailable = false;
   let websiteUnavailable = false;
   if (!loadError) {
-    try {
-      const [saved, connected, website] = await Promise.all([loadMarketingReports(), loadSocialAccounts(), loadWebsiteEvents()]);
+    const [reportsResult, agreementResult, postResult, websiteResult] = await Promise.all([
+      Promise.all([
+        memo("marketing-reports", () => loadMarketingReports()),
+        memo("social-accounts", () => loadSocialAccounts()),
+        memo("website-events", () => loadWebsiteEvents()),
+      ]).then(
+        (value) => ({ ok: true as const, value }),
+        (caught: unknown) => ({ ok: false as const, caught }),
+      ),
+      Promise.all([
+        memo("agreements:all", () => loadAffiliateAgreements()),
+        memo("agreement-payouts:all", () => loadAllAgreementPayouts()),
+      ]).then(
+        (value) => ({ ok: true as const, value }),
+        (caught: unknown) => ({ ok: false as const, caught }),
+      ),
+      memo("stats-refresh:all", () => refreshDueMetrics(undefined, 8))
+        .catch((caught: unknown) => {
+          reportHandledAffiliateError("[affiliate] post metrics refresh failed", caught);
+        })
+        .then(() =>
+          Promise.all([
+            memo("submissions:all", () => loadContentSubmissions()),
+            memo("payments:all", () => loadDeliverablePayments()),
+          ]),
+        )
+        .then(
+          (value) => ({ ok: true as const, value }),
+          (caught: unknown) => ({ ok: false as const, caught }),
+        ),
+      Promise.all([
+        memo("marketing-events:all", () => loadMarketingEvents({ all: true })),
+        memo("website-payouts:all", () => loadAllWebsitePayouts()),
+      ]).then(
+        (value) => ({ ok: true as const, value }),
+        (caught: unknown) => ({ ok: false as const, caught }),
+      ),
+    ]);
+    if (reportsResult.ok) {
+      const [saved, connected, website] = reportsResult.value;
       marketingReports = saved;
       socialAccounts = connected;
       websiteVisits = website.visits;
       websiteOrders = website.orders;
-    } catch (caught) {
+    } else {
       reportsUnavailable = true;
-      reportHandledAffiliateError("[affiliate] marketing report load failed", caught);
+      reportHandledAffiliateError("[affiliate] marketing report load failed", reportsResult.caught);
     }
-    try {
-      [agreements, agreementPayouts] = await Promise.all([loadAffiliateAgreements(), loadAllAgreementPayouts()]);
-    } catch (caught) {
+    if (agreementResult.ok) {
+      [agreements, agreementPayouts] = agreementResult.value;
+    } else {
       agreementsUnavailable = true;
-      reportHandledAffiliateError("[affiliate] agreement load failed", caught);
+      reportHandledAffiliateError("[affiliate] agreement load failed", agreementResult.caught);
     }
-    try {
-      await refreshDueMetrics(undefined, 8);
-    } catch (caught) {
-      reportHandledAffiliateError("[affiliate] post metrics refresh failed", caught);
-    }
-    try {
-      [contentPosts, deliverablePayments] = await Promise.all([loadContentSubmissions(), loadDeliverablePayments()]);
-    } catch (caught) {
+    if (postResult.ok) {
+      [contentPosts, deliverablePayments] = postResult.value;
+    } else {
       postsUnavailable = true;
-      reportHandledAffiliateError("[affiliate] post load failed", caught);
+      reportHandledAffiliateError("[affiliate] post load failed", postResult.caught);
     }
-    try {
-      [marketingEvents, websiteSnapshots] = await Promise.all([loadMarketingEvents({ all: true }), loadAllWebsitePayouts()]);
-    } catch (caught) {
+    if (websiteResult.ok) {
+      [marketingEvents, websiteSnapshots] = websiteResult.value;
+    } else {
       websiteUnavailable = true;
-      reportHandledAffiliateError("[affiliate] website pay load failed", caught);
+      reportHandledAffiliateError("[affiliate] website pay load failed", websiteResult.caught);
     }
   }
   const labByCode = new Map<string, number>();
@@ -611,7 +651,7 @@ export default async function AffiliateAccountsPage({
     const postsShort = rateThisMonth.requiredPosts - rateThisMonth.verifiedPosts;
     const earnedNote =
       rateThisMonth.status === "none"
-        ? "Social, website and lab"
+        ? "Social performance + base pay, website and lab"
         : rateThisMonth.status === "short"
           ? `Monthly rate needs ${postsShort} more ${postsShort === 1 ? "post" : "posts"}`
           : "Includes the monthly rate";

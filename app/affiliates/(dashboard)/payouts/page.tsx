@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AffiliatePayoutsBoard } from "@/components/affiliate/AffiliatePayoutsBoard";
 import { loadDeliverablePayments } from "@/lib/affiliate/deliverable-payments";
+import { memo } from "@/lib/affiliate/memo";
 import { loadMarketingEvents, loadWebsitePayoutsForCode } from "@/lib/affiliate/marketing-events";
 import { eventPeriod, websiteMonthAmount } from "@/lib/affiliate/payment-rates";
 import { loadPaymentRates } from "@/lib/affiliate/payment-store";
@@ -34,16 +35,17 @@ export default async function AffiliatePayoutHistoryPage() {
   let labs: PayoutLabPeriod[] = [];
   let loadError = "";
   try {
+    const code = affiliate.code;
     const [posts, payments, events, websitePayouts, rates, conversions, payouts, agreements, agreementPayouts] = await Promise.all([
-      loadContentSubmissions(affiliate.code),
-      loadDeliverablePayments(affiliate.code),
-      loadMarketingEvents({ code: affiliate.code }),
-      loadWebsitePayoutsForCode(affiliate.code),
-      loadPaymentRates(),
-      LAB_COMMISSIONS_ENABLED ? loadAffiliateConversions(affiliate.code) : Promise.resolve([]),
-      LAB_COMMISSIONS_ENABLED ? loadPayoutRecords(affiliate.code) : Promise.resolve([]),
-      loadAffiliateAgreements(affiliate.code),
-      loadAgreementPayoutsForCode(affiliate.code),
+      memo(`submissions:${code}`, () => loadContentSubmissions(code)),
+      memo(`payments:${code}`, () => loadDeliverablePayments(code)),
+      memo(`marketing-events:${code}`, () => loadMarketingEvents({ code })),
+      memo(`website-payouts:${code}`, () => loadWebsitePayoutsForCode(code)),
+      memo("payment-rates", () => loadPaymentRates()),
+      LAB_COMMISSIONS_ENABLED ? memo(`conversions:${code}`, () => loadAffiliateConversions(code)) : Promise.resolve([]),
+      LAB_COMMISSIONS_ENABLED ? memo(`payout-records:${code}`, () => loadPayoutRecords(code)) : Promise.resolve([]),
+      memo(`agreements:${code}`, () => loadAffiliateAgreements(code)),
+      memo(`agreement-payouts:${code}`, () => loadAgreementPayoutsForCode(code)),
     ]);
     const monthlyPeriods = new Set<string>([currentPayoutPeriod(), ...agreementPayouts.map((row) => row.period)]);
     for (const post of posts) {

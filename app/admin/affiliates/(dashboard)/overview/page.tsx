@@ -3,12 +3,12 @@ import Link from "next/link";
 import { ManageAffiliate } from "@/components/affiliate/ManageAffiliate";
 import { LAB_COMMISSIONS_ENABLED } from "@/lib/affiliate/code";
 import { deliverableLines, loadDeliverablePayments, marketingTotals } from "@/lib/affiliate/deliverable-payments";
-import { formatCents, publishDateValue } from "@/lib/affiliate/format";
+import { formatCents } from "@/lib/affiliate/format";
 import { loadMarketingEvents, loadWebsitePayouts } from "@/lib/affiliate/marketing-events";
 import { socialMonthCents, websiteMonthAmount, type PaymentRates } from "@/lib/affiliate/payment-rates";
 import { loadPaymentRates } from "@/lib/affiliate/payment-store";
 import { listOpenApplications } from "@/lib/affiliate/applications";
-import { loadMarketingOffers } from "@/lib/affiliate/marketing-offers";
+import { memo } from "@/lib/affiliate/memo";
 import { loadContentSubmissions } from "@/lib/affiliate/post-review";
 import { agreementMonthEarning } from "@/lib/affiliate/agreement-earnings";
 import { loadAgreementPayouts } from "@/lib/affiliate/agreement-payouts";
@@ -116,19 +116,74 @@ export default async function AffiliateOverviewPage({
   const status = statusOf(query.status);
   const search = searchOf(query.q);
 
+  const currentPeriod = currentPayoutPeriod();
+  const priorPeriod = previousPayoutPeriod(currentPeriod) ?? currentPeriod;
+  const [core, postsBundle, catalog, reportsBundle, applications, websiteBundle, agreementBundle] = await Promise.all([
+    Promise.all([
+      memo("admin-overview", () => loadAffiliateOverview()),
+      memo("click-times", () => loadClickTimes()),
+      memo("payout-records:all", () => loadPayoutRecords()),
+    ]).then(
+      (value) => ({ ok: true as const, value }),
+      (caught: unknown) => ({ ok: false as const, caught }),
+    ),
+    Promise.all([
+      memo("submissions:all", () => loadContentSubmissions()),
+      memo("payments:all", () => loadDeliverablePayments()),
+    ]).then(
+      (value) => ({ ok: true as const, value }),
+      () => ({ ok: false as const }),
+    ),
+    memo("promo-codes", () => listPromoCodes()).then(
+      (value) => value,
+      () => null as PromoCodeRow[] | null,
+    ),
+    Promise.all([
+      memo("marketing-reports", () => loadMarketingReports()),
+      memo("social-accounts", () => loadSocialAccounts()),
+      memo("website-events", () => loadWebsiteEvents()),
+    ]).then(
+      (value) => ({ ok: true as const, value }),
+      () => ({ ok: false as const }),
+    ),
+    canInvite
+      ? memo("open-applications", () => listOpenApplications()).then(
+          (rows) => ({ unavailable: false, count: rows.length as number | null }),
+          () => ({ unavailable: true, count: null as number | null }),
+        )
+      : Promise.resolve({ unavailable: false, count: null as number | null }),
+    Promise.all([
+      memo("payment-rates", () => loadPaymentRates()),
+      memo(`marketing-events:${priorPeriod}`, () => loadMarketingEvents({ period: priorPeriod })),
+      priorPeriod === currentPeriod ? Promise.resolve([]) : memo(`marketing-events:${currentPeriod}`, () => loadMarketingEvents({ period: currentPeriod })),
+      memo(`website-payouts-period:${priorPeriod}`, () => loadWebsitePayouts(priorPeriod)),
+      priorPeriod === currentPeriod ? Promise.resolve([]) : memo(`website-payouts-period:${currentPeriod}`, () => loadWebsitePayouts(currentPeriod)),
+    ]).then(
+      (value) => ({ ok: true as const, value }),
+      () => ({ ok: false as const }),
+    ),
+    Promise.all([
+      memo("agreements:all", () => loadAffiliateAgreements()),
+      memo(`agreement-payouts-period:${priorPeriod}`, () => loadAgreementPayouts(priorPeriod)),
+      priorPeriod === currentPeriod ? Promise.resolve([]) : memo(`agreement-payouts-period:${currentPeriod}`, () => loadAgreementPayouts(currentPeriod)),
+    ]).then(
+      (value) => ({ ok: true as const, value }),
+      () => ({ ok: false as const }),
+    ),
+  ]);
+
   let affiliates: AffiliateSummary[] = [];
   let conversions: ConversionSummary[] = [];
   let clickTimes: string[] = [];
   let payouts: PayoutRecord[] = [];
   let loadError = "";
-  try {
-    const overview = await loadAffiliateOverview();
-    affiliates = overview.affiliates;
-    conversions = overview.conversions;
-    clickTimes = await loadClickTimes();
-    payouts = await loadPayoutRecords();
-  } catch (caught) {
-    loadError = caught instanceof AffiliateStoreError ? caught.message : "Could not load affiliate records.";
+  if (core.ok) {
+    affiliates = core.value[0].affiliates;
+    conversions = core.value[0].conversions;
+    clickTimes = core.value[1];
+    payouts = core.value[2];
+  } else {
+    loadError = core.caught instanceof AffiliateStoreError ? core.caught.message : "Could not load affiliate records.";
   }
 
   let marketing = { pendingCents: 0, heldCents: 0, approvedCents: 0, paidCents: 0 };
@@ -138,8 +193,8 @@ export default async function AffiliateOverviewPage({
   let contentPosts: Awaited<ReturnType<typeof loadContentSubmissions>> = [];
   let deliverablePayments: Awaited<ReturnType<typeof loadDeliverablePayments>> = [];
   let postsReady = false;
-  try {
-    const [posts, payments] = await Promise.all([loadContentSubmissions(), loadDeliverablePayments()]);
+  if (postsBundle.ok) {
+    const [posts, payments] = postsBundle.value;
     contentPosts = posts;
     deliverablePayments = payments;
     postsReady = true;
@@ -150,15 +205,6 @@ export default async function AffiliateOverviewPage({
     for (const affiliate of affiliates) {
       marketingByCode.set(affiliate.code, marketingTotals(lines.filter((line) => line.code === affiliate.code)));
     }
-  } catch {
-    marketing = { pendingCents: 0, heldCents: 0, approvedCents: 0, paidCents: 0 };
-  }
-
-  let catalog: PromoCodeRow[] | null = null;
-  try {
-    catalog = await listPromoCodes();
-  } catch {
-    catalog = null;
   }
 
   let marketingReports: MarketingReport[] = [];
@@ -166,35 +212,35 @@ export default async function AffiliateOverviewPage({
   let websiteVisits: WebsiteVisit[] = [];
   let websiteOrders: WebsiteOrder[] = [];
   let reportsUnavailable = false;
-  try {
-    const [saved, connected, website] = await Promise.all([loadMarketingReports(), loadSocialAccounts(), loadWebsiteEvents()]);
+  if (reportsBundle.ok) {
+    const [saved, connected, website] = reportsBundle.value;
     marketingReports = saved;
     socialAccounts = connected;
     websiteVisits = website.visits;
     websiteOrders = website.orders;
-  } catch {
+  } else {
     reportsUnavailable = true;
   }
   const reportSections = visibleReportSections(marketingReports, socialAccounts);
-
-  let applicationCount: number | null = null;
-  let applicationsUnavailable = false;
-  if (canInvite) {
-    try {
-      applicationCount = (await listOpenApplications()).length;
-    } catch {
-      applicationsUnavailable = true;
-    }
+  const applicationCount = applications.count;
+  const applicationsUnavailable = applications.unavailable;
+  let contentRates: PaymentRates | null = null;
+  let marketingEvents: Awaited<ReturnType<typeof loadMarketingEvents>> = [];
+  let websiteSnapshots: Awaited<ReturnType<typeof loadWebsitePayouts>> = [];
+  let websiteReady = false;
+  if (websiteBundle.ok) {
+    const [rates, priorEvents, currentEvents, priorPayouts, currentPayouts] = websiteBundle.value;
+    contentRates = rates;
+    marketingEvents = [...priorEvents, ...currentEvents];
+    websiteSnapshots = [...priorPayouts, ...currentPayouts];
+    websiteReady = true;
   }
-  let deadlineCount: number | null = null;
-  try {
-    const offers = await loadMarketingOffers();
-    deadlineCount = offers.filter(
-      (offer) =>
-        (offer.status === "sent" || offer.status === "countered" || offer.status === "accepted") && publishDateValue(offer.publishBy),
-    ).length;
-  } catch {
-    deadlineCount = null;
+  let agreements: Awaited<ReturnType<typeof loadAffiliateAgreements>> = [];
+  let agreementPayouts: Awaited<ReturnType<typeof loadAgreementPayouts>> = [];
+  if (agreementBundle.ok) {
+    const [loadedAgreements, priorAgreementPayouts, currentAgreementPayouts] = agreementBundle.value;
+    agreements = loadedAgreements;
+    agreementPayouts = [...priorAgreementPayouts, ...currentAgreementPayouts];
   }
   const labLines = loadError ? [] : payoutLines({ affiliates, orders: conversions, payouts });
   const payoutApprovalCount = loadError ? null : labLines.filter((line) => line.status === "pending").length;
@@ -217,12 +263,6 @@ export default async function AffiliateOverviewPage({
       label: "Posts waiting for review",
       value: reviewCount == null ? "—" : String(reviewCount),
       detail: reviewCount == null ? "Unavailable right now" : "Submitted content",
-    },
-    {
-      href: "/admin/affiliates/offers",
-      label: "Content deadlines",
-      value: deadlineCount == null ? "—" : String(deadlineCount),
-            detail: deadlineCount == null ? "Unavailable right now" : "Optional plans. They do not block a new post.",
     },
     {
       href: "/admin/affiliates/payouts",
@@ -287,41 +327,6 @@ export default async function AffiliateOverviewPage({
       return [affiliate.name, affiliate.email, affiliate.code].some((value) => value.toLowerCase().includes(needle));
     })
     .sort((left, right) => (byCode.get(right.code)?.orders ?? 0) - (byCode.get(left.code)?.orders ?? 0) || left.name.localeCompare(right.name));
-
-  const currentPeriod = currentPayoutPeriod();
-  const priorPeriod = previousPayoutPeriod(currentPeriod) ?? currentPeriod;
-  let contentRates: PaymentRates | null = null;
-  let marketingEvents: Awaited<ReturnType<typeof loadMarketingEvents>> = [];
-  let websiteSnapshots: Awaited<ReturnType<typeof loadWebsitePayouts>> = [];
-  let websiteReady = false;
-  try {
-    const [rates, priorEvents, currentEvents, priorPayouts, currentPayouts] = await Promise.all([
-      loadPaymentRates(),
-      loadMarketingEvents({ period: priorPeriod }),
-      priorPeriod === currentPeriod ? Promise.resolve([]) : loadMarketingEvents({ period: currentPeriod }),
-      loadWebsitePayouts(priorPeriod),
-      priorPeriod === currentPeriod ? Promise.resolve([]) : loadWebsitePayouts(currentPeriod),
-    ]);
-    contentRates = rates;
-    marketingEvents = [...priorEvents, ...currentEvents];
-    websiteSnapshots = [...priorPayouts, ...currentPayouts];
-    websiteReady = true;
-  } catch {
-    websiteReady = false;
-  }
-  let agreements: Awaited<ReturnType<typeof loadAffiliateAgreements>> = [];
-  let agreementPayouts: Awaited<ReturnType<typeof loadAgreementPayouts>> = [];
-  try {
-    const [loadedAgreements, priorAgreementPayouts, currentAgreementPayouts] = await Promise.all([
-      loadAffiliateAgreements(),
-      loadAgreementPayouts(priorPeriod),
-      priorPeriod === currentPeriod ? Promise.resolve([]) : loadAgreementPayouts(currentPeriod),
-    ]);
-    agreements = loadedAgreements;
-    agreementPayouts = [...priorAgreementPayouts, ...currentAgreementPayouts];
-  } catch {
-    agreements = [];
-  }
 
   function manageReports(code: string) {
     return {
