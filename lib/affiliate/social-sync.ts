@@ -55,6 +55,26 @@ export async function syncAffiliateSocialReports(code: string) {
       }
       continue;
     }
+    if (connection.network === "instagram") {
+      await syncAccount({
+        code: normalized,
+        proofUrls,
+        network: "instagram",
+        accountId: connection.accountId,
+        accountName: connection.accountName,
+        load: () => fetchInstagramPosts({
+          accountId: connection.accountId,
+          accountName: connection.accountName,
+          accessToken: connection.accessToken,
+          instagramAccountId: connection.accountId,
+          instagramAccountName: connection.accountName,
+          graphHost: "instagram",
+        }),
+        accounts,
+        failed,
+      });
+      continue;
+    }
     if (connection.network === "youtube") continue;
     await syncAccount({
       code: normalized,

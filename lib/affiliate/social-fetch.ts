@@ -2,6 +2,7 @@ import { SocialError, oauthTokenExpired, type FacebookPageSecret, type TikTokCon
 import type { SocialPost } from "./social-match";
 
 const GRAPH = "https://graph.facebook.com/v21.0";
+const INSTAGRAM_GRAPH = "https://graph.instagram.com/v21.0";
 
 const FACEBOOK_POST_FIELDS = "id,message,permalink_url,created_time,shares,comments.summary(true).limit(0),reactions.type(LIKE).limit(0).summary(true)";
 
@@ -60,9 +61,13 @@ export type InstagramMediaSnapshot = {
   views: number | null;
 };
 
+function mediaHost(page: FacebookPageSecret) {
+  return page.graphHost === "instagram" ? INSTAGRAM_GRAPH : GRAPH;
+}
+
 export async function fetchInstagramMedia(page: FacebookPageSecret) {
   if (!page.instagramAccountId) return [];
-  const posts = await graphList(`/${page.instagramAccountId}/media`, page.accessToken, "id,caption,permalink,like_count,comments_count");
+  const posts = await graphList(`/${page.instagramAccountId}/media`, page.accessToken, "id,caption,permalink,like_count,comments_count", undefined, mediaHost(page));
   const results: (InstagramMediaSnapshot | null)[] = [];
   let index = 0;
   async function worker() {
@@ -78,7 +83,7 @@ export async function fetchInstagramMedia(page: FacebookPageSecret) {
 
 export async function readInstagramMedia(page: FacebookPageSecret, mediaId: string) {
   if (!page.instagramAccountId || !/^[0-9]{5,32}$/.test(mediaId)) return null;
-  const url = new URL(`${GRAPH}/${mediaId}`);
+  const url = new URL(`${mediaHost(page)}/${mediaId}`);
   url.searchParams.set("fields", "id,caption,permalink,like_count,comments_count,owner");
   const response = await fetch(url, {
     headers: { Authorization: `Bearer ${page.accessToken}` },
@@ -97,7 +102,7 @@ export async function readInstagramMedia(page: FacebookPageSecret, mediaId: stri
 async function mediaSnapshot(item: Record<string, unknown>, page: FacebookPageSecret): Promise<InstagramMediaSnapshot | null> {
   const id = text(item.id);
   if (!id || !page.instagramAccountId) return null;
-  const insights = await insightKnown(id, page.accessToken);
+  const insights = await insightKnown(id, page.accessToken, mediaHost(page));
   return {
     id,
     permalink: text(item.permalink),
@@ -111,10 +116,10 @@ async function mediaSnapshot(item: Record<string, unknown>, page: FacebookPageSe
   };
 }
 
-async function insightKnown(id: string, token: string) {
-  const primary = await insightMap(id, token, ["views", "reach", "saved", "shares"]);
+async function insightKnown(id: string, token: string, host = GRAPH) {
+  const primary = await insightMap(id, token, ["views", "reach", "saved", "shares"], host);
   if (primary.size > 0) return primary;
-  return insightMap(id, token, ["reach", "saved"]);
+  return insightMap(id, token, ["reach", "saved"], host);
 }
 
 function insightMetric(map: Map<string, number>, key: string) {
@@ -125,11 +130,12 @@ export async function fetchInstagramPosts(page: FacebookPageSecret) {
   if (!page.instagramAccountId) return [];
   const accountId = page.instagramAccountId;
   const accountName = page.instagramAccountName ?? accountId;
-  const posts = await graphList(`/${accountId}/media`, page.accessToken, "id,caption,permalink,timestamp,like_count,comments_count");
+  const host = mediaHost(page);
+  const posts = await graphList(`/${accountId}/media`, page.accessToken, "id,caption,permalink,timestamp,like_count,comments_count", undefined, host);
   return mapPool(posts, 4, async (item) => {
     const id = text(item.id);
     if (!id) return null;
-    const insights = await insightValues(id, page.accessToken, ["views", "reach", "saved", "shares"], ["reach", "saved"]);
+    const insights = await insightValues(id, page.accessToken, ["views", "reach", "saved", "shares"], ["reach", "saved"], host);
     const caption = text(item.caption);
     return {
       id,
@@ -218,18 +224,18 @@ function tiktokPosts(videos: Record<string, unknown>[], connection: Pick<TikTokC
   });
 }
 
-async function graphList(path: string, token: string, fields: string, fallback?: string) {
+async function graphList(path: string, token: string, fields: string, fallback?: string, host = GRAPH) {
   try {
-    return await graphPages(path, token, fields);
+    return await graphPages(path, token, fields, host);
   } catch (error) {
     if (!fallback) throw error;
-    return graphPages(path, token, fallback);
+    return graphPages(path, token, fallback, host);
   }
 }
 
-async function graphPages(path: string, token: string, fields: string) {
+async function graphPages(path: string, token: string, fields: string, host = GRAPH) {
   const items: Record<string, unknown>[] = [];
-  const first = new URL(`${GRAPH}${path}`);
+  const first = new URL(`${host}${path}`);
   first.searchParams.set("fields", fields);
   first.searchParams.set("limit", "25");
   let next: string | null = first.toString();
@@ -251,14 +257,14 @@ async function graphPages(path: string, token: string, fields: string) {
   return items;
 }
 
-async function insightValues(id: string, token: string, metrics: string[], fallback: string[]) {
-  const primary = await insightMap(id, token, metrics);
+async function insightValues(id: string, token: string, metrics: string[], fallback: string[], host = GRAPH) {
+  const primary = await insightMap(id, token, metrics, host);
   if (primary.size > 0) return primary;
-  return insightMap(id, token, fallback);
+  return insightMap(id, token, fallback, host);
 }
 
-async function insightMap(id: string, token: string, metrics: string[]) {
-  const url = new URL(`${GRAPH}/${id}/insights`);
+async function insightMap(id: string, token: string, metrics: string[], host = GRAPH) {
+  const url = new URL(`${host}/${id}/insights`);
   url.searchParams.set("metric", metrics.join(","));
   const response = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },

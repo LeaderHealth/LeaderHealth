@@ -27,6 +27,7 @@ export type FacebookPageSecret = {
   accessToken: string;
   instagramAccountId: string | null;
   instagramAccountName: string | null;
+  graphHost?: "instagram";
 };
 
 export type FacebookConnectionSecret = {
@@ -56,9 +57,18 @@ export type YouTubeConnectionSecret = {
   expiresAt: string | null;
 };
 
-export type ConnectionSecret = FacebookConnectionSecret | TikTokConnectionSecret | YouTubeConnectionSecret;
+export type InstagramConnectionSecret = {
+  code: string;
+  network: "instagram";
+  accountId: string;
+  accountName: string;
+  accessToken: string;
+  expiresAt: string | null;
+};
 
-type StoredNetwork = "facebook" | "tiktok" | "youtube";
+export type ConnectionSecret = FacebookConnectionSecret | TikTokConnectionSecret | YouTubeConnectionSecret | InstagramConnectionSecret;
+
+type StoredNetwork = "facebook" | "tiktok" | "youtube" | "instagram";
 
 const ACCOUNT_ID = /^[A-Za-z0-9._-]{1,128}$/;
 
@@ -108,7 +118,7 @@ function viewsFrom(data: DocumentData | undefined): SocialAccountView[] {
   if (!data) return [];
   const code = normalizeAffiliateCode(data.code);
   if (!code) return [];
-  if (data.network === "tiktok" || data.network === "youtube") {
+  if (data.network === "tiktok" || data.network === "youtube" || data.network === "instagram") {
     const accountId = accountIdOf(data.accountId);
     if (!accountId) return [];
     return [{ code, network: data.network, accountId, accountName: labelOf(data.accountName) ?? accountId, needsReconnect: data.needsReconnect === true }];
@@ -137,6 +147,19 @@ function secretFrom(data: DocumentData | undefined): ConnectionSecret | null {
   if (!data) return null;
   const code = normalizeAffiliateCode(data.code);
   if (!code) return null;
+  if (data.network === "instagram") {
+    const accountId = accountIdOf(data.accountId);
+    const accessToken = tokenOf(data.accessToken);
+    if (!accountId || !accessToken) return null;
+    return {
+      code,
+      network: "instagram",
+      accountId,
+      accountName: labelOf(data.accountName) ?? accountId,
+      accessToken,
+      expiresAt: typeof data.expiresAt === "string" ? data.expiresAt : null,
+    };
+  }
   if (data.network === "tiktok" || data.network === "youtube") {
     const accountId = accountIdOf(data.accountId);
     const accessToken = tokenOf(data.accessToken);
@@ -232,6 +255,23 @@ export async function saveTikTokConnection(input: TikTokConnectionSecret) {
     accountName: labelOf(input.accountName) ?? accountId,
     accessToken,
     refreshToken: tokenOf(input.refreshToken) ?? "",
+    expiresAt: input.expiresAt,
+    needsReconnect: false,
+    updatedAt: new Date(),
+  });
+}
+
+export async function saveInstagramConnection(input: InstagramConnectionSecret) {
+  const code = normalizeAffiliateCode(input.code);
+  const accountId = accountIdOf(input.accountId);
+  const accessToken = tokenOf(input.accessToken);
+  if (!code || !accountId || !accessToken) throw new SocialError("invalid");
+  await requireDb().collection("socialConnections").doc(documentId(code, "instagram")).set({
+    code,
+    network: "instagram",
+    accountId,
+    accountName: labelOf(input.accountName) ?? accountId,
+    accessToken,
     expiresAt: input.expiresAt,
     needsReconnect: false,
     updatedAt: new Date(),

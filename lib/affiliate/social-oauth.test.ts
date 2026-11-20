@@ -44,9 +44,8 @@ test("youtube login asks Google for read-only channel access", () => {
   assert.equal(url.searchParams.get("state"), state);
 });
 
-test("instagram login uses its own app and configuration", () => {
+test("instagram login opens Instagram and Facebook login stays on Facebook", () => {
   process.env.INSTAGRAM_APP_ID = "instagram-app";
-  process.env.INSTAGRAM_CONFIG_ID = "instagram-config";
   process.env.INSTAGRAM_REDIRECT_URI = "https://leaderhealth.clinic/api/affiliate/social/meta/callback";
   process.env.FACEBOOK_APP_ID = "facebook-app";
   process.env.AFFILIATE_SESSION_SECRET = "instagram-test-secret";
@@ -54,11 +53,15 @@ test("instagram login uses its own app and configuration", () => {
   const state = signSocialState({ code: "88h4dcji", network: "instagram", now });
   assert.ok(state);
   const instagram = new URL(instagramAuthorizeUrl(state));
+  assert.equal(instagram.origin + instagram.pathname, "https://www.instagram.com/oauth/authorize");
   assert.equal(instagram.searchParams.get("client_id"), "instagram-app");
-  assert.equal(instagram.searchParams.get("config_id"), "instagram-config");
+  assert.equal(instagram.searchParams.get("enable_fb_login"), "0");
+  assert.equal(instagram.searchParams.get("force_authentication"), "1");
+  assert.equal(instagram.searchParams.get("scope"), "instagram_business_basic,instagram_business_manage_insights");
   assert.equal(instagram.searchParams.get("redirect_uri"), "https://leaderhealth.clinic/api/affiliate/social/meta/callback");
-  assert.equal(instagram.searchParams.has("scope"), false);
+  assert.equal(instagram.searchParams.has("config_id"), false);
   const facebook = new URL(metaAuthorizeUrl("facebook-state"));
+  assert.equal(facebook.origin + facebook.pathname, "https://www.facebook.com/v21.0/dialog/oauth");
   assert.equal(facebook.searchParams.get("client_id"), "facebook-app");
   assert.equal(facebook.searchParams.get("scope"), "pages_show_list,pages_read_engagement,pages_read_user_content");
   assert.equal(facebook.searchParams.has("config_id"), false);
