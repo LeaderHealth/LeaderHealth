@@ -51,7 +51,7 @@ export const products: Product[] = [
     eyebrow: "Weight Loss",
     badge: "Medication",
     compare: true,
-    highlight: "Three-month start. To cancel, contact support.",
+    highlight: "Three-month start. Your card is charged automatically until you cancel. To cancel, email support@myleaderhealth.com.",
     safety:
       "*Risk of thyroid C cell tumors. Do not use if you or a family member has had medullary thyroid cancer, or if you have MEN 2. Compounded. Not FDA approved. Not a generic of Wegovy or Ozempic.",
     description:
@@ -147,7 +147,7 @@ export const products: Product[] = [
     labRequired: true,
     image: "/images/products/sermorelin.png",
     tagline: "Peptide support for recovery, body composition, and overnight repair.",
-    highlight: "$149/month, three-month start. To cancel, contact support.",
+    highlight: "$149/month, three-month start. Your card is charged automatically until you cancel. To cancel, email support@myleaderhealth.com.",
     safety:
       "*Do not use if you have active cancer, or if you are pregnant or breastfeeding. Compounded. Not FDA approved. No FDA approved sermorelin product is on the market.",
     description:
@@ -187,7 +187,7 @@ export const products: Product[] = [
     price: "Starting at $149/month",
     image: "/images/products/nad-compounded.png?v=4",
     tagline: "Injectable NAD+ for cellular energy support under clinician direction.",
-    highlight: "$149/month, three-month start. To cancel, contact support.",
+    highlight: "$149/month, three-month start. Your card is charged automatically until you cancel. To cancel, email support@myleaderhealth.com.",
     description:
       "NAD+ is an injectable coenzyme your cells rely on for energy production and DNA repair. Levels naturally dip as we age, and many patients report feeling more energized and focused. Your provider guides you through gradual dose adjustments to keep you comfortable and minimize flushing, so you build up tolerance at the right pace. It's offered as a wellness trial with easy at-home subcutaneous dosing.",
     benefits: [
@@ -206,7 +206,7 @@ export const products: Product[] = [
     labRequired: true,
     image: "/images/products/testosterone-cypionate.png",
     tagline: "Clinician-led TRT after labs, history, and a real plan for follow-up.",
-    highlight: "Medication and provider access for $119/month, billed $357 every 3 months. To cancel, contact support.",
+    highlight: "Medication and provider access for $119/month, billed $357 every 3 months. Your card is charged automatically until you cancel. To cancel, email support@myleaderhealth.com.",
     safety:
       "*Do not use if you have breast cancer or known or suspected prostate cancer, or if you are pregnant. FDA approved medication. Schedule III controlled substance; federal law limits refills to five within six months.",
     description:
@@ -227,7 +227,7 @@ export const products: Product[] = [
     labRequired: true,
     image: "/images/products/enclomiphene.png",
     tagline: "A fertility-minded option for men who need testosterone support.",
-    highlight: "$119/month, or $357 for 3 months paid in full. Billed $357 every 3 months. To cancel, contact support.",
+    highlight: "$119/month, or $357 for 3 months paid in full. Billed $357 every 3 months. Your card is charged automatically until you cancel. To cancel, email support@myleaderhealth.com.",
     description:
       "Want to support your own testosterone instead of replacing it? This daily pill may help your body make more naturally, and can fit if you'd rather avoid injections or keep fertility in mind. You start with labs and a clearance visit, then your clinician tracks your progress.",
     benefits: [
@@ -288,7 +288,7 @@ export const products: Product[] = [
     compare: true,
     disclaimer:
       "FDA approved medication. Dispensed as a commercially manufactured, FDA approved product by a licensed U.S. pharmacy. Not compounded.",
-    highlight: "$79/month, three-month start. To cancel, contact support.",
+    highlight: "$79/month, three-month start. Your card is charged automatically until you cancel. To cancel, email support@myleaderhealth.com.",
     safety:
       "*Do not use with any nitrate medicine, including nitroglycerin and poppers. FDA approved medication, dispensed by a licensed U.S. pharmacy.",
     description:
@@ -310,7 +310,7 @@ export const products: Product[] = [
     tagline: "A CNS peptide used for desire — for men and women — when clinically appropriate.",
     description:
       "PT-141 is a compounded nasal spray that takes a different route than oral ED meds. Rather than working on blood flow, bremelanotide acts on your brain's arousal pathways — supporting desire itself. You use it on demand, before the moment. Your provider screens your cardiovascular health and blood pressure first, since it can affect blood pressure.",
-    highlight: "$189/month, three-month start. To cancel, contact support.",
+    highlight: "$189/month, three-month start. Your card is charged automatically until you cancel. To cancel, email support@myleaderhealth.com.",
     safety:
       "*Do not use if you have uncontrolled high blood pressure or heart disease, or if you are or may be pregnant. Compounded. Not FDA approved. No bremelanotide nasal spray is FDA approved.",
     benefits: [
