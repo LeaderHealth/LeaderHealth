@@ -17,8 +17,8 @@ const panelSlug = {
 } as const;
 
 const billingNote: Record<string, string> = {
-  "men-trt-testosterone-cypionate": "Billed $357 every 3 months. Three-month start, then cancel anytime.",
-  "men-trt-enclomiphene": "Billed $357 every 3 months. Three-month start, then cancel anytime.",
+  "men-trt-testosterone-cypionate": "Billed $357 every 3 months. To cancel, contact support.",
+  "men-trt-enclomiphene": "Billed $357 every 3 months. To cancel, contact support.",
 };
 
 const planPrices: Record<string, Array<{ label: string; price: string }>> = {

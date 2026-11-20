@@ -29,7 +29,7 @@ const planOffers: Record<string, PlanOffer[]> = {
       badgeTone: "quiet",
       perMonth: "$149",
       billedToday: "$149",
-      note: "Renews at $149 every month. Cancel anytime.",
+      note: "Renews at $149 every month. To cancel, contact support.",
     },
     {
       term: "3m",
@@ -40,7 +40,7 @@ const planOffers: Record<string, PlanOffer[]> = {
       badgeTone: "pill",
       perMonth: "$136",
       billedToday: "$408",
-      note: "Renews at $408 every 3 months. Cancel anytime after your first 3 months.",
+      note: "Renews at $408 every 3 months. To cancel, contact support.",
     },
   ],
 };
@@ -250,7 +250,7 @@ export function PlanAddToCart({ product }: { product: Product }) {
   return (
     <>
       <div className="mt-7">
-        <p className="mb-3 font-sans text-[15px] leading-snug text-white/90">Pick your plan, cancel anytime.</p>
+        <p className="mb-3 font-sans text-[15px] leading-snug text-white/90">Pick your plan. To cancel, contact support.</p>
         <button
           ref={triggerRef}
           type="button"

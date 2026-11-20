@@ -38,7 +38,7 @@ export const faqs = [
   },
   {
     q: "Is there a commitment?",
-    a: "Plans are typically billed monthly. You can cancel according to the Subscription Terms — there is no long-term lock-in marketed as a three-month start, cancel anytime for weight-loss protocols.",
+    a: "Plans are typically billed monthly. To cancel a subscription, contact support. See the Subscription Terms for the details.",
   },
   {
     q: "Do you see patients in every state?",
@@ -85,7 +85,7 @@ export const productFaqs = [
   },
   {
     q: "Is there a commitment?",
-    a: "Weight-loss protocols are typically a three-month start, cancel anytime. Other plans are billed monthly according to the Subscription Terms.",
+    a: "Weight-loss protocols typically start at three months. To cancel a subscription, contact support. Other plans are billed monthly according to the Subscription Terms.",
   },
   {
     q: "Do you accept insurance?",
@@ -136,7 +136,7 @@ export const womenHrtFaqs = [
   },
   {
     q: "Is there a commitment?",
-    a: "Therapy has a three-month minimum so your provider can evaluate response and adjust safely. After month three, you can cancel anytime.",
+    a: "Therapy has a three-month minimum so your provider can evaluate response and adjust safely. After month three, contact support to cancel.",
   },
   {
     q: "Do you accept insurance?",
@@ -187,7 +187,7 @@ export const tirzepatideFaqs = [
   },
   {
     q: "Is there a commitment?",
-    a: "Weight-loss protocols are typically a three-month start, cancel anytime. Plans are billed monthly according to the Subscription Terms.",
+    a: "Weight-loss protocols typically start at three months. To cancel a subscription, contact support. Plans are billed monthly according to the Subscription Terms.",
   },
   {
     q: "Do you accept insurance?",
@@ -238,7 +238,7 @@ export const tadalafilFaqs = [
   },
   {
     q: "Is there a commitment?",
-    a: "Therapy has a three-month minimum so your provider can adjust if needed. After month three, you can cancel anytime.",
+    a: "Therapy has a three-month minimum so your provider can adjust if needed. After month three, contact support to cancel.",
   },
   {
     q: "Do you accept insurance?",
@@ -603,7 +603,7 @@ const comboTrochesFaqs = [
   },
   {
     q: "Is there a commitment?",
-    a: "Therapy has a three-month minimum so your provider can adjust if needed. After month three, you can cancel anytime.",
+    a: "Therapy has a three-month minimum so your provider can adjust if needed. After month three, contact support to cancel.",
   },
   {
     q: "Do you accept insurance?",
@@ -645,7 +645,7 @@ export const productFaqsBySlug: Record<string, FaqItem[]> = {
     },
     {
       "q": "Is there a commitment?",
-      "a": "Therapy has a three-month minimum so your provider can evaluate response and adjust safely. After month three, you can cancel anytime."
+      "a": "Therapy has a three-month minimum so your provider can evaluate response and adjust safely. After month three, contact support to cancel."
     },
     {
       "q": "What side effects and risks should I know about?",
@@ -703,7 +703,7 @@ export const productFaqsBySlug: Record<string, FaqItem[]> = {
     },
     {
       "q": "Is there a commitment?",
-      "a": "Therapy has a three-month minimum so your provider can evaluate response and adjust safely. After month three, you can cancel anytime."
+      "a": "Therapy has a three-month minimum so your provider can evaluate response and adjust safely. After month three, contact support to cancel."
     }
   ],
   "men-trt-enclomiphene": [
@@ -737,7 +737,7 @@ export const productFaqsBySlug: Record<string, FaqItem[]> = {
     },
     {
       "q": "Is there a commitment?",
-      "a": "Therapy has a three-month minimum so your provider can evaluate response and adjust safely. After month three, you can cancel anytime."
+      "a": "Therapy has a three-month minimum so your provider can evaluate response and adjust safely. After month three, contact support to cancel."
     },
     {
       "q": "Can this affect athletic testing?",
@@ -839,7 +839,7 @@ export const productFaqsBySlug: Record<string, FaqItem[]> = {
     },
     {
       q: "Is there a commitment?",
-      a: "Therapy has a three-month minimum so your provider can evaluate response and adjust safely. After month three, you can cancel anytime.",
+      a: "Therapy has a three-month minimum so your provider can evaluate response and adjust safely. After month three, contact support to cancel.",
     },
   ],
   "longevity-nad": [
@@ -877,7 +877,7 @@ export const productFaqsBySlug: Record<string, FaqItem[]> = {
     },
     {
       q: "Is there a commitment?",
-      a: "Therapy has a three-month minimum so your provider can evaluate fit and tolerance. After month three, you can cancel anytime.",
+      a: "Therapy has a three-month minimum so your provider can evaluate fit and tolerance. After month three, contact support to cancel.",
     },
   ],
   "oxytocin-nasal-spray": [
@@ -953,7 +953,7 @@ export const productFaqsBySlug: Record<string, FaqItem[]> = {
     },
     {
       "q": "Is there a commitment?",
-      "a": "Therapy has a three-month minimum so your provider can titrate and assess response. After month three, you can cancel anytime."
+      "a": "Therapy has a three-month minimum so your provider can titrate and assess response. After month three, contact support to cancel."
     }
   ],
   "weight-loss-tirzepatide": [
@@ -991,7 +991,7 @@ export const productFaqsBySlug: Record<string, FaqItem[]> = {
     },
     {
       "q": "Is there a commitment?",
-      "a": "Therapy has a three-month minimum so your provider can titrate and assess response. After month three, you can cancel anytime."
+      "a": "Therapy has a three-month minimum so your provider can titrate and assess response. After month three, contact support to cancel."
     }
   ],
   "sexual-health-pt-141-nasal": [
@@ -1029,7 +1029,7 @@ export const productFaqsBySlug: Record<string, FaqItem[]> = {
     },
     {
       "q": "Is there a commitment?",
-      "a": "Therapy has a three-month minimum so your provider can reassess fit and adjust if needed. After month three, you can cancel anytime."
+      "a": "Therapy has a three-month minimum so your provider can reassess fit and adjust if needed. After month three, contact support to cancel."
     }
   ],
   "longevity-glutathione": [
