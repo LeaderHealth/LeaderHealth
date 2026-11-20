@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import test from "node:test";
-import { openTikTokVerifier, readSocialState, sealTikTokVerifier, signSocialState, tiktokAuthorizeUrl, tiktokCodeChallenge, tiktokCodeVerifier, youtubeAuthorizeUrl } from "./social-oauth";
+import { instagramAuthorizeUrl, metaAuthorizeUrl, openTikTokVerifier, readSocialState, sealTikTokVerifier, signSocialState, tiktokAuthorizeUrl, tiktokCodeChallenge, tiktokCodeVerifier, youtubeAuthorizeUrl } from "./social-oauth";
 
 test("tiktok login sends a hex S256 code challenge and keeps the verifier", () => {
   const verifier = tiktokCodeVerifier();
@@ -42,4 +42,24 @@ test("youtube login asks Google for read-only channel access", () => {
   assert.equal(url.searchParams.get("access_type"), "offline");
   assert.equal(url.searchParams.get("prompt"), "consent");
   assert.equal(url.searchParams.get("state"), state);
+});
+
+test("instagram login uses its own app and configuration", () => {
+  process.env.INSTAGRAM_APP_ID = "instagram-app";
+  process.env.INSTAGRAM_CONFIG_ID = "instagram-config";
+  process.env.INSTAGRAM_REDIRECT_URI = "https://leaderhealth.clinic/api/affiliate/social/meta/callback";
+  process.env.FACEBOOK_APP_ID = "facebook-app";
+  process.env.AFFILIATE_SESSION_SECRET = "instagram-test-secret";
+  const now = 1_700_000_000_000;
+  const state = signSocialState({ code: "88h4dcji", network: "instagram", now });
+  assert.ok(state);
+  const instagram = new URL(instagramAuthorizeUrl(state));
+  assert.equal(instagram.searchParams.get("client_id"), "instagram-app");
+  assert.equal(instagram.searchParams.get("config_id"), "instagram-config");
+  assert.equal(instagram.searchParams.get("redirect_uri"), "https://leaderhealth.clinic/api/affiliate/social/meta/callback");
+  assert.equal(instagram.searchParams.has("scope"), false);
+  const facebook = new URL(metaAuthorizeUrl("facebook-state"));
+  assert.equal(facebook.searchParams.get("client_id"), "facebook-app");
+  assert.equal(facebook.searchParams.get("scope"), "pages_show_list,pages_read_engagement,pages_read_user_content");
+  assert.equal(facebook.searchParams.has("config_id"), false);
 });

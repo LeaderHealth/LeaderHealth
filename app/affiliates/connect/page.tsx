@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { skipSocialOnboarding } from "@/app/affiliates/connect-actions";
 import { PortalLegalLinks } from "@/components/affiliate/PortalLegalLinks";
 import { currentAffiliate } from "@/app/affiliates/current";
-import { metaConfigured, tiktokConfigured, youtubeConfigured } from "@/lib/affiliate/social-oauth";
+import { instagramConfigured, metaConfigured, tiktokConfigured, youtubeConfigured } from "@/lib/affiliate/social-oauth";
 import { loadSocialAccounts, type SocialAccountView } from "@/lib/affiliate/social-store";
 
 export const metadata: Metadata = {
@@ -37,15 +37,15 @@ export default async function ConnectAccountsPage() {
     {
       name: "Instagram",
       accounts: instagram,
-      detail: "Instagram connects with the Facebook Page. That is the official Meta connection.",
-      href: metaConfigured() ? "/api/affiliate/social/meta/start" : null,
-      unavailable: metaConfigured() ? "" : "Instagram reporting is not set up.",
-      changeLabel: "Change Facebook Page",
+      detail: "Instagram uses its own login. A professional account linked to a Facebook Page is included.",
+      href: instagramConfigured() ? "/api/affiliate/social/instagram/start" : null,
+      unavailable: instagramConfigured() ? "" : "Instagram reporting is not set up.",
+      changeLabel: "Change Instagram account",
     },
     {
       name: "Facebook",
       accounts: facebook,
-      detail: "Connecting reads the Facebook Page so a linked professional Instagram account can be included.",
+      detail: "Connecting reads the Facebook Page.",
       href: metaConfigured() ? "/api/affiliate/social/meta/start" : null,
       unavailable: metaConfigured() ? "" : "Facebook reporting is not set up.",
       changeLabel: "Change Facebook Page",
