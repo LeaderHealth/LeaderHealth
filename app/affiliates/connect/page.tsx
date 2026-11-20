@@ -52,13 +52,11 @@ export default async function ConnectAccountsPage() {
     },
     {
       name: "YouTube",
-      accounts: [] as SocialAccountView[],
-      detail: youtubeConfigured()
-        ? "YouTube reporting stays off until Google approves the app."
-        : "YouTube reporting is not set up.",
-      href: null,
-      unavailable: youtubeConfigured() ? "YouTube reporting is not available yet." : "YouTube reporting is not set up.",
-      changeLabel: "",
+      accounts: accounts.filter((account) => account.network === "youtube"),
+      detail: "Connecting reads the YouTube channel name. Leader Health does not post to YouTube.",
+      href: youtubeConfigured() ? "/api/affiliate/social/youtube/start" : null,
+      unavailable: "YouTube reporting is not set up.",
+      changeLabel: "Change YouTube channel",
     },
   ];
 
@@ -88,6 +86,13 @@ export default async function ConnectAccountsPage() {
                 {row.name === "TikTok" ? (
                   <p className="mt-2 text-sm leading-relaxed text-brown">
                     <a href="/affiliates/privacy#tiktok-accounts" className="underline underline-offset-4">
+                      Affiliate Privacy Policy
+                    </a>
+                  </p>
+                ) : null}
+                {row.name === "YouTube" ? (
+                  <p className="mt-2 text-sm leading-relaxed text-brown">
+                    <a href="/affiliates/privacy#youtube-accounts" className="underline underline-offset-4">
                       Affiliate Privacy Policy
                     </a>
                   </p>

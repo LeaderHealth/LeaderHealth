@@ -95,6 +95,45 @@ export function selectCampaignPosts(posts: readonly SocialPost[], code: string, 
   return [...kept.values()];
 }
 
+export function tiktokVideoId(value: string) {
+  return /^[0-9]{8,30}$/.test(value) ? value : null;
+}
+
+export function selectTikTokUpdate(input: { videoId: string | null; postUrl: string | null; videos: readonly SocialPost[] }) {
+  const saved = input.videoId ? tiktokVideoId(input.videoId) : null;
+  if (saved) {
+    const video = input.videos.find((item) => item.network === "tiktok" && item.id === saved);
+    return video ? { videoId: saved, video } : null;
+  }
+  if (!input.postUrl) return null;
+  const video = input.videos.find((item) => item.network === "tiktok" && samePublishedPost(input.postUrl, item.permalink));
+  const id = video ? tiktokVideoId(video.id) : null;
+  return video && id ? { videoId: id, video } : null;
+}
+
+export function rememberedFacebookPosts(input: {
+  saved: readonly SocialPost[];
+  refreshed: readonly SocialPost[];
+  feed: readonly SocialPost[];
+  code: string;
+  proofUrls: readonly string[];
+}) {
+  const kept = new Map<string, SocialPost>();
+  for (const post of input.saved) {
+    if (post.network !== "facebook" || !post.id.trim()) continue;
+    kept.set(post.id, post);
+  }
+  for (const post of input.refreshed) {
+    if (post.network !== "facebook" || !kept.has(post.id)) continue;
+    kept.set(post.id, post);
+  }
+  for (const post of selectCampaignPosts(input.feed, input.code, input.proofUrls)) {
+    if (post.network !== "facebook" || kept.has(post.id)) continue;
+    kept.set(post.id, post);
+  }
+  return [...kept.values()];
+}
+
 export function totalsByAccountMonth(posts: readonly SocialPost[]) {
   const totals = new Map<string, AccountMonthTotals>();
   for (const post of posts) {
@@ -131,9 +170,10 @@ export function campaignReports(input: {
   proofUrls: readonly string[];
   accounts: readonly { network: SocialNetwork; accountId: string; accountName: string }[];
   monthsByAccount: ReadonlyMap<string, readonly string[]>;
+  alreadyMatched?: boolean;
   now?: Date;
 }) {
-  const matched = selectCampaignPosts(input.posts, input.code, input.proofUrls);
+  const matched = input.alreadyMatched ? dedupePosts(input.posts) : selectCampaignPosts(input.posts, input.code, input.proofUrls);
   const totals = totalsByAccountMonth(matched);
   const rows: MarketingReportFields[] = [];
   for (const account of input.accounts) {
@@ -161,6 +201,17 @@ export function campaignReports(input: {
     }
   }
   return rows;
+}
+
+function dedupePosts(posts: readonly SocialPost[]) {
+  const kept = new Map<string, SocialPost>();
+  for (const post of posts) {
+    const id = post.id.trim();
+    if (!id) continue;
+    const key = `${post.network}:${id}`;
+    if (!kept.has(key)) kept.set(key, post);
+  }
+  return [...kept.values()];
 }
 
 function urlsInText(text: string) {

@@ -16,6 +16,9 @@ function posthogAssetsHost(host: string) {
 }
 
 const nextConfig: NextConfig = {
+  // The dev server treats 127.0.0.1 as a different host from localhost and
+  // blocks the page scripts. Without those scripts the navbar cannot open.
+  allowedDevOrigins: ["127.0.0.1"],
   experimental: {
     serverActions: {
       bodySizeLimit: "220mb",

@@ -70,7 +70,7 @@ export function PayoutTable({ month, title, rows }: { month: string; title: stri
   );
 
   function exportCsv() {
-    const header = ["Affiliate", "Social", "Website traffic", "Lab", "Total", "Status"];
+    const header = ["Affiliate", "Social + base", "Website traffic", "Lab", "Total", "Status"];
     const body = rows.map((row) => [row.name, formatCents(row.socialCents), formatCents(row.websiteCents), formatCents(row.labCents), formatCents(row.totalCents), statusLabel[row.status]]);
     const csv = [header, ...body].map((cells) => cells.map(csvCell).join(",")).join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));

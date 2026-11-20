@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Suspense, useState, type ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import type { AreaNavItem } from "./AreaNav";
 import { Subnav } from "./Subnav";
 import { TabPanel } from "./SlidingTabs";
@@ -41,12 +41,9 @@ function FadingSectionRow({ group }: { group: DashboardGroup }) {
   return <SectionRow group={group} hidden={inProfile} />;
 }
 
-function SectionPanel({ groupId, pathname, children }: { groupId: string; pathname: string; children: ReactNode }) {
-  const [stored, setStored] = useState({ groupId, panelKey: pathname, path: pathname });
-  if (stored.groupId !== groupId) setStored({ groupId, panelKey: stored.panelKey, path: pathname });
-  else if (groupId && stored.path !== pathname) setStored({ groupId, panelKey: pathname, path: pathname });
+function SectionPanel({ pathname, children }: { pathname: string; children: ReactNode }) {
   return (
-    <TabPanel tabKey={stored.panelKey} sync className="min-w-0">
+    <TabPanel tabKey={pathname} className="min-w-0">
       {children}
     </TabPanel>
   );
@@ -63,9 +60,7 @@ export function DashboardSections({ groups, children }: { groups: DashboardGroup
           <FadingSectionRow group={group} />
         </Suspense>
       ) : null}
-      <SectionPanel groupId={group?.paths[0] ?? ""} pathname={pathname}>
-        {children}
-      </SectionPanel>
+      <SectionPanel pathname={pathname}>{children}</SectionPanel>
     </div>
   );
 }

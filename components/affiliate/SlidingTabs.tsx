@@ -19,7 +19,7 @@ export type SlidingTabItem = {
   onSelect?: () => void;
 };
 
-const ease = "duration-[280ms] ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none";
+const ease = "duration-[140ms] ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none";
 const tabFocus = "focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-[#E39A93]";
 const TAB_SWITCH = "lh-tab-switch";
 
@@ -31,51 +31,18 @@ function markTabSwitch() {
   }
 }
 
-function freshTabSwitch() {
-  try {
-    const stamp = Number(sessionStorage.getItem(TAB_SWITCH) || 0);
-    return stamp > 0 && Date.now() - stamp < 1500;
-  } catch {
-    return false;
-  }
-}
-
-function clearTabSwitch() {
-  try {
-    sessionStorage.removeItem(TAB_SWITCH);
-  } catch {
-    /* storage can be blocked */
-  }
+export function beginSectionSwitch(href: string) {
+  if (typeof window === "undefined" || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  markTabSwitch();
+  window.dispatchEvent(new CustomEvent(TAB_SWITCH, { detail: href }));
 }
 
 function motionReduced() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
-function pathOf(href: string) {
-  const path = href.split("#")[0]?.split("?")[0] ?? href;
-  if (!path.startsWith("http")) return path;
-  try {
-    return new URL(path).pathname;
-  } catch {
-    return path;
-  }
-}
-
-function switchAge() {
-  try {
-    const stamp = Number(sessionStorage.getItem(TAB_SWITCH) || 0);
-    return stamp > 0 ? Date.now() - stamp : 0;
-  } catch {
-    return 0;
-  }
-}
-
-const PANEL_TRANSITION = "opacity 220ms ease-out, transform 220ms ease-out";
-
 export function TabPanel({
   tabKey,
-  sync = false,
   className = "",
   children,
 }: {
@@ -84,94 +51,50 @@ export function TabPanel({
   className?: string;
   children: ReactNode;
 }) {
-  const panelRef = useRef<HTMLDivElement>(null);
-  const waitingFor = useRef<string | null>(null);
-  const fromRoute = useRef(false);
-  const [shown, setShown] = useState(tabKey);
-  const [visible, setVisible] = useState(true);
-  if (tabKey !== shown) {
-    setShown(tabKey);
-    if (typeof window === "undefined" || !motionReduced()) setVisible(false);
-  }
+  const probeRef = useRef<HTMLDivElement>(null);
+  const shownKey = useRef(tabKey);
+  const promoting = useRef(false);
+  const [shown, setShown] = useState({ key: tabKey, node: children });
+  const [shift, setShift] = useState(false);
+  const arriving = tabKey !== shown.key;
   useLayoutEffect(() => {
-    if (!freshTabSwitch() || motionReduced()) return;
-    fromRoute.current = true;
-    const panel = panelRef.current;
-    if (panel) {
-      panel.style.transition = "none";
-      panel.style.opacity = "0";
-      panel.style.transform = "translateY(6px)";
-    }
-    queueMicrotask(() => setVisible(false));
-  }, []);
-  useEffect(() => {
-    if (!sync) return;
-    const onSwitch = (event: Event) => {
-      if (motionReduced()) return;
-      const target = pathOf((event as CustomEvent<string>).detail || "");
-      if (!target || target === tabKey) return;
-      waitingFor.current = target;
-      setVisible(false);
-    };
-    window.addEventListener(TAB_SWITCH, onSwitch);
-    return () => window.removeEventListener(TAB_SWITCH, onSwitch);
-  }, [sync, tabKey]);
-  useLayoutEffect(() => {
-    const panel = panelRef.current;
-    if (!panel) return;
-    if (visible) {
-      panel.style.minHeight = "";
+    if (promoting.current) return;
+    const probe = probeRef.current;
+    if (probe?.querySelector("[data-section-pending]")) return;
+    if (tabKey === shownKey.current) {
+      const nextNode = children;
+      queueMicrotask(() => {
+        setShown((current) => (current.key !== tabKey || current.node === nextNode ? current : { key: tabKey, node: nextNode }));
+      });
       return;
     }
-    if (!panel.style.minHeight && panel.offsetHeight > 0) panel.style.minHeight = `${panel.offsetHeight}px`;
-    // Drop the outgoing section to the hidden pose in the same frame as the
-    // pill, then let the incoming section fade once it is actually here.
-    panel.style.transition = "none";
-    void panel.offsetHeight;
-    panel.style.transition = PANEL_TRANSITION;
-  }, [visible, shown]);
-  useEffect(() => {
-    if (visible) return;
-    const panel = panelRef.current;
-    let timeout = 0;
-    let settled = false;
-    const reveal = (wait: number) => {
-      if (settled) return;
-      settled = true;
-      timeout = window.setTimeout(() => {
-        waitingFor.current = null;
-        fromRoute.current = false;
-        clearTabSwitch();
-        setVisible(true);
-      }, wait);
-    };
-    const arm = () => {
-      if (settled) return;
-      if (panel?.querySelector("[data-section-pending]")) return;
-      const target = waitingFor.current;
-      if (target && target !== tabKey) return;
-      const elapsed = target || fromRoute.current ? switchAge() : null;
-      reveal(elapsed == null ? 120 : Math.max(0, 120 - elapsed));
-    };
-    arm();
-    const safety = window.setTimeout(() => reveal(0), 2000);
-    const observer = panel ? new MutationObserver(arm) : null;
-    if (panel && observer) observer.observe(panel, { childList: true, subtree: true });
-    return () => {
-      observer?.disconnect();
-      window.clearTimeout(timeout);
-      window.clearTimeout(safety);
-    };
-  }, [visible, shown, tabKey]);
+    const reduce = motionReduced();
+    const nextKey = tabKey;
+    const nextNode = children;
+    promoting.current = true;
+    queueMicrotask(() => {
+      promoting.current = false;
+      shownKey.current = nextKey;
+      setShown({ key: nextKey, node: nextNode });
+      if (reduce) return;
+      setShift(true);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setShift(false));
+      });
+    });
+  }, [tabKey, children]);
+  const motion = shift
+    ? "translate-y-1 transition-none"
+    : "translate-y-0 transition-transform duration-[120ms] ease-out motion-reduce:transition-none";
   return (
-    <div
-      ref={panelRef}
-      inert={visible ? undefined : true}
-      className={`${className} motion-reduce:translate-y-0 motion-reduce:opacity-100 motion-reduce:transition-none ${visible ? "translate-y-0 opacity-100" : "translate-y-[6px] opacity-0"}`.trim()}
-      style={{ transition: PANEL_TRANSITION }}
-    >
-      {children}
-    </div>
+    <>
+      <div className={`${className} ${motion}`.trim()}>{arriving ? shown.node : children}</div>
+      {arriving ? (
+        <div ref={probeRef} className="hidden" aria-hidden inert>
+          {children}
+        </div>
+      ) : null}
+    </>
   );
 }
 

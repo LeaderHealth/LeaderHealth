@@ -8,8 +8,8 @@ import { IMAGE_BYTES, VIDEO_BYTES, postUploadKind } from "./post-files";
 import { deliverableFeeCents } from "./deliverable-payments";
 import { formatForOfferKind, lockedPayTerms, offerSlideBounds, type LockedPayTerms } from "./offer-post";
 import { loadMarketingOffer } from "./marketing-offers";
-import { canonicalPostUrl, samePublishedPost, textHasTrackingCode } from "./social-match";
-import { fetchInstagramMedia, fetchTikTokPosts, readInstagramMedia, type InstagramMediaSnapshot } from "./social-fetch";
+import { canonicalPostUrl, selectTikTokUpdate, textHasTrackingCode, tiktokVideoId } from "./social-match";
+import { fetchInstagramMedia, fetchTikTokPosts, queryTikTokVideos, readInstagramMedia, type InstagramMediaSnapshot } from "./social-fetch";
 import { currentTikTokConnection } from "./social-sync";
 import { SocialError, loadConnectionSecrets, loadSocialAccounts, markSocialReconnect, type TikTokConnectionSecret } from "./social-store";
 import { formatWhen, publishDateValue } from "./format";
@@ -103,6 +103,7 @@ export type ContentSubmission = {
   reviewNote: string;
   postUrl: string | null;
   instagramMediaId: string | null;
+  tiktokVideoId: string | null;
   verificationNote: string;
   metricsCheckedAt: string | null;
   createdAt: string | null;
@@ -476,6 +477,7 @@ function submissionFrom(id: string, data: DocumentData | undefined): ContentSubm
     reviewNote: typeof data.reviewNote === "string" ? data.reviewNote : "",
     postUrl: typeof data.postUrl === "string" && data.postUrl ? data.postUrl : null,
     instagramMediaId: typeof data.instagramMediaId === "string" && /^[0-9]{5,32}$/.test(data.instagramMediaId) ? data.instagramMediaId : null,
+    tiktokVideoId: typeof data.tiktokVideoId === "string" ? tiktokVideoId(data.tiktokVideoId) : null,
     verificationNote: typeof data.verificationNote === "string" ? data.verificationNote : "",
     likes: metricValue(data.likes),
     comments: metricValue(data.comments),
@@ -631,6 +633,7 @@ export async function submitContentPost(input: { code: string; caption: unknown;
     reviewNote: null,
     postUrl: null,
     instagramMediaId: null,
+    tiktokVideoId: null,
     verificationNote: null,
     ...blankMetrics(),
     metricsCheckedAt: null,
@@ -784,6 +787,7 @@ function newSubmissionFields(code: string, caption: string, files: StoredPostFil
     reviewNote: null,
     postUrl: null,
     instagramMediaId: null,
+    tiktokVideoId: null,
     verificationNote: null,
     ...blankMetrics(),
     metricsCheckedAt: null,
@@ -941,9 +945,8 @@ export async function submitContentBatch(input: { code: string; posts: BatchPost
     const slot = postedUnder.months.find((month) => month.period === period);
     if (!slot) throw new PostReviewError("month");
     for (const entry of ready) {
-      if (!entry.item.proposedPublishOn) continue;
       const date = proposedPublishDate(entry.item.proposedPublishOn);
-      if (date && date.slice(0, 7) !== slot.period) throw new PostReviewError("date");
+      if (!date || date.slice(0, 7) !== slot.period) throw new PostReviewError("date");
     }
     if (slot.limit != null) {
       const exclude = new Set(ready.flatMap((entry) => (entry.existing ? [entry.existing.id] : [])));
@@ -1242,31 +1245,44 @@ function importedMetrics(metrics: PostMetrics) {
 }
 
 async function writeTikTokPostMetrics(post: ContentSubmission) {
-  if (!post.postUrl) return false;
+  if (!post.tiktokVideoId && !post.postUrl) return false;
   const secrets = await loadConnectionSecrets(post.code);
   const connection = secrets.find((item): item is TikTokConnectionSecret => item.network === "tiktok");
   if (!connection) return false;
   const current = await currentTikTokConnection(connection);
-  const videos = await fetchTikTokPosts(current);
-  const match = videos.find((video) => samePublishedPost(post.postUrl, video.permalink));
+  const videos = await loadTikTokVideos(current, post.tiktokVideoId);
+  const match = selectTikTokUpdate({ videoId: post.tiktokVideoId, postUrl: post.postUrl, videos });
   const ref = requireDb().collection("contentSubmissions").doc(post.id);
   if (!match) {
     await ref.update({ metricsCheckedAt: new Date() });
     await markSocialReconnect(post.code, "tiktok", false);
     return false;
   }
-  await ref.update(
-    importedMetrics({
-      likes: match.likes,
-      comments: match.comments,
-      shares: match.shares,
+  await ref.update({
+    tiktokVideoId: match.videoId,
+    ...importedMetrics({
+      likes: match.video.likes,
+      comments: match.video.comments,
+      shares: match.video.shares,
       saves: null,
       reach: null,
-      views: match.impressions,
+      views: match.video.impressions,
     }),
-  );
+  });
   await markSocialReconnect(post.code, "tiktok", false);
   return true;
+}
+
+async function loadTikTokVideos(connection: TikTokConnectionSecret, videoId: string | null) {
+  if (!videoId) return fetchTikTokPosts(connection);
+  try {
+    const queried = await queryTikTokVideos(connection, [videoId]);
+    if (queried.some((video) => video.id === videoId)) return queried;
+  } catch (error) {
+    if (error instanceof SocialError && error.code === "expired") throw error;
+  }
+  const listed = await fetchTikTokPosts(connection);
+  return listed.filter((video) => video.id === videoId);
 }
 
 async function writeInstagramPostMetrics(post: ContentSubmission) {
@@ -1411,7 +1427,7 @@ export async function applyMetricChange(input: { id: string; views: unknown; lik
 export async function refreshDueMetrics(code?: string, limit = 8) {
   const posts = code ? await loadContentSubmissions(code) : await loadContentSubmissions();
   const due = posts
-    .filter((post) => post.publicationStatus === "tracking_active" && (Boolean(post.instagramMediaId) || Boolean(post.postUrl)) && metricsAreStale(post.metricsCheckedAt))
+    .filter((post) => post.publicationStatus === "tracking_active" && (Boolean(post.instagramMediaId) || Boolean(post.tiktokVideoId) || Boolean(post.postUrl)) && metricsAreStale(post.metricsCheckedAt))
     .slice(0, limit);
   let updated = 0;
   for (const post of due) {

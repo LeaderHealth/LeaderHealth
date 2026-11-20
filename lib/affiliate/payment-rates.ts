@@ -163,6 +163,18 @@ export function socialMonthCents(input: {
   return { socialCents, adjustmentCents };
 }
 
+export function marketingPayoutParts(input: { socialCents: number; adjustmentCents: number; baseCents: number; socialNote: string; baseNote: string }) {
+  const social = input.socialCents + input.adjustmentCents;
+  const base = input.baseCents;
+  return {
+    socialAndBaseCents: social + base,
+    parts: [
+      { kind: "Social performance", what: input.socialNote, amountCents: social },
+      { kind: "Base pay", what: input.baseNote, amountCents: base },
+    ],
+  };
+}
+
 export function categoryLabel(category: PaymentCategory) {
   if (category === "views") return "Social views";
   if (category === "engagements") return "Social engagements";

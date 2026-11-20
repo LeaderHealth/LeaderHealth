@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { approvableCents } from "./payouts";
 import { marketingReportFields } from "./marketing";
-import { campaignReports, samePublishedPost, selectCampaignPosts, type SocialPost } from "./social-match";
+import { campaignReports, rememberedFacebookPosts, samePublishedPost, selectCampaignPosts, selectTikTokUpdate, type SocialPost } from "./social-match";
 
 const code = "k7mq2n4p";
 
@@ -176,6 +176,79 @@ test("a synced report has no commission and does not change the amount owed", ()
   assert.equal("commissionCents" in report, false);
   assert.equal("engagement" in report, false);
   assert.equal(approvableCents({ orders: [], payouts: [], code: report.code, period: report.month }), 0);
+});
+
+test("a saved TikTok video id updates metrics without a matching permalink", () => {
+  const video = post({
+    id: "7123456789012345678",
+    network: "tiktok",
+    accountId: "tok",
+    permalink: "https://www.tiktok.com/@a/video/7999999999999999999",
+    impressions: 90,
+  });
+  const match = selectTikTokUpdate({
+    videoId: "7123456789012345678",
+    postUrl: "https://www.tiktok.com/@a/video/7123456789012345678",
+    videos: [video],
+  });
+  assert.equal(match?.videoId, "7123456789012345678");
+  assert.equal(match?.video.impressions, 90);
+});
+
+test("the first TikTok permalink match writes the video id", () => {
+  const video = post({
+    id: "7123456789012345678",
+    network: "tiktok",
+    accountId: "tok",
+    permalink: "https://www.tiktok.com/@leader/video/7123456789012345678",
+    impressions: 12,
+  });
+  const match = selectTikTokUpdate({
+    videoId: null,
+    postUrl: "https://www.tiktok.com/@leader/video/7123456789012345678/?is_from_webapp=1",
+    videos: [video],
+  });
+  assert.equal(match?.videoId, video.id);
+  assert.equal(match?.video.impressions, 12);
+});
+
+test("a saved Facebook post stays in the monthly totals after its permalink changes", () => {
+  const saved = post({
+    id: "111_222",
+    network: "facebook",
+    accountId: "111",
+    accountName: "Page",
+    permalink: "https://www.facebook.com/111/posts/222",
+    impressions: 40,
+    createdAt: "2026-03-15T00:00:00.000Z",
+  });
+  const refreshed = { ...saved, permalink: "https://www.facebook.com/111/posts/changed", impressions: 55 };
+  const posts = rememberedFacebookPosts({
+    saved: [saved],
+    refreshed: [refreshed],
+    feed: [],
+    code,
+    proofUrls: [saved.permalink],
+  });
+  assert.equal(posts[0]?.id, "111_222");
+  assert.equal(posts[0]?.impressions, 55);
+  const dropped = campaignReports({
+    code,
+    posts,
+    proofUrls: [saved.permalink],
+    accounts: [{ network: "facebook", accountId: "111", accountName: "Page" }],
+    monthsByAccount: new Map([["facebook:111", ["2026-03"]]]),
+  });
+  assert.equal(dropped[0]?.impressions, 0);
+  const kept = campaignReports({
+    code,
+    posts,
+    proofUrls: [],
+    accounts: [{ network: "facebook", accountId: "111", accountName: "Page" }],
+    monthsByAccount: new Map([["facebook:111", ["2026-03"]]]),
+    alreadyMatched: true,
+  });
+  assert.equal(kept[0]?.impressions, 55);
 });
 
 test("a pasted TikTok link matches the share URL from video.list", () => {

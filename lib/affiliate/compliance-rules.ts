@@ -132,6 +132,31 @@ export function complianceActionLabel(action: ComplianceAction) {
   return "Post check failed";
 }
 
+const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
+
+export function youtubeVideoId(value: string | null) {
+  if (!value) return null;
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return null;
+  }
+  const host = url.hostname.toLowerCase().replace(/^www\./, "");
+  if (host === "youtu.be") {
+    const id = url.pathname.split("/").filter(Boolean)[0] ?? "";
+    return YOUTUBE_ID.test(id) ? id : null;
+  }
+  if (host !== "youtube.com" && host !== "m.youtube.com" && host !== "music.youtube.com") return null;
+  const parts = url.pathname.split("/").filter(Boolean);
+  if (parts[0] === "watch") {
+    const id = url.searchParams.get("v") ?? "";
+    return YOUTUBE_ID.test(id) ? id : null;
+  }
+  if ((parts[0] === "shorts" || parts[0] === "embed" || parts[0] === "live") && parts[1] && YOUTUBE_ID.test(parts[1])) return parts[1];
+  return null;
+}
+
 export function disclosurePostUrl(value: unknown) {
   const raw = typeof value === "string" ? value.trim() : "";
   if (!raw) return null;

@@ -37,7 +37,7 @@ function LegalBlocks({ blocks }: { blocks: LegalBlock[] }) {
   return blocks.map((block, index) => {
     if (block.kind === "h3") {
       return (
-        <h3 key={index} id={block.text === "TikTok accounts" ? "tiktok-accounts" : block.text === "Facebook and Instagram accounts" ? "facebook-instagram-accounts" : undefined} className="mt-6 text-xl">
+        <h3 key={index} id={block.text === "TikTok accounts" ? "tiktok-accounts" : block.text === "YouTube accounts" ? "youtube-accounts" : block.text === "Facebook and Instagram accounts" ? "facebook-instagram-accounts" : undefined} className="mt-6 text-xl">
           {block.runs ? <LegalRuns runs={block.runs} /> : block.text}
         </h3>
       );

@@ -151,7 +151,7 @@ test("approved posts cannot change the campaign", () => {
   assert.equal(campaignChangeAllowed("withdrawn"), false);
 });
 
-test("a proposed publishing date is optional", () => {
+test("a blank proposed publishing date stays blank until submit requires one", () => {
   assert.equal(proposedPublishDate(""), "");
   assert.equal(proposedPublishDate(null), "");
   assert.equal(proposedPublishDate("2026-11-16"), "2026-11-16");

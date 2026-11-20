@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { clearAffiliateMemo } from "@/lib/affiliate/memo";
 import { redirect } from "next/navigation";
 import {
   acceptSubAdminPasswordReset,
@@ -342,10 +343,15 @@ export async function resendAffiliateInvitationAction(formData: FormData) {
 }
 
 function refreshAssignments() {
+  clearAffiliateMemo();
   revalidatePath(PROMO_PATH);
+  clearAffiliateMemo();
   revalidatePath(ACCOUNTS_PATH);
+  clearAffiliateMemo();
   revalidatePath("/admin/affiliates/tracking-links");
+  clearAffiliateMemo();
   revalidatePath("/affiliates/overview");
+  clearAffiliateMemo();
   revalidatePath("/affiliates/tracking-link");
 }
 
@@ -394,9 +400,13 @@ export async function unassignPromoCodeAction(formData: FormData) {
 const PAYOUT_PATH = "/admin/affiliates/payouts";
 
 function refreshPayouts() {
+  clearAffiliateMemo();
   revalidatePath(PAYOUT_PATH);
+  clearAffiliateMemo();
   revalidatePath("/admin/affiliates/overview");
+  clearAffiliateMemo();
   revalidatePath("/affiliates/payouts");
+  clearAffiliateMemo();
   revalidatePath("/affiliates/overview");
 }
 
@@ -526,7 +536,9 @@ export async function saveMarketingOfferAction(formData: FormData) {
     code,
     detail: offerId ? "Revised a marketing offer." : "Sent a marketing offer.",
   });
+  clearAffiliateMemo();
   revalidatePath(OFFER_PATH);
+  clearAffiliateMemo();
   revalidatePath("/affiliates/overview");
   offerDone(id, offerId ? "revised" : "sent");
 }
@@ -548,7 +560,9 @@ async function offerStep(formData: FormData, run: (id: string) => Promise<void>,
     code: formData.get("code"),
     detail,
   });
+  clearAffiliateMemo();
   revalidatePath(OFFER_PATH);
+  clearAffiliateMemo();
   revalidatePath("/affiliates/overview");
   offerDone(id, notice);
 }
@@ -747,9 +761,13 @@ export async function saveMarketingCampaignAction(formData: FormData) {
     console.error("[affiliate] marketing campaign failed", error instanceof Error ? error.message : "unknown");
     redirect(campaignDestination(formData, range, { error: "roi-unavailable" }));
   }
+  clearAffiliateMemo();
   revalidatePath(ROI_PATH);
+  clearAffiliateMemo();
   revalidatePath(CAMPAIGNS_PATH);
+  clearAffiliateMemo();
   revalidatePath("/admin/affiliates/offers");
+  clearAffiliateMemo();
   revalidatePath("/affiliates/campaigns");
   redirect(campaignDestination(formData, range, { notice }));
 }
@@ -766,10 +784,15 @@ export async function saveCampaignFlowAction(input: CampaignFlowInput) {
     console.error("[affiliate] campaign flow failed", error instanceof Error ? error.message : "unknown");
     return { ok: false as const, error: "Campaigns are unavailable right now." };
   }
+  clearAffiliateMemo();
   revalidatePath(ROI_PATH);
+  clearAffiliateMemo();
   revalidatePath(CAMPAIGNS_PATH);
+  clearAffiliateMemo();
   revalidatePath("/admin/affiliates/offers");
+  clearAffiliateMemo();
   revalidatePath("/affiliates/campaigns");
+  clearAffiliateMemo();
   revalidatePath("/affiliates/posts");
   return { ok: true as const, status: parsed.brief.status, count: parsed.brief.assignedCodes.length };
 }
@@ -788,6 +811,7 @@ export async function saveMarketingCostAction(formData: FormData) {
     console.error("[affiliate] marketing cost failed", error instanceof Error ? error.message : "unknown");
     redirect(roiQuery(range, { error: "roi-unavailable" }));
   }
+  clearAffiliateMemo();
   revalidatePath(ROI_PATH);
   redirect(roiQuery(range, { notice: "saved" }));
 }

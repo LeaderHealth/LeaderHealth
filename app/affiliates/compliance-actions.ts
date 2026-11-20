@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { clearAffiliateMemo } from "@/lib/affiliate/memo";
 import { redirect } from "next/navigation";
 import { currentAffiliate } from "@/app/affiliates/current";
 import { noteComplianceEvent } from "@/lib/affiliate/compliance-log";
@@ -36,6 +37,7 @@ export async function acknowledgeDisclosureAction(formData: FormData) {
     console.error("[affiliate] disclosure acknowledgement failed", error instanceof Error ? error.message : "unknown");
     linkFail("unavailable");
   }
+  clearAffiliateMemo();
   revalidatePath(LINK);
   revalidatePath("/affiliates/posts");
   revalidatePath("/affiliates/overview");
@@ -65,6 +67,7 @@ export async function submitDisclosureProofAction(formData: FormData) {
     code: affiliate.code,
     detail: upload ? "Submitted disclosure proof with a screenshot." : "Submitted a disclosure proof URL.",
   });
+  clearAffiliateMemo();
   revalidatePath(LINK);
   revalidatePath("/admin/affiliates/compliance");
   redirect(`${LINK}?notice=proof`);
@@ -90,6 +93,7 @@ export async function replyToComplianceFlagAction(formData: FormData) {
     code: flag.code,
     detail: String(formData.get("reply") ?? ""),
   });
+  clearAffiliateMemo();
   revalidatePath(NOTICES);
   revalidatePath("/admin/affiliates/compliance");
   redirect(`${NOTICES}?notice=replied`);

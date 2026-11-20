@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { engagementPayCents, socialPayCents } from "./manual-checkpoint";
 import { marketingEventId, marketingPayPath, marketingVisitorAllowed, shouldRecordMarketingEvent } from "./marketing-path";
-import { defaultPaymentRates, rateFor, standingViewRateCents, websiteMonthAmount, websitePayCents, type PaymentRates } from "./payment-rates";
+import { defaultPaymentRates, marketingPayoutParts, rateFor, standingViewRateCents, websiteMonthAmount, websitePayCents, type PaymentRates } from "./payment-rates";
 
 test("social pay adds engagements and the maximum caps the combined amount", () => {
   assert.equal(
@@ -33,6 +33,26 @@ test("social pay adds engagements and the maximum caps the combined amount", () 
   );
   assert.equal(engagementPayCents(4, 5), 20);
   assert.equal(socialPayCents({ views: null, viewRateCents: 200, likes: null, engagementRateCents: 5 }), 0);
+});
+
+test("an affiliate payout adds social performance and base pay", () => {
+  const payout = marketingPayoutParts({
+    socialCents: 220,
+    adjustmentCents: 50,
+    baseCents: 300,
+    socialNote: "2 posts this month",
+    baseNote: "Posting rate $3.00 · 4 of 4 posts live",
+  });
+  assert.equal(payout.socialAndBaseCents, 570);
+  assert.deepEqual(
+    payout.parts.map((part) => part.kind),
+    ["Social performance", "Base pay"],
+  );
+  assert.equal(payout.parts[0]?.amountCents, 270);
+  assert.equal(payout.parts[1]?.amountCents, 300);
+  const empty = marketingPayoutParts({ socialCents: 0, adjustmentCents: 0, baseCents: 0, socialNote: "Views and engagements", baseNote: "No monthly posting rate this month" });
+  assert.equal(empty.socialAndBaseCents, 0);
+  assert.equal(empty.parts.length, 2);
 });
 
 test("a disabled engagement category locks a zero rate", () => {

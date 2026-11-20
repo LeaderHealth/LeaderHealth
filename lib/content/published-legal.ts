@@ -3500,19 +3500,19 @@ export const subscriptionTerms: LegalPage = {
       "blocks": [
         {
           "kind": "p",
-          "text": "You can cancel any Subscription at any time using the same method by which you signed up. Cancellation does not require speaking to a representative and does not require steps or screens more burdensome than signup."
-        },
-        {
-          "kind": "p",
-          "text": "Online (primary method). Sign in → Account → Subscriptions → Cancel. Confirmation is shown immediately on screen and emailed to you."
-        },
-        {
-          "kind": "p",
-          "text": "Other methods, equally available:• Email: support@myleaderhealth.com (subject: \"Cancel Subscription\") — we confirm by reply within 24 hours."
-        },
-        {
-          "kind": "p",
-          "text": "• Mail: Leader Health, c/o LH Ventures LLC, 321 S Persimmon St, Tomball, TX 77375, Attn: Subscriptions."
+          "text": "A subscription keeps charging your card automatically at the price and cadence shown at checkout until you cancel. To cancel, email support@myleaderhealth.com. We confirm by reply.",
+          "runs": [
+            {
+              "text": "A subscription keeps charging your card automatically at the price and cadence shown at checkout until you cancel. To cancel, email "
+            },
+            {
+              "text": "support@myleaderhealth.com",
+              "href": "mailto:support@myleaderhealth.com"
+            },
+            {
+              "text": ". We confirm by reply."
+            }
+          ]
         },
         {
           "kind": "p",

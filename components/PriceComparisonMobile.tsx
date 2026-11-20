@@ -85,7 +85,7 @@ const defaultRows: CompareSpotlightRow[] = [
     val4: "Varies",
   },
   {
-    label: "Cancel anytime",
+    label: "Cancel through support",
     val1: "yes",
     val2: "yes",
     val3: "yes",
