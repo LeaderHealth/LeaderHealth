@@ -330,7 +330,7 @@ export function WomenHormoneTherapy() {
                   <span className="font-serif-italic">Surprises</span>.
                 </h2>
                 <p className="mt-5 max-w-3xl text-[16px] leading-relaxed text-white/95">
-                  HRT is an ongoing process. Dosing and application evolve with your journey. For $50/month (billed quarterly), all labs and clinician visits are included. Medications are billed separately per your treatment plan. Everything ships and bills quarterly. Cancel anytime after the first 3 months.
+                  HRT is an ongoing process. Dosing and application evolve with your journey. For $50/month (billed quarterly), all labs and clinician visits are included. Medications are billed separately per your treatment plan. Everything ships and bills quarterly. Your card is charged automatically until you cancel. To cancel, email support@myleaderhealth.com.
                 </p>
                 <div className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                   {treatments.map((item) => (
