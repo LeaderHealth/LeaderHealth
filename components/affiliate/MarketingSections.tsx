@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { SlidingTabs } from "./SlidingTabs";
+import { SegmentedControl } from "./SegmentedControl";
 import { disconnectSocialAction } from "@/app/affiliates/social-actions";
 import { currentReportMonth, formatReportMonth, networkLabel, reportMetricsBlank, type SocialNetwork } from "@/lib/affiliate/marketing";
 import type { SocialAccountView } from "@/lib/affiliate/social-store";
@@ -170,20 +170,14 @@ export function WebsiteReportSection({ months }: { months: WebsiteMonthReport[] 
       <h3 className="text-lg">Website traffic</h3>
       <p className="mt-1 text-sm text-brown">Visits come from tracking links. A promo code is counted when the link carries that code, or when a paid order uses it.</p>
       <div className="mt-4">
-        <SlidingTabs
-          variant="track"
+        <SegmentedControl
           label="Website traffic"
-          items={(
-            [
-              ["visits", "Visits"],
-              ["orders", "Orders"],
-            ] as const
-          ).map(([id, label]) => ({
-            id,
-            label,
-            current: view === id,
-            onSelect: () => setView(id),
-          }))}
+          value={view}
+          options={[
+            { id: "visits", label: "Visits" },
+            { id: "orders", label: "Orders" },
+          ]}
+          onChange={setView}
         />
       </div>
       <MonthChart
@@ -337,7 +331,7 @@ export function MarketingAccountSections({
             ]}
           />
           {section.months.length > 0 && section.months.every((month) => reportMetricsBlank(month)) ? (
-            <p className="mt-3 text-sm text-brown">The post must contain the tracking link, or its URL must be submitted.</p>
+            <p className="mt-3 text-sm text-brown">The caption needs @myleaderhealth so the post can track, or its URL must be submitted.</p>
           ) : null}
         </section>
       ))}

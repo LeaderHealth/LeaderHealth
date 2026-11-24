@@ -370,7 +370,7 @@ export default async function AffiliatePayoutsPage({
     const paidLine = labPaid ?? monthPosts.find((post) => post.status === "paid");
     const paidWhen = paidLine && "paidAt" in paidLine ? formatPayoutDate(paidLine.paidAt) : "";
     const paidRef = paidLine && "reference" in paidLine ? paidLine.reference : "";
-    const detail = status === "paid" ? [paidWhen === "—" ? "" : paidWhen, paidRef].filter(Boolean).join(" · ") : status === "waiting" ? waitingNote : "";
+    const detail = status === "paid" ? [paidWhen === "—" ? "" : paidWhen, paidRef].filter(Boolean).join(" · ") : status === "waiting" ? waitingNote : status === "approved" ? "Not sent yet" : month === currentPayoutPeriod() ? "Month still open" : "Waiting for review";
     const parts = [
       ...marketingPay.parts,
       website.amountCents || counts ? { kind: "Website traffic", what: websiteLabel || "This month", amountCents: website.amountCents } : null,
@@ -451,7 +451,8 @@ export default async function AffiliatePayoutsPage({
       {
         key: affiliate.code,
         name: affiliate.name,
-        socialCents: marketingPay.socialAndBaseCents,
+        agreementCents: monthly.earnedCents,
+        socialCents: social.socialCents + social.adjustmentCents,
         websiteCents: website.amountCents,
         labCents,
         totalCents,
@@ -524,7 +525,7 @@ export default async function AffiliatePayoutsPage({
         <div className="min-w-[16rem] flex-1">
           <h2 className="text-[30px] font-normal">Payouts</h2>
           <p className="mt-1.5 max-w-xl text-[15px] text-[#4a3a37]">
-            {canPay ? "Each total adds social performance and base pay, then website traffic and lab commission. Approve it, send the money, then record it here." : "Approving and recording a payment is limited to main admins and admins."}
+            {canPay ? "Each total adds agreement pay, social performance, website traffic, and lab commission. Approve it, send the money, then record it here." : "Approving and recording a payment is limited to main admins and admins."}
             {LAB_COMMISSIONS_ENABLED ? "" : " Lab commission is not active."}
           </p>
         </div>

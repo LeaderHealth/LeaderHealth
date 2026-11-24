@@ -23,6 +23,7 @@ export const dynamic = "force-dynamic";
 
 const errors: Record<string, string> = {
   disclosure: "Include the sponsorship disclosure in the caption.",
+  tag: "Tag @myleaderhealth in the caption. The post does not track without that tag.",
   link: "Put your tracking link in the caption. A link in your bio is not enough.",
   file: "Use a PNG, JPEG, or WebP image under 8 MB, or an MP4, MOV, or WebM video under 200 MB.",
   url: "Paste the link to the live post.",

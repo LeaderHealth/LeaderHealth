@@ -18,10 +18,10 @@ function SectionRow({ group, hidden = false }: { group: DashboardGroup; hidden?:
     <div
       aria-hidden={hidden || undefined}
       inert={hidden}
-      className={`grid transition-[grid-template-rows,opacity,margin] duration-300 ease-out motion-reduce:transition-none ${hidden ? "-mb-4 grid-rows-[0fr] opacity-0" : "grid-rows-[1fr] opacity-100"}`}
+      className={`grid min-w-0 transition-[grid-template-rows,opacity,margin] duration-300 ease-out motion-reduce:transition-none ${hidden ? "-mb-4 grid-rows-[0fr] opacity-0" : "grid-rows-[1fr] opacity-100"}`}
     >
-      <div className="-m-1 min-h-0 overflow-hidden p-1">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className={`-m-1 min-h-0 min-w-0 p-1 ${hidden ? "overflow-hidden" : "overflow-visible min-[600px]:overflow-hidden"}`}>
+        <div className="flex min-w-0 max-w-full flex-wrap items-center justify-between gap-3">
           <Subnav key={group.paths.join("|")} label="Section" items={group.items} />
           {group.note ? (
             <Link href={group.note.href} className="text-sm font-medium text-ink underline underline-offset-4">

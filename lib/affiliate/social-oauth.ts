@@ -86,7 +86,7 @@ export function metaAuthorizeUrl(state: string) {
   url.searchParams.set("redirect_uri", metaRedirectUri());
   url.searchParams.set("state", state);
   url.searchParams.set("response_type", "code");
-  url.searchParams.set("scope", "pages_show_list,pages_read_engagement,pages_read_user_content");
+  url.searchParams.set("scope", "public_profile");
   return url.toString();
 }
 
@@ -193,9 +193,38 @@ async function exchangeMetaApp(clientId: string, clientSecret: string, redirectU
     client_secret: clientSecret,
     fb_exchange_token: shortToken,
   });
-  const pages = await metaPages(userToken);
-  if (pages.length === 0) throw new SocialError("page");
-  return { userAccessToken: userToken, pages };
+  const pages = await facebookPages(userToken);
+  if (pages.length > 0) return { userAccessToken: userToken, pages };
+  const profile = await facebookProfile(userToken);
+  if (!profile) throw new SocialError("unavailable");
+  return {
+    userAccessToken: userToken,
+    pages: [{
+      accountId: profile.accountId,
+      accountName: profile.accountName,
+      accessToken: userToken,
+      instagramAccountId: null,
+      instagramAccountName: null,
+    }],
+  };
+}
+
+async function facebookPages(userToken: string) {
+  try {
+    return await metaPages(userToken);
+  } catch (error) {
+    if (error instanceof SocialError && error.code === "unavailable") return [];
+    throw error;
+  }
+}
+
+async function facebookProfile(token: string) {
+  const url = new URL(`${GRAPH}/me`);
+  url.searchParams.set("fields", "id,name");
+  const body = await readJson(url, token);
+  const accountId = asAccountId(body.id);
+  if (!accountId) return null;
+  return { accountId, accountName: label(body.name) ?? accountId };
 }
 
 export async function exchangeTikTokCode(oauthCode: string, verifier: string): Promise<Omit<TikTokConnectionSecret, "code">> {

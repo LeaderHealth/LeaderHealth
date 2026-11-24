@@ -4,7 +4,7 @@ import { publishDateValue } from "./format";
 export const CAMPAIGN_PLATFORMS = ["Instagram", "TikTok", "YouTube", "Facebook"] as const;
 export const CAMPAIGN_CONTENT_TYPES = ["Reel", "Video", "Image post", "Carousel", "Story"] as const;
 export const DEFAULT_CAMPAIGN_DISCLOSURE = "Paid partnership with Leader Health";
-export const DEFAULT_CAMPAIGN_LINK_INSTRUCTIONS = "Put your tracking link in the caption. A link in your bio doesn’t count.";
+export const DEFAULT_CAMPAIGN_LINK_INSTRUCTIONS = "Optional. The post tracks when the caption tags @myleaderhealth. A tracking link in the caption is not required.";
 
 export type CampaignBaseMode = "post" | "campaign";
 export type CampaignStatus = "draft" | "sent";

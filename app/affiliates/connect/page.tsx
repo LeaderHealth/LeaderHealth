@@ -45,10 +45,10 @@ export default async function ConnectAccountsPage() {
     {
       name: "Facebook",
       accounts: facebook,
-      detail: "Connecting reads the Facebook Page.",
+      detail: "Facebook opens its login and reads the account name.",
       href: metaConfigured() ? "/api/affiliate/social/meta/start" : null,
       unavailable: metaConfigured() ? "" : "Facebook reporting is not set up.",
-      changeLabel: "Change Facebook Page",
+      changeLabel: "Change Facebook account",
     },
     {
       name: "YouTube",

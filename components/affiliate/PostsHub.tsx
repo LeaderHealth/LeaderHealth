@@ -201,6 +201,10 @@ function hasTracking(caption: string, url: string, code: string) {
   return caption.includes(url) || caption.toLowerCase().includes(`ref=${code.toLowerCase()}`);
 }
 
+function hasBrandTag(caption: string) {
+  return caption.toLowerCase().includes("@myleaderhealth");
+}
+
 function insertLine(caption: string, line: string, gap: "\n" | "\n\n") {
   if (caption.toLowerCase().includes(line.toLowerCase())) return caption;
   const trimmed = caption.replace(/\s+$/, "");
@@ -357,12 +361,13 @@ function applySlides(card: Card, slides: Slide[]): Card {
 }
 
 function includesLabel(text: string, disclosureLine: string, trackingUrl: string, code: string) {
-  const disclosed = hasDisclosure(text, disclosureLine);
-  const linked = hasTracking(text, trackingUrl, code);
-  if (disclosed && linked) return "Includes the disclosure line and your tracking link.";
-  if (disclosed) return "Includes the disclosure line.";
-  if (linked) return "Includes your tracking link.";
-  return "";
+  const parts: string[] = [];
+  if (hasBrandTag(text)) parts.push("@myleaderhealth");
+  if (hasDisclosure(text, disclosureLine)) parts.push("the sponsorship line");
+  if (hasTracking(text, trackingUrl, code)) parts.push("your tracking link");
+  if (parts.length === 0) return "";
+  if (parts.length === 1) return `Includes ${parts[0]}.`;
+  return `Includes ${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}.`;
 }
 
 function slideIsVideo(slide: Slide) {
@@ -370,7 +375,7 @@ function slideIsVideo(slide: Slide) {
   return /\.(mp4|m4v|webm|mov)$/i.test(slide.fileName) || /video/i.test(slide.fileName);
 }
 
-function cardProblem(card: Card, disclosureLine: string, trackingUrl: string, code: string) {
+function cardProblem(card: Card) {
   if (!card.format) return "needs a type";
   const issue = card.slides.find((slide) => slide.fileIssue)?.fileIssue ?? "";
   if (issue) return issue;
@@ -378,14 +383,13 @@ function cardProblem(card: Card, disclosureLine: string, trackingUrl: string, co
   const joined = joinedCaption(card);
   if (joined.length > CAPTION_LIMIT) return "These captions together need to stay under 2,200 characters.";
   const missing: string[] = [];
-  if (!hasDisclosure(joined, disclosureLine)) missing.push("the disclosure line");
-  if (!hasTracking(joined, trackingUrl, code)) missing.push("your tracking link");
+  if (!hasBrandTag(joined)) missing.push("@myleaderhealth");
   if (card.slides.length === 0) missing.push(card.format === "instagram_post" ? "at least one photo or video" : "a video");
   return missing.length ? `needs ${joinList(missing)}` : "";
 }
 
-function cardReady(card: Card, disclosureLine: string, trackingUrl: string, code: string) {
-  return cardProblem(card, disclosureLine, trackingUrl, code) === "";
+function cardReady(card: Card) {
+  return cardProblem(card) === "";
 }
 
 function joinList(parts: string[]) {
@@ -446,7 +450,7 @@ function publishGuide(format: PostFormat | null) {
       placeholder: "instagram.com/reel/…",
       error: "That doesn’t look like an Instagram reel link. It should look like instagram.com/reel/…",
       hold: "Don’t post it on Instagram yet.",
-      pending: "This stays here until the caption on Instagram has the sponsorship line and your tracking link.",
+      pending: "This stays here until the caption on Instagram tags @myleaderhealth.",
       cta: "Add reel link",
     };
   }
@@ -461,7 +465,7 @@ function publishGuide(format: PostFormat | null) {
       ? "That doesn’t look like an Instagram post link. It should look like instagram.com/p/…"
       : "That doesn’t look like an Instagram post link. It should look like instagram.com/p/… or instagram.com/reel/…",
     hold: "Don’t post it on Instagram yet.",
-    pending: "This stays here until the caption on Instagram has the sponsorship line and your tracking link.",
+    pending: "This stays here until the caption on Instagram tags @myleaderhealth.",
     cta: "Add Instagram link",
   };
 }
@@ -872,9 +876,9 @@ function Composer({
   const monthBlocked = monthSlot != null && monthSlot.limit != null && cards.length > monthRoom;
   const noFullMonth = !offer && posting != null && posting.months.length === 0;
   const dateBounds = monthSlot ? postingMonthDateBounds(monthSlot.period, posting?.startsOn ?? null, posting?.endsOn ?? null) : null;
-  const readyCount = cards.filter((card) => cardReady(card, disclosureLine, trackingUrl, affiliateCode)).length;
+  const readyCount = cards.filter((card) => cardReady(card)).length;
   const blocked = cards
-    .map((card, index) => ({ card, index, problem: cardProblem(card, disclosureLine, trackingUrl, affiliateCode) }))
+    .map((card, index) => ({ card, index, problem: cardProblem(card) }))
     .find((item) => item.problem);
   const slideProblem = offer
     ? cards.find((card) => card.slides.length > 0 && (card.slides.length < offer.minSlides || card.slides.length > offer.maxSlides))
@@ -1052,7 +1056,7 @@ function Composer({
       <BackButton onClick={onBack} />
       <div className="flex flex-col gap-1.5">
         <h2 className="text-[28px] font-medium tracking-tight">{cards.length === 1 && !cards[0]?.format ? "What are you sending?" : "New posts"}</h2>
-        <p className="text-sm leading-normal text-brown">{cards.length === 1 && !cards[0]?.format ? "Pick TikTok, an Instagram post or carousel, or an Instagram reel. The next step matches that choice." : "Each post is reviewed on its own, so you can publish them as they’re approved. A link in your bio doesn’t count: both lines below go in every caption."}</p>
+        <p className="text-sm leading-normal text-brown">{cards.length === 1 && !cards[0]?.format ? "Pick TikTok, an Instagram post or carousel, or an Instagram reel. The next step matches that choice." : "Each post is reviewed on its own, so you can publish them as they’re approved. Tag @myleaderhealth in every caption. A link in your bio doesn’t count."}</p>
       </div>
       <AgreementLine posting={posting} unavailable={agreementsUnavailable} />
       {offer || !posting?.months.length ? null : (
@@ -1086,7 +1090,7 @@ function Composer({
       <Progress current={0} />
       {cards.map((card, index) => {
         const carousel = isCarousel(card);
-        const ready = cardReady(card, disclosureLine, trackingUrl, affiliateCode);
+        const ready = cardReady(card);
         const videoPost = card.format === "tiktok" || card.format === "instagram_reel";
         const fileTitle = card.format === "tiktok" ? "TikTok video" : card.format === "instagram_reel" ? "Reel" : "Photos or videos";
         const addLabel = !card.slides.length
@@ -1229,14 +1233,14 @@ function Composer({
               <p className="text-[13px] leading-relaxed text-brown">{limitCopy}</p>
               {!carousel && card.slides[0]?.fileIssue ? <p className="text-[13px] text-[#9B2C1F]">{card.slides[0].fileIssue}</p> : null}
               {carousel ? (
-                <p className="text-[13px] leading-relaxed text-brown">Each slide has its own caption, and every slide caption is reviewed. The disclosure line and tracking link have to appear in your slide captions. Slide 1 is best, since the cover is seen first.</p>
+                <p className="text-[13px] leading-relaxed text-brown">Each slide has its own caption, and every slide caption is reviewed. Tag @myleaderhealth so the post can track. The sponsorship line and tracking link are optional. Slide 1 is best, since the cover is seen first.</p>
               ) : null}
             </div>
             {offer ? (
               <div className="flex flex-col gap-1.5 rounded-[14px] bg-[#F7F3F2] px-3.5 py-3">
                 <span className="text-[13px] font-semibold">Requirements</span>
                 <span className="text-sm leading-normal text-[#4A3A37]">{offer.brief || "—"}</span>
-                <span className="text-xs text-[#6B5A57]">Publish by {offer.publishLabel}. Always include “Paid partnership with Leader Health” and your tracking link.</span>
+                <span className="text-xs text-[#6B5A57]">Publish by {offer.publishLabel}. Tag @myleaderhealth so the post can track. The sponsorship line and tracking link are optional.</span>
               </div>
             ) : null}
             {carousel ? null : (
@@ -1341,16 +1345,32 @@ function CaptionChecker({
   code: string;
   onInsert: (line: string, gap: "\n" | "\n\n") => void;
 }) {
+  const tagAt = captions.findIndex((text) => hasBrandTag(text));
   const disclosureAt = captions.findIndex((text) => hasDisclosure(text, disclosureLine));
   const trackingAt = captions.findIndex((text) => hasTracking(text, trackingUrl, code));
   return (
     <div className="flex flex-col gap-1 rounded-[14px] bg-white px-4 py-3">
-      <p className="text-sm font-medium">{carousel ? "Your slide captions need both of these." : "Your caption needs both of these"}</p>
+      <p className="text-sm font-medium">{carousel ? "Tag @myleaderhealth in a slide caption so the post can track." : "Tag @myleaderhealth in the caption so the post can track."}</p>
+      <RequirementRow
+        ok={tagAt >= 0}
+        label="@myleaderhealth"
+        found={carousel && tagAt >= 0 ? `Found in slide ${tagAt + 1}’s caption.` : ""}
+        caution={carousel && tagAt > 0 ? "Slide 1 is better, so it’s seen first." : ""}
+        action={
+          tagAt >= 0 ? null : (
+            <button type="button" className={`${quietButtonClass} h-9 px-3.5 text-[13px]`} onClick={() => onInsert("@myleaderhealth", "\n")}>
+              {carousel ? "Add to slide 1" : "Insert"}
+            </button>
+          )
+        }
+      />
+      <div className="h-px bg-[#F0E8E6]" />
       <RequirementRow
         ok={disclosureAt >= 0}
+        optional
         label={disclosureLine}
         found={carousel && disclosureAt >= 0 ? `Found in slide ${disclosureAt + 1}’s caption.` : ""}
-        caution={carousel && disclosureAt > 0 ? "Slide 1 is better, so it’s seen first." : ""}
+        caution=""
         action={
           disclosureAt >= 0 ? null : (
             <button type="button" className={`${quietButtonClass} h-9 px-3.5 text-[13px]`} onClick={() => onInsert(disclosureLine, "\n\n")}>
@@ -1362,6 +1382,7 @@ function CaptionChecker({
       <div className="h-px bg-[#F0E8E6]" />
       <RequirementRow
         ok={trackingAt >= 0}
+        optional
         label={trackingUrl}
         mono
         found={carousel && trackingAt >= 0 ? `Found in slide ${trackingAt + 1}’s caption.` : ""}
@@ -1378,12 +1399,12 @@ function CaptionChecker({
   );
 }
 
-function RequirementRow({ ok, label, mono, found, caution, action }: { ok: boolean; label: string; mono?: boolean; found: string; caution: string; action: ReactNode }) {
+function RequirementRow({ ok, label, mono, optional = false, found, caution, action }: { ok: boolean; label: string; mono?: boolean; optional?: boolean; found: string; caution: string; action: ReactNode }) {
   return (
     <div className="flex items-start gap-3 py-2.5">
-      <span className="mt-0.5">{ok ? <CheckMark /> : <EmptyMark />}</span>
+      <span className="mt-0.5">{ok ? <CheckMark /> : optional ? <span className="grid size-5 place-items-center text-sm text-[#B3A5A2]">–</span> : <EmptyMark />}</span>
       <div className="min-w-0 flex-1">
-        <p className={mono ? "break-all font-mono text-sm" : "text-sm"}>{label}</p>
+        <p className={mono ? "break-all font-mono text-sm" : "text-sm"}>{label}{optional ? " · optional" : ""}</p>
         {found ? <p className="mt-0.5 text-[13px] text-brown">{found}</p> : null}
         {caution ? <p className="mt-0.5 text-[13px] text-[#7A4E00]">{caution}</p> : null}
       </div>
@@ -1462,14 +1483,13 @@ function PostDetail({
   const joinedEdit = carousel
     ? editSlides.map((slide) => slide.caption.trim()).filter(Boolean).join("\n\n")
     : editCaption;
-  const disclosed = hasDisclosure(joinedEdit, disclosureLine);
-  const linked = hasTracking(joinedEdit, trackingUrl, affiliateCode);
+  const tagged = hasBrandTag(joinedEdit);
   const singleIssue = !carousel && editFile ? (post.format ? formatUploadIssue(post.format, editFile) : fileIssue(editFile)) : "";
   const fileProblem = carousel ? editSlides.find((slide) => slide.issue)?.issue ?? "" : singleIssue;
   const changed = carousel
     ? editSlides.some((slide, index) => slide.caption !== (post.slides[index]?.caption ?? "") || Boolean(slide.file))
     : editCaption !== post.caption || Boolean(editFile);
-  const canResubmit = disclosed && linked && changed && !pending && !fileProblem && joinedEdit.length <= CAPTION_LIMIT && posting != null;
+  const canResubmit = tagged && changed && !pending && !fileProblem && joinedEdit.length <= CAPTION_LIMIT && posting != null;
   const editHint = agreementsUnavailable
     ? "Your agreement could not be loaded. Try again before resubmitting."
     : !posting
@@ -1478,10 +1498,10 @@ function PostDetail({
     ? fileProblem
     : joinedEdit.length > CAPTION_LIMIT
       ? "These captions together need to stay under 2,200 characters."
-      : !disclosed || !linked
+      : !tagged
         ? carousel
-          ? "Keep the disclosure line and your tracking link in the slide captions."
-          : "Keep the disclosure line and your tracking link in the caption."
+          ? "Tag @myleaderhealth in a slide caption so the post can track."
+          : "Tag @myleaderhealth in the caption so the post can track."
         : changed
           ? "Ready to resubmit."
           : "Make the requested change before resubmitting.";

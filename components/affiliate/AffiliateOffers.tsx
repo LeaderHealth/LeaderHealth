@@ -149,7 +149,7 @@ export function AffiliateOffers({ offers, toast }: { offers: AffiliateOfferCard[
               <div className="flex flex-col gap-1.5 rounded-[14px] bg-[#F7F3F2] px-3.5 py-3">
                 <span className="text-[13px] font-semibold">Brief</span>
                 <span className="text-sm leading-normal text-[#4A3A37]">{offer.brief || "—"}</span>
-                <span className="text-xs text-[#6B5A57]">Always required: “Paid partnership with Leader Health” and your tracking link in the caption. Pay is recorded views ÷ 1,000 × this rate, capped at the maximum, after {offer.trackingDays} days live. Lab commission stays separate.</span>
+                <span className="text-xs text-[#6B5A57]">Tag @myleaderhealth in the caption so the post can track. The sponsorship line and tracking link are optional. Pay is recorded views ÷ 1,000 × this rate, capped at the maximum, after {offer.trackingDays} days live. Lab commission stays separate.</span>
               </div>
 
               {open === "" ? (

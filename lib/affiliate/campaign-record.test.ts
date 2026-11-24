@@ -36,7 +36,7 @@ const ready = {
   posts: "2",
   guidelines: "Show the consult, not a before-and-after.",
   disclosure: "Paid partnership with Leader Health",
-  linkInstructions: "Put your tracking link in the caption.",
+  linkInstructions: "Tag @myleaderhealth in the caption so the post can track.",
   baseMode: "post",
   amount: "150",
   performancePay: false,

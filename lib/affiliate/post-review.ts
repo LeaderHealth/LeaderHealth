@@ -8,7 +8,7 @@ import { IMAGE_BYTES, VIDEO_BYTES, postUploadKind } from "./post-files";
 import { deliverableFeeCents } from "./deliverable-payments";
 import { formatForOfferKind, lockedPayTerms, offerSlideBounds, type LockedPayTerms } from "./offer-post";
 import { loadMarketingOffer } from "./marketing-offers";
-import { canonicalPostUrl, selectTikTokUpdate, textHasTrackingCode, tiktokVideoId } from "./social-match";
+import { canonicalPostUrl, selectTikTokUpdate, tiktokVideoId } from "./social-match";
 import { fetchInstagramMedia, fetchTikTokPosts, queryTikTokVideos, readInstagramMedia, type InstagramMediaSnapshot } from "./social-fetch";
 import { currentTikTokConnection } from "./social-sync";
 import { SocialError, loadConnectionSecrets, loadSocialAccounts, markSocialReconnect, type TikTokConnectionSecret } from "./social-store";
@@ -27,6 +27,7 @@ const CAPTION_LIMIT = 2200;
 const SLIDE_LIMIT = 20;
 const NOTE_LIMIT = 500;
 export const DISCLOSURE_LINE = "Paid partnership with Leader Health";
+export const BRAND_TAG = "@myleaderhealth";
 export const METRICS_STALE_MS = 6 * 60 * 60 * 1000;
 
 const CONTENT_STATUSES = ["draft", "submitted", "revision_requested", "rejected", "approved", "withdrawn"] as const;
@@ -48,10 +49,10 @@ export type MetricChangeRequest = {
   requestedAt: string | null;
 };
 export type ContentStep = "approve" | "request" | "reject" | "revise";
-export type VerificationFailure = "not_connected" | "not_found" | "missing_disclosure" | "missing_link" | "unavailable";
+export type VerificationFailure = "not_connected" | "not_found" | "missing_disclosure" | "missing_tag" | "missing_link" | "unavailable";
 
 export class PostReviewError extends Error {
-  code: "invalid" | "file" | "storage" | "missing" | "unavailable" | "status" | "url" | "note" | "disclosure" | "link" | "fee" | "campaign" | "offer" | "terms" | "date" | "agreement" | "month";
+  code: "invalid" | "file" | "storage" | "missing" | "unavailable" | "status" | "url" | "note" | "disclosure" | "tag" | "link" | "fee" | "campaign" | "offer" | "terms" | "date" | "agreement" | "month";
 
   constructor(code: PostReviewError["code"]) {
     super(code);
@@ -158,31 +159,22 @@ export function nextContentStatus(status: ContentStatus, step: ContentStep): Con
 
 export type LinkCheck = { label: string; state: "pass" | "fail" | "unknown" };
 
-const LINK_CHECK_LABELS = ["Post found on your account", "“Paid partnership with Leader Health” in caption", "Tracking link in caption"] as const;
+const LINK_CHECK_LABELS = ["Post found on your account", "@myleaderhealth in caption"] as const;
 
 export function instagramLinkChecks(status: PublicationStatus | null, verificationNote: string): LinkCheck[] {
-  const [found, disclosure, link] = LINK_CHECK_LABELS;
+  const [found, tag] = LINK_CHECK_LABELS;
   if (status === "tracking_active") return LINK_CHECK_LABELS.map((label) => ({ label, state: "pass" }));
   if (status !== "verification_failed") return [];
-  if (verificationNote === verificationFailureNote("missing_link")) {
+  if (verificationNote === verificationFailureNote("missing_tag")) {
     return [
       { label: found, state: "pass" },
-      { label: disclosure, state: "pass" },
-      { label: link, state: "fail" },
+      { label: tag, state: "fail" },
     ];
   }
-  if (verificationNote === verificationFailureNote("missing_disclosure")) {
+  if (verificationNote === verificationFailureNote("not_found") || verificationNote === verificationFailureNote("missing_link") || verificationNote === verificationFailureNote("missing_disclosure")) {
     return [
-      { label: found, state: "pass" },
-      { label: disclosure, state: "fail" },
-      { label: link, state: "unknown" },
-    ];
-  }
-  if (verificationNote === verificationFailureNote("not_found")) {
-    return [
-      { label: found, state: "fail" },
-      { label: disclosure, state: "unknown" },
-      { label: link, state: "unknown" },
+      { label: found, state: verificationNote === verificationFailureNote("not_found") ? "fail" : "pass" },
+      { label: tag, state: "unknown" },
     ];
   }
   return [];
@@ -193,6 +185,12 @@ export function instagramCheckCopy(status: PublicationStatus | null, verificatio
     return {
       headline: "Your post is live",
       detail: "Instagram engagement for this post shows in Stats. It does not change commission or payouts.",
+    };
+  }
+  if (verificationNote === verificationFailureNote("missing_tag")) {
+    return {
+      headline: "The caption needs @myleaderhealth",
+      detail: "Tag @myleaderhealth in the caption on Instagram, then check again. The post does not track without that tag.",
     };
   }
   if (verificationNote === verificationFailureNote("missing_link")) {
@@ -244,6 +242,10 @@ export function captionHasDisclosure(caption: string) {
   return caption.toLowerCase().includes(DISCLOSURE_LINE.toLowerCase());
 }
 
+export function captionHasBrandTag(caption: string) {
+  return caption.toLowerCase().includes(BRAND_TAG.toLowerCase());
+}
+
 const CLAIM_PATTERNS = [
   /\bfixed my [a-z][a-z'’\- ]{0,40}/i,
   /\bcured(?: my)? [a-z][a-z'’\- ]{0,40}/i,
@@ -265,9 +267,8 @@ export function treatmentClaims(caption: string) {
   return found.slice(0, 3);
 }
 
-export function captionIssue(caption: string, code: string) {
-  if (!captionHasDisclosure(caption)) return "disclosure" as const;
-  if (!textHasTrackingCode(caption, code)) return "link" as const;
+export function captionIssue(caption: string) {
+  if (!captionHasBrandTag(caption)) return "tag" as const;
   return null;
 }
 
@@ -290,7 +291,7 @@ export function instagramShortcode(value: string) {
   return shortcode;
 }
 
-export function matchInstagramPost(url: string, code: string, posts: readonly InstagramMediaSnapshot[]) {
+export function matchInstagramPost(url: string, _code: string, posts: readonly InstagramMediaSnapshot[]) {
   const submitted = instagramPostUrl(url);
   const wanted = submitted ? canonicalPostUrl(submitted) : null;
   const shortcode = submitted ? instagramShortcode(submitted) : null;
@@ -301,8 +302,7 @@ export function matchInstagramPost(url: string, code: string, posts: readonly In
     return instagramShortcode(post.permalink) === shortcode;
   });
   if (!found || !/^[0-9]{5,32}$/.test(found.id)) return { ok: false as const, reason: "not_found" as const };
-  if (!captionHasDisclosure(found.caption)) return { ok: false as const, reason: "missing_disclosure" as const };
-  if (!textHasTrackingCode(found.caption, code)) return { ok: false as const, reason: "missing_link" as const };
+  if (!captionHasBrandTag(found.caption)) return { ok: false as const, reason: "missing_tag" as const };
   return { ok: true as const, mediaId: found.id, metrics: postMetricFields(found) };
 }
 
@@ -310,6 +310,7 @@ export function verificationFailureNote(reason: VerificationFailure) {
   if (reason === "not_connected") return "Instagram is not connected. Connect it from Stats, or ask an admin to check the link.";
   if (reason === "not_found") return "That post was not found on the connected Instagram account.";
   if (reason === "missing_disclosure") return "The caption needs “Paid partnership with Leader Health.”";
+  if (reason === "missing_tag") return "The caption needs @myleaderhealth so the post can track.";
   if (reason === "missing_link") return "The caption needs your tracking link. A link in your bio is not enough.";
   return "Instagram could not be reached. Ask an admin to check the link.";
 }
@@ -603,7 +604,7 @@ async function preparedCaption(code: string, value: unknown) {
   if (!(await disclosureAcknowledged(code))) throw new PostReviewError("invalid");
   const caption = captionText(value);
   if (!caption) throw new PostReviewError("invalid");
-  const issue = captionIssue(caption, code);
+  const issue = captionIssue(caption);
   if (issue) throw new PostReviewError(issue);
   return caption;
 }

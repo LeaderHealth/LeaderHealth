@@ -61,6 +61,7 @@ export function AffiliateCampaigns({
   }
 
   const hasDisclosure = caption.toLowerCase().includes(disclosure.toLowerCase());
+  const hasTag = caption.toLowerCase().includes("@myleaderhealth");
   const hasLink = trackingUrl !== "" && caption.includes(trackingUrl);
 
   return (
@@ -97,7 +98,7 @@ export function AffiliateCampaigns({
             <div className="flex flex-col gap-1">
               <span className="text-sm font-semibold">Guidelines</span>
               <p className="text-[15px] leading-normal text-[#4A3A37]">{invite.guidelines || "No extra guidelines."}</p>
-              <p className="text-[13px] text-[#6B5A57]">Every caption needs “{disclosure}” and your tracking link.</p>
+              <p className="text-[13px] text-[#6B5A57]">Every caption needs @myleaderhealth so the post can track. “{disclosure}” and your tracking link are optional.</p>
             </div>
             {declining === invite.name ? (
               <div className="flex flex-wrap items-center gap-3 rounded-[14px] bg-[#FBF1EF] px-4 py-3.5">
@@ -172,9 +173,9 @@ export function AffiliateCampaigns({
                           setProblem("Upload your file first.");
                           return;
                         }
-                        if (!hasDisclosure || !hasLink) {
+                        if (!hasTag) {
                           event.preventDefault();
-                          setProblem("Add both required lines to the caption.");
+                          setProblem("Tag @myleaderhealth in the caption so the post can track.");
                           return;
                         }
                         if (!posting) {
@@ -224,9 +225,10 @@ export function AffiliateCampaigns({
                         <textarea id={`cap-${slot.key}`} rows={4} value={caption} onChange={(event) => { setCaption(event.target.value); setProblem(""); }} className="resize-y rounded-xl border border-[#CDBDBA] bg-white px-3.5 py-2.5 text-[15px] font-normal leading-normal" />
                       </label>
                       <div className="flex flex-col gap-2">
-                        <span className="text-sm font-semibold">3. Check the required lines</span>
-                        <CheckLine ok={hasDisclosure} label={disclosure} onInsert={hasDisclosure ? undefined : () => setCaption((current) => `${current.trim() ? `${current.replace(/\s+$/, "")}\n\n` : ""}${disclosure}`)} />
-                        <CheckLine ok={hasLink} label={trackingUrl} mono onInsert={hasLink ? undefined : () => setCaption((current) => `${current.trim() ? `${current.replace(/\s+$/, "")}\n` : ""}${trackingUrl}`)} />
+                        <span className="text-sm font-semibold">3. Tag @myleaderhealth so the post can track</span>
+                        <CheckLine ok={hasTag} label="@myleaderhealth" onInsert={hasTag ? undefined : () => setCaption((current) => `${current.trim() ? `${current.replace(/\s+$/, "")}\n` : ""}@myleaderhealth`)} />
+                        <CheckLine ok={hasDisclosure} optional label={disclosure} onInsert={hasDisclosure ? undefined : () => setCaption((current) => `${current.trim() ? `${current.replace(/\s+$/, "")}\n\n` : ""}${disclosure}`)} />
+                        <CheckLine ok={hasLink} optional label={trackingUrl || "Your tracking link"} mono onInsert={!trackingUrl || hasLink ? undefined : () => setCaption((current) => `${current.trim() ? `${current.replace(/\s+$/, "")}\n` : ""}${trackingUrl}`)} />
                       </div>
                       {posting ? <p className="text-sm text-[#4A3A37]">Posting under your agreement: {posting.label}</p> : <p className="text-sm text-[#9B2C1F]">A signed agreement has to be on your account before you can send a post.</p>}
                       {posting?.postTotal && posting.months.length > 1 ? <p className="text-sm text-[#4A3A37]">Each month of this agreement has its own {posting.postTotal} posts.</p> : null}
@@ -308,11 +310,11 @@ function Fact({ label, value }: { label: string; value: string }) {
   );
 }
 
-function CheckLine({ ok, label, mono = false, onInsert }: { ok: boolean; label: string; mono?: boolean; onInsert?: () => void }) {
+function CheckLine({ ok, label, mono = false, optional = false, onInsert }: { ok: boolean; label: string; mono?: boolean; optional?: boolean; onInsert?: () => void }) {
   return (
     <div className="flex items-center gap-2.5 text-[15px]">
-      <span className={`grid size-[22px] place-items-center rounded-full text-[13px] font-bold ${ok ? "bg-[#DDF0E4] text-[#1D6340]" : "bg-[#FBE3DF] text-[#9B2C1F]"}`}>{ok ? "✓" : "!"}</span>
-      <span className={`min-w-0 flex-1 break-all ${mono ? "font-mono text-sm" : ""}`}>{label}</span>
+      <span className={`grid size-[22px] place-items-center rounded-full text-[13px] font-bold ${ok ? "bg-[#DDF0E4] text-[#1D6340]" : optional ? "bg-[#F7F3F2] text-[#6B5A57]" : "bg-[#FBE3DF] text-[#9B2C1F]"}`}>{ok ? "✓" : optional ? "–" : "!"}</span>
+      <span className={`min-w-0 flex-1 break-all ${mono ? "font-mono text-sm" : ""}`}>{label}{optional ? " · optional" : ""}</span>
       {onInsert ? <button type="button" onClick={onInsert} className="inline-flex h-[34px] items-center rounded-full border border-[#CDBDBA] bg-white px-3 text-[13px] text-ink">Insert</button> : null}
     </div>
   );

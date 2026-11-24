@@ -10,6 +10,8 @@ import {
   assignedCampaignName,
   campaignChangeAllowed,
   canPasteLiveUrl,
+  BRAND_TAG,
+  captionHasBrandTag,
   captionHasDisclosure,
   captionIssue,
   contentStatusLabel,
@@ -50,10 +52,10 @@ test("content review moves only from the allowed status", () => {
   assert.equal(contentStatusLabel("revision_requested"), "Needs changes");
   assert.equal(contentStatusLabel("withdrawn"), "Withdrawn");
   assert.equal(contentStatusLabel("draft"), "Draft");
-  const missingLink = verificationFailureNote("missing_link");
+  const missingTag = verificationFailureNote("missing_tag");
   assert.equal(instagramLinkChecks("tracking_active", "").every((item) => item.state === "pass"), true);
-  assert.equal(instagramLinkChecks("verification_failed", missingLink).at(-1)?.state, "fail");
-  assert.equal(instagramCheckCopy("verification_failed", missingLink).headline, "We couldn't find your tracking link in this post");
+  assert.equal(instagramLinkChecks("verification_failed", missingTag).at(-1)?.state, "fail");
+  assert.equal(instagramCheckCopy("verification_failed", missingTag).headline, "The caption needs @myleaderhealth");
   assert.equal(instagramLinkChecks("verification_failed", verificationFailureNote("not_connected")).length, 0);
 });
 
@@ -65,13 +67,15 @@ test("an Instagram post or reel link is accepted", () => {
   assert.equal(instagramPostUrl("https://example.com/p/AbC123_de/"), null);
 });
 
-test("a caption needs the disclosure line and the tracking link", () => {
-  const caption = `${DISCLOSURE_LINE}\n${link}`;
+test("a caption tracks with the brand tag, and the sponsorship line and tracking link are optional", () => {
+  const caption = `${BRAND_TAG}`;
   assert.equal(captionHasDisclosure(`  paid partnership with leader health  `), true);
   assert.equal(captionHasDisclosure("Thanks for watching"), false);
-  assert.equal(captionIssue(caption, code), null);
-  assert.equal(captionIssue("Paid partnership with Leader Health", code), "link");
-  assert.equal(captionIssue(link, code), "disclosure");
+  assert.equal(captionHasBrandTag("Tag @MyLeaderHealth in the caption"), true);
+  assert.equal(captionHasBrandTag("Thanks for watching"), false);
+  assert.equal(captionIssue(caption), null);
+  assert.equal(captionIssue(`${DISCLOSURE_LINE}\n${link}`), "tag");
+  assert.equal(captionIssue(`${DISCLOSURE_LINE}\n${BRAND_TAG}`), null);
 });
 
 test("a matched Instagram caption stores engagement and not pay", () => {
@@ -79,7 +83,7 @@ test("a matched Instagram caption stores engagement and not pay", () => {
     {
       id: "17890000000000001",
       permalink: "https://www.instagram.com/p/AbC123_de/",
-      caption: `${DISCLOSURE_LINE} ${link}`,
+      caption: BRAND_TAG,
       likes: 4,
       comments: 1,
       shares: null,
@@ -100,6 +104,21 @@ test("a matched Instagram caption stores engagement and not pay", () => {
     matchInstagramPost("https://www.instagram.com/p/Missing01/", code, []).ok,
     false,
   );
+  const untagged = matchInstagramPost("https://www.instagram.com/reel/AbC123_de/", code, [
+    {
+      id: "17890000000000001",
+      permalink: "https://www.instagram.com/reel/AbC123_de/",
+      caption: `${DISCLOSURE_LINE} ${link}`,
+      likes: 0,
+      comments: 0,
+      shares: null,
+      saves: null,
+      reach: null,
+      views: null,
+    },
+  ]);
+  assert.equal(untagged.ok, false);
+  if (!untagged.ok) assert.equal(untagged.reason, "missing_tag");
 });
 
 test("metrics older than six hours are due for a refresh", () => {

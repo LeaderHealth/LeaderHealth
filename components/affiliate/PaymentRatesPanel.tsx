@@ -116,29 +116,6 @@ function RateCard({
   );
 }
 
-function MonthlyRateCard({ count }: { count: number | null }) {
-  return (
-    <div className="flex min-w-[240px] flex-1 flex-col justify-between rounded-2xl border border-ink/10 bg-white px-4 py-3">
-      <div>
-        <p className="text-sm font-medium text-ink">Monthly posting rate</p>
-        <div className="mt-2 flex items-center justify-between gap-3">
-          <p className="whitespace-nowrap text-sm text-taupe">Per month</p>
-          <span className="whitespace-nowrap rounded-full bg-[#efeae8] px-3 py-1.5 text-sm text-ink">Negotiated</span>
-        </div>
-      </div>
-      <div className="mt-3 flex items-center justify-between gap-3">
-        <span className="whitespace-nowrap rounded-full bg-[#efeae8] px-3 py-1 text-xs text-taupe">{count == null ? "Per agreement" : `${count} active`}</span>
-        <a
-          href="#monthly-rates"
-          className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-ink/15 bg-white px-3 py-1.5 text-sm text-ink hover:bg-background focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-        >
-          See rates
-        </a>
-      </div>
-    </div>
-  );
-}
-
 function Example({ title, detail, amount, lines }: { title: string; detail: string; amount: string; lines: string[] }) {
   return (
     <div className="flex w-full min-w-[260px] max-w-[340px] shrink-0 flex-col justify-center rounded-2xl bg-ink px-4 py-3 text-white">
@@ -193,11 +170,40 @@ export function PaymentRatesPanel({
   return (
     <form action={savePaymentRatesAction} className="space-y-4">
       {error ? <p className="text-sm text-ink">{error}</p> : null}
+      <section id="monthly-rates" className="rounded-[28px] bg-white p-4 sm:p-5">
+        <h3 className="text-lg font-medium">Agreement pay</h3>
+        <p className="mt-2 max-w-2xl text-sm text-taupe">
+          Negotiated in each affiliate&apos;s agreement. Paid in full for a month only when every required post is live.
+        </p>
+        <div className="mt-4 rounded-2xl border border-ink/10 px-4 py-3">
+          <p className="text-sm font-medium text-ink">Active agreements</p>
+          {monthlyRates == null ? (
+            <p className="mt-2 text-sm text-taupe">Agreements could not be loaded.</p>
+          ) : monthlyRates.length === 0 ? (
+            <p className="mt-2 text-sm text-taupe">No signed agreement is active yet. Set the rate when you create an affiliate&apos;s agreement.</p>
+          ) : (
+            <ul className="mt-2 divide-y divide-ink/10">
+              {monthlyRates.map((row) => (
+                <li key={row.code} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+                  <span className="font-medium">{row.name}</span>
+                  <span className="flex items-center gap-3">
+                    <span className="tabular-nums">
+                      {row.monthly} / month · {row.postTotal} {row.postTotal === 1 ? "post" : "posts"}
+                    </span>
+                    <Link href={`/admin/affiliates/accounts?code=${encodeURIComponent(row.code)}&view=agreements`} className="text-ink underline underline-offset-4">
+                      Agreement
+                    </Link>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
+
       <section className="rounded-[28px] bg-white p-4 sm:p-5">
         <h3 className="text-lg font-medium">Social Media Pay</h3>
         <div className="mt-4 flex flex-wrap items-stretch gap-3">
-          <MonthlyRateCard count={monthlyRates?.length ?? null} />
-          <span className="self-center text-lg text-taupe" aria-hidden="true">+</span>
           <RateCard
             title="Views"
             formula="Views ÷ 1,000 ×"
@@ -224,37 +230,10 @@ export function PaymentRatesPanel({
             title="Posts this month"
             detail="24k views, 1.2k engagements"
             amount={exampleDollars(social.total)}
-            lines={[`${exampleDollars(social.views)} from views`, `${exampleDollars(social.engagements)} from engagements`, "+ the monthly posting rate"]}
+            lines={[`${exampleDollars(social.views)} from views`, `${exampleDollars(social.engagements)} from engagements`]}
           />
         </div>
-        <p className="mt-4 text-sm text-taupe">
-          Engagements = likes, comments, shares and saves. The monthly posting rate is negotiated in each affiliate&apos;s agreement and paid in full only for a month
-          when every required post is live.
-        </p>
-        <div id="monthly-rates" className="mt-4 rounded-2xl border border-ink/10 px-4 py-3">
-          <p className="text-sm font-medium text-ink">Active monthly posting rates</p>
-          {monthlyRates == null ? (
-            <p className="mt-2 text-sm text-taupe">Agreements could not be loaded.</p>
-          ) : monthlyRates.length === 0 ? (
-            <p className="mt-2 text-sm text-taupe">No signed agreement is active yet. Set the rate when you create an affiliate&apos;s agreement.</p>
-          ) : (
-            <ul className="mt-2 divide-y divide-ink/10">
-              {monthlyRates.map((row) => (
-                <li key={row.code} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
-                  <span className="font-medium">{row.name}</span>
-                  <span className="flex items-center gap-3">
-                    <span className="tabular-nums">
-                      {row.monthly} / month · {row.postTotal} {row.postTotal === 1 ? "post" : "posts"}
-                    </span>
-                    <Link href={`/admin/affiliates/accounts?code=${encodeURIComponent(row.code)}&view=agreements`} className="text-ink underline underline-offset-4">
-                      Agreement
-                    </Link>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <p className="mt-4 text-sm text-taupe">Engagements = likes, comments, shares and saves.</p>
       </section>
 
       <section className="rounded-[28px] bg-white p-4 sm:p-5">

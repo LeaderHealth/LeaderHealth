@@ -104,7 +104,7 @@ function Review({
         <ol className="flex list-decimal flex-col gap-1.5 pl-5 text-[15px] leading-normal">
           <li>Make {posts} each month{card.kindLine ? `: ${card.kindLine}` : ""}{card.where ? ` on ${card.where}` : ""}.</li>
           <li>Send each one here for approval before you publish it.</li>
-          <li>Publish the approved post with “Paid partnership with Leader Health” and your tracking link, then add the live link.</li>
+          <li>Publish the approved post with @myleaderhealth in the caption, then add the live link. The sponsorship line and tracking link are optional.</li>
           <li>Once all {card.postTotal || "the required posts"} are verified, that month’s {card.monthly || "monthly amount"} is approved and sent to you manually.</li>
         </ol>
       </div>

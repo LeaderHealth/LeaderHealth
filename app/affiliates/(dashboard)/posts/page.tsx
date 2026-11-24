@@ -37,6 +37,7 @@ const postErrors: Record<string, string> = {
   acknowledge: "Confirm the sponsorship disclosure before continuing.",
   invalid: "Add a caption and a picture or video.",
   disclosure: "Include “Paid partnership with Leader Health” in the caption.",
+  tag: "Tag @myleaderhealth in the caption. The post does not track without that tag.",
   link: "Put your tracking link in the caption. A link in your bio is not enough.",
   url: "Paste the link from the TikTok, Instagram post, or Instagram reel you published.",
   file: "Use a PNG, JPEG, or WebP image under 8 MB, or an MP4, MOV, or WebM video under 200 MB. A saved TikTok video is usually an MP4.",
@@ -101,7 +102,7 @@ function historyFor(post: ContentSubmission): HubPost["history"] {
   if (post.contentStatus === "withdrawn") events.push({ label: "You withdrew it", when: when(post.reviewedAt), note: "", tone: "neutral" });
   if (post.contentStatus === "approved") events.push({ label: "Approved", when: when(post.reviewedAt), note: "", tone: "neutral" });
   if (post.postUrl) events.push({ label: post.format === "tiktok" ? "You added the TikTok link" : post.format === "instagram_reel" ? "You added the reel link" : "You added the Instagram link", when: "", note: post.postUrl, tone: "neutral" });
-  if (post.publicationStatus === "tracking_active") events.push({ label: "Live. Disclosure and tracking link found", when: "", note: "", tone: "good" });
+  if (post.publicationStatus === "tracking_active") events.push({ label: "Live. @myleaderhealth found", when: "", note: "", tone: "good" });
   if (post.publicationStatus === "verification_failed") events.push({ label: "The Instagram check needs a fix", when: "", note: post.verificationNote, tone: "bad" });
   return events;
 }
@@ -315,10 +316,10 @@ export default async function AffiliatePostsPage({
         <form action={acknowledgeDisclosureAction} className="mt-6">
           <input type="hidden" name="next" value="posts" />
           <h3 className="text-lg">Sponsorship agreement</h3>
-          <p className="mt-2 max-w-2xl text-sm text-brown">Put “Paid partnership with Leader Health” and your tracking link in the caption. A link in your bio is not enough.</p>
+          <p className="mt-2 max-w-2xl text-sm text-brown">Tag @myleaderhealth in the caption so the post can track. The sponsorship line and your tracking link are optional in the caption.</p>
           <label className="mt-4 flex items-start gap-3 text-sm text-ink">
             <input name="acknowledge" type="checkbox" required className="mt-1 size-4 accent-ink" />
-            <span>I will include a clear sponsorship disclosure on posts and videos I publish for Leader Health, and I will send each new post for review before I publish it, with my tracking link in the caption.</span>
+            <span>I will tag @myleaderhealth in the caption so the post can track, and I will send each new post for review before I publish it. The sponsorship line and my tracking link are optional in the caption.</span>
           </label>
           <button type="submit" className={`${buttonClass} mt-4`}>
             Acknowledge

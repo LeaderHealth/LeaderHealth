@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildPayoutItems, itemsInRange, labPayoutRows, payoutCents, payoutMonths, payoutReceipts, type PayoutBoardPost } from "./payout-board";
+import { buildPayoutItems, itemsInRange, labPayoutRows, payoutCents, payoutMonths, payoutPeriodTotals, payoutReceipts, type PayoutBoardPost } from "./payout-board";
 
 const today = "2026-11-17";
 
@@ -121,6 +121,15 @@ test("payout items use real social, website, and paid amounts", () => {
   assert.equal(lab.periods[0]?.refs[0]?.id, "abc123def456");
   const withLab = buildPayoutItems({ today, posts: [], payments: [], websites: [], labs: [{ period: "2026-10", amountCents: 4905, conversions: 3, status: "paid", paidOn: "2026-11-15T00:00:00.000Z", approvedOn: null, reference: "", terms: "15%", refs: [] }] });
   assert.equal(payoutMonths(withLab, today, "90").find((month) => month.period === "2026-10")?.lab, 4905);
+  const combined = payoutPeriodTotals([...items.filter((item) => item.earnedOn.startsWith("2026-10") || item.earnedOn.startsWith("2026-11")), ...withLab]);
+  const octoberTotal = combined.find((month) => month.period === "2026-10");
+  assert.equal(octoberTotal?.base, 0);
+  assert.equal(octoberTotal?.lab, 4905);
+  assert.equal(octoberTotal?.total, 4905);
+  const novemberTotal = combined.find((month) => month.period === "2026-11");
+  assert.equal(novemberTotal?.social, 220);
+  assert.equal(novemberTotal?.web, 500);
+  assert.equal(novemberTotal?.total, 720);
 });
 
 test("the monthly posting rate shows as a base payment once earned, and a short month stays until it is earned", () => {

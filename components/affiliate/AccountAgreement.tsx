@@ -22,7 +22,7 @@ const inkButton = `inline-flex h-[46px] items-center justify-center rounded-full
 const quietButton = `inline-flex h-[46px] items-center justify-center rounded-full border border-[#CDBDBA] bg-white px-5 text-[15px] font-medium text-ink hover:bg-background ${focusRing}`;
 const fieldClass = `h-[54px] w-full rounded-[14px] border bg-white px-4 text-[17px] text-ink ${focusRing}`;
 
-const RULES = ["“Paid partnership with Leader Health” in the caption", "Their own tracking link in the caption", "Approval from an admin before it goes live"];
+const RULES = ["@myleaderhealth in the caption, so the post can track", "“Paid partnership with Leader Health” in the caption, optional", "Their own tracking link in the caption, optional", "Approval from an admin before it goes live"];
 const STEPS = ["1 Basics", "2 Pay and posts", "3 Content", "4 Review and send"];
 
 type Draft = {
@@ -497,7 +497,7 @@ export function AccountAgreement({
                       <button type="button" aria-current={step === index ? "step" : undefined} onClick={() => goTo(index)} className={`flex w-full flex-col gap-2 text-left ${focusRing}`}>
                         <span className={`h-[5px] rounded-full ${index <= step ? "bg-ink" : "bg-[#E8DEDC]"}`} />
                         <span className={`text-[15px] ${index === step ? "font-semibold text-ink" : index < step ? "text-ink" : "text-[#6B5A57]"}`}>{label}</span>
-                      </button>
+      </button>
                     </li>
                   ))}
                 </ol>
@@ -562,7 +562,7 @@ export function AccountAgreement({
                     <div className="flex flex-col gap-2">
                       <label htmlFor={`${id}-amount`} className="text-base font-semibold">
                         Paid each month
-                      </label>
+                            </label>
                       <span className={`flex h-[60px] w-[220px] items-center rounded-[14px] border bg-white px-4 ${paid || !draft.monthly ? "border-[#CDBDBA]" : "border-[#9B2C1F]"}`}>
                         <span aria-hidden="true" className="pr-1.5 text-[22px] text-[#6B5A57]">
                           $
@@ -615,7 +615,7 @@ export function AccountAgreement({
                                 <div className="flex items-baseline justify-between pb-1.5">
                                   <span className="text-base font-semibold">{platform}</span>
                                   <span className={`text-sm font-semibold ${subtotal ? "text-ink" : "text-[#9B2C1F]"}`}>{subtotal === 1 ? "1 post" : `${subtotal} posts`}</span>
-                                </div>
+                          </div>
                                 {AGREEMENT_POST_TYPES[platform].map((type) => {
                                   const count = draft.counts[countKey(platform, type)] || 0;
                                   return (
@@ -633,14 +633,14 @@ export function AccountAgreement({
                                       <span aria-live="polite" className="w-7 text-center text-[17px] font-semibold">
                                         {count}
                                       </span>
-                                      <button
-                                        type="button"
+                          <button
+                            type="button"
                                         aria-label={`One more ${type} on ${platform}`}
                                         onClick={() => changeCount(platform, type, 1)}
                                         className={`size-9 rounded-full border border-[#CDBDBA] bg-white text-lg text-ink ${focusRing}`}
                                       >
                                         +
-                                      </button>
+                          </button>
                                     </div>
                                   );
                                 })}
@@ -836,9 +836,9 @@ export function AccountAgreement({
                     className={`${inkButton} disabled:opacity-50`}
                   >
                     Send to {first}
-                  </button>
-                )}
-              </div>
+                          </button>
+                        )}
+                      </div>
               </>
             ) : selected ? (
               <ReadAgreement
@@ -1027,8 +1027,8 @@ function AgreementList({
                   <HiddenTerms code={code} draft={draftFrom(agreement.source)} seed={agreement.source} copy />
                   {replaceNeedsNote ? <input type="hidden" name="note" value="Replaced with a new agreement." /> : null}
                   <button type="submit" className={`h-10 text-sm text-ink underline ${focusRing}`}>Reuse as new draft</button>
-                </form>
-              ) : null}
+                    </form>
+                  ) : null}
             </div>
           );
         })}
@@ -1056,7 +1056,7 @@ function DraftDelete({ code, agreement, first }: { code: string; agreement: Agre
     <div className="flex flex-wrap items-center gap-2.5 rounded-[14px] bg-[#FBF1EF] px-3.5 py-3">
       <span className="min-w-[220px] flex-1 text-sm">Delete this draft? It was never sent, so {first} won’t notice.</span>
       <form action={deleteAgreementDraftAction}>
-        <input type="hidden" name="code" value={code} />
+                      <input type="hidden" name="code" value={code} />
         <input type="hidden" name="agreementId" value={agreement.id} />
         <button type="submit" className={`${quietButton} h-10 border-[#F0CFC9] bg-white px-4 text-sm text-[#9B2C1F]`}>Delete draft</button>
       </form>
@@ -1071,8 +1071,8 @@ function FlashNotice({ message, onClose }: { message: string; onClose: () => voi
       <span className="flex-1">{message}</span>
       <button type="button" onClick={onClose} className={`text-sm underline ${focusRing}`}>
         Dismiss
-      </button>
-    </div>
+                        </button>
+                      </div>
   );
 }
 
@@ -1084,7 +1084,7 @@ function WithdrawSent({ code, agreementId }: { code: string; agreementId: string
       <button type="submit" className={`h-11 px-1 text-sm text-[#6B5A57] underline ${focusRing}`}>
         Withdraw
       </button>
-    </form>
+                    </form>
   );
 }
 
@@ -1199,7 +1199,7 @@ function ReadAgreement({
         <span role="alert" className="text-[15px] text-[#9B2C1F]">
           {error}
         </span>
-      ) : null}
+                  ) : null}
 
       {agreement.questions.length > 0 || replyNotice ? (
         <div className="flex flex-col gap-2">
@@ -1227,7 +1227,7 @@ function ReadAgreement({
                       />
                       <button type="submit" className={`${inkButton} self-start`}>
                         Send reply
-                      </button>
+                        </button>
                     </form>
                   )
                 : undefined
@@ -1274,7 +1274,7 @@ function ReadAgreement({
       <div className="flex flex-col gap-1 border-t border-[#F0E8E6] pt-3">
         <span className="text-sm text-[#6B5A57]">Guidelines</span>
         <span className="whitespace-pre-line text-[15px] leading-relaxed">{agreement.guidelines || "—"}</span>
-        <span className="text-sm text-[#6B5A57]">Plus the disclosure line, their tracking link, and admin approval on every post.</span>
+        <span className="text-sm text-[#6B5A57]">Plus @myleaderhealth in the caption so the post can track, and admin approval on every post. The sponsorship line and tracking link are optional.</span>
       </div>
 
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-[#F0E8E6] pt-3 text-sm">
@@ -1291,13 +1291,13 @@ function ReadAgreement({
         <span className="text-[#6B5A57]">Accepted {agreement.signedAt || "not yet"}</span>
         {agreement.phase === "ended" || agreement.phase === "expired" ? (
           <span className="text-[#6B5A57]">{agreement.phase === "ended" ? "Ended early" : "Ended"} {agreement.phase === "ended" ? agreement.endedAt || "—" : agreement.expiresOn}</span>
-        ) : null}
+                  ) : null}
       </div>
 
       {canSign ? (
         <form action={signAgreementAction} className="flex flex-col gap-2 border-t border-[#F0E8E6] pt-3">
           <span className="text-sm font-medium">Signed agreement (PDF)</span>
-          <input type="hidden" name="code" value={code} />
+                      <input type="hidden" name="code" value={code} />
           <input type="hidden" name="agreementId" value={agreement.id} />
           <input type="hidden" name="signerName" value={name} />
           <span className="text-sm text-[#4A3A37]">This agreement was sent without a PDF. Attach the signed copy to make it active.</span>
@@ -1306,7 +1306,7 @@ function ReadAgreement({
             Store signed PDF
           </button>
         </form>
-      ) : null}
+                      ) : null}
 
       {draftDeletable(agreement) ? <DraftDelete code={code} agreement={agreement} first={first} /> : null}
 
@@ -1321,9 +1321,9 @@ function ReadAgreement({
             <input type="hidden" name="agreementId" value={agreement.id} />
             <button type="submit" className={quietButton}>
               Mark as accepted
-            </button>
-          </form>
-        ) : null}
+                        </button>
+                    </form>
+                  ) : null}
         {agreement.phase === "waiting" ? <WithdrawSent code={code} agreementId={agreement.id} /> : null}
         {canEnd && !confirmEnd ? (
           <button type="button" onClick={onAskEnd} className="h-11 text-sm text-[#9B2C1F] underline">
@@ -1338,8 +1338,8 @@ function ReadAgreement({
               Start a new one like this
             </button>
           </form>
-        ) : null}
-      </div>
+                  ) : null}
+                </div>
 
       {confirmEnd && canEnd ? (
         <form action={endAgreementAction} role="alertdialog" aria-label="End this agreement" className="flex flex-wrap items-center gap-3 rounded-2xl border border-[#F0CFC9] bg-[#FBF1EF] px-4 py-3.5">
@@ -1351,9 +1351,9 @@ function ReadAgreement({
           </button>
           <button type="button" onClick={onCancelEnd} className={quietButton}>
             Keep it
-          </button>
+                  </button>
         </form>
       ) : null}
-    </div>
+              </div>
   );
 }

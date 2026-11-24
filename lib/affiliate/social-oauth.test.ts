@@ -63,6 +63,6 @@ test("instagram login opens Instagram and Facebook login stays on Facebook", () 
   const facebook = new URL(metaAuthorizeUrl("facebook-state"));
   assert.equal(facebook.origin + facebook.pathname, "https://www.facebook.com/v21.0/dialog/oauth");
   assert.equal(facebook.searchParams.get("client_id"), "facebook-app");
-  assert.equal(facebook.searchParams.get("scope"), "pages_show_list,pages_read_engagement,pages_read_user_content");
+  assert.equal(facebook.searchParams.get("scope"), "public_profile");
   assert.equal(facebook.searchParams.has("config_id"), false);
 });

@@ -272,6 +272,7 @@ export type PayoutBoardMonthly = {
 };
 
 function monthlyItem(row: PayoutBoardMonthly, today: string): PayoutBoardItem | null {
+  if (row.status === "short" && row.period !== today.slice(0, 7)) return null;
   const status: PayoutBoardStatus = row.status === "paid" ? "paid" : row.status === "approved" ? "approved" : "review";
   const paidOn = payoutDay(row.paidAt);
   const approvedOn = payoutDay(row.approvedAt) || paidOn;
@@ -337,7 +338,7 @@ export function labPayoutRows(rows: PayoutLabInput[], today: string) {
       earnedOn,
       status,
       terms: row.terms,
-      work: `${countLabel}. See Lab commission by pay period.`,
+      work: `${countLabel}. Included in this month's payout.`,
       approved: status === "review" ? (row.period === today.slice(0, 7) ? "After this month ends" : "Not yet") : approvedOn ? payoutDateLabel(approvedOn) : "Not yet",
       paymentNote: paymentNote(status, paidOn),
       paidOn: paidOn || null,
@@ -437,6 +438,46 @@ export function moneyTop(cents: number) {
   if (cents <= 0) return 100;
   const step = cents >= 10000 ? 10000 : cents >= 1000 ? 1000 : 100;
   return Math.ceil(cents / step) * step;
+}
+
+export type PayoutPeriodTotal = {
+  period: string;
+  label: string;
+  total: number;
+  base: number;
+  social: number;
+  web: number;
+  lab: number;
+  status: PayoutBoardStatus | "mixed";
+  items: PayoutBoardItem[];
+};
+
+export function payoutPeriodTotals(items: PayoutBoardItem[]): PayoutPeriodTotal[] {
+  const groups = new Map<string, PayoutBoardItem[]>();
+  for (const item of items) {
+    const period = item.earnedOn.slice(0, 7);
+    if (!/^\d{4}-\d{2}$/.test(period)) continue;
+    const rows = groups.get(period) ?? [];
+    rows.push(item);
+    groups.set(period, rows);
+  }
+  return [...groups.entries()]
+    .sort(([left], [right]) => right.localeCompare(left))
+    .map(([period, rows]) => {
+      const statuses = new Set(rows.map((row) => row.status));
+      const status = statuses.size === 1 ? [...statuses][0] : "mixed";
+      return {
+        period,
+        label: payoutMonthLabel(period),
+        base: payoutCents(rows.filter((row) => row.kind === "base")),
+        social: payoutCents(rows.filter((row) => row.kind === "social")),
+        web: payoutCents(rows.filter((row) => row.kind === "web")),
+        lab: payoutCents(rows.filter((row) => row.kind === "lab")),
+        total: payoutCents(rows),
+        status,
+        items: [...rows].sort((left, right) => payoutKindOrder().indexOf(left.kind) - payoutKindOrder().indexOf(right.kind) || left.title.localeCompare(right.title)),
+      };
+    });
 }
 
 export function payoutMonths(items: PayoutBoardItem[], today: string, range: PayoutBoardRange) {

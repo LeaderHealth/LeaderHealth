@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { CartButton } from "@/components/cart/CartButton";
 
@@ -220,6 +221,8 @@ function Tool({
 }
 
 export function AccessibilityButton() {
+  const pathname = usePathname();
+  const onDashboard = pathname.startsWith("/affiliates") || pathname.startsWith("/admin/affiliates");
   const panelId = useId();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -466,7 +469,7 @@ export function AccessibilityButton() {
           data-swipe-handle
           aria-expanded={!tucked}
           aria-controls="lh-phone-actions"
-          aria-label={tucked ? "Show accessibility and cart" : "Swipe down to hide these buttons"}
+          aria-label={tucked ? (onDashboard ? "Show accessibility" : "Show accessibility and cart") : onDashboard ? "Swipe down to hide this button" : "Swipe down to hide these buttons"}
           onClick={() => rememberTuck(!tucked)}
           className="mb-1 inline-flex min-h-9 touch-none items-center gap-2 rounded-full bg-white py-1 pr-3 pl-1 text-xs font-medium text-[#321110] shadow-[0_8px_20px_rgba(50,17,16,0.16)] min-[765px]:hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e33d4d]"
         >
@@ -595,9 +598,11 @@ export function AccessibilityButton() {
         </svg>
         {active ? <span className="absolute top-1 right-1 h-2.5 w-2.5 rounded-full bg-[#e33d4d]" aria-hidden /> : null}
       </button>
-          <div className="min-[765px]:hidden">
-            <CartButton className="h-14 w-14 border-0 bg-[#e33d4d] text-white shadow-[0_10px_28px_rgba(227,61,77,0.35)] hover:bg-[#c43240] [&_svg]:h-6 [&_svg]:w-6" />
-          </div>
+          {onDashboard ? null : (
+            <div className="min-[765px]:hidden">
+              <CartButton className="h-14 w-14 border-0 bg-[#e33d4d] text-white shadow-[0_10px_28px_rgba(227,61,77,0.35)] hover:bg-[#c43240] [&_svg]:h-6 [&_svg]:w-6" />
+            </div>
+          )}
         </div>
       </div>
     </div>

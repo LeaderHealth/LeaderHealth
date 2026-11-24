@@ -28,7 +28,7 @@ export default function AffiliateTermsPage() {
 
         <h2 className="mt-10 text-2xl">Posts</h2>
         <p className="mt-4 leading-relaxed text-brown">
-          Send each post, including a reel, for review before you publish it. Put “Paid partnership with Leader Health” and your tracking link in the caption. A link in your bio is not enough.
+          Send each post, including a reel, for review before you publish it. Tag @myleaderhealth in the caption so the post can track. “Paid partnership with Leader Health” and your tracking link are optional in the caption.
         </p>
 
         <h2 className="mt-10 text-2xl">Pay</h2>

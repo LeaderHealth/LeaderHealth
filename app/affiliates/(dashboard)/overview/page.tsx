@@ -112,10 +112,10 @@ function countLabel(value: number) {
 }
 
 function changeChip(current: number, previous: number, custom: boolean) {
-  if (custom) return { text: "Custom range", className: "bg-[#EFEAE9] text-[#4A3A37]" };
+  if (custom) return { text: "Custom range", className: "bg-[#EFEAE9] text-[#4A3A37]", note: false };
   if (previous <= 0) {
-    if (current <= 0) return { text: "0% vs. last month", className: "bg-[#EFEAE9] text-[#4A3A37]" };
-    return { text: "New vs. last month", className: "bg-[#DDF0E4] text-[#1D6340]" };
+    if (current <= 0) return { text: "0% vs. last month", className: "bg-[#EFEAE9] text-[#4A3A37]", note: false };
+    return { text: "New vs. last month", className: "bg-[#DDF0E4] text-[#1D6340]", note: false };
   }
   const percent = ((current - previous) / previous) * 100;
   const rounded = Math.round(Math.abs(percent) * 10) / 10;
@@ -123,6 +123,7 @@ function changeChip(current: number, previous: number, custom: boolean) {
   return {
     text: `${up ? "▲" : "▼"} ${rounded}% vs. last month`,
     className: up ? "bg-[#DDF0E4] text-[#1D6340]" : "bg-[#FBE3DF] text-[#9B2C1F]",
+    note: false,
   };
 }
 
@@ -304,8 +305,8 @@ export default async function AffiliatePortalOverviewPage({
     { key: "Total views", value: countLabel(views), chip: changeChip(views, viewsIn(previousStart, previousEnd), custom) },
     { key: "Total engagements", value: countLabel(engagements), chip: changeChip(engagements, engagementsIn(previousStart, previousEnd), custom) },
     { key: "Verified link clicks", value: countLabel(clicks), chip: changeChip(clicks, clicksIn(previousStart, previousEnd), custom) },
-    { key: "Paid orders", value: String(paidOrders), chip: { text: "From your link or code", className: "bg-[#DDF0E4] text-[#1D6340]" } },
-    { key: "Unpaid orders", value: String(unpaidOrders), chip: { text: "Not paid yet · no commission", className: "bg-[#FBEFD6] text-[#7A4E00]" } },
+    { key: "Paid orders", value: String(paidOrders), chip: { text: "From your link or code. Commission is lab orders only.", className: "bg-[#DDF0E4] text-[#1D6340]", note: true } },
+    { key: "Unpaid orders", value: String(unpaidOrders), chip: { text: "Started checkout. Not a promo use, and no commission.", className: "bg-[#FBEFD6] text-[#7A4E00]", note: true } },
   ];
 
   const agreement = agreementForMonth(agreements, affiliate.code, selectedPeriod);
@@ -409,7 +410,7 @@ export default async function AffiliatePortalOverviewPage({
             <div key={item.key} className="flex flex-col gap-1 rounded-2xl border border-[#E8DEDC] px-[18px] py-4">
               <span className="text-sm text-[#4A3A37]">{item.key}</span>
               <span className="text-[30px] font-medium leading-none">{item.value}</span>
-              <span className={`mt-1 self-start rounded-full px-2 py-0.5 text-[13px] font-semibold ${item.chip.className}`}>{item.chip.text}</span>
+              <span className={item.chip.note ? `mt-1 self-stretch rounded-xl px-2.5 py-1.5 text-left text-[13px] font-medium leading-snug ${item.chip.className}` : `mt-1 self-start rounded-full px-2 py-0.5 text-[13px] font-semibold ${item.chip.className}`}>{item.chip.text}</span>
             </div>
           ))}
         </div>
@@ -431,7 +432,7 @@ export default async function AffiliatePortalOverviewPage({
             ) : (
               <p className="text-sm text-[#4A3A37]">Accept the sponsorship agreement on the referral link page before sharing your tracking link.</p>
             )}
-            <span className="text-[13px] text-[#4A3A37]">Put it in every caption. A link in your bio doesn’t count.</span>
+            <span className="text-[13px] text-[#4A3A37]">Optional in the caption. Tag @myleaderhealth in every caption so the post can track. A link in your bio doesn’t count.</span>
           </div>
           <div className="flex flex-col gap-2.5 rounded-[18px] bg-[#F7F3F2] px-[18px] py-4">
             <span className="text-sm text-[#4A3A37]">Promo code</span>

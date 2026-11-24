@@ -312,7 +312,7 @@ export async function sendPostApprovedEmail(email: string, caption: string) {
   const url = affiliatePostsUrl();
   const note = excerpt
     ? `Caption: ${excerpt}`
-    : "Keep “Paid partnership with Leader Health” and your tracking link in the caption.";
+    : "Tag @myleaderhealth in the caption so the post can track. The sponsorship line and tracking link are optional.";
   await deliverAffiliateEmail(
     email,
     "Your Leader Health post was approved",
