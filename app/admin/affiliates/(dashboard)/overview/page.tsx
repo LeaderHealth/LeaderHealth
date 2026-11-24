@@ -298,7 +298,7 @@ export default async function AffiliateOverviewPage({ searchParams }: { searchPa
     return periods.reduce(
       (sum, period) => {
         const month = earn(code, period);
-        return {
+    return {
           agreement: sum.agreement + month.agreement,
           social: sum.social + (month.social ?? 0),
           website: sum.website + (month.website ?? 0),

@@ -1261,7 +1261,7 @@ export default async function AffiliateAccountsPage({
                     <span className={`text-base font-semibold tabular-nums ${visibleTotal((row) => row.pay.total) ? "" : zero}`}>{money(visibleTotal((row) => row.pay.total))}</span>
                   </span>
                 </li>
-              </ul>
+            </ul>
 
               <div role="table" aria-labelledby="accounts-title" className="hidden overflow-hidden rounded-[20px] border border-[#E8DEDC] xl:block">
                 <div role="rowgroup" className="border-b border-[#E8DEDC] px-4">
