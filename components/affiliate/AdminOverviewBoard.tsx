@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { chartMax, compactCount, linePath } from "@/lib/affiliate/stats-board";
+import { FilterDatePicker } from "./FilterDatePicker";
 import { SegmentedControl } from "./SegmentedControl";
 
 const focusRing = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#33130F]";
@@ -89,6 +91,7 @@ export type OverviewActivity = { text: string; when: string; color: string };
 
 export function AdminOverviewBoard({
   ranges,
+  customRange = null,
   rangeText,
   todoCount,
   todos,
@@ -109,6 +112,7 @@ export function AdminOverviewBoard({
   activity,
 }: {
   ranges: OverviewRange[];
+  customRange?: { from: string; to: string } | null;
   rangeText: string;
   todoCount: string;
   todos: OverviewTodo[];
@@ -128,6 +132,19 @@ export function AdminOverviewBoard({
   monthNote: string;
   activity: OverviewActivity[];
 }) {
+  const router = useRouter();
+  const rangeFrom = customRange?.from ?? "";
+  const rangeTo = customRange?.to ?? "";
+  const [from, setFrom] = useState(rangeFrom);
+  const [to, setTo] = useState(rangeTo);
+  const [syncedFrom, setSyncedFrom] = useState(rangeFrom);
+  const [syncedTo, setSyncedTo] = useState(rangeTo);
+  if (syncedFrom !== rangeFrom || syncedTo !== rangeTo) {
+    setSyncedFrom(rangeFrom);
+    setSyncedTo(rangeTo);
+    setFrom(rangeFrom);
+    setTo(rangeTo);
+  }
   const [platform, setPlatform] = useState<PlatformId>("all");
   const [compare, setCompare] = useState<string | null>(null);
   const [entered, setEntered] = useState(false);
@@ -170,6 +187,12 @@ export function AdminOverviewBoard({
     };
   }, []);
 
+  function applyCustomRange() {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) return;
+    const params = new URLSearchParams({ range: "custom", from, to });
+    router.push(`/admin/affiliates/overview?${params.toString()}`);
+  }
+
   useEffect(() => {
     if (!compare) return;
     const previousBody = document.body.style.overflow;
@@ -196,8 +219,8 @@ export function AdminOverviewBoard({
           <h2 className="text-[30px] font-normal leading-tight">Overview</h2>
           <p className="text-[15px] text-[#4A3A37]">What needs you today, and how the affiliate program is doing.</p>
         </div>
-        <div className="flex flex-col items-end gap-1.5">
-          <div role="group" aria-label="Date range" className="flex flex-wrap gap-2">
+        <div className="flex flex-col items-end gap-2">
+          <div role="group" aria-label="Date range" className="flex flex-wrap justify-end gap-2">
             {ranges.map((item) => (
               <Link
                 key={item.id}
@@ -209,6 +232,19 @@ export function AdminOverviewBoard({
               </Link>
             ))}
           </div>
+          {customRange ? (
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <div className="w-[11.5rem]">
+                <FilterDatePicker label="From" placeholder="Start date" value={from} onChange={setFrom} variant="field" />
+              </div>
+              <div className="w-[11.5rem]">
+                <FilterDatePicker label="To" placeholder="End date" value={to} onChange={setTo} variant="field" />
+              </div>
+              <button type="button" onClick={applyCustomRange} className={`inline-flex h-11 items-center rounded-full bg-[#33130F] px-4 text-sm font-medium text-white hover:bg-[#4A1E19] ${focusRing}`}>
+                Apply
+              </button>
+            </div>
+          ) : null}
           <span className="text-[13px] text-[#6B5A57]">{rangeText}</span>
         </div>
       </div>
@@ -251,7 +287,7 @@ export function AdminOverviewBoard({
             <div key={item.label} className="flex min-w-0 flex-col gap-1 rounded-2xl bg-[#F7F3F2] px-4 py-3.5">
               <span className="truncate text-sm text-[#4A3A37]">{item.label}</span>
               <span className="text-[28px] font-medium tabular-nums leading-none">{item.value}</span>
-              <span className={`truncate text-[13px] ${item.noteClass}`}>{item.note}</span>
+              <span className={`text-[13px] leading-snug ${item.noteClass}`}>{item.note}</span>
             </div>
           ))}
         </div>

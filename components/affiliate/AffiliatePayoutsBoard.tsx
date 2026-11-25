@@ -96,8 +96,6 @@ export function AffiliatePayoutsBoard({ today, items, labs }: { today: string; i
   const [openPeriod, setOpenPeriod] = useState<string | null>(null);
   const [openReceipt, setOpenReceipt] = useState<string | null>(null);
   const visible = useMemo(() => itemsInRange(items, today, range), [items, today, range]);
-  const earned = visible.filter((item) => item.status === "approved" || item.status === "paid");
-  const approvedWaiting = items.filter((item) => item.status === "approved");
   const receipts = useMemo(() => payoutReceipts(items, today, range), [items, today, range]);
   const filtered = visible.filter((item) => status === "all" || item.status === status);
   const periods = useMemo(() => {
@@ -114,10 +112,9 @@ export function AffiliatePayoutsBoard({ today, items, labs }: { today: string; i
       .filter((month) => status === "all" || month.items.length > 0 || (status === "review" && month.period === today.slice(0, 7) && month.items.length === 0));
   }, [filtered, range, status, today, visible]);
   const cards = [
-    { label: "Total earned", value: formatCents(payoutCents(earned)), detail: "Approved and paid", highlight: false },
-    { label: "Pending payment", value: formatCents(payoutCents(visible.filter((item) => item.status === "approved"))), detail: "Approved, not sent yet", highlight: false },
-    { label: "Paid to date", value: formatCents(payoutCents(visible.filter((item) => item.status === "paid"))), detail: "Sent to you", highlight: false },
-    { label: "Next payout", value: formatCents(payoutCents(approvedWaiting)), detail: "Sent manually. We’ll email you when it goes out.", highlight: true },
+    { label: "In review", value: formatCents(payoutCents(items.filter((item) => item.status === "review" || item.status === "hold"))), detail: "Earned, not approved yet", highlight: false },
+    { label: "Approved, not sent", value: formatCents(payoutCents(items.filter((item) => item.status === "approved"))), detail: "Sent manually. We’ll email you when it goes out.", highlight: true },
+    { label: "Paid", value: formatCents(payoutCents(items.filter((item) => item.status === "paid"))), detail: "Sent to you", highlight: false },
   ];
   const counts = (id: PayoutBoardStatus | "all") => {
     if (id === "all") return new Set([...monthsInRange(today, range), ...payoutPeriodTotals(visible).map((month) => month.period)]).size;
@@ -130,7 +127,7 @@ export function AffiliatePayoutsBoard({ today, items, labs }: { today: string; i
     lab: periods.reduce((sum, month) => sum + month.lab, 0),
     total: periods.reduce((sum, month) => sum + month.total, 0),
   };
-  const filters = ([["all", "All"], ["review", "Pending review"], ["approved", "Approved"], ["paid", "Paid"], ["hold", "On hold"]] as const).map(([id, label]) => {
+  const filters = ([["all", "All"], ["review", "In review"], ["approved", "Approved, not sent"], ["paid", "Paid"], ["hold", "On hold"]] as const).map(([id, label]) => {
     const count = counts(id);
     return { id, label, count, off: count === 0 && id !== "all" };
   });
@@ -176,7 +173,7 @@ export function AffiliatePayoutsBoard({ today, items, labs }: { today: string; i
         </div>
       </div>
 
-      <section aria-label="Payout overview" className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
+      <section aria-label="Payout overview" className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
         {cards.map((card) => (
           <div key={card.label} className={`flex flex-col gap-1.5 rounded-[20px] bg-white px-5 py-[18px] ${card.highlight ? "border-2 border-ink" : "border-2 border-transparent"}`}>
             <span className="text-sm text-[#4A3A37]">{card.label}</span>
@@ -254,9 +251,15 @@ export function AffiliatePayoutsBoard({ today, items, labs }: { today: string; i
                       return <span key={kind} className="text-right text-[15px]" style={{ color: cell.color }}>{cell.text}</span>;
                     })}
                     <span className="text-right text-[17px] font-bold">{formatCents(month.total)}</span>
-                    <span className="flex flex-col items-start gap-[3px] pl-3">
-                      <span className="rounded-full px-3 py-1 text-[13px] font-semibold" style={{ background: tone.background, color: tone.color }}>{tone.label}</span>
-                      <span className="text-xs text-[#6B5A57]">{monthWhen(month, today)}</span>
+                    <span className="flex flex-col items-start gap-1.5 pl-3">
+                      <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-[5px] text-[12px] leading-none font-semibold whitespace-nowrap" style={{ background: tone.background, color: tone.color }}>
+                        <span className="size-1.5 shrink-0 rounded-full bg-current" aria-hidden />
+                        {tone.label}
+                      </span>
+                      <span className="inline-flex items-center gap-1 pl-0.5 text-[12px] leading-none text-[#6B5A57]">
+                        <span className="size-1 shrink-0 rounded-full bg-[#C4B8A4]" aria-hidden />
+                        {monthWhen(month, today)}
+                      </span>
                     </span>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B5A57" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={`justify-self-end transition-transform duration-200 ${open ? "rotate-90" : ""}`}><path d="M9 6l6 6-6 6" /></svg>
                   </button>

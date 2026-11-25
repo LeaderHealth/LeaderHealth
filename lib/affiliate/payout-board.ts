@@ -78,8 +78,8 @@ export const PAYOUT_KINDS: Record<PayoutBoardKind, { label: string; color: strin
 };
 
 export const PAYOUT_STATUSES: Record<PayoutBoardStatus, { label: string; background: string; color: string }> = {
-  review: { label: "Pending review", background: "#FBEFD6", color: "#7A4E00" },
-  approved: { label: "Approved", background: "#F3E6E3", color: "#5A2A24" },
+  review: { label: "In review", background: "#DBD4BD", color: "#331110" },
+  approved: { label: "Approved, not sent", background: "#F3E6E3", color: "#5A2A24" },
   paid: { label: "Paid", background: "#DDF0E4", color: "#1D6340" },
   hold: { label: "On hold", background: "#FBE3DF", color: "#9B2C1F" },
 };
@@ -329,7 +329,7 @@ export function labPayoutRows(rows: PayoutLabInput[], today: string) {
     const approvedOn = payoutDay(row.approvedOn) || paidOn;
     const end = monthEnd(row.period);
     const earnedOn = row.period === today.slice(0, 7) ? today : end;
-    const countLabel = row.conversions === 1 ? "1 conversion" : `${row.conversions.toLocaleString("en-US")} conversions`;
+    const countLabel = row.conversions === 1 ? "1 order" : `${row.conversions.toLocaleString("en-US")} orders`;
     items.push({
       id: `lab-${row.period}-${row.status}`,
       title: `${payoutMonthLabel(row.period)} lab orders`,

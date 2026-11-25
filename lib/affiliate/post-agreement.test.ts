@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { agreementBoardPeriod, agreementMatchesPost, agreementMonthBoard, monthCanTake, postingAgreement, postingMonthDateBounds, type AgreementBoardPost, type AgreementForPost, type MonthFillPost } from "./post-agreement";
+import { agreementBoardPeriod, agreementKindFormat, agreementMatchesPost, agreementMonthBoard, agreementSlotState, kindUsedCount, mixSentence, monthCanTake, placedSlotNumber, postIdentity, postPlaceLabel, postTypeLabel, postingAgreement, postingMonthDateBounds, type AgreementBoardPost, type AgreementForPost, type AgreementKindUse, type MonthFillPost } from "./post-agreement";
 
 const today = "2026-11-17";
 
@@ -108,4 +108,68 @@ test("each month of a multi-month agreement keeps its own set of posts", () => {
   assert.deepEqual(postingMonthDateBounds("2026-11", "2026-11-16", "2027-01-10"), { min: "2026-11-16", max: "2026-11-30" });
   assert.deepEqual(postingMonthDateBounds("2026-12", "2026-11-16", "2027-01-10"), { min: "2026-12-01", max: "2026-12-31" });
   assert.deepEqual(postingMonthDateBounds("2027-01", "2026-11-16", "2027-01-10"), { min: "2027-01-01", max: "2027-01-10" });
+});
+
+test("a sent post counts toward the agreement type it matches", () => {
+  const sent = (patch: Partial<AgreementKindUse>): AgreementKindUse => ({
+    id: "p",
+    agreementId: "agree1",
+    contentStatus: "approved",
+    offerId: "",
+    publishedAt: null,
+    submittedAt: "2026-11-02T00:00:00.000Z",
+    postingMonth: "2026-11",
+    format: "tiktok",
+    fileCount: 1,
+    agreementPlatform: "",
+    agreementPostType: "",
+    ...patch,
+  });
+  assert.equal(agreementKindFormat("TikTok", "Video"), "tiktok");
+  assert.equal(agreementKindFormat("Instagram", "Carousel"), "instagram_post");
+  assert.equal(agreementKindFormat("Instagram", "Story"), null);
+  assert.equal(agreementKindFormat("Facebook", "Post"), "facebook_post");
+  assert.equal(agreementKindFormat("Facebook", "Reel"), "facebook_reel");
+  assert.equal(agreementKindFormat("Facebook", "Video"), "facebook_video");
+  assert.equal(agreementKindFormat("Facebook", "Story"), null);
+  assert.equal(agreementKindFormat("YouTube", "Short"), "youtube_short");
+  assert.equal(agreementKindFormat("YouTube", "Video"), "youtube_video");
+  const posts = [sent({ id: "video" }), sent({ id: "carousel", format: "instagram_post", fileCount: 3 })];
+  assert.equal(kindUsedCount(posts, "agree1", "2026-11", "TikTok", "Video"), 1);
+  assert.equal(kindUsedCount(posts, "agree1", "2026-11", "Instagram", "Carousel"), 1);
+  assert.equal(kindUsedCount(posts, "agree1", "2026-11", "Instagram", "Reel"), 0);
+});
+
+test("post labels match the agreement slot and mix", () => {
+  const row = (patch: Partial<AgreementBoardPost>): AgreementBoardPost => ({
+    id: "post",
+    agreementId: "agree1",
+    contentStatus: "approved",
+    offerId: "",
+    publicationStatus: "tracking_active",
+    publishedAt: "2026-11-04T00:00:00.000Z",
+    submittedAt: "2026-11-02T00:00:00.000Z",
+    postingMonth: "2026-11",
+    reviewNote: "",
+    title: "",
+    agreementSlot: null,
+    ...patch,
+  });
+  const rows = [row({ id: "tiktok" }), row({ id: "waiting", contentStatus: "approved", publicationStatus: "awaiting_publication", submittedAt: "2026-11-03T00:00:00.000Z" })];
+  assert.equal(placedSlotNumber(rows, "agree1", "2026-11", 4, "tiktok"), 1);
+  assert.equal(placedSlotNumber(rows, "agree1", "2026-11", 4, "waiting"), 2);
+  assert.equal(agreementSlotState(rows[0] ?? null), "Verified");
+  assert.equal(agreementSlotState(rows[1] ?? null), "Ready to publish");
+  assert.equal(agreementSlotState(null), "Not posted");
+  assert.equal(agreementSlotState({ contentStatus: "submitted", publicationStatus: null }), "In review");
+  const place = postPlaceLabel({ offerId: "", agreementId: "agree1", agreementSlot: null }, 1);
+  const type = postTypeLabel({ agreementPlatform: "TikTok", agreementPostType: "Video", format: "tiktok", fileCount: 1 });
+  assert.equal(postIdentity(place, type), "Post 1 · TikTok video");
+  assert.equal(postTypeLabel({ agreementPlatform: "", agreementPostType: "", format: "youtube_short", fileCount: 1 }), "YouTube Short");
+  assert.equal(postTypeLabel({ agreementPlatform: "", agreementPostType: "", format: "facebook_reel", fileCount: 1 }), "Facebook reel");
+  assert.equal(mixSentence([
+    { platform: "Instagram", type: "Carousel", count: 2 },
+    { platform: "TikTok", type: "Video", count: 2 },
+    { platform: "Instagram", type: "Story", count: 1 },
+  ]), "2 Instagram carousels and 2 TikTok videos");
 });

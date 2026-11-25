@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { acknowledgeDisclosureAction } from "../../compliance-actions";
+import { acknowledgeDisclosureAction } from "../../../compliance-actions";
 import { CopyTrackingLink } from "@/components/affiliate/CopyTrackingLink";
 import { EligibleProducts } from "@/components/affiliate/EligibleProducts";
 import { eligibleProductGroups } from "@/lib/affiliate/eligibleProducts";
@@ -11,7 +11,7 @@ import { loadPaymentRates } from "@/lib/affiliate/payment-store";
 import { affiliateTrackingLink } from "@/lib/affiliate/link";
 import { disclosureAcknowledged } from "@/lib/affiliate/disclosures";
 import { listPromoCodes, personalPromoForAffiliate, type PromoCodeRow } from "@/lib/genhealth/promocodes";
-import { currentAffiliate } from "../../current";
+import { currentAffiliate } from "../../../current";
 
 export const metadata: Metadata = {
   title: "Referral link",

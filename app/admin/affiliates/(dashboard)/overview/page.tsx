@@ -13,7 +13,7 @@ import { listOpenApplications } from "@/lib/affiliate/applications";
 import { memo } from "@/lib/affiliate/memo";
 import { loadContentSubmissions, type ContentSubmission } from "@/lib/affiliate/post-review";
 import { currentPayoutPeriod, formatPayoutMonth, loadPayoutRecords, payoutLines, previousPayoutPeriod, type PayoutLine, type PayoutRecord } from "@/lib/affiliate/payouts";
-import { remainingSalesCents } from "@/lib/affiliate/refunds";
+import { adjustedCommissionCents, earnsLabCommission, remainingSalesCents } from "@/lib/affiliate/refunds";
 import { daySpan, rangeLabel, shortDay, shiftDay } from "@/lib/affiliate/stats-board";
 import { AffiliateStoreError, loadAffiliateOverview, loadUncommissionedPendingOrders, type AffiliateSummary, type ConversionSummary } from "@/lib/affiliate/store";
 import { trafficReview } from "@/lib/affiliate/traffic-review";
@@ -27,12 +27,13 @@ export const metadata: Metadata = {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type RangeId = "this" | "last" | "q";
+type RangeId = "this" | "last" | "q" | "custom";
 
 const RANGE_LINKS: { id: RangeId; label: string }[] = [
   { id: "this", label: "This month" },
   { id: "last", label: "Last month" },
-  { id: "q", label: "90 days" },
+  { id: "q", label: "Last 90 days" },
+  { id: "custom", label: "Custom" },
 ];
 
 const PAY_COLORS = [
@@ -45,11 +46,27 @@ const PAY_COLORS = [
 function rangeOf(value: string | undefined): RangeId {
   if (value === "last") return "last";
   if (value === "q" || value === "90") return "q";
+  if (value === "custom") return "custom";
   return "this";
 }
 
-function overviewHref(range: RangeId) {
-  return range === "this" ? "/admin/affiliates/overview" : `/admin/affiliates/overview?range=${range}`;
+function overviewHref(range: RangeId, from = "", to = "") {
+  if (range === "this") return "/admin/affiliates/overview";
+  if (range !== "custom") return `/admin/affiliates/overview?range=${range}`;
+  const params = new URLSearchParams({ range: "custom" });
+  if (from) params.set("from", from);
+  if (to) params.set("to", to);
+  return `/admin/affiliates/overview?${params.toString()}`;
+}
+
+function dayKey(value: string | undefined) {
+  return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : "";
+}
+
+function dayCount(start: string, end: string) {
+  const span = Date.parse(`${end}T00:00:00.000Z`) - Date.parse(`${start}T00:00:00.000Z`);
+  if (!Number.isFinite(span)) return 1;
+  return Math.max(1, Math.round(span / 86_400_000) + 1);
 }
 
 function monthEnd(period: string) {
@@ -64,11 +81,11 @@ function nextPeriod(period: string) {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
-function monthsBetween(start: string, end: string) {
+function monthsBetween(start: string, end: string, limit = 6) {
   const months: string[] = [];
   let cursor = start.slice(0, 7);
   const last = end.slice(0, 7);
-  while (cursor <= last && months.length < 6) {
+  while (cursor <= last && months.length < limit) {
     months.push(cursor);
     cursor = nextPeriod(cursor);
   }
@@ -149,7 +166,7 @@ function waitingDays(oldest: string, today: string) {
   return Math.max(0, Math.round((end - start) / 86_400_000));
 }
 
-export default async function AffiliateOverviewPage({ searchParams }: { searchParams: Promise<{ range?: string }> }) {
+export default async function AffiliateOverviewPage({ searchParams }: { searchParams: Promise<{ range?: string; from?: string; to?: string }> }) {
   const query = await searchParams;
   const actor = await adminSessionActor();
   const canInvite = Boolean(actor && adminHasFullAccess(actor));
@@ -158,19 +175,28 @@ export default async function AffiliateOverviewPage({ searchParams }: { searchPa
   const currentPeriod = currentPayoutPeriod();
   const priorPeriod = previousPayoutPeriod(currentPeriod) ?? currentPeriod;
   const beforePrior = previousPayoutPeriod(priorPeriod) ?? priorPeriod;
+  const customEnd = dayKey(query.to) && dayKey(query.to) < today ? dayKey(query.to) : today;
+  const requestedStart = dayKey(query.from);
+  const customStart = requestedStart && requestedStart <= customEnd ? requestedStart : shiftDay(customEnd, -29);
+  const boundedStart = customStart < shiftDay(customEnd, -179) ? shiftDay(customEnd, -179) : customStart;
   const selected =
     range === "this"
       ? { start: `${currentPeriod}-01`, end: today, periods: [currentPeriod], word: "this month", previousName: "last month" }
       : range === "last"
         ? { start: `${priorPeriod}-01`, end: monthEnd(priorPeriod), periods: [priorPeriod], word: "last month", previousName: "the month before" }
-        : { start: shiftDay(today, -89), end: today, periods: monthsBetween(shiftDay(today, -89), today), word: "in 90 days", previousName: "the previous 90 days" };
+        : range === "custom"
+          ? { start: boundedStart, end: customEnd, periods: monthsBetween(boundedStart, customEnd, 7), word: "in this range", previousName: "the previous range" }
+          : { start: shiftDay(today, -89), end: today, periods: monthsBetween(shiftDay(today, -89), today), word: "in the last 90 days", previousName: "the previous 90 days" };
+  const customSpan = dayCount(selected.start, selected.end);
   const previous =
     range === "this"
       ? { start: `${priorPeriod}-01`, end: monthEnd(priorPeriod) }
       : range === "last"
         ? { start: `${beforePrior}-01`, end: monthEnd(beforePrior) }
-        : { start: shiftDay(selected.start, -90), end: shiftDay(selected.start, -1) };
-  const eventMonths = [...new Set([currentPeriod, priorPeriod, beforePrior, ...selected.periods])];
+        : range === "custom"
+          ? { start: shiftDay(selected.start, -customSpan), end: shiftDay(selected.start, -1) }
+          : { start: shiftDay(selected.start, -90), end: shiftDay(selected.start, -1) };
+  const eventMonths = [...new Set([currentPeriod, priorPeriod, beforePrior, ...selected.periods, ...monthsBetween(previous.start, previous.end, 7)])];
 
   const [core, postsBundle, applications, websiteBundle, agreementBundle, unpaidResult, keepsResult] = await Promise.all([
     Promise.all([memo("admin-overview", () => loadAffiliateOverview()), memo("payout-records:all", () => loadPayoutRecords())]).then(
@@ -349,10 +375,12 @@ export default async function AffiliateOverviewPage({ searchParams }: { searchPa
   const viewThen = affiliates.reduce((sum, affiliate) => sum + (viewsFor(affiliate.code, previous.start, previous.end) ?? 0), 0);
   const viewChange = changeNote(viewNow, viewThen, selected.previousName);
   const visitNow = websiteReady ? websiteVisits.filter((visit) => inSpan(visit.createdAt, selected.start, selected.end)).length : null;
-  const labOrders = conversions.filter(
+  const labSaleOrders = conversions.filter(
     (conversion) => !conversion.dryRun && conversion.orderKind === "lab" && inSpan(conversion.createdAt, selected.start, selected.end) && remainingSalesCents(conversion.amountCents, conversion.refundedAmountCents) > 0,
   );
-  const labSales = labOrders.reduce((sum, conversion) => sum + remainingSalesCents(conversion.amountCents, conversion.refundedAmountCents), 0);
+  const labCommissionOrders = labSaleOrders.filter((conversion) => earnsLabCommission(conversion));
+  const labSales = labSaleOrders.reduce((sum, conversion) => sum + remainingSalesCents(conversion.amountCents, conversion.refundedAmountCents), 0);
+  const labCommission = labCommissionOrders.reduce((sum, conversion) => sum + adjustedCommissionCents(conversion.commissionCents, conversion.commissionRefundedCents), 0);
   const promoPaid = conversions.filter(
     (conversion) => conversion.promoCode && !conversion.dryRun && inSpan(conversion.createdAt, selected.start, selected.end) && remainingSalesCents(conversion.amountCents, conversion.refundedAmountCents) > 0,
   );
@@ -473,16 +501,17 @@ export default async function AffiliateOverviewPage({ searchParams }: { searchPa
     { label: "Views", value: postsReady ? viewNow.toLocaleString("en-US") : "—", note: postsReady ? viewChange.text : "Unavailable right now", noteClass: postsReady ? viewChange.className : "text-[#4A3A37]" },
     { label: "Visits", value: visitNow == null ? "—" : String(visitNow), note: visitNow == null ? "Unavailable right now" : "Tracking + promo links", noteClass: "text-[#4A3A37]" },
     {
-      label: "Paid lab orders",
-      value: String(labOrders.length),
-      note: unpaidTotal == null ? "Unpaid count unavailable" : `${unpaidTotal} unpaid, not counted`,
-      noteClass: unpaidTotal ? "text-[#7A4E00]" : "text-[#4A3A37]",
+      label: "Lab orders",
+      value: String(labCommissionOrders.length),
+      note: unpaidTotal == null ? "Checkout count unavailable" : `${unpaidTotal} checkouts not finished\nNot counted`,
+      noteClass: "whitespace-pre-line rounded-md bg-[#FBEFD6] px-2 py-1 leading-snug text-[#7A4E00]",
     },
-    { label: "Agreement posts verified", value: `${verifiedNow} of ${requiredNow}`, note: "Across all agreements", noteClass: "text-[#4A3A37]" },
+    { label: "Posts verified", value: `${verifiedNow} of ${requiredNow}`, note: "Across all agreements", noteClass: "text-[#4A3A37]" },
   ];
 
   const stats: OverviewStat[] = [
-    { label: "Lab sales", value: LAB_COMMISSIONS_ENABLED ? formatCents(labSales) : "Not active", note: "Earns commission", noteClass: "text-[#1D6340]", tip: "Paid lab orders only" },
+    { label: "Lab sales", value: LAB_COMMISSIONS_ENABLED ? formatCents(labSales) : "Not active", note: "Remaining sale amount", noteClass: "text-[#1D6340]", tip: "Remaining customer payment on lab orders" },
+    { label: "Lab commission", value: LAB_COMMISSIONS_ENABLED ? formatCents(labCommission) : "Not active", note: "What the affiliate earns", noteClass: "text-[#1D6340]", tip: "Lab orders that still have commission" },
     {
       label: "Promo code uses",
       value: String(promoPaid.length),
@@ -490,8 +519,8 @@ export default async function AffiliateOverviewPage({ searchParams }: { searchPa
       noteClass: "text-[#6B5A57]",
       tip: "Paid orders that used the code. Commission is lab orders only.",
     },
-    { label: "Link clicks", value: websiteReady ? clicks.toLocaleString("en-US") : "—", note: "Verified clicks", noteClass: "text-[#6B5A57]", tip: "Verified link clicks" },
-    { label: "Page views", value: websiteReady ? pageViews.toLocaleString("en-US") : "—", note: "Public pages", noteClass: "text-[#6B5A57]", tip: "Public page views" },
+    { label: "Verified link clicks", value: websiteReady ? clicks.toLocaleString("en-US") : "—", note: "Your tracking link", noteClass: "text-[#6B5A57]", tip: "Verified link clicks" },
+    { label: "Public page views", value: websiteReady ? pageViews.toLocaleString("en-US") : "—", note: "Approved Leader Health pages", noteClass: "text-[#6B5A57]", tip: "Public page views" },
   ];
 
   const chartDays = daySpan(selected.end, Math.max(1, Math.round((Date.parse(`${selected.end}T00:00:00.000Z`) - Date.parse(`${selected.start}T00:00:00.000Z`)) / 86_400_000) + 1));
@@ -547,8 +576,10 @@ export default async function AffiliateOverviewPage({ searchParams }: { searchPa
     const lastEng = engagementsFor(code, `${priorPeriod}-01`, monthEnd(priorPeriod)) ?? 0;
     const nowVisits = visitsFor(code, `${currentPeriod}-01`, today) ?? 0;
     const lastVisits = visitsFor(code, `${priorPeriod}-01`, monthEnd(priorPeriod)) ?? 0;
-    const nowPaid = paidOrders(code, `${currentPeriod}-01`, today).length;
-    const lastPaid = paidOrders(code, `${priorPeriod}-01`, monthEnd(priorPeriod)).length;
+    const nowPaidOrders = paidOrders(code, `${currentPeriod}-01`, today);
+    const lastPaidOrders = paidOrders(code, `${priorPeriod}-01`, monthEnd(priorPeriod));
+    const nowLab = nowPaidOrders.filter((order) => earnsLabCommission(order)).length;
+    const lastLab = lastPaidOrders.filter((order) => earnsLabCommission(order)).length;
     const unpaid = unpaidByCode.get(code) ?? 0;
     const nowPromo = promoUses(code, `${currentPeriod}-01`, today).length;
     const lastPromo = promoUses(code, `${priorPeriod}-01`, monthEnd(priorPeriod)).length;
@@ -558,17 +589,19 @@ export default async function AffiliateOverviewPage({ searchParams }: { searchPa
       { label: "Views", now: nowViews, last: lastViews },
       { label: "Engagements", now: nowEng, last: lastEng },
       { label: "Visits", now: nowVisits, last: lastVisits },
-      { label: "Paid orders", now: nowPaid, last: lastPaid },
-      { label: "Unpaid orders", now: unpaid, last: 0, invert: true, note: "All time. Not a promo use, and no commission." },
+      { label: "Paid orders", now: nowPaidOrders.length, last: lastPaidOrders.length },
+      { label: "Lab orders", now: nowLab, last: lastLab },
+      { label: "Orders without commission", now: nowPaidOrders.length - nowLab, last: lastPaidOrders.length - lastLab },
+      { label: "Checkouts not finished", now: unpaid, last: 0, invert: true, note: "All time. Not a promo use, and no commission." },
       { label: "Promo code uses", now: nowPromo, last: lastPromo },
     ];
     const rows: OverviewCompareRow[] = counts.map((row) => {
-      const delta = row.label === "Unpaid orders" ? { text: "—", className: "bg-[#F7F3F2] text-[#6B5A57]" } : countDelta(row.now, row.last, row.invert);
+      const delta = row.label === "Checkouts not finished" ? { text: "—", className: "bg-[#F7F3F2] text-[#6B5A57]" } : countDelta(row.now, row.last, row.invert);
       return {
         label: row.label,
         note: row.note ?? "",
         now: row.now.toLocaleString("en-US"),
-        last: row.label === "Unpaid orders" ? "—" : row.last.toLocaleString("en-US"),
+        last: row.label === "Checkouts not finished" ? "—" : row.last.toLocaleString("en-US"),
         nowClass: row.invert && row.now > 0 ? "text-[#7A4E00]" : "text-[#2A1714]",
         strong: false,
         delta: delta.text,
@@ -577,7 +610,7 @@ export default async function AffiliateOverviewPage({ searchParams }: { searchPa
       };
     });
     rows.push({
-      label: "Agreement posts verified",
+      label: "Posts verified",
       note: "",
       now: `${nowEarn.verified} of ${nowEarn.required}`,
       last: `${lastEarn.verified} of ${lastEarn.required}`,
@@ -638,7 +671,7 @@ export default async function AffiliateOverviewPage({ searchParams }: { searchPa
       ? `${row.affiliate.active ? "Active" : "Inactive"} · ${agreement.monthlyCents ? `${formatCents(agreement.monthlyCents)}/month agreement` : "Agreement"}${mix ? ` · ${mix}` : ""}`
       : `${row.affiliate.active ? "Active" : "Inactive"} · no agreement`;
     const engagements = engagementsFor(row.affiliate.code, selected.start, selected.end);
-    const labOrders = paidOrders(row.affiliate.code, selected.start, selected.end, "lab").length;
+    const labOrders = paidOrders(row.affiliate.code, selected.start, selected.end, "lab").filter((order) => earnsLabCommission(order)).length;
     return {
       code: row.affiliate.code,
       rank: String(index + 1),
@@ -681,7 +714,8 @@ export default async function AffiliateOverviewPage({ searchParams }: { searchPa
     <div className="flex flex-col gap-4">
       {loadError ? <p className="text-ink">{loadError}</p> : null}
       <AdminOverviewBoard
-        ranges={RANGE_LINKS.map((item) => ({ ...item, href: overviewHref(item.id), current: item.id === range }))}
+        ranges={RANGE_LINKS.map((item) => ({ ...item, href: overviewHref(item.id, selected.start, selected.end), current: item.id === range }))}
+        customRange={range === "custom" ? { from: selected.start, to: selected.end } : null}
         rangeText={rangeLabel(selected.start, selected.end)}
         todoCount={openTodos === 0 ? "Nothing waiting" : openTodos === 1 ? "1 needs action" : `${openTodos} need action`}
         todos={todos}

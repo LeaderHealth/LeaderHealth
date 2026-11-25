@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { ROI_UNASSIGNED, campaignDirectoryName, roiCostCents, roiFigures, roiInRange, roiSpentOn } from "./roi";
+import { ROI_UNASSIGNED, campaignAffiliateRanks, campaignDirectoryName, campaignSocialTotals, ordersWithinCampaignPeriod, roiCostCents, roiFigures, roiInRange, roiSpentOn } from "./roi";
 
 const now = Date.parse("2026-11-10T18:00:00.000Z");
 
@@ -70,6 +70,89 @@ test("a saved campaign stays on the list before it has spend or sales", () => {
   assert.equal(campaignDirectoryName("  Spring sale "), "Spring sale");
   assert.equal(campaignDirectoryName("No promo code"), null);
   assert.equal(campaignDirectoryName(""), null);
+});
+
+test("affiliates rank by the stats they gained for a campaign", () => {
+  const boards = campaignAffiliateRanks({
+    now,
+    range: "30",
+    names: new Map([
+      ["aaa", "Ada"],
+      ["bbb", "Bea"],
+    ]),
+    posts: [
+      { code: "bbb", campaign: "Launch", postedOn: "2026-11-02", views: 40, engagements: 4 },
+      { code: "aaa", campaign: "launch", postedOn: "2026-11-03", views: 100, engagements: 8 },
+      { code: "aaa", campaign: "Launch", postedOn: "2026-08-01", views: 900, engagements: 90 },
+      { code: "aaa", campaign: "", postedOn: "2026-11-03", views: 50, engagements: 5 },
+    ],
+    orders: [
+      { code: "bbb", promoCode: "Launch", amountCents: 5000, refundedAmountCents: 0, dryRun: false, createdAt: "2026-11-04T12:00:00.000Z" },
+      { code: "aaa", promoCode: "", amountCents: 32700, refundedAmountCents: 0, dryRun: false, createdAt: "2026-11-05T12:00:00.000Z" },
+      { code: "bbb", promoCode: "Launch", amountCents: 9000, refundedAmountCents: 0, dryRun: true, createdAt: "2026-11-04T12:00:00.000Z" },
+    ],
+  });
+
+  assert.deepEqual(
+    boards.map((board) => ({ campaign: board.campaign, ranks: board.affiliates.map((affiliate) => [affiliate.rank, affiliate.name, affiliate.views, affiliate.orders]) })),
+    [
+      {
+        campaign: "Launch",
+        ranks: [
+          [1, "Ada", 100, 0],
+          [2, "Bea", 40, 1],
+        ],
+      },
+      { campaign: ROI_UNASSIGNED, ranks: [[1, "Ada", 0, 1]] },
+    ],
+  );
+});
+
+test("orders count only inside the campaign dates", () => {
+  const windows = [{ name: "Launch", startsOn: "2026-11-01", endsOn: "2026-11-30" }];
+  const orders = [
+    { promoCode: "Launch", dryRun: false, createdAt: "2026-11-04T12:00:00.000Z" },
+    { promoCode: "Launch", dryRun: false, createdAt: "2026-10-01T12:00:00.000Z" },
+    { promoCode: "Launch", dryRun: true, createdAt: "2026-11-04T12:00:00.000Z" },
+    { promoCode: "", dryRun: false, createdAt: "2026-11-05T12:00:00.000Z" },
+  ];
+
+  const counts = ordersWithinCampaignPeriod(orders, windows, "all", now);
+  assert.equal(counts.get("launch"), 1);
+  assert.equal(counts.get(ROI_UNASSIGNED.toLowerCase()), 1);
+
+  const open = ordersWithinCampaignPeriod(orders, [{ name: "Launch", startsOn: "", endsOn: "" }], "all", now);
+  assert.equal(open.get("launch"), 2);
+
+  const ranks = campaignAffiliateRanks({
+    now,
+    range: "all",
+    windows,
+    names: new Map([["aaa", "Ada"]]),
+    posts: [],
+    orders: [
+      { code: "aaa", promoCode: "Launch", amountCents: 1000, refundedAmountCents: 0, dryRun: false, createdAt: "2026-10-01T12:00:00.000Z" },
+      { code: "aaa", promoCode: "Launch", amountCents: 2000, refundedAmountCents: 0, dryRun: false, createdAt: "2026-11-04T12:00:00.000Z" },
+    ],
+  });
+  assert.equal(ranks[0]?.campaign, "Launch");
+  assert.equal(ranks[0]?.affiliates[0]?.orders, 1);
+  assert.equal(ranks[0]?.affiliates[0]?.revenueCents, 2000);
+});
+
+test("campaign post stats stay with that campaign and inside the range", () => {
+  const totals = campaignSocialTotals(
+    [
+      { campaign: "Launch", postedOn: "2026-11-01", views: 100, engagements: 12 },
+      { campaign: "launch", postedOn: "2026-11-02", views: 40, engagements: 3 },
+      { campaign: "Launch", postedOn: "2026-08-01", views: 999, engagements: 80 },
+      { campaign: "", postedOn: "2026-11-01", views: 50, engagements: 5 },
+      { campaign: "No promo code", postedOn: "2026-11-01", views: 20, engagements: 2 },
+    ],
+    "30",
+    now,
+  );
+  assert.deepEqual(totals, [{ campaign: "Launch", views: 140, engagements: 15 }]);
 });
 
 test("cost amount and date must be usable before they are saved", () => {

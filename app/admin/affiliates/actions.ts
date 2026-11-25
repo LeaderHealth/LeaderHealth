@@ -494,7 +494,7 @@ async function requirePaymentAdmin() {
   if (!actor || !canReleaseDeliverablePayment(actor.role)) fail("restricted", PAYOUT_PATH);
 }
 
-const OFFER_PATH = "/admin/affiliates/offers";
+const OFFER_PATH = "/admin/affiliates/posts";
 
 function offerFail(code: string, id = ""): never {
   const params = new URLSearchParams({ error: code === "status" ? "offer-status" : code });
@@ -766,7 +766,7 @@ export async function saveMarketingCampaignAction(formData: FormData) {
   clearAffiliateMemo();
   revalidatePath(CAMPAIGNS_PATH);
   clearAffiliateMemo();
-  revalidatePath("/admin/affiliates/offers");
+  revalidatePath("/admin/affiliates/posts");
   clearAffiliateMemo();
   revalidatePath("/affiliates/campaigns");
   redirect(campaignDestination(formData, range, { notice }));
@@ -789,7 +789,7 @@ export async function saveCampaignFlowAction(input: CampaignFlowInput) {
   clearAffiliateMemo();
   revalidatePath(CAMPAIGNS_PATH);
   clearAffiliateMemo();
-  revalidatePath("/admin/affiliates/offers");
+  revalidatePath("/admin/affiliates/posts");
   clearAffiliateMemo();
   revalidatePath("/affiliates/campaigns");
   clearAffiliateMemo();

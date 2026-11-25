@@ -20,18 +20,6 @@ type CreatedLink = {
   commissionLabel: string;
 };
 
-function percentValue(value: string) {
-  const percent = Number(value);
-  if (!value.trim() || !Number.isFinite(percent)) return null;
-  return percent;
-}
-
-function moneyLabel(value: string) {
-  const dollars = Number(value);
-  if (!value.trim() || !Number.isFinite(dollars)) return null;
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(dollars);
-}
-
 function recipientEmail(value: string) {
   const email = value.trim().toLowerCase();
   if (!email) return "";
@@ -73,10 +61,6 @@ export function ApplicationLinkForm({
   useEffect(() => {
     if (created) shareTitleRef.current?.focus();
   }, [created]);
-
-  const customPercent = percentValue(percent);
-  const fixedAmount = moneyLabel(fixed);
-  const labValue = mode === "fixed" ? fixedAmount : mode === "percent" ? (customPercent == null ? null : `${customPercent}%`) : `${DEFAULT_COMMISSION_PERCENT}%`;
 
   if (created) {
     return (
@@ -223,31 +207,6 @@ export function ApplicationLinkForm({
         setError(result.error);
       }}
     >
-      <section aria-label="How this affiliate earns">
-        <p className="text-xs font-medium uppercase tracking-wide text-taupe">How this affiliate earns</p>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-2xl border border-ink/10 bg-white px-4 py-3">
-            <p className="text-sm font-semibold text-ink">Lab orders</p>
-            <p className="mt-1 text-sm text-ink">{labValue ?? "Not set"}</p>
-            <p className="mt-1 text-sm leading-5 text-taupe">Of each lab order from their link or code.</p>
-          </div>
-          <div className="rounded-2xl border border-ink/10 bg-white px-4 py-3">
-            <p className="text-sm font-semibold text-ink">Other products</p>
-            <p className="mt-1 text-sm text-ink">No commission</p>
-            <p className="mt-1 text-sm leading-5 text-taupe">Customers still get the code&apos;s discount.</p>
-          </div>
-          <div className="rounded-2xl border border-ink/10 bg-white px-4 py-3">
-            <p className="text-sm font-semibold text-ink">Marketing</p>
-            <p className="mt-1 text-sm text-ink">Per campaign</p>
-            <p className="mt-1 text-sm leading-5 text-taupe">Set pay for campaign posts.</p>
-          </div>
-          <div className="rounded-2xl border border-ink/10 bg-white px-4 py-3">
-            <p className="text-sm font-semibold text-ink">Performance</p>
-            <p className="mt-1 text-sm text-ink">On</p>
-            <p className="mt-1 text-sm leading-5 text-taupe">Paid for views, likes and site visits.</p>
-          </div>
-        </div>
-      </section>
       <div className="rounded-[28px] bg-background px-4 py-5 sm:px-6">
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
           <StepBadge n={1} />

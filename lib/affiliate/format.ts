@@ -11,6 +11,14 @@ export function viewPayTerms(rateCents: number, maxPayCents: number | null, trac
   return `${formatCents(rateCents)} per 1,000 views, ${cap}, tracked for ${period}`;
 }
 
+export function viewPayFormula(rateCents: number, maxPayCents: number | null, trackingDays: number, engagementRateCents: number | null = null) {
+  const cap = maxPayCents == null ? "no maximum" : `capped at ${formatCents(maxPayCents)}`;
+  const period = trackingDays === 1 ? "1 day" : `${trackingDays} days`;
+  const views = `views ÷ 1,000 × ${formatCents(rateCents)}`;
+  const engagements = engagementRateCents != null && engagementRateCents > 0 ? ` + engagements × ${formatCents(engagementRateCents)}` : "";
+  return `${views}${engagements}, ${cap}, after ${period}`;
+}
+
 export function formatCommissionRate(input: {
   commissionMode: CommissionMode;
   commissionPercent: number;

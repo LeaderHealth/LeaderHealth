@@ -78,6 +78,7 @@ export type CheckpointInput = {
 };
 
 export function networkConnectedForPost(format: string | null, accounts: readonly { network: string; needsReconnect: boolean }[]) {
+  if (format === "facebook_post" || format === "facebook_reel" || format === "facebook_video" || format === "youtube_short" || format === "youtube_video") return false;
   const network = format === "tiktok" ? "tiktok" : "instagram";
   return accounts.some((account) => account.network === network && !account.needsReconnect);
 }

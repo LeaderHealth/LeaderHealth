@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { replyToComplianceFlagAction } from "../../compliance-actions";
+import { replyToComplianceFlagAction } from "../../../compliance-actions";
 import { loadComplianceFlags } from "@/lib/affiliate/compliance-flags";
 import { memo } from "@/lib/affiliate/memo";
 import { flagReasonLabel } from "@/lib/affiliate/compliance-rules";
 import { formatWhen } from "@/lib/affiliate/format";
-import { currentAffiliate } from "../../current";
+import { currentAffiliate } from "../../../current";
 
 export const metadata: Metadata = {
   title: "Compliance",

@@ -170,6 +170,63 @@ function Review({
   );
 }
 
+export function AgreementMonthPosts({
+  id,
+  monthName,
+  noMonth,
+  slots,
+  guidelines,
+  pdfHref,
+  showFooter = true,
+  embedded = false,
+  onSlot,
+}: {
+  id: string;
+  monthName: string;
+  noMonth: boolean;
+  slots: AgreementBoardSlot[];
+  guidelines: string;
+  pdfHref: string | null;
+  showFooter?: boolean;
+  embedded?: boolean;
+  onSlot?: (slot: AgreementBoardSlot) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-4">
+      <section aria-labelledby={`posts-${id}`} className={embedded ? "flex flex-col" : "flex flex-col rounded-[26px] bg-white px-5 py-[22px] sm:px-6"}>
+        <h2 id={`posts-${id}`} className={embedded ? "mb-1 text-base font-semibold" : "mb-2.5 text-xl font-semibold"}>{monthName} posts</h2>
+        {noMonth ? <p className="text-[15px] text-[#4A3A37]">These dates don’t include a full month, so there is no monthly post set.</p> : null}
+        {slots.map((slot) => (
+          <div key={slot.id} className="flex flex-col gap-3 border-t border-[#F0E8E6] py-3.5">
+            <div className="flex flex-wrap items-center gap-3.5">
+              <span className="grid size-11 flex-none place-items-center rounded-xl bg-[#F7F3F2] text-sm font-semibold">#{slot.number}</span>
+              <span className="flex min-w-[200px] flex-1 flex-col gap-0.5">
+                <span className="text-base font-semibold">{slot.title}</span>
+                <span className="text-sm text-[#4A3A37]">{slot.note}</span>
+              </span>
+              <span className="rounded-full px-3 py-1 text-[13px] font-semibold whitespace-nowrap" style={{ background: slot.bg, color: slot.fg }}>{slot.label}</span>
+              {slot.actionLabel && (onSlot || slot.href) ? (
+                onSlot ? (
+                  <button type="button" onClick={() => onSlot(slot)} className="inline-flex h-[42px] items-center rounded-full bg-ink px-[18px] text-sm font-medium text-white">{slot.actionLabel}</button>
+                ) : (
+                  <Link href={slot.href} className="inline-flex h-[42px] items-center rounded-full bg-ink px-[18px] text-sm font-medium text-white">{slot.actionLabel}</Link>
+                )
+              ) : null}
+            </div>
+            {slot.adminNote ? <div className="ml-0 rounded-[14px] bg-[#FBF1EF] px-3.5 py-3 text-[15px] text-[#5C1F17] sm:ml-[58px]"><b>Leader Health:</b> {slot.adminNote}</div> : null}
+          </div>
+        ))}
+      </section>
+      {showFooter ? (
+        <section className="flex flex-wrap items-center gap-3.5 rounded-[24px] bg-white px-6 py-[18px]">
+          <span className="min-w-[240px] flex-1 text-[15px] text-[#4A3A37]">{guidelines ? `Guidelines: ${guidelines}` : "The guidelines are in the agreement PDF."}</span>
+          {pdfHref ? <a href={pdfHref} className="text-sm underline">Open agreement PDF</a> : null}
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
 function Active({ card }: { card: MyAgreementCard }) {
   return (
     <div className="flex flex-col gap-5">
@@ -188,26 +245,6 @@ function Active({ card }: { card: MyAgreementCard }) {
           </div>
           <span className="text-right text-[13px] text-[#4A3A37]">{card.payText}</span>
         </div>
-      </section>
-      <section aria-labelledby={`posts-${card.id}`} className="flex flex-col rounded-[26px] bg-white px-5 py-[22px] sm:px-6">
-        <h2 id={`posts-${card.id}`} className="mb-2.5 text-xl font-semibold">{card.monthName} posts</h2>
-        {card.noMonth ? <p className="text-[15px] text-[#4A3A37]">These dates don’t include a full month, so there is no monthly post set.</p> : null}
-        {card.slots.map((slot) => (
-          <div key={slot.id} className="flex flex-col gap-3 border-t border-[#F0E8E6] py-3.5">
-            <div className="flex flex-wrap items-center gap-3.5">
-              <span className="grid size-11 flex-none place-items-center rounded-xl bg-[#F7F3F2] text-sm font-semibold">#{slot.number}</span>
-              <span className="flex min-w-[200px] flex-1 flex-col gap-0.5">
-                <span className="text-base font-semibold">{slot.title}</span>
-                <span className="text-sm text-[#4A3A37]">{slot.note}</span>
-              </span>
-              <span className="rounded-full px-3 py-1 text-[13px] font-semibold whitespace-nowrap" style={{ background: slot.bg, color: slot.fg }}>{slot.label}</span>
-              {slot.actionLabel && slot.href ? (
-                <Link href={slot.href} className="inline-flex h-[42px] items-center rounded-full bg-ink px-[18px] text-sm font-medium text-white">{slot.actionLabel}</Link>
-              ) : null}
-            </div>
-            {slot.adminNote ? <div className="ml-0 rounded-[14px] bg-[#FBF1EF] px-3.5 py-3 text-[15px] text-[#5C1F17] sm:ml-[58px]"><b>Leader Health:</b> {slot.adminNote}</div> : null}
-          </div>
-        ))}
       </section>
       <section className="flex flex-wrap items-center gap-3.5 rounded-[24px] bg-white px-6 py-[18px]">
         <span className="min-w-[240px] flex-1 text-[15px] text-[#4A3A37]">{card.guidelines ? `Guidelines: ${card.guidelines}` : "The guidelines are in the agreement PDF."}</span>

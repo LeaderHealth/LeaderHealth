@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
 import { SlidingTabs, TabPanel } from "./SlidingTabs";
+import { formatCents } from "@/lib/affiliate/format";
 import {
   barPath,
   chartMax,
@@ -18,11 +19,17 @@ import {
   postsIn,
   rangeLabel,
   rangeLength,
+  salePeriodLabel,
+  saleDaysIn,
+  saleHistory,
+  salesTotals,
   shortDay,
   trafficIn,
   type BoardPlatform,
   type BoardPostFilter,
   type BoardRange,
+  type SaleDayCount,
+  type SalePeriodRefs,
   type StatsBoardDay,
   type StatsBoardPost,
 } from "@/lib/affiliate/stats-board";
@@ -52,12 +59,13 @@ function Delta({ current, previous, points = false }: { current: number; previou
   );
 }
 
-export function AffiliateStatsBoard({ today, posts, traffic }: { today: string; posts: StatsBoardPost[]; traffic: StatsBoardDay[] }) {
+export function AffiliateStatsBoard({ today, posts, traffic, saleDays, salePeriods }: { today: string; posts: StatsBoardPost[]; traffic: StatsBoardDay[]; saleDays: SaleDayCount[]; salePeriods: SalePeriodRefs[] }) {
   const [range, setRange] = useState<BoardRange>("30");
   const [fromDays, setFromDays] = useState(14);
-  const [tab, setTab] = useState<"social" | "web" | "posts">("social");
+  const [tab, setTab] = useState<"social" | "web" | "posts" | "labs">("social");
   const [platform, setPlatform] = useState<BoardPlatform>("all");
   const [postFilter, setPostFilter] = useState<BoardPostFilter>("all");
+  const [saleView, setSaleView] = useState<"commission" | "none">("commission");
   const [openId, setOpenId] = useState<string | null>(null);
   const days = rangeLength(range, fromDays);
   const currentDays = useMemo(() => daySpan(today, days), [today, days]);
@@ -94,6 +102,25 @@ export function AffiliateStatsBoard({ today, posts, traffic }: { today: string; 
   const clickMax = chartMax(clickSeries);
   const pageMax = chartMax(pageSeries);
   const shownPosts = contentPosts(posts, currentDays, postFilter);
+  const showCommission = saleView === "commission";
+  const currentSales = saleDaysIn(saleDays, currentDays, showCommission);
+  const previousSales = saleDaysIn(saleDays, previousDays, showCommission);
+  const labNow = salesTotals(currentSales);
+  const labBefore = salesTotals(previousSales);
+  const rangePeriods = [...new Set(currentDays.map((day) => day.slice(0, 7)))];
+  const countSeries = rangePeriods.map((period) => salesTotals(currentSales.filter((sale) => sale.day.startsWith(period))).orders);
+  const commissionDollars = rangePeriods.map((period) => salesTotals(currentSales.filter((sale) => sale.day.startsWith(period))).commissionCents / 100);
+  const orderMax = chartMax(countSeries);
+  const commissionDollarMax = chartMax(commissionDollars);
+  const orderLine = linePath(countSeries, orderMax, 10, 250);
+  const commissionLine = linePath(commissionDollars, commissionDollarMax, 10, 250);
+  const history = saleHistory(salePeriods, saleDays, currentDays, showCommission);
+  const activePeriods = history.length;
+  const previousActivePeriods = saleHistory(salePeriods, saleDays, previousDays, showCommission).length;
+  const periodLabels = rangePeriods.map((period) => salePeriodLabel(period));
+  const periodStart = periodLabels[0] ?? "";
+  const periodMiddle = periodLabels.length > 2 ? periodLabels[Math.floor(periodLabels.length / 2)] ?? "" : "";
+  const periodEnd = periodLabels.length > 1 ? periodLabels.at(-1) ?? "" : "";
   const start = currentDays[0] ?? today;
   const middle = currentDays[Math.floor(currentDays.length / 2)] ?? today;
   const end = currentDays.at(-1) ?? today;
@@ -105,7 +132,7 @@ export function AffiliateStatsBoard({ today, posts, traffic }: { today: string; 
         <div className="min-w-[16rem] flex-1">
           <h2 className="text-[32px] font-medium leading-tight">Stats</h2>
           <p className="mt-1.5 text-[15px] text-[#4A3A37]">
-            How your posts and tracking link are doing. Earnings are in <Link href="/affiliates/payouts" className="underline underline-offset-4">Payouts</Link>.
+            How your posts, tracking link, and sales are doing. Earnings are in <Link href="/affiliates/payouts" className="underline underline-offset-4">Payouts</Link>.
           </p>
         </div>
         <div className="flex flex-col items-start gap-1.5 sm:items-end">
@@ -115,7 +142,7 @@ export function AffiliateStatsBoard({ today, posts, traffic }: { today: string; 
                 {`${item} days`}
               </Chip>
             ))}
-            <Chip pressed={range === "custom"} onClick={() => { setRange("custom"); setOpenId(null); }}>Custom</Chip>
+            <Chip pressed={range === "custom"} onClick={() => { setRange("custom"); setOpenId(null); }}>Ending today</Chip>
           </div>
           <span className="text-[13px] text-[#6B5A57]">{rangeLabel(start, end)}</span>
         </div>
@@ -141,17 +168,17 @@ export function AffiliateStatsBoard({ today, posts, traffic }: { today: string; 
       ) : null}
 
       <section aria-label="Performance overview" className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-5">
-        <Card label="Total views" value={compactCount(views)} detail={versus} current={views} previous={previousViews} />
-        <Card label="Total engagements" value={compactCount(engagements)} detail="Likes, comments, shares, saves" current={engagements} previous={previousEngagements} />
+        <Card label="Views" value={compactCount(views)} detail={versus} current={views} previous={previousViews} />
+        <Card label="Engagements" value={compactCount(engagements)} detail="Likes, comments, shares, saves" current={engagements} previous={previousEngagements} />
         <Card label="Engagement rate" value={`${rate.toFixed(1)}%`} detail="Engagements ÷ views" current={rate} previous={previousRate} points />
-        <Card label="Link clicks" value={compactCount(site.clicks)} detail="Verified, your tracking link" current={site.clicks} previous={previousSite.clicks} />
+        <Card label="Verified link clicks" value={compactCount(site.clicks)} detail="Your tracking link" current={site.clicks} previous={previousSite.clicks} />
         <Card label="Public page views" value={compactCount(site.pageViews)} detail="Approved Leader Health pages" current={site.pageViews} previous={previousSite.pageViews} />
       </section>
 
       <SlidingTabs
         variant="track"
         label="Stats sections"
-        items={([["social", "Social media"], ["web", "Website traffic"], ["posts", "Content"]] as const).map(([id, name]) => ({
+        items={([["social", "Social media"], ["web", "Website traffic"], ["posts", "Content"], ["labs", "Sales"]] as const).map(([id, name]) => ({
           id,
           label: name,
           current: tab === id,
@@ -176,9 +203,9 @@ export function AffiliateStatsBoard({ today, posts, traffic }: { today: string; 
           </div>
           <Chart
             label={`Daily views and engagements, ${platform === "all" ? "Instagram, Facebook, TikTok, and YouTube" : platformLabel(platform)}`}
-            left={[compactCount(viewMax), compactCount(viewMax / 2), "0"]}
+            left={[axisCount(viewMax), axisCount(viewMax / 2), "0"]}
             leftClass="text-ink"
-            right={[compactCount(engagementMax), compactCount(engagementMax / 2), "0"]}
+            right={[axisCount(engagementMax), axisCount(engagementMax / 2), "0"]}
             rightClass="text-[#D9534A]"
             height={260}
             start={shortDay(start)}
@@ -247,7 +274,7 @@ export function AffiliateStatsBoard({ today, posts, traffic }: { today: string; 
           <div className="flex flex-wrap items-center gap-3">
             <h3 id="content-stats-title" className="flex-1 text-xl font-semibold">Content performance</h3>
             <div role="group" aria-label="Posts" className="flex flex-wrap gap-2">
-              {([["all", "All posts"], ["campaign", "Campaign posts"], ["independent", "Independent posts"]] as const).map(([id, label]) => (
+              {([["all", "All posts"], ["campaign", "Campaign posts"], ["independent", "Agreement posts"]] as const).map(([id, label]) => (
                 <Chip key={id} pressed={postFilter === id} onClick={() => { setPostFilter(id); setOpenId(null); }}>{label}</Chip>
               ))}
             </div>
@@ -273,30 +300,148 @@ export function AffiliateStatsBoard({ today, posts, traffic }: { today: string; 
                     </span>
                   </span>
                   <span className="text-sm">{platformLabel(post.platform)}</span>
-                  <span><span className={`inline-flex rounded-full px-2.5 py-0.5 text-[13px] font-semibold ${post.campaign ? "bg-[#F3E6E3] text-[#5A2A24]" : "bg-[#EFEAE9] text-[#4A3A37]"}`}>{post.campaign || "Independent"}</span></span>
+                  <span><span className={`inline-flex rounded-full px-2.5 py-0.5 text-[13px] font-semibold ${post.campaign ? "bg-[#F3E6E3] text-[#5A2A24]" : "bg-[#EFEAE9] text-[#4A3A37]"}`}>{post.campaign || post.agreementLabel || "Agreement post"}</span></span>
                   <span className="text-[15px] font-semibold lg:text-right">{compactCount(post.views)}</span>
                   <span className="text-[15px] lg:text-right">{compactCount(engagementsForPost)}</span>
                   <button type="button" aria-expanded={open} onClick={() => setOpenId(open ? null : post.id)} className="h-9 justify-self-start rounded-full border border-[#CDBDBA] bg-white px-3.5 text-sm font-medium text-ink lg:justify-self-end">
                     {open ? "Hide details" : "View details"}
                   </button>
                 </div>
-                {open ? (
-                  <div className="mx-2 mb-3.5 grid gap-3 rounded-[18px] bg-[#F7F3F2] px-4 py-4 sm:grid-cols-3 lg:grid-cols-5">
-                    <Detail label="Likes" value={compactCount(post.likes)} />
-                    <Detail label="Comments" value={compactCount(post.comments)} />
-                    <Detail label="Shares" value={compactCount(post.shares)} />
-                    <Detail label="Saves" value={compactCount(post.saves)} />
-                    <Detail label="Engagement rate" value={engagementRate} />
+                <div className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none ${open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+                  <div className="overflow-hidden">
+                    <div className="px-2 pb-3.5">
+                      <div className="grid gap-3 rounded-[18px] bg-[#F7F3F2] px-4 py-4 sm:grid-cols-3 lg:grid-cols-5">
+                        <Detail label="Likes" value={compactCount(post.likes)} />
+                        <Detail label="Comments" value={compactCount(post.comments)} />
+                        <Detail label="Shares" value={compactCount(post.shares)} />
+                        <Detail label="Saves" value={compactCount(post.saves)} />
+                        <Detail label="Engagement rate" value={engagementRate} />
+                      </div>
+                    </div>
                   </div>
-                ) : null}
+                </div>
               </div>
             );
           })}
         </section>
       ) : null}
-      </TabPanel>
 
-      <p className="text-[13px] text-[#6B5A57]">Shows only your own marketing results. No patient, purchase or order information is included.</p>
+      {tab === "labs" ? (
+        <section aria-labelledby="lab-sales-title" className="flex flex-col gap-[18px] rounded-3xl bg-white px-4 py-6 sm:px-6">
+          <div className="flex flex-wrap items-center gap-3">
+            <h3 id="lab-sales-title" className="flex-1 text-xl font-semibold">Sales</h3>
+            <div role="group" aria-label="Lab orders" className="flex flex-wrap gap-2">
+              <Chip pressed={showCommission} onClick={() => setSaleView("commission")}>Lab commission</Chip>
+              <Chip pressed={!showCommission} onClick={() => setSaleView("none")}>No commission</Chip>
+            </div>
+          </div>
+          {showCommission ? (
+            <>
+              <p className="text-[13px] text-[#6B5A57]">These lab orders earn commission.</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <LabStat label="Lab orders" value={compactCount(labNow.orders)} detail={versus} current={labNow.orders} previous={labBefore.orders} />
+                <LabStat label="Lab commission" value={formatCents(labNow.commissionCents)} detail="Lab commission for this range" current={labNow.commissionCents} previous={labBefore.commissionCents} />
+              </div>
+              <div className="flex flex-col gap-3">
+                <h4 className="text-[15px] font-semibold">Orders by pay period</h4>
+                <div className="flex flex-wrap gap-5 text-sm text-[#4A3A37]">
+                  <Legend mark="line" color="#33130F" label="Lab orders" value={compactCount(labNow.orders)} />
+                  <Legend mark="dashed" color="#1D6340" label="Lab commission" value={formatCents(labNow.commissionCents)} />
+                </div>
+                <Chart
+                  label="Orders by pay period"
+                  left={[axisCount(orderMax), axisCount(orderMax / 2), "0"]}
+                  leftClass="text-ink"
+                  right={[axisDollars(commissionDollarMax), axisDollars(commissionDollarMax / 2), "$0"]}
+                  rightClass="text-[#1D6340]"
+                  height={260}
+                  start={periodStart}
+                  middle={periodMiddle}
+                  end={periodEnd}
+                >
+                  <line x1="0" y1="10" x2="1000" y2="10" stroke="#F0E8E6" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+                  <line x1="0" y1="130" x2="1000" y2="130" stroke="#F0E8E6" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+                  <line x1="0" y1="250" x2="1000" y2="250" stroke="#DCCFCC" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+                  {orderLine ? <path d={`${orderLine} L1000 250 L0 250 Z`} fill="#33130F" fillOpacity="0.06" /> : null}
+                  {orderLine ? <path d={orderLine} fill="none" stroke="#33130F" strokeWidth="2.5" strokeLinejoin="round" vectorEffect="non-scaling-stroke" /> : null}
+                  {commissionLine ? <path d={commissionLine} fill="none" stroke="#1D6340" strokeWidth="2.5" strokeLinejoin="round" strokeDasharray="6 4" vectorEffect="non-scaling-stroke" /> : null}
+                </Chart>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-[13px] text-[#6B5A57]">HIPAA-friendly stats for these orders: a count grouped by pay period, and an opaque referral ID. Patient names, contact details, products, and purchase dates are not shown.</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <LabStat label="Orders" value={compactCount(labNow.orders)} detail={versus} current={labNow.orders} previous={labBefore.orders} />
+                <LabStat label="Pay periods" value={compactCount(activePeriods)} detail="With an order" current={activePeriods} previous={previousActivePeriods} />
+              </div>
+              <div className="flex flex-col gap-3">
+                <h4 className="text-[15px] font-semibold">Orders by pay period</h4>
+                <div className="flex flex-wrap gap-5 text-sm text-[#4A3A37]">
+                  <Legend mark="line" color="#33130F" label="Orders" value={compactCount(labNow.orders)} />
+                </div>
+                <Chart
+                  label="Orders by pay period"
+                  left={[axisCount(orderMax), axisCount(orderMax / 2), "0"]}
+                  leftClass="text-ink"
+                  right={["", "", ""]}
+                  rightClass="text-[#D9534A]"
+                  height={260}
+                  start={periodStart}
+                  middle={periodMiddle}
+                  end={periodEnd}
+                >
+                  <line x1="0" y1="10" x2="1000" y2="10" stroke="#F0E8E6" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+                  <line x1="0" y1="130" x2="1000" y2="130" stroke="#F0E8E6" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+                  <line x1="0" y1="250" x2="1000" y2="250" stroke="#DCCFCC" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+                  {orderLine ? <path d={`${orderLine} L1000 250 L0 250 Z`} fill="#33130F" fillOpacity="0.06" /> : null}
+                  {orderLine ? <path d={orderLine} fill="none" stroke="#33130F" strokeWidth="2.5" strokeLinejoin="round" vectorEffect="non-scaling-stroke" /> : null}
+                </Chart>
+              </div>
+            </>
+          )}
+          <div className="flex flex-col gap-3 pt-1">
+            <h4 className="text-[15px] font-semibold">Order history</h4>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[36rem] border-collapse text-left">
+                <thead>
+                  <tr className="border-b border-[#E8DEDC] text-xs font-semibold uppercase tracking-wide text-[#6B5A57]">
+                    <th className="px-2 py-1.5 font-semibold">Pay period</th>
+                    <th className="px-2 py-1.5 font-semibold">{showCommission ? "Lab orders" : "Orders"}</th>
+                    {showCommission ? <th className="px-2 py-1.5 font-semibold">Lab commission</th> : null}
+                    <th className="px-2 py-1.5 font-semibold">Referral ID</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.length === 0 ? (
+                    <tr>
+                      <td colSpan={showCommission ? 4 : 3} className="px-2 py-3 text-[15px] text-[#6B5A57]">{showCommission ? "No lab orders in this date range." : "No orders in this date range."}</td>
+                    </tr>
+                  ) : history.map((group) => (
+                    <tr key={group.period} className="border-b border-[#F0E8E6]">
+                      <td className="px-2 py-3 text-[15px] font-semibold">{salePeriodLabel(group.period)}</td>
+                      <td className="px-2 py-3 text-[15px]">{compactCount(group.orders)}</td>
+                      {showCommission ? <td className="px-2 py-3 text-[15px]">{formatCents(group.commissionCents)}</td> : null}
+                      <td className="px-2 py-3">
+                        {group.refs.length > 0 ? (
+                          <span className="flex flex-wrap gap-2">
+                            {group.refs.map((ref) => (
+                              <span key={ref} className="font-mono text-[13px] font-semibold">{ref}</span>
+                            ))}
+                          </span>
+                        ) : (
+                          <span className="text-[13px] text-[#6B5A57]">Referral IDs appear when the whole pay period is in this range.</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      ) : null}
+      </TabPanel>
     </div>
   );
 }
@@ -316,6 +461,19 @@ function shiftBefore(day: string) {
   return date.toISOString().slice(0, 10);
 }
 
+function axisCount(value: number) {
+  if (value > 0 && value < 1) return value.toFixed(1);
+  return compactCount(value);
+}
+
+function axisDollars(dollars: number) {
+  const amount = Math.max(0, dollars);
+  if (amount >= 1000) return `$${(amount / 1000).toFixed(amount >= 10000 ? 0 : 1)}k`;
+  if (amount >= 100) return `$${Math.round(amount)}`;
+  if (amount > 0 && amount < 1) return `$${amount.toFixed(2)}`;
+  return `$${Math.round(amount)}`;
+}
+
 function sum<T>(items: T[], value: (item: T) => number) {
   return items.reduce((total, item) => total + value(item), 0);
 }
@@ -326,6 +484,17 @@ function Card({ label, value, detail, current, previous, points = false }: { lab
       <span className="text-sm text-[#4A3A37]">{label}</span>
       <span className="text-[30px] font-medium tracking-tight">{value}</span>
       <Delta current={current} previous={previous} points={points} />
+      <span className="text-[13px] text-[#6B5A57]">{detail}</span>
+    </div>
+  );
+}
+
+function LabStat({ label, value, detail, current, previous }: { label: string; value: string; detail: string; current: number; previous: number }) {
+  return (
+    <div className="flex flex-col gap-1.5 rounded-2xl bg-[#F7F3F2] px-4 py-3.5">
+      <span className="text-sm text-[#4A3A37]">{label}</span>
+      <span className="text-2xl font-medium tracking-tight">{value}</span>
+      <Delta current={current} previous={previous} />
       <span className="text-[13px] text-[#6B5A57]">{detail}</span>
     </div>
   );
@@ -345,10 +514,10 @@ function Chart({ label, left, right, leftClass, rightClass, height, start, middl
     <div className="flex gap-2.5">
       <div aria-hidden="true" className={`flex w-12 flex-col justify-between text-right text-xs ${leftClass}`} style={{ height }}>{left.map((item, index) => <span key={`${item}-${index}`}>{item}</span>)}</div>
       <div className="min-w-0 flex-1">
-        <svg role="img" aria-label={label} viewBox={height === 220 ? "0 0 1000 220" : "0 0 1000 260"} preserveAspectRatio="none" className="block w-full overflow-visible" style={{ height }}>{children}</svg>
+        <svg role="img" aria-label={label} viewBox={`0 0 1000 ${height}`} preserveAspectRatio="none" className="block w-full overflow-visible" style={{ height }}>{children}</svg>
         <div className="flex justify-between pt-1.5 text-xs text-[#6B5A57]"><span>{start}</span><span>{middle}</span><span>{end}</span></div>
       </div>
-      <div aria-hidden="true" className={`flex w-12 flex-col justify-between text-xs ${rightClass}`} style={{ height }}>{right.map((item, index) => <span key={`${item}-${index}`}>{item}</span>)}</div>
+      {right.some(Boolean) ? <div aria-hidden="true" className={`flex w-12 flex-col justify-between text-xs ${rightClass}`} style={{ height }}>{right.map((item, index) => <span key={`${item}-${index}`}>{item}</span>)}</div> : null}
     </div>
   );
 }

@@ -79,11 +79,12 @@ function TabletTabs({ label, items, pathname }: { label: string; items: AreaNavI
 
 function SectionMenu({ label, items, current, pathname }: { label: string; items: AreaNavItem[]; current: AreaNavItem; pathname: string }) {
   const [open, setOpen] = useState(false);
+  const [openPath, setOpenPath] = useState(pathname);
   const rootRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
+  if (openPath !== pathname) {
+    setOpenPath(pathname);
     setOpen(false);
-  }, [pathname]);
+  }
 
   useEffect(() => {
     if (!open) return;

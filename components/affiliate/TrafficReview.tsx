@@ -155,7 +155,6 @@ export function TrafficReview({
           <h3 className="text-xl font-medium">{monthLabel}</h3>
           <Link href={previousHref} className="text-sm text-ink underline">Previous month</Link>
           {nextHref ? <Link href={nextHref} className="text-sm text-ink underline">Next month</Link> : null}
-          <span className="w-full text-sm text-[#6B5A57] sm:ml-auto sm:w-auto">Ad impressions are never counted.</span>
         </div>
         {rows.length === 0 ? <p className="py-6 text-sm text-[#6B5A57]">No affiliates yet.</p> : (
           <>

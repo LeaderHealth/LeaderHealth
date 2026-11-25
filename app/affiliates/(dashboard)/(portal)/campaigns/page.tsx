@@ -3,16 +3,16 @@ import { redirect } from "next/navigation";
 import { AffiliateCampaigns } from "@/components/affiliate/AffiliateCampaigns";
 import { affiliateCampaignBoard, type AffiliateCampaignPost } from "@/lib/affiliate/affiliate-campaigns";
 import { DEFAULT_CAMPAIGN_DISCLOSURE } from "@/lib/affiliate/campaign-record";
-import { viewPayTerms } from "@/lib/affiliate/format";
 import { affiliateTrackingLink } from "@/lib/affiliate/link";
 import { standingViewRateCents } from "@/lib/affiliate/payment-rates";
 import { loadPaymentRates } from "@/lib/affiliate/payment-store";
 import { DISCLOSURE_LINE, loadContentSubmissions, type ContentSubmission } from "@/lib/affiliate/post-review";
 import { loadMarketingCampaignRecords } from "@/lib/affiliate/roi-store";
 import { loadAffiliateAgreements, utcAgreementToday } from "@/lib/affiliate/agreements";
+import { agreementPostMonth } from "@/lib/affiliate/agreement-earnings";
 import { postingAgreement } from "@/lib/affiliate/post-agreement";
 import { memo } from "@/lib/affiliate/memo";
-import { currentAffiliate } from "../../current";
+import { currentAffiliate } from "../../../current";
 
 export const metadata: Metadata = {
   title: "My campaigns",
@@ -33,6 +33,9 @@ const errors: Record<string, string> = {
   status: "That post can no longer be changed that way.",
   invalid: "Add a caption and a picture or video.",
   unavailable: "That could not be saved right now.",
+  requirement: "Choose an agreement post that still needs to be filled in.",
+  kind: "Choose a post type this agreement still has room for.",
+  date: "Choose a proposed publishing date in that month.",
   agreement: "A signed agreement has to be on your account before you can send a post.",
   month: "Choose a full month of this agreement that still has room for these posts.",
 };
@@ -100,9 +103,22 @@ export default async function AffiliateCampaignsPage({
         past={board.past}
         disclosure={DISCLOSURE_LINE || DEFAULT_CAMPAIGN_DISCLOSURE}
         trackingUrl={affiliateTrackingLink(affiliate.code)}
-        terms={viewRate == null ? "" : `I accept ${viewPayTerms(viewRate, affiliate.deliverableMaxPayCents, affiliate.deliverableTrackingDays)}. These terms lock when I send the post.`}
         canSend={viewRate != null}
         posting={posting}
+        fills={submissions.map((post) => ({
+          id: post.id,
+          agreementId: post.agreementId,
+          contentStatus: post.contentStatus,
+          offerId: post.offerId,
+          publishedAt: null,
+          submittedAt: null,
+          postingMonth: agreementPostMonth(post),
+          format: post.format,
+          fileCount: post.files.length || (post.filePath ? 1 : 0),
+          agreementPlatform: post.agreementPlatform,
+          agreementPostType: post.agreementPostType,
+          agreementSlot: post.agreementSlot,
+        }))}
         toast={toast}
         error={query.error ? errors[query.error] ?? "That could not be saved right now." : ""}
       />

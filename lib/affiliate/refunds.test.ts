@@ -1,13 +1,19 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { accountColumnTotals } from "./account-figures";
-import { adjustedCommissionCents, commissionRefundTarget, planRefundAdjustments, remainingSalesCents } from "./refunds";
+import { adjustedCommissionCents, commissionRefundTarget, earnsLabCommission, planRefundAdjustments, remainingSalesCents } from "./refunds";
 
 test("remaining sales drop a full refund, keep a partial refund, and ignore a missing amount", () => {
   assert.equal(remainingSalesCents(32700, 32700), 0);
   assert.equal(remainingSalesCents(32700, 16350), 16350);
   assert.equal(remainingSalesCents(null, 1000), 0);
   assert.equal(remainingSalesCents(1000, 2500), 0);
+});
+
+test("lab commission stays only on a lab order that still has commission", () => {
+  assert.equal(earnsLabCommission({ orderKind: "lab", commissionCents: 4905, commissionRefundedCents: 0 }), true);
+  assert.equal(earnsLabCommission({ orderKind: "lab", commissionCents: 4905, commissionRefundedCents: 4905 }), false);
+  assert.equal(earnsLabCommission({ orderKind: "treatment", commissionCents: 4905, commissionRefundedCents: 0 }), false);
 });
 
 test("a full refund deducts the entire commission", () => {

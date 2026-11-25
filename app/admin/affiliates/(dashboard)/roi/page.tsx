@@ -4,10 +4,14 @@ import { saveMarketingCostAction } from "@/app/admin/affiliates/actions";
 import { ADMIN_ERRORS } from "@/app/admin/affiliates/messages";
 import { FilterDatePicker } from "@/components/affiliate/FilterDatePicker";
 import { FilterDropdown } from "@/components/affiliate/FilterDropdown";
+import { CampaignAffiliateRank } from "@/components/affiliate/CampaignAffiliateRank";
+import { chartRowsFor, RoiCampaignChart } from "@/components/affiliate/RoiCampaignChart";
 import { formatCents } from "@/lib/affiliate/format";
-import { roiRange, type RoiRange, type RoiReport } from "@/lib/affiliate/roi";
+import { listAffiliateChoices } from "@/lib/affiliate/marketing-store";
+import { campaignAffiliateRanks, campaignSocialTotals, ordersWithinCampaignPeriod, roiRange, type CampaignRankOrder, type CampaignRankPost, type CampaignSocialPost, type CampaignWindow, type RoiRange, type RoiReport, type RoiRow } from "@/lib/affiliate/roi";
 import { memo } from "@/lib/affiliate/memo";
-import { loadMarketingCampaigns, loadRoiReport, RoiStoreError } from "@/lib/affiliate/roi-store";
+import { loadContentSubmissions, type ContentSubmission } from "@/lib/affiliate/post-review";
+import { loadCampaignOrders, loadMarketingCampaignRecords, loadRoiReport, RoiStoreError } from "@/lib/affiliate/roi-store";
 
 export const metadata: Metadata = {
   title: "Campaign ROI",
@@ -37,6 +41,28 @@ function emptyReport(): RoiReport {
   return { rows: [], orders: 0, costCents: 0, revenueCents: 0, profitCents: 0 };
 }
 
+function published(post: ContentSubmission) {
+  return post.contentStatus === "approved" && (post.publicationStatus === "tracking_active" || Boolean(post.postUrl));
+}
+
+function socialPost(post: ContentSubmission): CampaignSocialPost {
+  const day = (post.publishedAt || post.createdAt || "").slice(0, 10);
+  return {
+    campaign: post.campaign,
+    postedOn: day || null,
+    views: post.views ?? 0,
+    engagements: (post.likes ?? 0) + (post.comments ?? 0) + (post.shares ?? 0) + (post.saves ?? 0),
+  };
+}
+
+function rankPost(post: ContentSubmission): CampaignRankPost {
+  return { code: post.code, ...socialPost(post) };
+}
+
+function withPeriodOrders<T extends RoiRow>(rows: T[], counts: Map<string, number>): T[] {
+  return rows.map((row) => ({ ...row, orders: counts.get(row.campaign.toLowerCase()) ?? 0 }));
+}
+
 export default async function AffiliateRoiPage({
   searchParams,
 }: {
@@ -50,15 +76,36 @@ export default async function AffiliateRoiPage({
 
   let report = emptyReport();
   let campaigns: string[] = [];
+  let socialPosts: CampaignSocialPost[] = [];
+  let rankPosts: CampaignRankPost[] = [];
+  let orders: CampaignRankOrder[] = [];
+  let names = new Map<string, string>();
+  let windows: CampaignWindow[] = [];
   let loadError = "";
   try {
-    [report, campaigns] = await Promise.all([
+    const [loadedReport, records, submissions, loadedOrders, affiliates] = await Promise.all([
       memo(`roi:${range}`, () => loadRoiReport(range)),
-      memo("marketing-campaigns", () => loadMarketingCampaigns()),
+      memo("marketing-campaign-records", () => loadMarketingCampaignRecords()),
+      memo("submissions:all", () => loadContentSubmissions()).catch(() => [] as ContentSubmission[]),
+      memo("roi-orders", () => loadCampaignOrders()).catch(() => [] as CampaignRankOrder[]),
+      memo("affiliate-choices", () => listAffiliateChoices()).catch(() => []),
     ]);
+    report = loadedReport;
+    const liveCampaigns = records.filter((record) => record.status !== "draft");
+    campaigns = liveCampaigns.map((record) => record.name);
+    windows = liveCampaigns.map((record) => ({ name: record.name, startsOn: record.startsOn, endsOn: record.endsOn }));
+    const livePosts = submissions.filter(published);
+    socialPosts = livePosts.map(socialPost);
+    rankPosts = livePosts.map(rankPost);
+    orders = loadedOrders;
+    names = new Map(affiliates.map((affiliate) => [affiliate.code, affiliate.name]));
   } catch (caught) {
     loadError = caught instanceof RoiStoreError ? caught.message : "Could not load campaign ROI.";
   }
+  const periodOrders = ordersWithinCampaignPeriod(orders, windows, range);
+  const tableRows = withPeriodOrders(report.rows, periodOrders);
+  const chartRows = withPeriodOrders(chartRowsFor(report.rows, campaignSocialTotals(socialPosts, range)), periodOrders);
+  const ranks = campaignAffiliateRanks({ posts: rankPosts, orders, names, windows, range });
 
   return (
     <div className="space-y-4">
@@ -101,6 +148,10 @@ export default async function AffiliateRoiPage({
           <p className="mt-2 text-3xl">{formatCents(report.profitCents)}</p>
         </section>
       </div>
+
+      <RoiCampaignChart rows={chartRows} costCents={report.costCents} revenueCents={report.revenueCents} profitCents={report.profitCents} />
+
+      <CampaignAffiliateRank boards={ranks} />
 
       <form action={saveMarketingCostAction} className="rounded-[28px] bg-white p-4 sm:p-6">
         <h3 className="text-xl">Add a marketing cost</h3>
@@ -152,11 +203,12 @@ export default async function AffiliateRoiPage({
         <h3 id="roi-table-title" className="px-4 pt-4 text-xl">
           Campaigns
         </h3>
-        {report.rows.length === 0 ? (
+        <p className="px-4 pt-2 text-sm text-brown">Orders are sales placed during that campaign&apos;s dates. A campaign without dates uses this range.</p>
+        {tableRows.length === 0 ? (
           <p className="px-4 py-6 text-sm text-brown">No campaigns yet.</p>
         ) : (
           <ul className="xl:hidden" aria-labelledby="roi-table-title">
-            {report.rows.map((row) => (
+            {tableRows.map((row) => (
               <li key={row.campaign} className="border-t border-ink/10 px-4 py-5 text-sm">
                 <div className="font-medium">{row.campaign}</div>
                 <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-5 leading-6">
@@ -181,7 +233,7 @@ export default async function AffiliateRoiPage({
             ))}
           </ul>
         )}
-        {report.rows.length > 0 ? (
+        {tableRows.length > 0 ? (
           <table className="hidden w-full max-w-full table-fixed border-collapse text-left text-sm leading-6 xl:table" aria-labelledby="roi-table-title">
             <colgroup>
               <col className="w-[28%]" />
@@ -200,7 +252,7 @@ export default async function AffiliateRoiPage({
               </tr>
             </thead>
             <tbody>
-              {report.rows.map((row) => (
+              {tableRows.map((row) => (
                 <tr key={row.campaign} className="border-t border-rose/60">
                   <td className="break-words px-4 py-5 align-top font-medium">{row.campaign}</td>
                   <td className="px-4 py-5 align-top">{row.orders}</td>

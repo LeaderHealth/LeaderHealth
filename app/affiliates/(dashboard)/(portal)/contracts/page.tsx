@@ -17,7 +17,7 @@ import { formatCents, formatWhen } from "@/lib/affiliate/format";
 import { standingViewRateCents } from "@/lib/affiliate/payment-rates";
 import { loadPaymentRates } from "@/lib/affiliate/payment-store";
 import { memo } from "@/lib/affiliate/memo";
-import { currentAffiliate } from "../../current";
+import { currentAffiliate } from "../../../current";
 
 export const metadata: Metadata = {
   title: "My agreement",
@@ -231,6 +231,7 @@ function boardPosts(posts: ContentSubmission[]): AgreementBoardPost[] {
     postingMonth: post.postingMonth,
     reviewNote: post.reviewNote,
     title: postTitle(post.caption),
+    agreementSlot: post.agreementSlot,
   }));
 }
 

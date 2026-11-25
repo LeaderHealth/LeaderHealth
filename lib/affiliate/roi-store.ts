@@ -8,6 +8,7 @@ import {
   roiCostCents,
   roiFigures,
   roiSpentOn,
+  type CampaignRankOrder,
   type RoiCost,
   type RoiOrder,
   type RoiRange,
@@ -234,6 +235,15 @@ export async function saveMarketingCampaign(input: {
     }
     tx.set(ref, { name, createdAt: new Date(), ...(fields ?? {}) });
     return "created" as const;
+  });
+}
+
+export async function loadCampaignOrders(): Promise<CampaignRankOrder[]> {
+  const snap = await requireRoiDb().collection("conversions").get();
+  return snap.docs.flatMap((doc) => {
+    const data = doc.data();
+    const code = typeof data.code === "string" ? data.code.trim() : "";
+    return [{ code, ...orderFrom(data) }];
   });
 }
 

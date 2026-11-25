@@ -44,7 +44,7 @@ const statusLabel: Record<PayoutTableStatus, string> = {
 };
 
 const statusClass: Record<PayoutTableStatus, string> = {
-  needs: "bg-[#FBEFD6] text-[#7A4E00]",
+  needs: "bg-[#DBD4BD] text-[#331110]",
   approved: "bg-[#F3E6E3] text-[#5A2A24]",
   paid: "bg-[#DDF0E4] text-[#1D6340]",
   waiting: "bg-[#EFEAE9] text-[#4A3A37]",
@@ -146,9 +146,17 @@ export function PayoutTable({ month, title, rows }: { month: string; title: stri
                       return <span key={kind.key} className="text-right text-[15px]" style={{ color: amountColor(cents) }}>{amountText(cents)}</span>;
                     })}
                     <span className="text-right text-[17px] font-bold">{formatCents(row.totalCents)}</span>
-                    <span className="flex flex-col items-start gap-[3px] pl-3">
-                      <span className={`inline-flex rounded-full px-3 py-1 text-[13px] font-semibold whitespace-nowrap ${statusClass[row.status]}`}>{statusLabel[row.status]}</span>
-                      {row.detail ? <span className="text-xs text-[#6B5A57]">{row.detail}</span> : null}
+                    <span className="flex flex-col items-start gap-1.5 pl-3">
+                      <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-[5px] text-[12px] leading-none font-semibold whitespace-nowrap ${statusClass[row.status]}`}>
+                        <span className="size-1.5 shrink-0 rounded-full bg-current" aria-hidden />
+                        {statusLabel[row.status]}
+                      </span>
+                      {row.detail ? (
+                        <span className="inline-flex items-center gap-1 pl-0.5 text-[12px] leading-none text-[#6B5A57]">
+                          <span className="size-1 shrink-0 rounded-full bg-[#C4B8A4]" aria-hidden />
+                          {row.detail}
+                        </span>
+                      ) : null}
                     </span>
                     <span className="flex justify-end">
                       {row.record && !recording ? (

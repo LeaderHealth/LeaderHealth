@@ -45,6 +45,7 @@ function boardPost(post: ContentSubmission): StatsBoardPost | null {
     platform,
     kind,
     campaign: post.campaign,
+    agreementLabel: post.agreementLabel,
     postedOn: day,
     views: post.views ?? 0,
     likes: post.likes ?? 0,

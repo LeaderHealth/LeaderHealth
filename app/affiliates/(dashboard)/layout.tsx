@@ -11,8 +11,8 @@ import { disclosureAcknowledged } from "@/lib/affiliate/disclosures";
 import { remindManualReports } from "@/lib/affiliate/manual-report";
 import { newCampaignInvitations } from "@/lib/affiliate/affiliate-campaigns";
 import { loadContentSubmissions } from "@/lib/affiliate/post-review";
+import { namedPlatform, type PostFormat } from "@/lib/affiliate/post-format";
 import { loadMarketingCampaignRecords } from "@/lib/affiliate/roi-store";
-import { readSocialOnboarding } from "@/lib/affiliate/social-onboarding";
 import { changeAffiliatePassword, logoutAffiliatePortal } from "../actions";
 import { currentAffiliate } from "../current";
 
@@ -20,7 +20,6 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const overview = "/affiliates/overview";
-const plans = "/affiliates/offers";
 const createPost = "/affiliates/posts/new";
 const submissions = "/affiliates/posts";
 const myCampaigns = "/affiliates/campaigns";
@@ -36,13 +35,31 @@ function needsPostAction(post: { contentStatus: string; publicationStatus: strin
   return post.contentStatus === "approved" && (post.publicationStatus === "awaiting_publication" || post.publicationStatus === null);
 }
 
+const PLATFORM_ORDER = ["TikTok", "Instagram", "Facebook", "YouTube"] as const;
+
+function approvedPlatform(post: { format: PostFormat | null; agreementPlatform: string }) {
+  return namedPlatform(post.format, post.agreementPlatform);
+}
+
+function approvedLinkWords(posts: { format: PostFormat | null; agreementPlatform: string }[]) {
+  const names = PLATFORM_ORDER.filter((name) => posts.some((post) => approvedPlatform(post) === name));
+  if (names.length === 0) return "live";
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} or ${names[1]}`;
+  return `${names.slice(0, -1).join(", ")}, or ${names[names.length - 1]}`;
+}
+
+function approvedMessage(posts: { format: PostFormat | null; agreementPlatform: string }[]) {
+  const where = approvedLinkWords(posts);
+  if (posts.length === 1) return `A post was approved. Publish it, then paste the ${where} link.`;
+  return `${posts.length} posts were approved. Publish each one, then paste the ${where} link.`;
+}
+
 export default async function AffiliateDashboardLayout({ children }: { children: ReactNode }) {
   const affiliate = await currentAffiliate();
   if (!affiliate) redirect("/affiliates");
-  const onboarding = await readSocialOnboarding(affiliate.code).catch(() => "skipped" as const);
-  if (onboarding === "pending") redirect("/affiliates/connect");
   const postsOpen = await disclosureAcknowledged(affiliate.code).catch(() => false);
-  let approvedIds: string[] = [];
+  let approvedPosts: { id: string; format: PostFormat | null; agreementPlatform: string }[] = [];
   let postsNeedingAction = 0;
   let ownPosts: { campaign: string; contentStatus: string }[] = [];
   if (postsOpen) {
@@ -54,10 +71,12 @@ export default async function AffiliateDashboardLayout({ children }: { children:
       } catch (error) {
         console.error("[affiliate] manual report reminder failed", error instanceof Error ? error.message : "unknown");
       }
-      approvedIds = posts.filter((post) => post.contentStatus === "approved" && post.publicationStatus === "awaiting_publication").map((post) => post.id);
+      approvedPosts = posts
+        .filter((post) => post.contentStatus === "approved" && post.publicationStatus === "awaiting_publication")
+        .map((post) => ({ id: post.id, format: post.format, agreementPlatform: post.agreementPlatform }));
       postsNeedingAction = posts.filter(needsPostAction).length;
     } catch {
-      approvedIds = [];
+      approvedPosts = [];
       postsNeedingAction = 0;
     }
   }
@@ -82,20 +101,20 @@ export default async function AffiliateDashboardLayout({ children }: { children:
     : { href: submissions, label: "My posts", ...closed };
   const nav: AreaNavItem[] = [
     { href: overview, label: "Overview", active: [overview, "/affiliates/tracking-link"] },
-    { href: submissions, label: "Content", active: [submissions, createPost, myCampaigns, plans, agreements], badge: submissionBadge },
+    { href: submissions, label: "Content", active: [submissions, createPost, myCampaigns, agreements], badge: submissionBadge },
     { href: stats, label: "Stats", active: [stats] },
     { href: payments, label: "Payouts", active: [payments, orders] },
-    { href: acknowledgments, label: "Settings", active: [acknowledgments] },
+    { href: acknowledgments, label: "Settings", active: [acknowledgments, connected] },
   ];
   const groups: DashboardGroup[] = [
     {
-      paths: [submissions, createPost, myCampaigns, plans, agreements],
+      paths: [submissions, createPost, myCampaigns, agreements],
       items: [createItem, submissionsItem, { href: myCampaigns, label: "My campaigns", badge: campaignBadge }, { href: agreements, label: "My agreement", badge: agreementWaiting ? 1 : undefined }],
     },
     {
-      paths: [acknowledgments],
+      paths: [acknowledgments, connected],
       items: [
-        { href: acknowledgments, label: "Acknowledgments" },
+        { href: acknowledgments, label: "Compliance" },
         { href: connected, label: "Connected accounts" },
       ],
     },
@@ -111,15 +130,11 @@ export default async function AffiliateDashboardLayout({ children }: { children:
           See your posts, campaigns, stats, payouts, and settings.
         </p>
         <PortalLegalLinks className="mt-3" />
-        {approvedIds.length > 0 ? (
+        {approvedPosts.length > 0 ? (
           <ApprovedPostsNotice
             code={affiliate.code}
-            ids={approvedIds}
-            message={
-              approvedIds.length === 1
-                ? "A post was approved. Publish it, then paste the Instagram link."
-                : `${approvedIds.length} posts were approved. Publish each one, then paste the Instagram link.`
-            }
+            ids={approvedPosts.map((post) => post.id)}
+            message={approvedMessage(approvedPosts)}
           />
         ) : null}
         <div className="mt-8 xl:grid xl:grid-cols-[minmax(18rem,max-content)_minmax(0,1fr)] xl:items-start xl:gap-8">

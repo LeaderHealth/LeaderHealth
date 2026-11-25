@@ -3,7 +3,7 @@ import { FieldValue, type DocumentData, type Timestamp } from "firebase-admin/fi
 import { normalizeAffiliateCode } from "./code";
 import { disclosureAcknowledged } from "./disclosures";
 import { affiliateFirebaseConfigured, affiliateFirestore } from "./firebase";
-import { filesMatchFormat, formatUploadIssue, instagramPostUrl, liveLinkFor, postFormat, type PostFormat } from "./post-format";
+import { awaitsManualLinkCheck, filesMatchFormat, formatUploadIssue, instagramPostUrl, liveLinkFor, postFormat, type PostFormat } from "./post-format";
 import { IMAGE_BYTES, VIDEO_BYTES, postUploadKind } from "./post-files";
 import { deliverableFeeCents } from "./deliverable-payments";
 import { formatForOfferKind, lockedPayTerms, offerSlideBounds, type LockedPayTerms } from "./offer-post";
@@ -19,7 +19,7 @@ import { DEFAULT_TRACKING_DAYS, MANUAL_REPORT_MS, REPORT_WINDOW_MS, manualReport
 import { rateFor, standingViewRateCents } from "./payment-rates";
 import { loadPaymentRates } from "./payment-store";
 import { loadAffiliateAgreement, utcAgreementToday } from "./agreements";
-import { agreementMatchesPost, postingAgreement, postsFillingMonth, type PostingAgreement } from "./post-agreement";
+import { agreementKindFormat, agreementMatchesPost, agreementSlotRows, kindUsedCount, postingAgreement, postsFillingMonth, type PostingAgreement } from "./post-agreement";
 export { MANUAL_REPORT_MS, REPORT_WINDOW_MS, manualReportDue, networkConnectedForPost };
 export type { MetricsOrigin };
 
@@ -52,7 +52,7 @@ export type ContentStep = "approve" | "request" | "reject" | "revise";
 export type VerificationFailure = "not_connected" | "not_found" | "missing_disclosure" | "missing_tag" | "missing_link" | "unavailable";
 
 export class PostReviewError extends Error {
-  code: "invalid" | "file" | "storage" | "missing" | "unavailable" | "status" | "url" | "note" | "disclosure" | "tag" | "link" | "fee" | "campaign" | "offer" | "terms" | "date" | "agreement" | "month";
+  code: "invalid" | "file" | "storage" | "missing" | "unavailable" | "status" | "url" | "note" | "disclosure" | "tag" | "link" | "fee" | "campaign" | "offer" | "terms" | "date" | "agreement" | "month" | "requirement" | "kind";
 
   constructor(code: PostReviewError["code"]) {
     super(code);
@@ -75,6 +75,9 @@ export type BatchPostInput = {
   campaign: string | null;
   offerId: string;
   proposedPublishOn: string | null;
+  agreementSlot: number | null;
+  agreementPlatform: string;
+  agreementPostType: string;
 };
 
 export type ContentRevision = {
@@ -123,6 +126,9 @@ export type ContentSubmission = {
   agreementId: string;
   agreementLabel: string;
   postingMonth: string;
+  agreementSlot: number | null;
+  agreementPlatform: string;
+  agreementPostType: string;
   offerKind: string;
   offerBrief: string;
   publishBy: string;
@@ -503,6 +509,9 @@ function submissionFrom(id: string, data: DocumentData | undefined): ContentSubm
     agreementId: typeof data.agreementId === "string" && !data.agreementId.includes("/") ? data.agreementId.slice(0, 128) : "",
     agreementLabel: typeof data.agreementLabel === "string" ? data.agreementLabel.trim().slice(0, 200) : "",
     postingMonth: typeof data.postingMonth === "string" && /^\d{4}-\d{2}$/.test(data.postingMonth) ? data.postingMonth : "",
+    agreementSlot: Number.isInteger(data.agreementSlot) && (data.agreementSlot as number) >= 1 && (data.agreementSlot as number) <= 20 ? (data.agreementSlot as number) : null,
+    agreementPlatform: typeof data.agreementPlatform === "string" ? data.agreementPlatform : "",
+    agreementPostType: typeof data.agreementPostType === "string" ? data.agreementPostType : "",
     offerKind: typeof data.offerKind === "string" ? data.offerKind : "",
     offerBrief: typeof data.offerBrief === "string" ? data.offerBrief.slice(0, 800) : "",
     publishBy: typeof data.publishBy === "string" ? data.publishBy : "",
@@ -949,10 +958,48 @@ export async function submitContentBatch(input: { code: string; posts: BatchPost
       const date = proposedPublishDate(entry.item.proposedPublishOn);
       if (!date || date.slice(0, 7) !== slot.period) throw new PostReviewError("date");
     }
+    const savedPosts = await loadContentSubmissions(code);
+    const exclude = new Set(ready.flatMap((entry) => (entry.existing ? [entry.existing.id] : [])));
     if (slot.limit != null) {
-      const exclude = new Set(ready.flatMap((entry) => (entry.existing ? [entry.existing.id] : [])));
-      const used = postsFillingMonth(await loadContentSubmissions(code), postedUnder.id, slot.period, exclude);
+      const used = postsFillingMonth(savedPosts, postedUnder.id, slot.period, exclude);
       if (used + ready.length > slot.limit) throw new PostReviewError("month");
+    }
+    if (ready.length !== 1 || ready[0]?.item.agreementSlot == null) throw new PostReviewError("requirement");
+    const chosen = ready[0].item.agreementSlot;
+    const row = agreementSlotRows(
+      savedPosts.map((post) => ({ ...post, title: "", reviewNote: post.reviewNote, publicationStatus: post.publicationStatus })),
+      postedUnder.id,
+      slot.period,
+      postedUnder.postTotal,
+    ).find((item) => item.number === chosen);
+    const occupant = row?.post && !exclude.has(row.post.id) ? row.post : null;
+    if (!row || occupant) throw new PostReviewError("requirement");
+    if (postedUnder.mix.length > 0) {
+      const chosenKind = ready[0].item;
+      const kind = postedUnder.mix.find((item) => item.platform === chosenKind.agreementPlatform && item.type === chosenKind.agreementPostType);
+      const format = kind ? agreementKindFormat(kind.platform, kind.type) : null;
+      if (!kind || !format || chosenKind.format !== format) throw new PostReviewError("kind");
+      const used = kindUsedCount(
+        savedPosts.map((post) => ({
+          id: post.id,
+          agreementId: post.agreementId,
+          contentStatus: post.contentStatus,
+          offerId: post.offerId,
+          publishedAt: post.publishedAt,
+          submittedAt: post.submittedAt,
+          postingMonth: post.postingMonth,
+          format: post.format,
+          fileCount: post.files.length || (post.filePath ? 1 : 0),
+          agreementPlatform: post.agreementPlatform,
+          agreementPostType: post.agreementPostType,
+        })),
+        postedUnder.id,
+        slot.period,
+        kind.platform,
+        kind.type,
+        exclude,
+      );
+      if (used >= kind.count) throw new PostReviewError("kind");
     }
     postingPeriod = slot.period;
   }
@@ -966,6 +1013,10 @@ export async function submitContentBatch(input: { code: string; posts: BatchPost
     const files = uploaded ?? knownFiles(entry.existing);
     if (!files.length) throw new PostReviewError("file");
     const boundOffer = entry.existing?.offerId || entry.item.offerId.trim();
+    if (!boundOffer && postingPeriod) {
+      if (entry.item.agreementPostType === "Carousel" && files.length < 2) throw new PostReviewError("file");
+      if (entry.item.agreementPostType === "Image post" && (files.length !== 1 || !files[0]?.contentType.startsWith("image/"))) throw new PostReviewError("file");
+    }
     const offer = boundOffer ? await loadMarketingOffer(boundOffer) : null;
     if (boundOffer && (!offer || offer.code !== code || offer.status !== "accepted")) throw new PostReviewError("offer");
     const expectedFormat = offer ? formatForOfferKind(offer.kind) : null;
@@ -1004,7 +1055,7 @@ export async function submitContentBatch(input: { code: string; posts: BatchPost
       ...revisionFields(entry.existing),
       agreementId: postedUnder.id,
       agreementLabel: postedUnder.label,
-      ...(postingPeriod ? { postingMonth: postingPeriod } : {}),
+      ...(postingPeriod ? { postingMonth: postingPeriod, agreementSlot: entry.item.agreementSlot, agreementPlatform: entry.item.agreementPlatform, agreementPostType: entry.item.agreementPostType } : {}),
     };
     if (offer) {
       await db.runTransaction(async (tx) => {
@@ -1132,14 +1183,14 @@ export function rejectContentPost(id: string, note: unknown, reviewer: unknown) 
 async function instagramPages(code: string) {
   try {
     const secrets = await loadConnectionSecrets(code);
-    const linked = secrets.flatMap((secret) => (secret.network === "facebook" ? secret.pages.filter((page) => page.instagramAccountId) : []));
+    const linked = secrets.flatMap((secret) => (secret.network === "facebook" ? secret.pages.filter((page) => page.instagramAccountId).map((page) => ({ ...page, sourceNetwork: "facebook" as const })) : []));
     const direct = secrets.flatMap((secret) => (secret.network === "instagram" ? [{
       accountId: secret.accountId,
       accountName: secret.accountName,
       accessToken: secret.accessToken,
       instagramAccountId: secret.accountId,
       instagramAccountName: secret.accountName,
-      graphHost: "instagram" as const,
+      sourceNetwork: "instagram" as const,
     }] : []));
     return [...linked, ...direct];
   } catch (error) {
@@ -1149,9 +1200,9 @@ async function instagramPages(code: string) {
   }
 }
 
-async function rememberInstagramReconnect(code: string, pages: ReadonlyArray<{ graphHost?: "instagram" }>, needed: boolean) {
+async function rememberInstagramReconnect(code: string, pages: ReadonlyArray<{ sourceNetwork?: "facebook" | "instagram" }>, needed: boolean) {
   const networks = new Set<"facebook" | "instagram">();
-  for (const page of pages) networks.add(page.graphHost === "instagram" ? "instagram" : "facebook");
+  for (const page of pages) networks.add(page.sourceNetwork === "instagram" ? "instagram" : "facebook");
   await Promise.all([...networks].map((network) => markSocialReconnect(code, network, needed)));
 }
 
@@ -1203,15 +1254,15 @@ export async function submitLiveInstagramUrl(input: { id: string; code: string; 
   const post = await requireOwned(input.id, code);
   const url = liveLinkFor(post.format, input.url);
   if (!url) throw new PostReviewError("url");
-  const waitingOnTikTok = post.format === "tiktok" && post.publicationStatus === "verification_pending";
-  if (!canPasteLiveUrl(post.contentStatus, post.publicationStatus) && !waitingOnTikTok) throw new PostReviewError("status");
+  const waitingOnManual = awaitsManualLinkCheck(post.format) && post.publicationStatus === "verification_pending";
+  if (!canPasteLiveUrl(post.contentStatus, post.publicationStatus) && !waitingOnManual) throw new PostReviewError("status");
   await requireDb().collection("contentSubmissions").doc(post.id).update({
     postUrl: url,
     publicationStatus: "verification_pending",
     verificationNote: null,
     publishedAt: new Date(),
   });
-  if (post.format === "tiktok") return { ...post, postUrl: url, publicationStatus: "verification_pending" as const };
+  if (awaitsManualLinkCheck(post.format)) return { ...post, postUrl: url, publicationStatus: "verification_pending" as const };
   const publicationStatus = await finishVerification(post.id, code, url);
   return { ...post, publicationStatus };
 }
@@ -1219,8 +1270,8 @@ export async function submitLiveInstagramUrl(input: { id: string; code: string; 
 export async function markContentChecked(id: string) {
   const post = await loadContentSubmission(id);
   if (!post) throw new PostReviewError("missing");
-  const tiktokWaiting = post.format === "tiktok" && post.publicationStatus === "verification_pending";
-  if (post.publicationStatus !== "verification_failed" && !tiktokWaiting) throw new PostReviewError("status");
+  const manualWaiting = awaitsManualLinkCheck(post.format) && post.publicationStatus === "verification_pending";
+  if (post.publicationStatus !== "verification_failed" && !manualWaiting) throw new PostReviewError("status");
   await requireDb().collection("contentSubmissions").doc(post.id).update({
     publicationStatus: "tracking_active",
     verificationNote: "An admin checked this link.",
@@ -1241,6 +1292,7 @@ export async function markContentChecked(id: string) {
 async function writeFreshMetrics(post: ContentSubmission) {
   try {
     if (post.format === "tiktok") return await writeTikTokPostMetrics(post);
+    if (awaitsManualLinkCheck(post.format)) return false;
     return await writeInstagramPostMetrics(post);
   } catch (error) {
     if (error instanceof SocialError && error.code === "expired") {

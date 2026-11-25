@@ -20,4 +20,17 @@ test("each content type accepts its own file and published link", () => {
   assert.equal(liveLinkFor("instagram_post", "https://www.instagram.com/reel/AbC123_de/"), null);
   assert.equal(liveLinkFor("instagram_reel", "https://instagram.com/reel/AbC123_de/"), "https://www.instagram.com/reel/AbC123_de/");
   assert.equal(liveLinkFor("tiktok", "https://www.tiktok.com/@leader/video/7123456789012345678"), "https://www.tiktok.com/@leader/video/7123456789012345678/");
+  assert.equal(formatUploadIssue("facebook_post", { type: "image/jpeg", name: "cover.jpg", size: 200_000 }), "");
+  assert.equal(formatUploadIssue("facebook_video", { type: "video/mp4", name: "clip.mp4", size: 20_000_000 }), "");
+  assert.match(formatUploadIssue("youtube_video", { type: "image/png", name: "still.png", size: 200_000 }), /YouTube video/);
+  assert.equal(filesMatchFormat("facebook_post", [{ contentType: "image/jpeg" }]), true);
+  assert.equal(filesMatchFormat("facebook_post", [{ contentType: "image/jpeg" }, { contentType: "image/jpeg" }]), false);
+  assert.equal(filesMatchFormat("youtube_short", [{ contentType: "video/mp4" }]), true);
+  assert.equal(liveLinkFor("youtube_video", "https://www.youtube.com/watch?v=dQw4w9WgXcQ"), "https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+  assert.equal(liveLinkFor("youtube_video", "https://youtu.be/dQw4w9WgXcQ"), "https://youtu.be/dQw4w9WgXcQ");
+  assert.equal(liveLinkFor("youtube_video", "https://www.youtube.com/shorts/dQw4w9WgXcQ"), null);
+  assert.equal(liveLinkFor("youtube_short", "https://www.youtube.com/shorts/dQw4w9WgXcQ"), "https://www.youtube.com/shorts/dQw4w9WgXcQ");
+  assert.equal(liveLinkFor("facebook_reel", "https://www.facebook.com/reel/1234567890/"), "https://www.facebook.com/reel/1234567890/");
+  assert.equal(liveLinkFor("facebook_post", "https://fb.watch/Ab12Cd/"), "https://fb.watch/Ab12Cd/");
+  assert.equal(liveLinkFor("facebook_video", "https://www.instagram.com/p/AbC123_de/"), null);
 });

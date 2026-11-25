@@ -8,10 +8,11 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { cancelMetricChangeAction, confirmManualMetricsAction, requestMetricChangeAction, saveManualMetricsAction, submitLiveLinkAction, submitPostsAction, withdrawPostAction } from "@/app/affiliates/post-actions";
 import { MediaExpand, MediaPreview } from "@/components/affiliate/MediaExpand";
 import { SlidingTabs } from "@/components/affiliate/SlidingTabs";
-import { viewPayTerms } from "@/lib/affiliate/format";
+import { viewPayFormula } from "@/lib/affiliate/format";
 import { POST_FILE_ACCEPT, VIDEO_FILE_ACCEPT, postUploadIssue } from "@/lib/affiliate/post-files";
-import { formatTitle, formatUploadIssue, liveLinkFor, type PostFormat } from "@/lib/affiliate/post-format";
-import { openPostingMonth, postingMonthDateBounds, postingMonthOption, type PostingAgreement } from "@/lib/affiliate/post-agreement";
+import { awaitsManualLinkCheck, formatTitle, formatUploadIssue, liveLinkFor, type PostFormat } from "@/lib/affiliate/post-format";
+import { AgreementMonthPosts } from "@/components/affiliate/MyAgreement";
+import { agreementKindFormat, kindUsedCount, mixSentence, openPostingMonth, postKindTitle, postPlaceLabel, postTypeLabel, postingMonthDateBounds, postingMonthOption, type AgreementBoardSlot, type PostingAgreement } from "@/lib/affiliate/post-agreement";
 
 const POST_BATCH_LIMIT = 10;
 const SLIDE_LIMIT = 20;
@@ -165,6 +166,10 @@ export type HubPost = {
   publishBy: string;
   proposedOn: string;
   postingMonth: string;
+  agreementSlot: number | null;
+  agreementId: string;
+  agreementPlatform: string;
+  agreementPostType: string;
 };
 
 type Slide = {
@@ -308,6 +313,7 @@ function fileLabel(post: HubPost) {
   if (post.format === "tiktok") return "TikTok video";
   if (post.format === "instagram_reel") return "Instagram reel";
   if (post.format === "instagram_post") return post.slides.length > 1 ? "Carousel" : post.media === "video" ? "Instagram video" : "Instagram photo";
+  if (post.format) return formatTitle(post.format);
   return post.media === "video" ? "Approved video" : "Approved photo";
 }
 
@@ -375,21 +381,23 @@ function slideIsVideo(slide: Slide) {
   return /\.(mp4|m4v|webm|mov)$/i.test(slide.fileName) || /video/i.test(slide.fileName);
 }
 
-function cardProblem(card: Card) {
+function cardProblem(card: Card, kind: string | null = null) {
   if (!card.format) return "needs a type";
   const issue = card.slides.find((slide) => slide.fileIssue)?.fileIssue ?? "";
   if (issue) return issue;
   if (card.format !== "instagram_post" && card.slides.length > 1) return "needs to be one video";
+  if (kind === "Image post" && card.slides.length > 1) return "needs to be one photo";
   const joined = joinedCaption(card);
   if (joined.length > CAPTION_LIMIT) return "These captions together need to stay under 2,200 characters.";
   const missing: string[] = [];
   if (!hasBrandTag(joined)) missing.push("@myleaderhealth");
-  if (card.slides.length === 0) missing.push(card.format === "instagram_post" ? "at least one photo or video" : "a video");
+  if (card.slides.length === 0) missing.push(kind === "Carousel" ? "at least two photos or videos" : kind === "Image post" ? "a photo" : card.format === "instagram_post" ? "at least one photo or video" : "a video");
+  else if (kind === "Carousel" && card.slides.length < 2) missing.push("at least two photos or videos");
   return missing.length ? `needs ${joinList(missing)}` : "";
 }
 
-function cardReady(card: Card) {
-  return cardProblem(card) === "";
+function cardReady(card: Card, kind: string | null = null) {
+  return cardProblem(card, kind) === "";
 }
 
 function joinList(parts: string[]) {
@@ -419,6 +427,46 @@ function looksLikePublishedLink(format: PostFormat | null, value: string) {
   return Boolean(liveLinkFor(format, value));
 }
 
+function kindTitle(platform: string, type: string) {
+  return postKindTitle(platform, type);
+}
+
+function kindDetail(platform: string, type: string) {
+  if (type === "Carousel") return "Several photos or videos posted together. The first one is the cover.";
+  if (type === "Image post") return "One photo you’ll post on Instagram.";
+  if (platform === "Facebook" && type === "Post") return "One photo or video you’ll post on Facebook.";
+  return `One video you’ll post on ${platform}.`;
+}
+
+function agreementKinds(posting: PostingAgreement | null, sent: HubPost[], period: string) {
+  if (!posting) return [];
+  const uses = sent.map((post) => ({
+    id: post.id,
+    agreementId: post.agreementId,
+    contentStatus: post.status,
+    offerId: post.offerId,
+    publishedAt: null,
+    submittedAt: null,
+    postingMonth: post.postingMonth,
+    format: post.format,
+    fileCount: post.slides.length || (post.hasFile ? 1 : 0),
+    agreementPlatform: post.agreementPlatform,
+    agreementPostType: post.agreementPostType,
+  }));
+  return posting.mix.flatMap((item) => {
+    const format = agreementKindFormat(item.platform, item.type);
+    if (!format) return [];
+    const left = Math.max(0, item.count - kindUsedCount(uses, posting.id, period, item.platform, item.type));
+    if (left < 1) return [];
+    return [{ platform: item.platform, type: item.type, count: item.count, left, title: kindTitle(item.platform, item.type), detail: kindDetail(item.platform, item.type) }];
+  });
+}
+
+function standingPayLine(rate: number | null, max: number | null, days: number, engagement: number) {
+  if (rate == null) return "A full admin sets your rate per 1,000 views before you can send a post.";
+  return `Pay is ${viewPayFormula(rate, max, days, engagement)}. It locks when you send the post.`;
+}
+
 const FORMAT_CHOICES: { id: PostFormat; title: string; detail: string }[] = [
   { id: "tiktok", title: "TikTok", detail: "One video you’ll post on TikTok." },
   { id: "instagram_post", title: "Instagram post or carousel", detail: "One photo or video, or several together in a carousel." },
@@ -438,6 +486,36 @@ function publishGuide(format: PostFormat | null) {
       hold: "Don’t post it on TikTok yet.",
       pending: "An admin confirms the TikTok link. This stays here until that check is done.",
       cta: "Add TikTok link",
+    };
+  }
+  if (format === "facebook_post" || format === "facebook_reel" || format === "facebook_video") {
+    const kind = format === "facebook_reel" ? "reel" : format === "facebook_video" ? "video" : "post";
+    return {
+      step: "Publish it on Facebook",
+      href: "https://www.facebook.com/",
+      open: "Open Facebook",
+      label: `Paste your Facebook ${kind} link`,
+      hint: "Open the post, then copy its link.",
+      placeholder: "facebook.com/… or fb.watch/…",
+      error: "That doesn’t look like a Facebook post, reel, or video link.",
+      hold: "Don’t post it on Facebook yet.",
+      pending: "An admin confirms the Facebook link. This stays here until that check is done.",
+      cta: "Add Facebook link",
+    };
+  }
+  if (format === "youtube_short" || format === "youtube_video") {
+    const short = format === "youtube_short";
+    return {
+      step: short ? "Publish the Short on YouTube" : "Publish it on YouTube",
+      href: "https://studio.youtube.com/",
+      open: "Open YouTube",
+      label: short ? "Paste your YouTube Short link" : "Paste your YouTube link",
+      hint: short ? "Open the Short, tap Share, then Copy link." : "Open the video, tap Share, then Copy link.",
+      placeholder: short ? "youtube.com/shorts/…" : "youtube.com/watch?v=…",
+      error: short ? "That doesn’t look like a YouTube Short link. It should look like youtube.com/shorts/…" : "That doesn’t look like a YouTube link. It should look like youtube.com/watch?v=… or youtu.be/…",
+      hold: "Don’t post it on YouTube yet.",
+      pending: "An admin confirms the YouTube link. This stays here until that check is done.",
+      cta: short ? "Add YouTube Short link" : "Add YouTube link",
     };
   }
   if (format === "instagram_reel") {
@@ -471,10 +549,23 @@ function publishGuide(format: PostFormat | null) {
 }
 
 function submissionLabel(post: HubPost, slides: number) {
-  if (post.format === "tiktok") return "TikTok";
-  if (post.format === "instagram_reel") return "Instagram reel";
-  if (post.format === "instagram_post") return slides > 1 ? `Instagram carousel · ${slides}` : "Instagram post";
-  return slides > 1 ? `Carousel · ${slides}` : "";
+  return postTypeLabel({
+    agreementPlatform: post.agreementPlatform,
+    agreementPostType: post.agreementPostType,
+    format: post.format,
+    fileCount: slides,
+  });
+}
+
+function submissionPlace(post: HubPost, slots: AgreementBoardSlot[] | undefined, matchIds: string[]) {
+  const slotNumber = slots?.find((slot) => matchIds.includes(slot.id))?.number ?? null;
+  return postPlaceLabel(post, slotNumber, post.source);
+}
+
+function monthWord(period: string) {
+  const [year, month] = period.split("-").map(Number);
+  if (!year || !month) return "";
+  return new Intl.DateTimeFormat("en-US", { month: "long", timeZone: "UTC" }).format(new Date(Date.UTC(year, month - 1, 1)));
 }
 
 function externalHref(value: string) {
@@ -567,21 +658,6 @@ function CopyControl({ value, label, copiedLabel = "Copied" }: { value: string; 
   );
 }
 
-export type OfferComposer = {
-  id: string;
-  format: PostFormat;
-  kindLabel: string;
-  brief: string;
-  publishLabel: string;
-  feeCents: number;
-  maxPayCents: number | null;
-  trackingDays: number;
-  campaign: string;
-  draftId: string;
-  minSlides: number;
-  maxSlides: number;
-};
-
 export function PostsHub({
   posts,
   trackingUrl,
@@ -593,13 +669,14 @@ export function PostsHub({
   agreedFeeCents,
   standingMaxPayCents,
   standingTrackingDays,
+  standingEngagementRateCents,
   campaigns,
-  offer,
   focusPostId,
   startCompose = false,
   startCampaign = "",
   posting = null,
   agreementsUnavailable = false,
+  agreementPosts = null,
 }: {
   posts: HubPost[];
   trackingUrl: string;
@@ -611,23 +688,25 @@ export function PostsHub({
   agreedFeeCents: number | null;
   standingMaxPayCents: number | null;
   standingTrackingDays: number;
+  standingEngagementRateCents: number;
   campaigns: string[];
-  offer: OfferComposer | null;
   focusPostId: string;
   startCompose?: boolean;
   startCampaign?: string;
   posting?: PostingAgreement | null;
   agreementsUnavailable?: boolean;
+  agreementPosts?: { id: string; monthName: string; period: string; noMonth: boolean; slots: AgreementBoardSlot[] } | null;
 }) {
   const router = useRouter();
   const motionEase = useSoftMotion();
   const [filter, setFilter] = useState<Filter>("all");
-  const [screen, setScreen] = useState<"hub" | "compose" | "detail">(offer || startCompose ? "compose" : focusPostId ? "detail" : "hub");
+  const [screen, setScreen] = useState<"hub" | "compose" | "detail">(startCompose ? "compose" : focusPostId ? "detail" : "hub");
   const [selectedId, setSelectedId] = useState<string | null>(focusPostId || null);
-  const [cards, setCards] = useState<Card[]>([blankCard(offer ? { id: offer.draftId, format: offer.format, caption: offer.brief } : undefined)]);
-  const [composeCampaign, setComposeCampaign] = useState(offer?.campaign || (campaigns.includes(startCampaign) ? startCampaign : ""));
+  const [cards, setCards] = useState<Card[]>([blankCard()]);
+  const [composeCampaign, setComposeCampaign] = useState(campaigns.includes(startCampaign) ? startCampaign : "");
   const [composeMonth, setComposeMonth] = useState(() => openPostingMonth(posting?.months ?? [], new Date().toISOString().slice(0, 10)));
-  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [requirement, setRequirement] = useState<number | null>(null);
+  const [postKind, setPostKind] = useState<{ platform: string; type: string } | null>(null);
   const [shownNotice, setShownNotice] = useState(notice);
   const [toastHidden, setToastHidden] = useState(false);
   if (notice !== shownNotice) {
@@ -642,11 +721,31 @@ export function PostsHub({
   })();
   const actionPosts = groups.filter((group) => stageOf(groupLead(group)) === "action").map(asOnePost);
 
-  function openCompose(seed?: HubPost, campaign = seed?.campaign ?? "") {
+  function openNumbers(period: string) {
+    if (agreementPosts && !agreementPosts.noMonth && period === agreementPosts.period) {
+      return agreementPosts.slots.filter((slot) => slot.id.startsWith("empty-")).map((slot) => slot.number);
+    }
+    const month = posting?.months.find((item) => item.period === period);
+    if (!month || month.limit == null) return [];
+    return Array.from({ length: Math.max(0, month.limit - month.used) }, (_, index) => month.used + 1 + index);
+  }
+
+  if (screen === "compose" && requirement == null) {
+    const open = openNumbers(composeMonth);
+    if (open[0]) setRequirement(open[0]);
+  }
+
+  function openCompose(seed?: HubPost, campaign = seed?.campaign ?? "", slotNumber?: number) {
     const months = posting?.months ?? [];
     const today = new Date().toISOString().slice(0, 10);
     const replacement = seed?.status === "rejected" && months.some((month) => month.period === seed.postingMonth) ? seed.postingMonth : "";
-    setComposeMonth(replacement || openPostingMonth(months, today));
+    const period = replacement || (slotNumber && agreementPosts?.period) || openPostingMonth(months, today);
+    const open = openNumbers(period);
+    setComposeMonth(period);
+    const kept = seed?.agreementSlot && seed.agreementSlot >= 1 ? seed.agreementSlot : null;
+    setRequirement(slotNumber && open.includes(slotNumber) ? slotNumber : kept && (open.includes(kept) || seed?.status === "revision_requested" || seed?.status === "draft") ? kept : open[0] ?? null);
+    const keptKind = seed?.agreementPlatform && seed.agreementPostType ? { platform: seed.agreementPlatform, type: seed.agreementPostType } : null;
+    setPostKind(keptKind);
     setComposeCampaign(campaigns.includes(campaign) ? campaign : "");
     setCards((current) => {
       for (const card of current) releaseSlides(card.slides);
@@ -656,7 +755,7 @@ export function PostsHub({
             ? {
                 caption: seed.caption,
                 id: seed.status === "draft" ? seed.id : "",
-                format: seed.format ?? (seed.media === "photo" || seed.slides.length > 1 ? "instagram_post" : null),
+                format: keptKind ? agreementKindFormat(keptKind.platform, keptKind.type) : posting?.mix.length ? null : seed.format ?? (seed.media === "photo" || seed.slides.length > 1 ? "instagram_post" : null),
                 slides:
                   seed.status === "draft" && seed.hasFile
                     ? [
@@ -684,6 +783,11 @@ export function PostsHub({
     setScreen("detail");
   }
 
+  function openAgreementSlot(slot: AgreementBoardSlot) {
+    if (slot.id.startsWith("empty-") || slot.href.includes("compose=1")) openCompose(undefined, "", slot.number);
+    else openDetail(slot.id);
+  }
+
   const screenKey = screen === "detail" ? `detail-${selectedId}` : screen;
 
   return (
@@ -694,16 +798,14 @@ export function PostsHub({
             <div className="flex min-w-0 flex-1 basis-80 flex-col gap-1.5">
               <h2 className="text-[28px] font-medium tracking-tight">Posts</h2>
               <p className="text-sm leading-normal text-brown">
-                Choose TikTok, an Instagram post or carousel, or an Instagram reel. Publish it after it’s approved, then add the link.{" "}
-                {agreedFeeCents == null
-                  ? "A full admin sets your rate per 1,000 views before you can send a post."
-                  : `Standing terms: ${viewPayTerms(agreedFeeCents, standingMaxPayCents, standingTrackingDays)}. They lock when you send the post.`}
+                {posting && mixSentence(posting.mix) ? `Each month: ${mixSentence(posting.mix)}. ` : ""}
+                Publish a post after it’s approved, then add the link. {standingPayLine(agreedFeeCents, standingMaxPayCents, standingTrackingDays, standingEngagementRateCents)}
               </p>
             </div>
             <div className="flex flex-wrap items-end justify-end gap-3">
               <button type="button" onClick={() => openCompose()} className="inline-flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-medium text-white transition-colors duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-brown focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink motion-reduce:transition-none">
                 <PlusIcon />
-                New posts
+                New post
               </button>
             </div>
           </div>
@@ -718,6 +820,20 @@ export function PostsHub({
                 </svg>
               </button>
             </div>
+          ) : null}
+
+          {agreementPosts ? (
+            <AgreementMonthPosts
+              id={agreementPosts.id}
+              monthName={agreementPosts.monthName}
+              noMonth={agreementPosts.noMonth}
+              slots={agreementPosts.slots}
+              guidelines=""
+              pdfHref={null}
+              showFooter={false}
+              embedded
+              onSlot={openAgreementSlot}
+            />
           ) : null}
 
           {actionPosts.length > 0 ? (
@@ -763,7 +879,8 @@ export function PostsHub({
                   const slides = slideTotal(group);
                   const label = submissionLabel(post, slides);
                   const sent = post.status === "draft" ? "Not sent yet" : post.sent ? `Sent ${post.sent}` : "";
-                  const meta = [post.source, post.agreement, post.campaign, label, sent].filter(Boolean).join(" · ");
+                  const place = submissionPlace(post, agreementPosts?.slots, group.map((item) => item.id));
+                  const meta = [place, label, post.postingMonth ? monthWord(post.postingMonth) : "", post.campaign, sent].filter(Boolean).join(" · ");
                   return (
                     <motion.div key={post.batchId || post.id} layout initial={motionEase.reduced ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={motionEase.fade}>
                       <div className="flex min-h-11 w-full items-center gap-3.5 border-t border-[#F0E8E6] px-1 py-3 text-left text-ink">
@@ -782,7 +899,13 @@ export function PostsHub({
                   );
                 })}
               </AnimatePresence>
-              {groups.filter((group) => filter === "all" || stageOf(groupLead(group)) === filter).length === 0 ? <p className="border-t border-[#F0E8E6] px-1 py-7 text-sm text-brown">Nothing here yet.</p> : null}
+              {groups.filter((group) => filter === "all" || stageOf(groupLead(group)) === filter).length === 0 ? (
+                <p className="border-t border-[#F0E8E6] px-1 py-7 text-sm text-brown">
+                  {filter === "all" && agreementPosts && !agreementPosts.noMonth && agreementPosts.slots.some((slot) => slot.id.startsWith("empty-"))
+                    ? `Nothing sent yet. Create the ${agreementPosts.monthName} posts above and send each one for approval.`
+                    : "Nothing here yet."}
+                </p>
+              ) : null}
             </div>
           </section>
         </motion.div>
@@ -797,13 +920,18 @@ export function PostsHub({
             agreedFeeCents={agreedFeeCents}
             standingMaxPayCents={standingMaxPayCents}
             standingTrackingDays={standingTrackingDays}
+            standingEngagementRateCents={standingEngagementRateCents}
             campaign={composeCampaign}
             initialMonth={composeMonth}
-            offer={offer}
             posting={posting}
             agreementsUnavailable={agreementsUnavailable}
-            termsAccepted={termsAccepted}
-            onTerms={setTermsAccepted}
+            requirement={requirement}
+            onRequirement={setRequirement}
+            openNumbers={openNumbers}
+            monthName={agreementPosts?.period === composeMonth ? agreementPosts.monthName : ""}
+            postKind={postKind}
+            onPostKind={setPostKind}
+            posts={posts}
             onBack={() => (startCompose ? router.push("/affiliates/posts") : setScreen("hub"))}
           />
         </motion.div>
@@ -821,6 +949,7 @@ export function PostsHub({
             campaigns={campaigns}
             posting={posting}
             agreementsUnavailable={agreementsUnavailable}
+            slots={agreementPosts?.slots}
             onComposeCampaign={(name) => openCompose(undefined, name)}
           />
         </motion.div>
@@ -838,13 +967,18 @@ function Composer({
   agreedFeeCents,
   standingMaxPayCents,
   standingTrackingDays,
+  standingEngagementRateCents,
   campaign,
   initialMonth,
-  offer,
   posting,
   agreementsUnavailable,
-  termsAccepted,
-  onTerms,
+  requirement,
+  onRequirement,
+  openNumbers,
+  monthName,
+  postKind,
+  onPostKind,
+  posts,
   onBack,
 }: {
   cards: Card[];
@@ -855,13 +989,18 @@ function Composer({
   agreedFeeCents: number | null;
   standingMaxPayCents: number | null;
   standingTrackingDays: number;
+  standingEngagementRateCents: number;
   campaign: string;
   initialMonth: string;
-  offer: OfferComposer | null;
   posting: PostingAgreement | null;
   agreementsUnavailable: boolean;
-  termsAccepted: boolean;
-  onTerms: (value: boolean) => void;
+  requirement: number | null;
+  onRequirement: (value: number | null) => void;
+  openNumbers: (period: string) => number[];
+  monthName: string;
+  postKind: { platform: string; type: string } | null;
+  onPostKind: (value: { platform: string; type: string } | null) => void;
+  posts: HubPost[];
   onBack: () => void;
 }) {
   const [pending, setPending] = useState(false);
@@ -871,28 +1010,21 @@ function Composer({
   });
   const [proposedOn, setProposedOn] = useState("");
   const [limitNote, setLimitNote] = useState("");
-  const monthSlot = offer ? null : posting?.months.find((month) => month.period === postingMonth) ?? null;
+  const monthSlot = posting?.months.find((month) => month.period === postingMonth) ?? null;
   const monthRoom = monthSlot == null || monthSlot.limit == null ? POST_BATCH_LIMIT : Math.max(0, monthSlot.limit - monthSlot.used);
   const monthBlocked = monthSlot != null && monthSlot.limit != null && cards.length > monthRoom;
-  const noFullMonth = !offer && posting != null && posting.months.length === 0;
+  const noFullMonth = posting != null && posting.months.length === 0;
   const dateBounds = monthSlot ? postingMonthDateBounds(monthSlot.period, posting?.startsOn ?? null, posting?.endsOn ?? null) : null;
-  const readyCount = cards.filter((card) => cardReady(card)).length;
+  const readyCount = cards.filter((card) => cardReady(card, postKind?.type ?? null)).length;
   const blocked = cards
-    .map((card, index) => ({ card, index, problem: cardProblem(card) }))
+    .map((card, index) => ({ card, index, problem: cardProblem(card, postKind?.type ?? null) }))
     .find((item) => item.problem);
-  const slideProblem = offer
-    ? cards.find((card) => card.slides.length > 0 && (card.slides.length < offer.minSlides || card.slides.length > offer.maxSlides))
-    : null;
   const hint = noFullMonth
     ? "These dates don't include a full month, so posts can't be sent under this agreement."
     : monthBlocked
     ? monthRoom === 0
       ? `${monthSlot.label} already has its ${monthSlot.limit} posts. Choose another month.`
       : `This send is ${cards.length} ${cards.length === 1 ? "post" : "posts"}. ${monthSlot.label} can take ${monthRoom} more.`
-    : slideProblem
-    ? offer && offer.minSlides > 1
-      ? "This carousel needs at least two photos or videos."
-      : "This offer takes one file."
     : blocked
       ? blocked.problem.startsWith("needs ")
         ? `Post ${blocked.index + 1} ${blocked.problem}.`
@@ -901,16 +1033,17 @@ function Composer({
         ? "Your agreement could not be loaded. Try again before sending."
         : !posting
           ? "A signed agreement has to be on your account before you can send a post."
-      : offer
-        ? `Marketing offer: ${viewPayTerms(offer.feeCents, offer.maxPayCents, offer.trackingDays)}. These terms are locked. Publish by ${offer.publishLabel}.`
-        : agreedFeeCents == null
+          : agreedFeeCents == null
           ? "A full admin needs to set your rate per 1,000 views before you can send a post."
-          : !termsAccepted
-            ? "Accept the rate, maximum, and tracking period before sending."
-            : !proposedOn
-              ? "Choose a proposed publishing date."
-              : `Standing terms: ${viewPayTerms(agreedFeeCents, standingMaxPayCents, standingTrackingDays)}. They lock when you send the post.`;
-  const canSend = cards.length > 0 && !blocked && !slideProblem && !monthBlocked && !noFullMonth && !pending && posting != null && (offer != null || (agreedFeeCents != null && termsAccepted && proposedOn !== ""));
+          : !requirement
+            ? "Choose the agreement post you are filling in."
+          : (posting?.mix.length ?? 0) > 0 && !postKind
+            ? "Choose the type of post this agreement asks for."
+          : !proposedOn
+            ? "Choose a proposed publishing date."
+            : standingPayLine(agreedFeeCents, standingMaxPayCents, standingTrackingDays, standingEngagementRateCents);
+  const needsKind = Boolean(posting?.mix.some((item) => agreementKindFormat(item.platform, item.type)));
+  const canSend = cards.length > 0 && !blocked && !monthBlocked && !noFullMonth && !pending && posting != null && agreedFeeCents != null && requirement != null && proposedOn !== "" && (!needsKind || postKind != null);
 
   function update(key: string, patch: Partial<Card>) {
     setCards(cards.map((card) => (card.key === key ? { ...card, ...patch } : card)));
@@ -920,7 +1053,15 @@ function Composer({
     const card = cards.find((item) => item.key === key);
     if (card) releaseSlides(card.slides);
     setCards(cards.map((item) => (item.key === key ? { ...item, format: null, slides: [] } : item)));
+    onPostKind(null);
     setLimitNote("");
+  }
+
+  function chooseKind(key: string, platform: string, type: string) {
+    const format = agreementKindFormat(platform, type);
+    if (!format) return;
+    onPostKind({ platform, type });
+    chooseFormat(key, format);
   }
 
   function chooseFormat(key: string, format: PostFormat) {
@@ -940,16 +1081,16 @@ function Composer({
     if (!incoming.length) return;
     const card = cards.find((item) => item.key === key);
     if (!card?.format) return;
-    if (card.format !== "instagram_post") {
+    if (card.format !== "instagram_post" || postKind?.type === "Image post") {
       const file = incoming[0];
       const slide = makeSlide(file);
-      slide.fileIssue = formatUploadIssue(card.format, file);
+      slide.fileIssue = postKind?.type === "Image post" && slideIsVideo(slide) ? "An image post needs a PNG, JPEG, or WebP photo under 8 MB." : formatUploadIssue(card.format, file);
       releaseSlides(card.slides);
       setCards(cards.map((item) => (item.key === key ? { ...item, slides: [slide] } : item)));
-      setLimitNote(incoming.length > 1 ? `${formatTitle(card.format)} is one video. The first file was kept.` : "");
+      setLimitNote(incoming.length > 1 ? `${postKind?.type === "Image post" ? "An image post is one photo" : formatTitle(card.format) + " is one video"}. The first file was kept.` : "");
       return;
     }
-    const room = Math.min(SLIDE_LIMIT, offer?.maxSlides ?? SLIDE_LIMIT) - card.slides.length;
+    const room = SLIDE_LIMIT - card.slides.length;
     const accepted = incoming.slice(0, Math.max(room, 0));
     if (!accepted.length) {
       setLimitNote("A carousel can hold 20 photos or videos.");
@@ -1010,11 +1151,15 @@ function Composer({
     if (!canSend) return;
     const data = new FormData();
     data.set("count", String(cards.length));
-    if (offer) data.set("offerId", offer.id);
     if (posting) data.set("agreement", posting.id);
-    if (!offer && postingMonth) data.set("postingMonth", postingMonth);
-    if (termsAccepted) data.set("terms", "yes");
-    data.set("proposedPublishOn", offer ? "" : proposedOn);
+    if (postingMonth) data.set("postingMonth", postingMonth);
+    if (requirement) data.set("requirement", String(requirement));
+    if (postKind) {
+      data.set("agreementPlatform", postKind.platform);
+      data.set("agreementPostType", postKind.type);
+    }
+    if (agreedFeeCents != null) data.set("terms", "yes");
+    data.set("proposedPublishOn", proposedOn);
     cards.forEach((card, index) => {
       const slideCaptions = isCarousel(card) ? card.slides.map((slide) => slide.caption) : [card.caption];
       data.set(`caption${index}`, joinedCaption(card));
@@ -1036,7 +1181,7 @@ function Composer({
       setPending(false);
     }
   }
-  const showAnother = !offer && cards.length < POST_BATCH_LIMIT && cards.length < monthRoom;
+  const showAnother = false;
 
   if (!posting) {
     return (
@@ -1055,13 +1200,13 @@ function Composer({
     <div className="flex flex-col gap-[22px]">
       <BackButton onClick={onBack} />
       <div className="flex flex-col gap-1.5">
-        <h2 className="text-[28px] font-medium tracking-tight">{cards.length === 1 && !cards[0]?.format ? "What are you sending?" : "New posts"}</h2>
-        <p className="text-sm leading-normal text-brown">{cards.length === 1 && !cards[0]?.format ? "Pick TikTok, an Instagram post or carousel, or an Instagram reel. The next step matches that choice." : "Each post is reviewed on its own, so you can publish them as they’re approved. Tag @myleaderhealth in every caption. A link in your bio doesn’t count."}</p>
+        <h2 className="text-[28px] font-medium tracking-tight">{requirement ? `Post ${requirement}` : "Choose a post"}</h2>
+        <p className="text-sm leading-normal text-brown">{`Fill in this ${monthName || "agreement"} post and send it for approval.`}</p>
       </div>
       <AgreementLine posting={posting} unavailable={agreementsUnavailable} />
-      {offer || !posting?.months.length ? null : (
+      {!posting?.months.length ? null : (
         <label className="flex max-w-md flex-col gap-2 text-sm font-medium" htmlFor="posting-month">
-          Month these posts count toward
+          Month this post counts toward
           <select
             id="posting-month"
             value={postingMonth}
@@ -1069,6 +1214,9 @@ function Composer({
               const next = event.target.value;
               setPostingMonth(next);
               setProposedOn((current) => (current && current.slice(0, 7) !== next ? "" : current));
+              const open = openNumbers(next);
+              onRequirement(open.includes(requirement ?? -1) ? requirement : open[0] ?? null);
+              if (postKind && !agreementKinds(posting, posts, next).some((item) => item.platform === postKind.platform && item.type === postKind.type) && cards[0]) clearFormat(cards[0].key);
             }}
             className={fieldClass}
           >
@@ -1076,45 +1224,71 @@ function Composer({
           </select>
         </label>
       )}
-      {offer ? null : (
+      {!posting?.months.length ? null : (
+        <label className="flex max-w-md flex-col gap-2 text-sm font-medium" htmlFor="post-requirement">
+          Which post are you filling in?
+          <select
+            id="post-requirement"
+            value={requirement ?? ""}
+            onChange={(event) => onRequirement(Number(event.target.value) || null)}
+            className={fieldClass}
+          >
+            {(() => {
+              const open = openNumbers(postingMonth);
+              const choices = requirement && !open.includes(requirement) ? [...open, requirement].sort((left, right) => left - right) : open;
+              return choices.length === 0 ? <option value="">No open posts this month</option> : choices.map((number) => <option key={number} value={number}>Post {number}</option>);
+            })()}
+          </select>
+          <span className="text-sm font-normal leading-normal text-brown">This is the agreement post the file and caption will count toward.</span>
+        </label>
+      )}
+      {posting?.months.length ? (
         <label className="flex max-w-xs flex-col gap-2 text-sm font-medium" htmlFor="proposed-publish-on">
           Proposed publishing date
           <input id="proposed-publish-on" type="date" required min={dateBounds?.min} max={dateBounds?.max} value={proposedOn} onChange={(event) => setProposedOn(event.target.value)} className={fieldClass} />
-          <span className="text-sm font-normal leading-normal text-brown">{posting?.months.length ? "Required. The date has to fall in the month above." : "Required. It does not change review or pay."}</span>
+          <span className="text-sm font-normal leading-normal text-brown">Required. The date has to fall in the month above.</span>
         </label>
-      )}
+      ) : null}
       {cards.length === 1 && !cards[0]?.format ? (
-        <FormatPicker onChoose={(format) => chooseFormat(cards[0].key, format)} />
+        needsKind ? <KindChoices kinds={agreementKinds(posting, posts, postingMonth)} onChoose={(kind) => chooseKind(cards[0].key, kind.platform, kind.type)} /> : <FormatPicker onChoose={(format) => chooseFormat(cards[0].key, format)} />
       ) : (
       <>
       <Progress current={0} />
       {cards.map((card, index) => {
         const carousel = isCarousel(card);
-        const ready = cardReady(card);
-        const videoPost = card.format === "tiktok" || card.format === "instagram_reel";
-        const fileTitle = card.format === "tiktok" ? "TikTok video" : card.format === "instagram_reel" ? "Reel" : "Photos or videos";
+        const ready = cardReady(card, postKind?.type ?? null);
+        const videoPost = card.format != null && card.format !== "instagram_post" && card.format !== "facebook_post";
+        const fileTitle = postKind ? kindTitle(postKind.platform, postKind.type) : card.format === "tiktok" ? "TikTok video" : card.format === "instagram_reel" ? "Reel" : "Photos or videos";
         const addLabel = !card.slides.length
-          ? card.format === "tiktok"
-            ? "Add the TikTok video"
-            : card.format === "instagram_reel"
-              ? "Add the reel"
-              : "Add photos or videos"
-          : "Add another photo or video";
-        const addHint = videoPost
+          ? postKind?.type === "Carousel"
+            ? "Add the carousel"
+            : postKind?.type === "Image post"
+              ? "Add the photo"
+              : card.format === "facebook_post"
+                ? "Add the photo or video"
+                : videoPost && card.format
+                  ? `Add the ${formatTitle(card.format).toLowerCase()}`
+                  : "Add photos or videos"
+          : postKind?.type === "Image post"
+            ? "Replace the photo"
+            : "Add another photo or video";
+        const addHint = postKind?.type === "Carousel"
+          ? "At least two. The first one is the cover."
+          : postKind?.type === "Image post"
+            ? "One PNG, JPEG, or WebP under 8 MB."
+          : videoPost
           ? "One MP4, MOV, or WebM, up to 200 MB."
           : "Select one photo or video, or several for a carousel. The first one is the cover.";
-        const limitCopy = card.format === "tiktok"
-          ? "A saved TikTok video is usually an MP4, and it can be up to 200 MB."
-          : card.format === "instagram_reel"
-            ? "An Instagram reel is one MP4, MOV, or WebM up to 200 MB."
-            : "Photos need to be PNG, JPEG, or WebP under 8 MB. A video can be an MP4, MOV, or WebM up to 200 MB.";
+        const limitCopy = videoPost && card.format
+          ? `${formatTitle(card.format)} is one MP4, MOV, or WebM, and it can be up to 200 MB.`
+          : "Photos need to be PNG, JPEG, or WebP under 8 MB. A video can be an MP4, MOV, or WebM up to 200 MB.";
         return (
           <article key={card.key} className="flex flex-col gap-4 rounded-[18px] bg-background p-5">
             <div className="flex items-center gap-2.5">
-              <span className="text-[15px] font-semibold">Post {index + 1}</span>
-              {card.format ? <span className="text-[13px] text-brown">{carousel ? `Carousel · ${card.slides.length}` : formatTitle(card.format)}</span> : null}
+              <span className="text-[15px] font-semibold">{requirement ? `Post ${requirement}` : `Post ${index + 1}`}</span>
+              {card.format ? <span className="text-[13px] text-brown">{postKind ? kindTitle(postKind.platform, postKind.type) : carousel ? `Carousel · ${card.slides.length}` : formatTitle(card.format)}</span> : null}
               {card.format ? (
-                offer ? <span className="text-[13px] font-medium text-ink">{offer.kindLabel}</span> : <button type="button" onClick={() => clearFormat(card.key)} className="text-[13px] text-brown underline underline-offset-4">Change</button>
+                <button type="button" onClick={() => clearFormat(card.key)} className="text-[13px] text-brown underline underline-offset-4">Change</button>
               ) : null}
               {ready ? <span className="rounded-full bg-[#DDF0E4] px-2 py-0.5 text-xs font-semibold text-[#1D6340]">Ready</span> : null}
               <span className="flex-1" />
@@ -1236,13 +1410,6 @@ function Composer({
                 <p className="text-[13px] leading-relaxed text-brown">Each slide has its own caption, and every slide caption is reviewed. Tag @myleaderhealth so the post can track. The sponsorship line and tracking link are optional. Slide 1 is best, since the cover is seen first.</p>
               ) : null}
             </div>
-            {offer ? (
-              <div className="flex flex-col gap-1.5 rounded-[14px] bg-[#F7F3F2] px-3.5 py-3">
-                <span className="text-[13px] font-semibold">Requirements</span>
-                <span className="text-sm leading-normal text-[#4A3A37]">{offer.brief || "—"}</span>
-                <span className="text-xs text-[#6B5A57]">Publish by {offer.publishLabel}. Tag @myleaderhealth so the post can track. The sponsorship line and tracking link are optional.</span>
-              </div>
-            ) : null}
             {carousel ? null : (
               <label className="flex flex-col gap-2 text-sm font-medium" htmlFor={`caption-${card.key}`}>
                 Caption
@@ -1259,7 +1426,7 @@ function Composer({
             />
             </>
             ) : (
-              <FormatPicker onChoose={(format) => chooseFormat(card.key, format)} />
+              needsKind ? <KindChoices kinds={agreementKinds(posting, posts, postingMonth)} onChoose={(kind) => chooseKind(card.key, kind.platform, kind.type)} /> : <FormatPicker onChoose={(format) => chooseFormat(card.key, format)} />
             )}
           </article>
         );
@@ -1270,17 +1437,11 @@ function Composer({
           Add another post
         </button>
       ) : null}
-      {offer || agreedFeeCents == null ? null : (
-        <label className="flex items-start gap-2.5 text-sm leading-normal text-[#4A3A37]">
-          <input type="checkbox" checked={termsAccepted} onChange={(event) => onTerms(event.target.checked)} className="mt-0.5 size-[18px] accent-ink" />
-          I accept {viewPayTerms(agreedFeeCents, standingMaxPayCents, standingTrackingDays)}. These terms lock when I send the post.
-        </label>
-      )}
       <div className="flex flex-wrap items-center gap-3 border-t border-[#E8DEDC] pt-5">
         <div className="min-w-0 flex-1 basis-60">
           <p className="text-sm font-semibold">{cards.length === 1 ? "1 post" : `${cards.length} posts`} · {readyCount} ready</p>
           {limitNote ? <p className="text-[13px] text-[#9B2C1F]">{limitNote}</p> : null}
-          <p className={`text-[13px] ${blocked || slideProblem || (!offer && (!termsAccepted || !proposedOn)) ? "text-[#9B2C1F]" : "text-[#1D6340]"}`}>{hint}</p>
+          <p className={`text-[13px] ${blocked || !requirement || !proposedOn ? "text-[#9B2C1F]" : "text-[#1D6340]"}`}>{hint}</p>
         </div>
         <button type="button" onClick={send} disabled={!canSend} className={`inline-flex h-11 items-center rounded-full px-[22px] text-sm font-medium ${canSend ? "bg-ink text-white hover:bg-brown" : "cursor-not-allowed bg-[#E8DEDC] text-[#5E4E4B]"}`}>
           {pending ? "Sending…" : cards.length === 1 ? "Send for review" : `Send ${cards.length} for review`}
@@ -1310,10 +1471,41 @@ function AgreementLine({ posting, unavailable }: { posting: PostingAgreement | n
       <p className="mt-1 text-sm font-medium">{posting.label}</p>
       {posting.postTotal > 0 ? (
         <p className="mt-1 text-sm leading-normal text-brown">
-          {posting.months.length > 1 ? `Each month of this agreement has its own ${posting.postTotal} posts.` : `${posting.postTotal} posts this month.`}
+          {mixSentence(posting.mix)
+            ? `Each month: ${mixSentence(posting.mix)}.`
+            : posting.months.length > 1
+              ? `Each month of this agreement has its own ${posting.postTotal} posts.`
+              : `${posting.postTotal} posts this month.`}
         </p>
       ) : null}
     </section>
+  );
+}
+
+function KindChoices({
+  kinds,
+  onChoose,
+}: {
+  kinds: { platform: string; type: string; title: string; detail: string; left: number; count: number }[];
+  onChoose: (kind: { platform: string; type: string }) => void;
+}) {
+  if (!kinds.length) return <p className="rounded-[18px] bg-background px-4 py-3.5 text-sm text-ink">This month already has every post type in the agreement.</p>;
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="flex flex-col gap-1">
+        <p className="text-sm font-medium">What are you posting?</p>
+        <p className="text-sm leading-normal text-brown">Choose a type from this agreement. The file you add has to match it.</p>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {kinds.map((kind) => (
+          <button key={`${kind.platform}-${kind.type}`} type="button" onClick={() => onChoose(kind)} className="flex min-h-28 flex-col gap-1.5 rounded-[18px] border border-[#E8DEDC] bg-white p-4 text-left transition-colors duration-200 hover:bg-background focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink">
+            <span className="text-[15px] font-semibold">{kind.title}</span>
+            <span className="text-sm leading-normal text-brown">{kind.detail}</span>
+            <span className="text-[13px] font-medium">{kind.left} of {kind.count} left this month</span>
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -1444,6 +1636,7 @@ function PostDetail({
   campaigns,
   posting,
   agreementsUnavailable,
+  slots,
   onBack,
   onReuse,
   onComposeCampaign,
@@ -1456,16 +1649,18 @@ function PostDetail({
   campaigns: string[];
   posting: PostingAgreement | null;
   agreementsUnavailable: boolean;
+  slots?: AgreementBoardSlot[];
   onBack: () => void;
   onReuse: () => void;
   onComposeCampaign: (campaign: string) => void;
 }) {
   const mark = statusMark(post);
+  const identity = [submissionPlace(post, slots, [post.id]), submissionLabel(post, post.slides.length)].filter(Boolean).join(" · ");
   const stage = stageOf(post);
   const closed = stage === "closed";
   const carousel = post.slides.length > 1;
   const guide = publishGuide(post.format);
-  const fileAccept = post.format && post.format !== "instagram_post" ? VIDEO_FILE_ACCEPT : POST_FILE_ACCEPT;
+  const fileAccept = post.format === "instagram_post" || post.format === "facebook_post" || !post.format ? POST_FILE_ACCEPT : VIDEO_FILE_ACCEPT;
   const [editing, setEditing] = useState(false);
   const [editCaption, setEditCaption] = useState(post.caption);
   const [editFile, setEditFile] = useState<File | null>(null);
@@ -1580,7 +1775,7 @@ function PostDetail({
       <div className="flex flex-col gap-2.5">
         <div className="flex flex-wrap items-center gap-2.5">
           <span className="rounded-full px-2.5 py-1 text-xs font-semibold" style={{ background: mark.bg, color: mark.fg }}>{mark.label}</span>
-          <span className="rounded-full bg-[#F3E6E3] px-2.5 py-1 text-xs font-semibold text-ink">{post.source}</span>
+          {identity ? <span className="rounded-full bg-[#F3E6E3] px-2.5 py-1 text-xs font-semibold text-ink">{identity}</span> : null}
           {post.sent ? <span className="text-[13px] text-brown">Sent {post.sent}</span> : null}
         </div>
         <h2 className="text-2xl font-medium tracking-tight">{post.title}</h2>
@@ -1759,10 +1954,10 @@ function PostDetail({
         <section className="flex flex-col gap-3 rounded-[18px] bg-background p-5">
           <h3 className="text-[17px] font-semibold">We’re checking the link you added</h3>
           <p className="text-sm leading-relaxed text-[#4A3A37]">{guide.pending}</p>
-          {post.format === "tiktok" ? (
+          {awaitsManualLinkCheck(post.format) ? (
             <form action={submitLiveLinkAction} onSubmit={onLinkSubmit} className="flex flex-col gap-2.5">
               <input type="hidden" name="id" value={post.id} />
-              <label htmlFor="tiktok-link" className="text-sm font-medium">Paste a different TikTok link</label>
+              <label htmlFor="tiktok-link" className="text-sm font-medium">Paste a different link</label>
               <div className="flex flex-wrap gap-2.5">
                 <input id="tiktok-link" name="postUrl" type="url" inputMode="url" required defaultValue={post.postUrl ?? ""} placeholder={guide.placeholder} onChange={() => setLinkError("")} className={`h-11 min-w-0 flex-1 rounded-full border bg-white px-[18px] text-sm ${linkError ? "border-[#9B2C1F]" : "border-[#CDBDBA]"}`} />
                 <button type="submit" className="inline-flex h-11 items-center rounded-full bg-ink px-[22px] text-sm font-medium text-white">Update link</button>
