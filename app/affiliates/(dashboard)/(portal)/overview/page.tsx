@@ -6,7 +6,7 @@ import { affiliateCampaignBoard } from "@/lib/affiliate/affiliate-campaigns";
 import { loadAffiliateAgreements, type AffiliateAgreement } from "@/lib/affiliate/agreements";
 import { agreementMonthEarning, agreementForMonth, agreementPostMonth, type AgreementMonthEarning } from "@/lib/affiliate/agreement-earnings";
 import { loadAgreementPayoutsForCode, type AgreementPayoutRow } from "@/lib/affiliate/agreement-payouts";
-import { agreementPostTotal, type AgreementPostCount } from "@/lib/affiliate/agreement-partnership";
+import { agreementPostTotal } from "@/lib/affiliate/agreement-partnership";
 import { LAB_COMMISSIONS_ENABLED } from "@/lib/affiliate/code";
 import { deliverableLines, loadDeliverablePayments, marketingTotals } from "@/lib/affiliate/deliverable-payments";
 import { disclosureAcknowledged } from "@/lib/affiliate/disclosures";
@@ -14,13 +14,14 @@ import { formatCents, formatPublishDate, publishDateValue } from "@/lib/affiliat
 import { affiliateTrackingLink } from "@/lib/affiliate/link";
 import { eventPeriod, socialMonthCents } from "@/lib/affiliate/payment-rates";
 import { currentPayoutPeriod, formatPayoutMonth, loadPayoutRecords, type PayoutRecord } from "@/lib/affiliate/payouts";
+import { agreementSlotRows, agreementSlotState, mixSentence, placedSlotNumber, postIdentity, postPlaceLabel, postTypeLabel, type AgreementBoardPost } from "@/lib/affiliate/post-agreement";
 import { contentStatusLabel, loadContentSubmissions, publicationStatusLabel, type ContentSubmission } from "@/lib/affiliate/post-review";
-import { remainingSalesCents } from "@/lib/affiliate/refunds";
+import { earnsLabCommission, remainingSalesCents } from "@/lib/affiliate/refunds";
 import { memo } from "@/lib/affiliate/memo";
 import { loadMarketingCampaignRecords } from "@/lib/affiliate/roi-store";
 import { AffiliateStoreError, loadAffiliateActivity, loadUncommissionedPendingOrders, type ConversionSummary } from "@/lib/affiliate/store";
 import { listPromoCodes, personalPromoForAffiliate } from "@/lib/genhealth/promocodes";
-import { currentAffiliate } from "../../current";
+import { currentAffiliate } from "../../../current";
 
 export const metadata: Metadata = {
   title: "Overview",
@@ -29,12 +30,12 @@ export const metadata: Metadata = {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type Range = "this" | "last" | "custom";
+type Range = "this" | "last" | "90";
 
 const ranges: { id: Range; label: string }[] = [
   { id: "this", label: "This month" },
   { id: "last", label: "Last month" },
-  { id: "custom", label: "Custom" },
+  { id: "90", label: "Last 90 days" },
 ];
 
 const focusRing = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
@@ -42,7 +43,7 @@ const inkButton = `inline-flex h-[46px] items-center justify-center rounded-full
 const quietButton = `inline-flex h-[46px] items-center justify-center rounded-full border border-[#CDBDBA] bg-white px-5 text-[15px] font-medium text-ink hover:bg-[#F7F3F2] ${focusRing}`;
 
 function rangeOf(value: string | undefined): Range {
-  if (value === "last" || value === "custom") return value;
+  if (value === "last" || value === "90") return value;
   return "this";
 }
 
@@ -69,17 +70,31 @@ function monthEnd(period: string) {
   return Date.UTC(year, month, 1);
 }
 
-function overviewWindow(range: Range, currentPeriod: string) {
-  const now = Date.now();
+function utcMidnight(now: number) {
+  const date = new Date(now);
+  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+}
+
+function overviewWindow(range: Range, currentPeriod: string, now = Date.now()) {
+  if (range === "90") {
+    const day = 86_400_000;
+    const windowStart = utcMidnight(now) - 89 * day;
+    return {
+      windowStart,
+      windowEnd: now + 1,
+      previousStart: windowStart - 90 * day,
+      previousEnd: windowStart,
+      versus: "vs. previous 90 days",
+    };
+  }
   const selectedPeriod = range === "last" ? shiftMonth(currentPeriod, -1) : currentPeriod;
-  const customStart = monthStart(shiftMonth(currentPeriod, -2));
   const previousPeriod = shiftMonth(selectedPeriod, -1);
   return {
-    selectedPeriod,
-    windowStart: range === "custom" ? customStart : monthStart(selectedPeriod),
+    windowStart: monthStart(selectedPeriod),
     windowEnd: range === "last" ? monthEnd(selectedPeriod) : now + 1,
-    previousStart: range === "custom" ? customStart : monthStart(previousPeriod),
-    previousEnd: range === "custom" ? customStart : monthEnd(previousPeriod),
+    previousStart: monthStart(previousPeriod),
+    previousEnd: monthEnd(previousPeriod),
+    versus: "vs. last month",
   };
 }
 
@@ -111,18 +126,18 @@ function countLabel(value: number) {
   return value.toLocaleString("en-US");
 }
 
-function changeChip(current: number, previous: number, custom: boolean) {
-  if (custom) return { text: "Custom range", className: "bg-[#EFEAE9] text-[#4A3A37]" };
+function changeChip(current: number, previous: number, versus: string) {
   if (previous <= 0) {
-    if (current <= 0) return { text: "0% vs. last month", className: "bg-[#EFEAE9] text-[#4A3A37]" };
-    return { text: "New vs. last month", className: "bg-[#DDF0E4] text-[#1D6340]" };
+    if (current <= 0) return { text: `0% ${versus}`, className: "bg-[#EFEAE9] text-[#4A3A37]", note: false };
+    return { text: `New ${versus}`, className: "bg-[#DDF0E4] text-[#1D6340]", note: false };
   }
   const percent = ((current - previous) / previous) * 100;
   const rounded = Math.round(Math.abs(percent) * 10) / 10;
   const up = percent >= 0;
   return {
-    text: `${up ? "▲" : "▼"} ${rounded}% vs. last month`,
+    text: `${up ? "▲" : "▼"} ${rounded}% ${versus}`,
     className: up ? "bg-[#DDF0E4] text-[#1D6340]" : "bg-[#FBE3DF] text-[#9B2C1F]",
+    note: false,
   };
 }
 
@@ -134,28 +149,45 @@ function engagementsOf(post: ContentSubmission) {
   return [post.likes, post.comments, post.shares, post.saves].reduce<number>((sum, value) => sum + (value ?? 0), 0);
 }
 
-function plural(name: string, count: number) {
-  const word = name.toLowerCase();
-  if (count === 1) return word;
-  if (word.endsWith("y") && !/[aeiou]y$/.test(word)) return `${word.slice(0, -1)}ies`;
-  if (word.endsWith("s")) return word;
-  return `${word}s`;
+function pipColor(label: string) {
+  if (label === "Verified") return "#1D6340";
+  if (label === "Ready to publish") return "#33130F";
+  if (label === "In review") return "#E9C98A";
+  return "#E8DEDC";
 }
 
-function mixLine(posts: readonly AgreementPostCount[]) {
-  const used = posts.filter((post) => post.count > 0);
-  const total = agreementPostTotal(used);
-  if (!total) return "";
-  const platforms = [...new Set(used.map((post) => post.platform))];
-  const kinds = used.map((post) => `${post.count} ${plural(post.type, post.count)}`);
-  const place = platforms.length === 1 ? platforms[0] : platforms.join(", ");
-  return `${total} ${total === 1 ? "post" : "posts"} on ${place} · ${kinds.join(", ")}`;
+function overviewBoard(posts: ContentSubmission[]): AgreementBoardPost[] {
+  return posts.map((post) => ({
+    id: post.id,
+    agreementId: post.agreementId,
+    contentStatus: post.contentStatus,
+    offerId: post.offerId,
+    publicationStatus: post.publicationStatus,
+    publishedAt: post.publishedAt,
+    submittedAt: post.submittedAt,
+    postingMonth: post.postingMonth,
+    reviewNote: post.reviewNote,
+    title: "",
+    agreementSlot: post.agreementSlot,
+  }));
 }
 
-function pipState(index: number, verified: number, review: number) {
-  if (index < verified) return { color: "#1D6340", label: "Verified" };
-  if (index < verified + review) return { color: "#E9C98A", label: "In review" };
-  return { color: "#E8DEDC", label: "Not posted" };
+function recentKind(post: ContentSubmission, rows: AgreementBoardPost[], agreements: readonly AffiliateAgreement[]) {
+  const owner = agreements.find((item) => item.id === post.agreementId);
+  const total = owner ? agreementPostTotal(owner.posts) : 0;
+  const slot = placedSlotNumber(rows, post.agreementId, agreementPostMonth(post), total, post.id);
+  const place = postPlaceLabel(
+    { offerId: post.offerId, agreementId: post.agreementId, agreementSlot: post.agreementSlot },
+    slot,
+    post.offerId ? "Marketing offer" : "",
+  );
+  const type = postTypeLabel({
+    agreementPlatform: post.agreementPlatform,
+    agreementPostType: post.agreementPostType,
+    format: post.format,
+    fileCount: post.files.length || (post.filePath ? 1 : 0),
+  });
+  return postIdentity(place, type) || post.campaign || "post";
 }
 
 function paymentLine(earning: AgreementMonthEarning, left: number, socialCents: number) {
@@ -195,7 +227,7 @@ export default async function AffiliatePortalOverviewPage({
 
   const range = rangeOf((await searchParams).range);
   const currentPeriod = currentPayoutPeriod();
-  const { selectedPeriod, windowStart, windowEnd, previousStart, previousEnd } = overviewWindow(range, currentPeriod);
+  const { windowStart, windowEnd, previousStart, previousEnd, versus } = overviewWindow(range, currentPeriod);
 
   let conversions: ConversionSummary[] = [];
   let clickTimes: string[] = [];
@@ -221,7 +253,7 @@ export default async function AffiliatePortalOverviewPage({
     agreements = loadedAgreements;
     agreementPayouts = loadedAgreementPayouts;
     ownPosts = posts.filter((post) => post.code === affiliate.code);
-    const socialMonth = socialMonthCents({ period: selectedPeriod, posts: ownPosts, payments });
+    const socialMonth = socialMonthCents({ period: currentPeriod, posts: ownPosts, payments });
     socialPerformanceCents = socialMonth.socialCents + socialMonth.adjustmentCents;
     const lines = deliverableLines({
       affiliates: [{ code: affiliate.code, name: affiliate.name }],
@@ -287,8 +319,11 @@ export default async function AffiliatePortalOverviewPage({
     acknowledged = false;
   }
 
-  const paidIn = (start: number, end: number) =>
-    conversions.filter((conversion) => !conversion.dryRun && inWindow(conversion.createdAt, start, end) && remainingSalesCents(conversion.amountCents, conversion.refundedAmountCents) > 0).length;
+  const countedIn = (start: number, end: number, commissioned: boolean) =>
+    conversions.filter((conversion) => {
+      if (conversion.dryRun || !inWindow(conversion.createdAt, start, end) || remainingSalesCents(conversion.amountCents, conversion.refundedAmountCents) <= 0) return false;
+      return earnsLabCommission(conversion) === commissioned;
+    }).length;
   const clicksIn = (start: number, end: number) => clickTimes.filter((createdAt) => inWindow(createdAt, start, end)).length;
   const postsIn = (start: number, end: number) =>
     ownPosts.filter((post) => post.contentStatus !== "withdrawn" && post.contentStatus !== "rejected" && post.contentStatus !== "draft" && inWindow(postStamp(post), start, end));
@@ -298,17 +333,18 @@ export default async function AffiliatePortalOverviewPage({
   const views = viewsIn(windowStart, windowEnd);
   const engagements = engagementsIn(windowStart, windowEnd);
   const clicks = clicksIn(windowStart, windowEnd);
-  const paidOrders = paidIn(windowStart, windowEnd);
-  const custom = range === "custom";
+  const labOrders = countedIn(windowStart, windowEnd, true);
+  const plainOrders = countedIn(windowStart, windowEnd, false);
   const performance = [
-    { key: "Total views", value: countLabel(views), chip: changeChip(views, viewsIn(previousStart, previousEnd), custom) },
-    { key: "Total engagements", value: countLabel(engagements), chip: changeChip(engagements, engagementsIn(previousStart, previousEnd), custom) },
-    { key: "Verified link clicks", value: countLabel(clicks), chip: changeChip(clicks, clicksIn(previousStart, previousEnd), custom) },
-    { key: "Paid orders", value: String(paidOrders), chip: { text: "From your link or code", className: "bg-[#DDF0E4] text-[#1D6340]" } },
-    { key: "Unpaid orders", value: String(unpaidOrders), chip: { text: "Not paid yet · no commission", className: "bg-[#FBEFD6] text-[#7A4E00]" } },
+    { key: "Views", value: countLabel(views), chip: changeChip(views, viewsIn(previousStart, previousEnd), versus) },
+    { key: "Engagements", value: countLabel(engagements), chip: changeChip(engagements, engagementsIn(previousStart, previousEnd), versus) },
+    { key: "Verified link clicks", value: countLabel(clicks), chip: changeChip(clicks, clicksIn(previousStart, previousEnd), versus) },
+    { key: "Lab orders", value: String(labOrders), chip: changeChip(labOrders, countedIn(previousStart, previousEnd, true), versus) },
+    { key: "Orders without commission", value: String(plainOrders), chip: changeChip(plainOrders, countedIn(previousStart, previousEnd, false), versus) },
+    { key: "Checkouts not finished", value: String(unpaidOrders), allTime: true, chip: { text: "Started checkout. Not a promo use, and no commission.", className: "bg-[#FBEFD6] text-[#7A4E00]", note: true } },
   ];
 
-  const agreement = agreementForMonth(agreements, affiliate.code, selectedPeriod);
+  const agreement = agreementForMonth(agreements, affiliate.code, currentPeriod);
   const waiting = agreement
     ? null
     : agreements
@@ -319,24 +355,26 @@ export default async function AffiliatePortalOverviewPage({
     agreements,
     posts: ownPosts,
     code: affiliate.code,
-    period: selectedPeriod,
-    snapshot: agreementPayouts.find((row) => row.period === selectedPeriod) ?? null,
+    period: currentPeriod,
+    snapshot: agreementPayouts.find((row) => row.period === currentPeriod) ?? null,
   });
   const monthPosts = agreement
-    ? ownPosts.filter((post) => post.agreementId === agreement.id && agreementPostMonth(post) === selectedPeriod && post.contentStatus !== "rejected" && post.contentStatus !== "withdrawn" && post.contentStatus !== "draft")
+    ? ownPosts.filter((post) => post.agreementId === agreement.id && agreementPostMonth(post) === currentPeriod && post.contentStatus !== "rejected" && post.contentStatus !== "withdrawn" && post.contentStatus !== "draft")
     : [];
   const verified = monthPosts.filter((post) => post.publicationStatus === "tracking_active").length;
-  const review = monthPosts.filter((post) => post.publicationStatus !== "tracking_active").length;
   const required = agreement ? agreementPostTotal(agreement.posts) : 0;
   const shownVerified = Math.min(verified, required);
-  const shownReview = Math.min(review, Math.max(0, required - shownVerified));
   const left = Math.max(0, required - shownVerified);
-  const pips = Array.from({ length: required }, (_, index) => pipState(index, shownVerified, shownReview));
+  const slotRows = agreement ? agreementSlotRows(overviewBoard(ownPosts), agreement.id, currentPeriod, required) : [];
+  const pips = slotRows.map((row) => {
+    const label = agreementSlotState(row.post);
+    return { number: row.number, label, color: pipColor(label) };
+  });
   const negotiating = Boolean(waiting && waiting.questions.length > 0);
   const payState = waiting
     ? { text: "Not active until you accept", className: "bg-[#FBF6EC] text-[#7A4E00]" }
     : paymentLine(earning, left, socialPerformanceCents);
-  const agreementTitle = shownAgreement?.title?.trim() || (agreement ? `${formatPayoutMonth(selectedPeriod)} content partnership` : waiting ? "Agreement to review" : "No active agreement");
+  const agreementTitle = shownAgreement?.title?.trim() || (agreement ? `${formatPayoutMonth(currentPeriod)} content partnership` : waiting ? "Agreement to review" : "No active agreement");
   const agreementStart = shownAgreement?.effectiveOn ?? "";
   const agreementFinish = shownAgreement?.expiresOn ?? "";
   const agreementDates = agreementStart && agreementFinish ? `${shortDate(agreementStart)} – ${formatPublishDate(agreementFinish)}` : "";
@@ -344,7 +382,7 @@ export default async function AffiliatePortalOverviewPage({
   const statusLabel = agreement && agreementEnd ? `Active until ${agreementEnd}` : waiting ? (negotiating ? "Still negotiating" : "Waiting for you to accept") : "No accepted agreement";
   const statusNote = waiting ? "This stays here until you accept it. Posts don’t count toward it yet." : "An accepted agreement is what lets posts count toward the monthly rate.";
   const rate = shownAgreement?.monthlyCents ? formatCents(shownAgreement.monthlyCents) : "";
-  const mix = shownAgreement ? mixLine(shownAgreement.posts) : "";
+  const mix = shownAgreement ? mixSentence(shownAgreement.posts) : "";
   const trackingLink = affiliateTrackingLink(affiliate.code);
   const trackingText = trackingLink.replace(/^https?:\/\//, "");
   const first = affiliate.name.trim().split(/\s+/)[0] || affiliate.name;
@@ -365,7 +403,7 @@ export default async function AffiliatePortalOverviewPage({
           <h2 className="text-[32px] font-medium leading-tight">Welcome back, {first}</h2>
           <p className="mt-1.5 text-[15px] text-[#4A3A37]">Your posting requirements, marketing results and payments at a glance.</p>
         </div>
-        <div className="flex flex-col items-start gap-1.5 sm:items-end">
+        <div className="flex flex-col items-start gap-2 sm:items-end">
           <div className="flex flex-wrap gap-2" role="group" aria-label="Date range">
             {ranges.map((item) => {
               const selected = range === item.id;
@@ -381,7 +419,7 @@ export default async function AffiliatePortalOverviewPage({
               );
             })}
           </div>
-          <span className="text-[13px] text-[#6B5A57]">{windowText}</span>
+          <p className="text-sm text-[#4A3A37]">Performance for {windowText}</p>
         </div>
       </div>
 
@@ -404,12 +442,14 @@ export default async function AffiliatePortalOverviewPage({
           <h3 id="performance-title" className="flex-1 text-lg font-semibold">Performance</h3>
           <Link href="/affiliates/stats" className="text-sm text-ink">View stats →</Link>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <p className="text-[13px] text-[#6B5A57]">{windowText}</p>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {performance.map((item) => (
             <div key={item.key} className="flex flex-col gap-1 rounded-2xl border border-[#E8DEDC] px-[18px] py-4">
               <span className="text-sm text-[#4A3A37]">{item.key}</span>
+              {"allTime" in item ? <span className="text-[13px] text-[#6B5A57]">All time</span> : null}
               <span className="text-[30px] font-medium leading-none">{item.value}</span>
-              <span className={`mt-1 self-start rounded-full px-2 py-0.5 text-[13px] font-semibold ${item.chip.className}`}>{item.chip.text}</span>
+              <span className={item.chip.note ? `mt-1 self-stretch rounded-xl px-2.5 py-1.5 text-left text-[13px] font-medium leading-snug ${item.chip.className}` : `mt-1 self-start rounded-full px-2 py-0.5 text-[13px] font-semibold ${item.chip.className}`}>{item.chip.text}</span>
             </div>
           ))}
         </div>
@@ -431,7 +471,7 @@ export default async function AffiliatePortalOverviewPage({
             ) : (
               <p className="text-sm text-[#4A3A37]">Accept the sponsorship agreement on the referral link page before sharing your tracking link.</p>
             )}
-            <span className="text-[13px] text-[#4A3A37]">Put it in every caption. A link in your bio doesn’t count.</span>
+            <span className="text-[13px] text-[#4A3A37]">Optional in the caption. Tag @myleaderhealth in every caption so the post can track. A link in your bio doesn’t count.</span>
           </div>
           <div className="flex flex-col gap-2.5 rounded-[18px] bg-[#F7F3F2] px-[18px] py-4">
             <span className="text-sm text-[#4A3A37]">Promo code</span>
@@ -459,7 +499,10 @@ export default async function AffiliatePortalOverviewPage({
         <section aria-labelledby="agreement-title" className="flex flex-col gap-[18px] rounded-[24px] border-2 border-ink bg-white px-6 py-[22px]">
           <div className="flex flex-wrap items-start gap-3">
             <div className="min-w-0 flex-1 basis-[220px]">
-              <span className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[#6B5A57]">My agreement</span>
+              <span className="flex flex-wrap items-center gap-2">
+                <span className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[#6B5A57]">My agreement</span>
+                <span className="rounded-full bg-[#F7F3F2] px-2.5 py-0.5 text-[13px] font-semibold normal-case tracking-normal text-[#4A3A37]">This month</span>
+              </span>
               <h3 id="agreement-title" className="mt-1 text-[22px] font-semibold leading-tight">{agreementTitle}</h3>
               {agreementDates ? <span className="mt-1 block text-sm text-[#4A3A37]">{agreementDates}</span> : <span className="mt-1 block text-sm text-[#4A3A37]">{statusNote}</span>}
             </div>
@@ -477,11 +520,11 @@ export default async function AffiliatePortalOverviewPage({
                 <span className="text-[17px] font-semibold">{shownVerified} of {required} posts verified</span>
                 <span className="text-[15px] text-[#4A3A37]">{left ? `${left} ${left === 1 ? "post" : "posts"} left this month` : "All done for this month"}</span>
               </div>
-              <div role="img" aria-label={`${shownVerified} of ${required} posts verified`} className="grid gap-2" style={{ gridTemplateColumns: `repeat(${required}, minmax(0, 1fr))` }}>
-                {pips.map((pip, index) => (
-                  <div key={`${pip.label}-${index}`} className="flex flex-col gap-1.5">
+              <div role="img" aria-label={`${shownVerified} of ${required} posts verified`} className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.max(pips.length, 1)}, minmax(0, 1fr))` }}>
+                {pips.map((pip) => (
+                  <div key={pip.number} className="flex flex-col gap-1.5">
                     <span className="h-3.5 rounded-[7px]" style={{ background: pip.color }} />
-                    <span className="text-[13px] text-[#4A3A37]">Post {index + 1} · {pip.label}</span>
+                    <span className="text-[13px] text-[#4A3A37]">Post {pip.number} · {pip.label}</span>
                   </div>
                 ))}
               </div>
@@ -499,7 +542,7 @@ export default async function AffiliatePortalOverviewPage({
           </div>
           <span className="text-[13px] text-[#6B5A57]">Only verified posts count. Progress resets on the 1st of each month. Campaign posts don’t count toward this agreement.</span>
           <div className="flex flex-wrap gap-2.5">
-            <Link href={createHref} className={inkButton}>Create post</Link>
+            <Link href={createHref} className={inkButton}>{acknowledged ? "Create post" : "Accept agreement"}</Link>
             <Link href="/affiliates/contracts" className={quietButton}>View agreement</Link>
           </div>
         </section>
@@ -510,12 +553,12 @@ export default async function AffiliatePortalOverviewPage({
             <Link href="/affiliates/payouts" className="text-sm text-ink">View payouts →</Link>
           </div>
           <div className="flex flex-col gap-0.5 rounded-2xl bg-[#F7F3F2] px-4 py-3.5">
-            <span className="text-sm text-[#4A3A37]">Approved earnings</span>
+            <span className="text-sm text-[#4A3A37]">Approved, not sent</span>
             <span className="text-[26px] font-medium">{formatCents(marketing.approvedCents)}</span>
             <span className="text-[13px] text-[#6B5A57]">Waiting to be sent</span>
           </div>
           <div className="flex flex-col gap-0.5 rounded-2xl bg-[#F7F3F2] px-4 py-3.5">
-            <span className="text-sm text-[#4A3A37]">Pending payment</span>
+            <span className="text-sm text-[#4A3A37]">In review</span>
             <span className="text-[26px] font-medium">{formatCents(marketing.pendingCents + marketing.heldCents)}</span>
             <span className="text-[13px] text-[#6B5A57]">{marketing.heldCents > 0 ? `Earned, not approved yet · ${formatCents(marketing.heldCents)} on hold` : "Earned, not approved yet"}</span>
           </div>
@@ -540,7 +583,7 @@ export default async function AffiliatePortalOverviewPage({
             recentPosts.map((post) => {
               const status = postStatus(post);
               const when = publishDateValue(postStamp(post)?.slice(0, 10)) ? formatPublishDate(postStamp(post)!.slice(0, 10)) : "";
-              const kind = post.agreementId ? "agreement post" : post.campaign ? post.campaign : "post";
+              const kind = recentKind(post, overviewBoard(ownPosts), agreements);
               return (
                 <div key={post.id} className="flex flex-wrap items-center gap-3.5 border-t border-[#F0E8E6] py-3">
                   <span aria-hidden="true" className="size-11 shrink-0 rounded-[10px] bg-[linear-gradient(135deg,#E39A93,#8E3B46)]" />
@@ -560,7 +603,7 @@ export default async function AffiliatePortalOverviewPage({
 
         <section aria-labelledby="quick-actions-title" className="flex flex-col gap-2.5 rounded-[24px] bg-white px-6 py-[22px]">
           <h3 id="quick-actions-title" className="mb-1 text-lg font-semibold">Quick actions</h3>
-          <Link href={createHref} className={`${inkButton} h-[50px]`}>+ Create post</Link>
+          <Link href={createHref} className={`${inkButton} h-[50px]`}>{acknowledged ? "+ Create post" : "Accept agreement"}</Link>
           <Link href="/affiliates/contracts" className={`${quietButton} h-[50px]`}>View agreement</Link>
           <Link href="/affiliates/payouts" className={`${quietButton} h-[50px]`}>View payouts</Link>
         </section>

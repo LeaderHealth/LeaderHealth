@@ -63,6 +63,11 @@ function slideCaptionsFrom(formData: FormData, index: number) {
   return Array.from({ length: count }, (_, slide) => String(formData.get(`slideCaption${index}_${slide}`) ?? ""));
 }
 
+function agreementSlotFrom(value: FormDataEntryValue | null) {
+  const slot = Number(value);
+  return Number.isInteger(slot) && slot >= 1 && slot <= 20 ? slot : null;
+}
+
 function batchFrom(formData: FormData): BatchPostInput[] {
   const count = Number(formData.get("count"));
   if (!Number.isInteger(count) || count < 1 || count > POST_BATCH_LIMIT) throw new PostReviewError("invalid");
@@ -78,6 +83,9 @@ function batchFrom(formData: FormData): BatchPostInput[] {
       campaign: formData.has("campaign") ? String(formData.get("campaign") ?? "") : null,
       offerId: String(formData.get("offerId") ?? "").trim(),
       proposedPublishOn: formData.has("proposedPublishOn") ? String(formData.get("proposedPublishOn") ?? "") : null,
+      agreementSlot: agreementSlotFrom(formData.get("requirement")),
+      agreementPlatform: String(formData.get("agreementPlatform") ?? "").trim(),
+      agreementPostType: String(formData.get("agreementPostType") ?? "").trim(),
     };
   });
 }
@@ -100,16 +108,18 @@ export async function submitPostsAction(formData: FormData) {
   const affiliate = await currentAffiliate();
   if (!affiliate) redirect("/affiliates");
   let count = 0;
+  let sentId = "";
   try {
     const posts = batchFrom(formData);
     count = posts.length;
-    await submitContentBatch({
+    const ids = await submitContentBatch({
       code: affiliate.code,
       posts,
       termsAccepted: String(formData.get("terms") ?? "") === "yes",
       agreementId: String(formData.get("agreement") ?? ""),
       postingMonth: String(formData.get("postingMonth") ?? ""),
     });
+    sentId = ids[0] ?? "";
   } catch (error) {
     if (error instanceof PostReviewError) linkFail(error.code, formData);
     console.error("[affiliate] post batch failed", error instanceof Error ? error.message : "unknown");
@@ -122,7 +132,8 @@ export async function submitPostsAction(formData: FormData) {
     detail: count === 1 ? `${affiliate.name} sent a post for review.` : `${affiliate.name} sent ${count} posts for review.`,
   });
   refresh();
-  redirect(donePath(formData, "notice=post"));
+  const opened = sentId && String(formData.get("returnTo") ?? "") !== "campaigns" ? `&post=${encodeURIComponent(sentId)}` : "";
+  redirect(donePath(formData, `notice=post${opened}`));
 }
 
 export async function assignPostCampaignAction(formData: FormData) {

@@ -1,27 +1,28 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { acknowledgeDisclosureAction } from "../../compliance-actions";
+import { acknowledgeDisclosureAction } from "../../../compliance-actions";
 import { PostsHub, type HubPost } from "@/components/affiliate/PostsHub";
 import { disclosureAcknowledged } from "@/lib/affiliate/disclosures";
 import { deliverableDetail, deliverablePhase, deliverableStatusLabel, holdEndsAt } from "@/lib/affiliate/deliverable-flow";
 import { resolvedTrackingDays, viewPayCents } from "@/lib/affiliate/manual-checkpoint";
 import { loadDeliverablePayments, type DeliverablePayment } from "@/lib/affiliate/deliverable-payments";
-import { formatCents, formatPublishDate, formatWhen, viewPayTerms } from "@/lib/affiliate/format";
-import { standingViewRateCents } from "@/lib/affiliate/payment-rates";
+import { formatCents, formatPublishDate, formatWhen, viewPayFormula } from "@/lib/affiliate/format";
+import { rateFor, standingViewRateCents } from "@/lib/affiliate/payment-rates";
 import { loadPaymentRates } from "@/lib/affiliate/payment-store";
 import { affiliateTrackingLink } from "@/lib/affiliate/link";
-import { loadMarketingOffer, offerKindLabel } from "@/lib/affiliate/marketing-offers";
-import { formatForOfferKind, offerSlideBounds, postSourceLabel } from "@/lib/affiliate/offer-post";
+import { postSourceLabel } from "@/lib/affiliate/offer-post";
 import { DISCLOSURE_LINE, instagramCheckCopy, instagramLinkChecks, loadContentSubmissions, manualReportDue, metricLines, metricsOriginLabel, networkConnectedForPost, type ContentSubmission } from "@/lib/affiliate/post-review";
+import { formatPlatform } from "@/lib/affiliate/post-format";
 import { affiliateCanAttachCampaign } from "@/lib/affiliate/campaign-record";
 import { loadMarketingCampaignRecords } from "@/lib/affiliate/roi-store";
 import { instagramConfigured, tiktokConfigured } from "@/lib/affiliate/social-oauth";
 import { loadSocialAccounts, type SocialAccountView } from "@/lib/affiliate/social-store";
 import { loadAffiliateAgreements, utcAgreementToday } from "@/lib/affiliate/agreements";
-import { agreementPostMonth } from "@/lib/affiliate/agreement-earnings";
-import { postingAgreement, type PostingAgreement } from "@/lib/affiliate/post-agreement";
+import { agreementPostMonth, agreementMonthPeriods } from "@/lib/affiliate/agreement-earnings";
+import { presentAgreement } from "@/lib/affiliate/agreement-view";
+import { agreementBoardPeriod, agreementMonthBoard, postingAgreement, type AgreementBoardPost, type PostingAgreement } from "@/lib/affiliate/post-agreement";
 import { memo } from "@/lib/affiliate/memo";
-import { currentAffiliate } from "../../current";
+import { currentAffiliate } from "../../../current";
 
 export const metadata: Metadata = {
   title: "Posts",
@@ -37,6 +38,7 @@ const postErrors: Record<string, string> = {
   acknowledge: "Confirm the sponsorship disclosure before continuing.",
   invalid: "Add a caption and a picture or video.",
   disclosure: "Include “Paid partnership with Leader Health” in the caption.",
+  tag: "Tag @myleaderhealth in the caption. The post does not track without that tag.",
   link: "Put your tracking link in the caption. A link in your bio is not enough.",
   url: "Paste the link from the TikTok, Instagram post, or Instagram reel you published.",
   file: "Use a PNG, JPEG, or WebP image under 8 MB, or an MP4, MOV, or WebM video under 200 MB. A saved TikTok video is usually an MP4.",
@@ -51,6 +53,8 @@ const postErrors: Record<string, string> = {
   date: "Choose a proposed publishing date in the month these posts count toward.",
   agreement: "A signed agreement has to be on your account before you can send a post.",
   month: "Choose a full month of this agreement that still has room for these posts.",
+  requirement: "Choose an agreement post that still needs to be filled in.",
+  kind: "Choose a post type this agreement still has room for.",
 };
 
 const notices: Record<string, string> = {
@@ -100,8 +104,8 @@ function historyFor(post: ContentSubmission): HubPost["history"] {
   if (post.contentStatus === "rejected") events.push({ label: "Not approved", when: when(post.reviewedAt), note: post.reviewNote, tone: "bad" });
   if (post.contentStatus === "withdrawn") events.push({ label: "You withdrew it", when: when(post.reviewedAt), note: "", tone: "neutral" });
   if (post.contentStatus === "approved") events.push({ label: "Approved", when: when(post.reviewedAt), note: "", tone: "neutral" });
-  if (post.postUrl) events.push({ label: post.format === "tiktok" ? "You added the TikTok link" : post.format === "instagram_reel" ? "You added the reel link" : "You added the Instagram link", when: "", note: post.postUrl, tone: "neutral" });
-  if (post.publicationStatus === "tracking_active") events.push({ label: "Live. Disclosure and tracking link found", when: "", note: "", tone: "good" });
+  if (post.postUrl) events.push({ label: post.format === "instagram_reel" ? "You added the reel link" : `You added the ${formatPlatform(post.format) || "Instagram"} link`, when: "", note: post.postUrl, tone: "neutral" });
+  if (post.publicationStatus === "tracking_active") events.push({ label: "Live. @myleaderhealth found", when: "", note: "", tone: "good" });
   if (post.publicationStatus === "verification_failed") events.push({ label: "The Instagram check needs a fix", when: "", note: post.verificationNote, tone: "bad" });
   return events;
 }
@@ -139,7 +143,7 @@ function paymentCopy(post: ContentSubmission, payment: DeliverablePayment | unde
       : post.viewRateCents != null
         ? status === "pending" && calculated != null
           ? formatCents(calculated)
-          : viewPayTerms(post.viewRateCents, post.maxPayCents, resolvedTrackingDays(post.trackingDays))
+          : viewPayFormula(post.viewRateCents, post.maxPayCents, resolvedTrackingDays(post.trackingDays), post.engagementRateCents)
         : post.agreedFeeCents == null
           ? ""
           : formatCents(post.agreedFeeCents);
@@ -153,10 +157,18 @@ function paymentCopy(post: ContentSubmission, payment: DeliverablePayment | unde
 
 function hubPost(post: ContentSubmission, accounts: SocialAccountView[], payment: DeliverablePayment | undefined): HubPost {
   const copy = instagramCheckCopy(post.publicationStatus, post.verificationNote);
+  const platform = formatPlatform(post.format);
+  const detail = post.publicationStatus === "tracking_active" && platform && platform !== "Instagram"
+    ? `${platform} engagement for this post shows in Stats. It does not change commission or payouts.`
+    : copy.detail;
   const files = post.files.length ? post.files : post.filePath ? [{ path: post.filePath, contentType: post.contentType }] : [];
   const captions = captionsForSlides(post, files.length);
   const connected = networkConnectedForPost(post.format, accounts);
-  const connectHref = post.format === "tiktok" ? (tiktokConfigured() ? "/api/affiliate/social/tiktok/start" : null) : instagramConfigured() ? "/api/affiliate/social/instagram/start" : null;
+  const connectHref = post.format === "tiktok"
+    ? (tiktokConfigured() ? "/api/affiliate/social/tiktok/start" : null)
+    : post.format === "instagram_post" || post.format === "instagram_reel" || post.format == null
+      ? (instagramConfigured() ? "/api/affiliate/social/instagram/start" : null)
+      : null;
   return {
     id: post.id,
     title: titleOf(post.caption),
@@ -179,8 +191,8 @@ function hubPost(post: ContentSubmission, accounts: SocialAccountView[], payment
     })),
     checks: instagramLinkChecks(post.publicationStatus, post.verificationNote),
     headline: copy.headline,
-    detail: copy.detail,
-    metrics: post.publicationStatus === "tracking_active" ? metricLines(post, post.format === "tiktok" ? "Not available yet" : undefined) : [],
+    detail,
+    metrics: post.publicationStatus === "tracking_active" ? metricLines(post, platform && platform !== "Instagram" ? "Not available yet" : undefined) : [],
     metricsNote: metricsOriginLabel(post.metricsSource, post.metricsRecordedAt),
     counts: { views: post.views, likes: post.likes, comments: post.comments, shares: post.shares, saves: post.saves },
     hasManual: post.metricsSource === "manual",
@@ -201,6 +213,10 @@ function hubPost(post: ContentSubmission, accounts: SocialAccountView[], payment
     publishBy: post.publishBy ? formatPublishDate(post.publishBy) : "",
     proposedOn: post.proposedPublishOn ? formatPublishDate(post.proposedPublishOn) : "",
     postingMonth: agreementPostMonth(post),
+    agreementSlot: post.agreementSlot,
+    agreementId: post.agreementId,
+    agreementPlatform: post.agreementPlatform,
+    agreementPostType: post.agreementPostType,
     ...paymentCopy(post, payment),
     trackingDays: resolvedTrackingDays(post.trackingDays),
   };
@@ -209,7 +225,7 @@ function hubPost(post: ContentSubmission, accounts: SocialAccountView[], payment
 export default async function AffiliatePostsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; notice?: string; offer?: string; post?: string; compose?: string; campaign?: string }>;
+  searchParams: Promise<{ error?: string; notice?: string; post?: string; compose?: string; campaign?: string }>;
 }) {
   const affiliate = await currentAffiliate();
   if (!affiliate) redirect("/affiliates");
@@ -222,6 +238,15 @@ export default async function AffiliatePostsPage({
   let assignedCampaigns: string[] = [];
   let postsUnavailable = false;
   let posting: PostingAgreement | null = null;
+  let monthPosts: {
+    id: string;
+    monthName: string;
+    period: string;
+    noMonth: boolean;
+    slots: ReturnType<typeof agreementMonthBoard>;
+    guidelines: string;
+    pdfHref: string | null;
+  } | null = null;
   let agreementsUnavailable = false;
   let viewRate: Awaited<ReturnType<typeof loadPaymentRates>> | null = null;
   if (acknowledged) {
@@ -247,57 +272,17 @@ export default async function AffiliatePostsPage({
     }
     if (!agreements) agreementsUnavailable = true;
     else {
+      const today = utcAgreementToday();
       try {
-        posting = postingAgreement(agreements, utcAgreementToday(), posts);
+        posting = postingAgreement(agreements, today, posts);
+        monthPosts = monthPostList(agreements, posts, today);
       } catch {
         agreementsUnavailable = true;
       }
     }
   }
   const paymentByPost = new Map(payments.map((payment) => [payment.postId, payment]));
-  let offerComposer: {
-    id: string;
-    format: NonNullable<ReturnType<typeof formatForOfferKind>>;
-    kindLabel: string;
-    brief: string;
-    publishLabel: string;
-    feeCents: number;
-    maxPayCents: number | null;
-    trackingDays: number;
-    campaign: string;
-    draftId: string;
-    minSlides: number;
-    maxSlides: number;
-  } | null = null;
-  let focusPostId = query.post ?? "";
-  if (query.offer && acknowledged && !postsUnavailable) {
-    const linkedOffer = await loadMarketingOffer(query.offer).catch(() => null);
-    const openPost = posts.find((post) => post.offerId === linkedOffer?.id && post.contentStatus !== "withdrawn" && post.contentStatus !== "rejected" && post.contentStatus !== "draft");
-    const draft = posts.find((post) => post.offerId === linkedOffer?.id && post.contentStatus === "draft");
-    if (linkedOffer && linkedOffer.code === affiliate.code && linkedOffer.status === "accepted") {
-      if (openPost) focusPostId = openPost.id;
-      else {
-        const format = formatForOfferKind(linkedOffer.kind);
-        const bounds = offerSlideBounds(linkedOffer.kind);
-        if (format && bounds) {
-          offerComposer = {
-            id: linkedOffer.id,
-            format,
-            kindLabel: offerKindLabel(linkedOffer.kind),
-            brief: linkedOffer.brief,
-            publishLabel: formatPublishDate(linkedOffer.publishBy),
-            feeCents: linkedOffer.amountCents,
-            maxPayCents: linkedOffer.maxPayCents,
-            trackingDays: linkedOffer.trackingDays,
-            campaign: linkedOffer.campaign,
-            draftId: draft?.id ?? "",
-            minSlides: bounds.min,
-            maxSlides: bounds.max,
-          };
-        }
-      }
-    }
-  }
+  const focusPostId = query.post ?? "";
   const error = query.error ? (postErrors[query.error] ?? "") : "";
   const notice = notices[query.notice ?? ""] ?? "";
 
@@ -315,10 +300,10 @@ export default async function AffiliatePostsPage({
         <form action={acknowledgeDisclosureAction} className="mt-6">
           <input type="hidden" name="next" value="posts" />
           <h3 className="text-lg">Sponsorship agreement</h3>
-          <p className="mt-2 max-w-2xl text-sm text-brown">Put “Paid partnership with Leader Health” and your tracking link in the caption. A link in your bio is not enough.</p>
+          <p className="mt-2 max-w-2xl text-sm text-brown">Tag @myleaderhealth in the caption so the post can track. The sponsorship line and your tracking link are optional in the caption.</p>
           <label className="mt-4 flex items-start gap-3 text-sm text-ink">
             <input name="acknowledge" type="checkbox" required className="mt-1 size-4 accent-ink" />
-            <span>I will include a clear sponsorship disclosure on posts and videos I publish for Leader Health, and I will send each new post for review before I publish it, with my tracking link in the caption.</span>
+            <span>I will tag @myleaderhealth in the caption so the post can track, and I will send each new post for review before I publish it. The sponsorship line and my tracking link are optional in the caption.</span>
           </label>
           <button type="submit" className={`${buttonClass} mt-4`}>
             Acknowledge
@@ -329,6 +314,7 @@ export default async function AffiliatePostsPage({
       {acknowledged && postsUnavailable ? <p className="text-sm text-ink">Posts are unavailable right now.</p> : null}
       {acknowledged && !postsUnavailable ? (
         <PostsHub
+          key={query.compose === "1" ? "compose" : focusPostId || "hub"}
           posts={posts.map((post) => hubPost(post, accounts, paymentByPost.get(post.id)))}
           trackingUrl={affiliateTrackingLink(affiliate.code)}
           disclosureLine={DISCLOSURE_LINE}
@@ -339,15 +325,63 @@ export default async function AffiliatePostsPage({
           agreedFeeCents={standingViewRateCents(viewRate)}
           standingMaxPayCents={affiliate.deliverableMaxPayCents}
           standingTrackingDays={affiliate.deliverableTrackingDays}
+          standingEngagementRateCents={viewRate ? rateFor(viewRate, "engagements") : 0}
           campaigns={assignedCampaigns}
-          offer={offerComposer}
           focusPostId={focusPostId}
           startCompose={query.compose === "1"}
           startCampaign={query.campaign ?? ""}
           posting={posting}
           agreementsUnavailable={agreementsUnavailable}
+          agreementPosts={monthPosts ? { id: monthPosts.id, monthName: monthPosts.monthName, period: monthPosts.period, noMonth: monthPosts.noMonth, slots: monthPosts.slots } : null}
         />
       ) : null}
     </div>
   );
+}
+
+function monthPostList(agreements: Parameters<typeof presentAgreement>[0][], posts: ContentSubmission[], today: string) {
+  const active = agreements.map((agreement) => presentAgreement(agreement, today)).find((agreement) => agreement.phase === "active");
+  if (!active) return null;
+  const periods = agreementMonthPeriods(active.effectiveValue || null, active.expiresValue || null);
+  const period = agreementBoardPeriod(periods, today);
+  const name = monthLabel(period);
+  return {
+    id: active.id,
+    monthName: name,
+    period,
+    noMonth: !period,
+    slots: period
+      ? agreementMonthBoard({ agreementId: active.id, postTotal: active.postTotal, period, monthLabel: name, posts: boardPosts(posts) })
+      : [],
+    guidelines: active.guidelines,
+    pdfHref: active.file ? `/affiliates/agreement-file?agreement=${encodeURIComponent(active.id)}` : null,
+  };
+}
+
+function monthLabel(period: string) {
+  const [year, month] = period.split("-").map(Number);
+  if (!year || !month) return "This month";
+  return new Intl.DateTimeFormat("en-US", { month: "long", timeZone: "UTC" }).format(new Date(Date.UTC(year, month - 1, 1)));
+}
+
+function captionTitle(caption: string) {
+  const line = caption.split("\n").map((part) => part.trim()).find((part) => part && part.toLowerCase() !== "paid partnership with leader health" && !/^https?:\/\//i.test(part));
+  if (!line) return "";
+  return line.length > 80 ? `${line.slice(0, 77)}...` : line;
+}
+
+function boardPosts(posts: ContentSubmission[]): AgreementBoardPost[] {
+  return posts.map((post) => ({
+    id: post.id,
+    agreementId: post.agreementId,
+    contentStatus: post.contentStatus,
+    offerId: post.offerId,
+    publicationStatus: post.publicationStatus,
+    publishedAt: post.publishedAt,
+    submittedAt: post.submittedAt,
+    postingMonth: post.postingMonth,
+    reviewNote: post.reviewNote,
+    title: captionTitle(post.caption),
+    agreementSlot: post.agreementSlot,
+  }));
 }

@@ -6,7 +6,8 @@ import { submitLiveLinkAction, submitPostsAction } from "@/app/affiliates/post-a
 import type { AffiliateActiveCampaign, AffiliateCampaignInvite, AffiliateCampaignSlot, AffiliatePastCampaign } from "@/lib/affiliate/affiliate-campaigns";
 import type { CampaignPostState } from "@/lib/affiliate/campaign-list";
 import type { PostFormat } from "@/lib/affiliate/post-format";
-import { openPostingMonth, postingMonthOption, type PostingAgreement } from "@/lib/affiliate/post-agreement";
+import { liveLinkFor } from "@/lib/affiliate/post-format";
+import { agreementKindFormat, agreementSlotRows, kindUsedCount, openPostingMonth, postingMonthDateBounds, postingMonthOption, type PostingAgreement } from "@/lib/affiliate/post-agreement";
 
 const TONE: Record<CampaignPostState, string> = {
   todo: "bg-[#EFEAE9] text-[#4A3A37]",
@@ -24,15 +25,76 @@ const PAST: Record<AffiliatePastCampaign["tone"], string> = {
   declined: "bg-[#EFEAE9] text-[#4A3A37]",
 };
 
+export type CampaignFill = {
+  id: string;
+  agreementId: string;
+  contentStatus: string;
+  offerId: string;
+  publishedAt: string | null;
+  submittedAt: string | null;
+  postingMonth: string;
+  format: string | null;
+  fileCount: number;
+  agreementPlatform: string;
+  agreementPostType: string;
+  agreementSlot: number | null;
+};
+
+function kindTitle(platform: string, type: string) {
+  if (platform === "TikTok" && type === "Video") return "TikTok video";
+  if (platform === "Instagram" && type === "Reel") return "Instagram reel";
+  if (platform === "Instagram" && type === "Carousel") return "Instagram carousel";
+  if (platform === "Instagram" && type === "Image post") return "Instagram image";
+  return `${platform} ${type.toLowerCase()}`;
+}
+
+function openRequirements(posting: PostingAgreement | null, fills: CampaignFill[], period: string, editingId = "") {
+  if (!posting || !period) return [];
+  return agreementSlotRows(
+    fills.map((post) => ({ ...post, publicationStatus: null, reviewNote: "", title: "" })),
+    posting.id,
+    period,
+    posting.postTotal,
+  ).filter((row) => !row.post || row.post.id === editingId).map((row) => row.number);
+}
+
+function openKinds(posting: PostingAgreement | null, fills: CampaignFill[], period: string, editingId = "") {
+  if (!posting || !period) return [];
+  const skip = new Set(editingId ? [editingId] : []);
+  return posting.mix.flatMap((item) => {
+    const format = agreementKindFormat(item.platform, item.type);
+    if (!format) return [];
+    const left = Math.max(0, item.count - kindUsedCount(fills, posting.id, period, item.platform, item.type, skip));
+    if (left < 1) return [];
+    return [{ platform: item.platform, type: item.type, format, count: item.count, left, title: kindTitle(item.platform, item.type) }];
+  });
+}
+
+function linkPlaceholder(format: PostFormat | null) {
+  if (format === "tiktok") return "tiktok.com/@you/video/…";
+  if (format === "instagram_post") return "instagram.com/p/…";
+  if (format === "facebook_post" || format === "facebook_reel" || format === "facebook_video") return "facebook.com/… or fb.watch/…";
+  if (format === "youtube_short") return "youtube.com/shorts/…";
+  if (format === "youtube_video") return "youtube.com/watch?v=…";
+  return "instagram.com/reel/…";
+}
+
+function httpsLink(value: string) {
+  const trimmed = value.trim();
+  if (/^https:\/\//i.test(trimmed)) return trimmed;
+  if (/^http:\/\//i.test(trimmed)) return trimmed.replace(/^http:/i, "https:");
+  return `https://${trimmed.replace(/^\/\//, "")}`;
+}
+
 export function AffiliateCampaigns({
   invites,
   active,
   past,
   disclosure,
   trackingUrl,
-  terms,
   canSend,
   posting,
+  fills,
   toast,
   error,
 }: {
@@ -41,26 +103,40 @@ export function AffiliateCampaigns({
   past: AffiliatePastCampaign[];
   disclosure: string;
   trackingUrl: string;
-  terms: string;
   canSend: boolean;
   posting: PostingAgreement | null;
+  fills: CampaignFill[];
   toast: string;
   error: string;
 }) {
   const [declining, setDeclining] = useState("");
   const [open, setOpen] = useState("");
   const [caption, setCaption] = useState("");
-  const [format, setFormat] = useState<PostFormat | "">("");
+  const [month, setMonth] = useState("");
+  const [requirement, setRequirement] = useState<number | null>(null);
+  const [kind, setKind] = useState("");
+  const [editingId, setEditingId] = useState("");
   const [problem, setProblem] = useState("");
 
-  function openSlot(slot: AffiliateCampaignSlot, formats: { value: PostFormat }[]) {
+  function chooseMonth(period: string, editing = editingId) {
+    const numbers = openRequirements(posting, fills, period, editing);
+    const kinds = openKinds(posting, fills, period, editing);
+    setMonth(period);
+    setRequirement((current) => current != null && numbers.includes(current) ? current : numbers[0] ?? null);
+    setKind((current) => kinds.some((item) => `${item.platform}::${item.type}` === current) ? current : kinds[0] ? `${kinds[0].platform}::${kinds[0].type}` : "");
+  }
+
+  function openSlot(slot: AffiliateCampaignSlot) {
+    const period = openPostingMonth(posting?.months ?? [], new Date().toISOString().slice(0, 10));
     setOpen(slot.key);
     setCaption("");
-    setFormat(formats[0]?.value ?? "");
+    setEditingId(slot.postId);
+    chooseMonth(period, slot.postId);
     setProblem("");
   }
 
   const hasDisclosure = caption.toLowerCase().includes(disclosure.toLowerCase());
+  const hasTag = caption.toLowerCase().includes("@myleaderhealth");
   const hasLink = trackingUrl !== "" && caption.includes(trackingUrl);
 
   return (
@@ -97,7 +173,7 @@ export function AffiliateCampaigns({
             <div className="flex flex-col gap-1">
               <span className="text-sm font-semibold">Guidelines</span>
               <p className="text-[15px] leading-normal text-[#4A3A37]">{invite.guidelines || "No extra guidelines."}</p>
-              <p className="text-[13px] text-[#6B5A57]">Every caption needs “{disclosure}” and your tracking link.</p>
+              <p className="text-[13px] text-[#6B5A57]">Every caption needs @myleaderhealth so the post can track. “{disclosure}” and your tracking link are optional.</p>
             </div>
             {declining === invite.name ? (
               <div className="flex flex-wrap items-center gap-3 rounded-[14px] bg-[#FBF1EF] px-4 py-3.5">
@@ -148,6 +224,11 @@ export function AffiliateCampaigns({
             {campaign.posts.map((slot) => {
               const submitting = open === slot.key && slot.action === "submit";
               const linking = open === slot.key && slot.action === "link";
+              const numbers = openRequirements(posting, fills, month, editingId);
+              const kinds = openKinds(posting, fills, month, editingId);
+              const chosen = kinds.find((item) => `${item.platform}::${item.type}` === kind) ?? kinds[0] ?? null;
+              const dateBounds = posting && month ? postingMonthDateBounds(month, posting.startsOn, posting.endsOn) : null;
+              const carousel = chosen?.type === "Carousel";
               return (
                 <div key={slot.key} className="flex flex-col gap-2.5 border-t border-[#F0E8E6] pt-3">
                   <div className="flex flex-wrap items-center gap-3">
@@ -158,7 +239,7 @@ export function AffiliateCampaigns({
                     </span>
                     <span className={`whitespace-nowrap rounded-full px-3 py-1 text-[13px] font-semibold ${TONE[slot.tone]}`}>{slot.label}</span>
                     {slot.action && !submitting && !linking ? (
-                      <button type="button" onClick={() => openSlot(slot, campaign.formats)} className="inline-flex h-10 items-center rounded-full bg-ink px-[18px] text-sm font-medium text-white">{slot.actionLabel}</button>
+                      <button type="button" onClick={() => openSlot(slot)} className="inline-flex h-10 items-center rounded-full bg-ink px-[18px] text-sm font-medium text-white">{slot.actionLabel}</button>
                     ) : null}
                   </div>
                   {submitting ? (
@@ -166,15 +247,21 @@ export function AffiliateCampaigns({
                       action={submitPostsAction}
                       className="flex flex-col gap-3.5 rounded-2xl bg-[#F7F3F2] p-4"
                       onSubmit={(event) => {
-                        const file = (event.currentTarget.elements.namedItem("file0") as HTMLInputElement | null)?.files?.[0];
-                        if (!slot.hasFile && !file) {
+                        const input = event.currentTarget.elements.namedItem("file0") as HTMLInputElement | null;
+                        const uploaded = [...(input?.files ?? [])];
+                        if (!slot.hasFile && uploaded.length === 0) {
                           event.preventDefault();
                           setProblem("Upload your file first.");
                           return;
                         }
-                        if (!hasDisclosure || !hasLink) {
+                        if (carousel && uploaded.length < 2) {
                           event.preventDefault();
-                          setProblem("Add both required lines to the caption.");
+                          setProblem("A carousel needs at least two photos or videos.");
+                          return;
+                        }
+                        if (!hasTag) {
+                          event.preventDefault();
+                          setProblem("Tag @myleaderhealth in the caption so the post can track.");
                           return;
                         }
                         if (!posting) {
@@ -182,69 +269,88 @@ export function AffiliateCampaigns({
                           setProblem("A signed agreement has to be on your account before you can send a post.");
                           return;
                         }
-                        if (posting.months.length === 0) {
+                        if (!requirement || !chosen) {
                           event.preventDefault();
-                          setProblem("These dates don't include a full month, so posts can't be sent under this agreement.");
+                          setProblem(!requirement ? "Choose the agreement post you are filling in." : "Choose the type of post this agreement asks for.");
                           return;
                         }
-                        const selected = String(new FormData(event.currentTarget).get("postingMonth") ?? "");
-                        const monthSlot = posting.months.find((month) => month.period === selected);
-                        if (monthSlot && monthSlot.limit != null && monthSlot.used >= monthSlot.limit) {
+                        const date = String(new FormData(event.currentTarget).get("proposedPublishOn") ?? "");
+                        if (!date || (dateBounds && (date < dateBounds.min || date > dateBounds.max))) {
                           event.preventDefault();
-                          setProblem(`${monthSlot.label} already has its ${monthSlot.limit} posts. Choose another month.`);
+                          setProblem("Choose a proposed publishing date in that month.");
                           return;
                         }
-                        if (!canSend || !(event.currentTarget.elements.namedItem("terms") as HTMLInputElement | null)?.checked) {
+                        if (!canSend) {
                           event.preventDefault();
-                          setProblem(canSend ? "Accept the rate and payment terms before sending the post." : "The social rate is not set yet.");
+                          setProblem("The social rate is not set yet.");
+                          return;
                         }
+                        if (!carousel) return;
+                        event.preventDefault();
+                        const data = new FormData(event.currentTarget);
+                        data.delete("file0");
+                        data.set("slots0", String(uploaded.length));
+                        data.set("slideCount0", String(uploaded.length));
+                        uploaded.forEach((file, index) => {
+                          data.set(`file0_${index}`, file);
+                          data.set(`slideCaption0_${index}`, caption);
+                        });
+                        void submitPostsAction(data);
                       }}
                     >
                       <input type="hidden" name="returnTo" value="campaigns" />
                       <input type="hidden" name="count" value="1" />
                       <input type="hidden" name="campaign" value={campaign.name} />
                       {posting ? <input type="hidden" name="agreement" value={posting.id} /> : null}
+                      {canSend ? <input type="hidden" name="terms" value="yes" /> : null}
                       <input type="hidden" name="id0" value={slot.postId} />
-                      <input type="hidden" name="format0" value={format} />
+                      <input type="hidden" name="format0" value={chosen?.format ?? ""} />
+                      <input type="hidden" name="requirement" value={requirement ?? ""} />
+                      <input type="hidden" name="agreementPlatform" value={chosen?.platform ?? ""} />
+                      <input type="hidden" name="agreementPostType" value={chosen?.type ?? ""} />
                       <input type="hidden" name="caption0" value={caption} />
-                      {campaign.formats.length > 1 ? (
+                      {posting?.months.length ? (
                         <label className="flex flex-col gap-1.5 text-sm font-semibold">
-                          Format
-                          <select value={format} onChange={(event) => setFormat(event.target.value as PostFormat)} className="h-11 rounded-xl border border-[#CDBDBA] bg-white px-3 text-[15px] font-normal">
-                            {campaign.formats.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                          Month this post counts toward
+                          <select name="postingMonth" value={month} onChange={(event) => chooseMonth(event.target.value)} className="h-11 rounded-xl border border-[#CDBDBA] bg-white px-3 text-[15px] font-normal">
+                            {posting.months.map((item) => <option key={item.period} value={item.period}>{postingMonthOption(item)}</option>)}
                           </select>
                         </label>
                       ) : null}
+                      <label className="flex flex-col gap-1.5 text-sm font-semibold" htmlFor={`req-${slot.key}`}>
+                        Which post are you filling in?
+                        <select id={`req-${slot.key}`} value={requirement ?? ""} onChange={(event) => setRequirement(Number(event.target.value) || null)} className="h-11 rounded-xl border border-[#CDBDBA] bg-white px-3 text-[15px] font-normal">
+                          {numbers.length === 0 ? <option value="">No open posts this month</option> : numbers.map((number) => <option key={number} value={number}>Post {number}</option>)}
+                        </select>
+                      </label>
+                      <label className="flex flex-col gap-1.5 text-sm font-semibold" htmlFor={`kind-${slot.key}`}>
+                        What are you posting?
+                        <select id={`kind-${slot.key}`} value={chosen ? `${chosen.platform}::${chosen.type}` : ""} onChange={(event) => setKind(event.target.value)} className="h-11 rounded-xl border border-[#CDBDBA] bg-white px-3 text-[15px] font-normal">
+                          {kinds.length === 0 ? <option value="">No open types this month</option> : kinds.map((item) => <option key={`${item.platform}::${item.type}`} value={`${item.platform}::${item.type}`}>{item.title} · {item.left} of {item.count} left</option>)}
+                        </select>
+                      </label>
+                      <label className="flex flex-col gap-1.5 text-sm font-semibold" htmlFor={`date-${slot.key}`}>
+                        Proposed publishing date
+                        <input id={`date-${slot.key}`} name="proposedPublishOn" type="date" required min={dateBounds?.min} max={dateBounds?.max} className="h-11 rounded-xl border border-[#CDBDBA] bg-white px-3 text-[15px] font-normal" />
+                      </label>
                       <label className="flex flex-col gap-1.5 text-sm font-semibold" htmlFor={`up-${slot.key}`}>
-                        1. Upload your {campaign.formats.length === 1 ? campaign.formats[0]?.label.toLowerCase() : "file"}
-                        <input id={`up-${slot.key}`} name="file0" type="file" accept="image/*,video/*" onChange={() => setProblem("")} className="rounded-xl border border-[#CDBDBA] bg-white px-2.5 py-2.5 text-sm font-normal" />
+                        1. Upload your {chosen ? chosen.title.toLowerCase() : "file"}
+                        <input id={`up-${slot.key}`} name="file0" type="file" multiple={carousel} accept={chosen?.type === "Image post" ? "image/png,image/jpeg,image/webp" : chosen?.format === "instagram_post" || chosen?.format === "facebook_post" ? "image/*,video/*" : "video/*"} onChange={() => setProblem("")} className="rounded-xl border border-[#CDBDBA] bg-white px-2.5 py-2.5 text-sm font-normal" />
+                        {carousel ? <span className="text-sm font-normal text-[#6B5A57]">At least two. The first one is the cover.</span> : null}
                       </label>
                       <label className="flex flex-col gap-1.5 text-sm font-semibold" htmlFor={`cap-${slot.key}`}>
                         2. Caption
                         <textarea id={`cap-${slot.key}`} rows={4} value={caption} onChange={(event) => { setCaption(event.target.value); setProblem(""); }} className="resize-y rounded-xl border border-[#CDBDBA] bg-white px-3.5 py-2.5 text-[15px] font-normal leading-normal" />
                       </label>
                       <div className="flex flex-col gap-2">
-                        <span className="text-sm font-semibold">3. Check the required lines</span>
-                        <CheckLine ok={hasDisclosure} label={disclosure} onInsert={hasDisclosure ? undefined : () => setCaption((current) => `${current.trim() ? `${current.replace(/\s+$/, "")}\n\n` : ""}${disclosure}`)} />
-                        <CheckLine ok={hasLink} label={trackingUrl} mono onInsert={hasLink ? undefined : () => setCaption((current) => `${current.trim() ? `${current.replace(/\s+$/, "")}\n` : ""}${trackingUrl}`)} />
+                        <span className="text-sm font-semibold">3. Tag @myleaderhealth so the post can track</span>
+                        <CheckLine ok={hasTag} label="@myleaderhealth" onInsert={hasTag ? undefined : () => setCaption((current) => `${current.trim() ? `${current.replace(/\s+$/, "")}\n` : ""}@myleaderhealth`)} />
+                        <CheckLine ok={hasDisclosure} optional label={disclosure} onInsert={hasDisclosure ? undefined : () => setCaption((current) => `${current.trim() ? `${current.replace(/\s+$/, "")}\n\n` : ""}${disclosure}`)} />
+                        <CheckLine ok={hasLink} optional label={trackingUrl || "Your tracking link"} mono onInsert={!trackingUrl || hasLink ? undefined : () => setCaption((current) => `${current.trim() ? `${current.replace(/\s+$/, "")}\n` : ""}${trackingUrl}`)} />
                       </div>
                       {posting ? <p className="text-sm text-[#4A3A37]">Posting under your agreement: {posting.label}</p> : <p className="text-sm text-[#9B2C1F]">A signed agreement has to be on your account before you can send a post.</p>}
-                      {posting?.postTotal && posting.months.length > 1 ? <p className="text-sm text-[#4A3A37]">Each month of this agreement has its own {posting.postTotal} posts.</p> : null}
                       {posting && posting.months.length === 0 ? <p className="text-sm text-[#9B2C1F]">These dates don&apos;t include a full month, so posts can&apos;t be sent under this agreement.</p> : null}
-                      {posting?.months.length ? (
-                        <label className="flex flex-col gap-1.5 text-sm font-semibold">
-                          Month this post counts toward
-                          <select name="postingMonth" defaultValue={openPostingMonth(posting.months, new Date().toISOString().slice(0, 10))} className="h-11 rounded-xl border border-[#CDBDBA] bg-white px-3 text-[15px] font-normal">
-                            {posting.months.map((month) => <option key={month.period} value={month.period}>{postingMonthOption(month)}</option>)}
-                          </select>
-                        </label>
-                      ) : null}
-                      {canSend ? (
-                        <label className="flex items-start gap-2 text-sm">
-                          <input name="terms" type="checkbox" value="yes" className="mt-1 size-4 accent-ink" />
-                          <span>{terms}</span>
-                        </label>
-                      ) : <p className="text-sm text-[#9B2C1F]">The social rate is not set yet.</p>}
+                      {canSend ? null : <p className="text-sm text-[#9B2C1F]">The social rate is not set yet.</p>}
                       {problem ? <p role="alert" className="text-sm text-[#9B2C1F]">{problem}</p> : null}
                       <div className="flex flex-wrap gap-2.5">
                         <button type="submit" disabled={!canSend || !posting || posting.months.length === 0} className="inline-flex h-[46px] items-center rounded-full bg-ink px-[22px] text-[15px] font-medium text-white disabled:opacity-50">Submit for approval</button>
@@ -258,7 +364,7 @@ export function AffiliateCampaigns({
                       className="flex flex-col gap-2.5 rounded-2xl bg-[#F7F3F2] p-4"
                       onSubmit={(event) => {
                         const url = String(new FormData(event.currentTarget).get("postUrl") ?? "").trim();
-                        if (!/(instagram\.com|tiktok\.com)\//.test(url)) {
+                        if (!liveLinkFor(slot.format, httpsLink(url))) {
                           event.preventDefault();
                           setProblem("Paste the link to the live post.");
                         }
@@ -268,7 +374,7 @@ export function AffiliateCampaigns({
                       <input type="hidden" name="id" value={slot.postId} />
                       <label className="text-sm font-semibold" htmlFor={`url-${slot.key}`}>Paste the live post link</label>
                       <div className="flex flex-wrap gap-2.5">
-                        <input id={`url-${slot.key}`} name="postUrl" type="url" placeholder="instagram.com/reel/…" onChange={() => setProblem("")} className="h-[46px] min-w-[16rem] flex-1 rounded-xl border border-[#CDBDBA] bg-white px-3.5 text-[15px]" />
+                        <input id={`url-${slot.key}`} name="postUrl" type="url" placeholder={linkPlaceholder(slot.format)} onChange={() => setProblem("")} className="h-[46px] min-w-[16rem] flex-1 rounded-xl border border-[#CDBDBA] bg-white px-3.5 text-[15px]" />
                         <button type="submit" className="inline-flex h-[46px] items-center rounded-full bg-ink px-[22px] text-[15px] font-medium text-white">Submit link</button>
                       </div>
                       {problem ? <p role="alert" className="text-sm text-[#9B2C1F]">{problem}</p> : null}
@@ -308,11 +414,11 @@ function Fact({ label, value }: { label: string; value: string }) {
   );
 }
 
-function CheckLine({ ok, label, mono = false, onInsert }: { ok: boolean; label: string; mono?: boolean; onInsert?: () => void }) {
+function CheckLine({ ok, label, mono = false, optional = false, onInsert }: { ok: boolean; label: string; mono?: boolean; optional?: boolean; onInsert?: () => void }) {
   return (
     <div className="flex items-center gap-2.5 text-[15px]">
-      <span className={`grid size-[22px] place-items-center rounded-full text-[13px] font-bold ${ok ? "bg-[#DDF0E4] text-[#1D6340]" : "bg-[#FBE3DF] text-[#9B2C1F]"}`}>{ok ? "✓" : "!"}</span>
-      <span className={`min-w-0 flex-1 break-all ${mono ? "font-mono text-sm" : ""}`}>{label}</span>
+      <span className={`grid size-[22px] place-items-center rounded-full text-[13px] font-bold ${ok ? "bg-[#DDF0E4] text-[#1D6340]" : optional ? "bg-[#F7F3F2] text-[#6B5A57]" : "bg-[#FBE3DF] text-[#9B2C1F]"}`}>{ok ? "✓" : optional ? "–" : "!"}</span>
+      <span className={`min-w-0 flex-1 break-all ${mono ? "font-mono text-sm" : ""}`}>{label}{optional ? " · optional" : ""}</span>
       {onInsert ? <button type="button" onClick={onInsert} className="inline-flex h-[34px] items-center rounded-full border border-[#CDBDBA] bg-white px-3 text-[13px] text-ink">Insert</button> : null}
     </div>
   );

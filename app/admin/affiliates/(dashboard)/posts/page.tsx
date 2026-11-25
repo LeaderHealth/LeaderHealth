@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { PostReviewQueue, type ReviewCheck, type ReviewPost, type ReviewQueue, type ReviewSlide } from "@/components/affiliate/PostReviewQueue";
 import { formatPublishDate, formatWhen, publishDateValue } from "@/lib/affiliate/format";
-import { DISCLOSURE_LINE, loadContentSubmissions, treatmentClaims, type ContentSubmission } from "@/lib/affiliate/post-review";
+import { captionHasBrandTag, DISCLOSURE_LINE, loadContentSubmissions, treatmentClaims, type ContentSubmission } from "@/lib/affiliate/post-review";
 import { postSourceLabel } from "@/lib/affiliate/offer-post";
 import { textHasTrackingCode } from "@/lib/affiliate/social-match";
 import { memo } from "@/lib/affiliate/memo";
@@ -73,6 +73,7 @@ function slidesOf(post: ContentSubmission): ReviewSlide[] {
       caption,
       cover: index === 0 && files.length > 1,
       disclosure: caption.toLowerCase().includes(DISCLOSURE_LINE.toLowerCase()),
+      tagged: captionHasBrandTag(caption),
       tracking: textHasTrackingCode(caption, post.code),
       claims: treatmentClaims(caption),
     };
@@ -81,14 +82,18 @@ function slidesOf(post: ContentSubmission): ReviewSlide[] {
 
 function checksFor(slides: ReviewSlide[]): ReviewCheck[] {
   const disclosure = slides.find((slide) => slide.disclosure);
+  const tagged = slides.find((slide) => slide.tagged);
   const tracking = slides.find((slide) => slide.tracking);
   const checks: ReviewCheck[] = [
+    tagged
+      ? { tone: "pass", label: `@myleaderhealth in the caption · slide ${tagged.index}` }
+      : { tone: "warn", label: "Tag @myleaderhealth is missing. The post will not track." },
     disclosure
-      ? { tone: "pass", label: `Disclosure line · slide ${disclosure.index} caption` }
-      : { tone: "warn", label: "Disclosure line is missing" },
+      ? { tone: "pass", label: `Sponsorship line · slide ${disclosure.index} caption · optional` }
+      : { tone: "pass", label: "Sponsorship line is optional" },
     tracking
-      ? { tone: "pass", label: `Tracking link matches this affiliate · slide ${tracking.index} caption` }
-      : { tone: "warn", label: "Tracking link is missing" },
+      ? { tone: "pass", label: `Tracking link · slide ${tracking.index} caption · optional` }
+      : { tone: "pass", label: "Tracking link in the caption is optional" },
     { tone: "pass", label: `${slides.length} of 20 slides · formats supported` },
   ];
   for (const slide of slides) {

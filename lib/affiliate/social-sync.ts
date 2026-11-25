@@ -68,7 +68,6 @@ export async function syncAffiliateSocialReports(code: string) {
           accessToken: connection.accessToken,
           instagramAccountId: connection.accountId,
           instagramAccountName: connection.accountName,
-          graphHost: "instagram",
         }),
         accounts,
         failed,

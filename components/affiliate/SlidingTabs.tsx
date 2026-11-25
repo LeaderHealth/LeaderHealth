@@ -105,7 +105,7 @@ export function SlidingTabs({
 }: {
   label: string;
   items: SlidingTabItem[];
-  variant?: "pills" | "track" | "outline";
+  variant?: "pills" | "track" | "outline" | "segment";
 }) {
   const router = useRouter();
   const rootRef = useRef<HTMLElement>(null);
@@ -128,6 +128,8 @@ export function SlidingTabs({
     setTravel(item.id);
   }
   const ready = Object.keys(frames).length > 0;
+  const segment = variant === "segment";
+  const motion = segment ? "duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none" : ease;
   const prefetchKey = items.map((item) => (item.href && !item.disabled ? item.href : "")).join("|");
   useEffect(() => {
     for (const href of prefetchKey.split("|")) {
@@ -169,15 +171,17 @@ export function SlidingTabs({
       aria-label={label}
       role={items.some((item) => item.href) ? undefined : "tablist"}
       className={
-        variant === "track"
-          ? "relative flex w-fit max-w-full flex-wrap self-start rounded-full bg-white p-1.5 shadow-[0_1px_2px_rgba(51,19,15,0.06)]"
-          : "relative flex flex-wrap gap-2"
+        segment
+          ? "relative flex w-fit max-w-full gap-1 self-start rounded-full bg-[#F7F3F2] p-1"
+          : variant === "track"
+            ? "relative flex w-fit max-w-full flex-wrap self-start rounded-full bg-white p-1.5 shadow-[0_1px_2px_rgba(51,19,15,0.06)]"
+            : "relative flex flex-wrap gap-2"
       }
     >
       {activeBox ? (
         <span
           aria-hidden="true"
-          className={`pointer-events-none absolute top-0 left-0 rounded-full bg-ink transition-[transform,width,height] ${ease} ${variant === "track" ? "z-0" : "z-10"}`}
+          className={`pointer-events-none absolute top-0 left-0 rounded-full bg-ink transition-[transform,width,height] ${motion} ${variant === "track" || segment ? "z-0" : "z-10"}`}
           style={{ width: activeBox.w, height: activeBox.h, transform: `translate(${activeBox.x}px, ${activeBox.y}px)` }}
         />
       ) : null}
@@ -197,8 +201,8 @@ export function SlidingTabs({
                 : item.id === shownId
                   ? "bg-ink"
                   : "bg-transparent";
-        const className = `relative z-[1] inline-flex cursor-pointer items-center justify-center gap-2 rounded-full text-center font-medium whitespace-nowrap transition-colors ${ease} ${tabFocus} ${
-          variant === "track" ? "h-[46px] px-5 text-base" : variant === "outline" ? "h-9 border px-3.5 text-[13px]" : "min-h-11 px-4 text-sm"
+        const className = `relative z-[1] inline-flex cursor-pointer items-center justify-center gap-2 rounded-full text-center font-medium whitespace-nowrap transition-colors ${motion} ${tabFocus} ${
+          segment ? "h-9 px-3.5 text-sm" : variant === "track" ? "h-[46px] px-5 text-base" : variant === "outline" ? "h-9 border px-3.5 text-[13px]" : "min-h-11 px-4 text-sm"
         } ${background} ${
           item.disabled ? "cursor-not-allowed text-brown" : item.id === shownId ? "text-white" : "text-ink"
         }`;

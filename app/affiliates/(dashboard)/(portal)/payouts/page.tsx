@@ -18,7 +18,7 @@ import { loadContentSubmissions } from "@/lib/affiliate/post-review";
 import { adjustedCommissionCents, remainingSalesCents } from "@/lib/affiliate/refunds";
 import { AffiliateStoreError, loadAffiliateConversions, type ConversionSummary } from "@/lib/affiliate/store";
 import { utcDay } from "@/lib/affiliate/stats-board";
-import { currentAffiliate } from "../../current";
+import { currentAffiliate } from "../../../current";
 
 export const metadata: Metadata = {
   title: "Payouts",

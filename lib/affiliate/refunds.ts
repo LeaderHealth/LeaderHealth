@@ -30,6 +30,10 @@ export function adjustedCommissionCents(originalCommissionCents: number, commiss
   return Math.max(0, whole(originalCommissionCents) - whole(commissionRefundedCents));
 }
 
+export function earnsLabCommission(order: { orderKind: string; commissionCents: number; commissionRefundedCents?: number }) {
+  return order.orderKind === "lab" && adjustedCommissionCents(order.commissionCents, order.commissionRefundedCents ?? 0) > 0;
+}
+
 export function remainingSalesCents(amountCents: number | null, refundedAmountCents: number) {
   return Math.max(0, whole(amountCents ?? 0) - whole(refundedAmountCents));
 }

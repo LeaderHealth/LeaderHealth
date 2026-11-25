@@ -616,6 +616,7 @@ export function Header() {
 
   const onCheckout = pathname.startsWith("/checkout");
   const isProductPage = pathname.startsWith("/products/");
+  const onDashboard = pathname.startsWith("/affiliates") || pathname.startsWith("/admin/affiliates");
 
   const [mobile, setMobile] = useState(false);
   const [search, setSearch] = useState(false);
@@ -827,21 +828,25 @@ export function Header() {
         onClose={() => setMobile(false)}
       />
 
-      <div className="lh-tablet-cart-fab fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-[55]">
-        <CartButton
-          onOpen={() => setTabletPanel(null)}
-          className="h-14 w-14 border-0 bg-[#e33d4d] text-white shadow-[0_10px_28px_rgba(227,61,77,0.35)] hover:bg-[#c43240] [&_svg]:h-6 [&_svg]:w-6"
-        />
-      </div>
+      {onDashboard ? null : (
+        <>
+          <div className="lh-tablet-cart-fab fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-[55]">
+            <CartButton
+              onOpen={() => setTabletPanel(null)}
+              className="h-14 w-14 border-0 bg-[#e33d4d] text-white shadow-[0_10px_28px_rgba(227,61,77,0.35)] hover:bg-[#c43240] [&_svg]:h-6 [&_svg]:w-6"
+            />
+          </div>
 
-      <div
-        className={`fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-[55] hidden transition-[opacity,transform] duration-300 ease-out motion-reduce:transition-none min-[1200px]:block ${
-          navVisible || search ? "pointer-events-none translate-y-3 opacity-0" : "translate-y-0 opacity-100"
-        }`}
-        inert={navVisible || search ? true : undefined}
-      >
-        <CartButton className="h-14 w-14 border-0 bg-[#e33d4d] text-white shadow-[0_10px_28px_rgba(227,61,77,0.35)] hover:bg-[#c43240] [&_svg]:h-6 [&_svg]:w-6" />
-      </div>
+          <div
+            className={`fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-[55] hidden transition-[opacity,transform] duration-300 ease-out motion-reduce:transition-none min-[1200px]:block ${
+              navVisible || search ? "pointer-events-none translate-y-3 opacity-0" : "translate-y-0 opacity-100"
+            }`}
+            inert={navVisible || search ? true : undefined}
+          >
+            <CartButton className="h-14 w-14 border-0 bg-[#e33d4d] text-white shadow-[0_10px_28px_rgba(227,61,77,0.35)] hover:bg-[#c43240] [&_svg]:h-6 [&_svg]:w-6" />
+          </div>
+        </>
+      )}
 
       <header
         ref={headerRef}

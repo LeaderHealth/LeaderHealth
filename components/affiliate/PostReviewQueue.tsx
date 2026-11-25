@@ -14,6 +14,7 @@ export type ReviewSlide = {
   caption: string;
   cover: boolean;
   disclosure: boolean;
+  tagged: boolean;
   tracking: boolean;
   claims: string[];
 };
@@ -343,7 +344,7 @@ export function PostReviewQueue({ posts, initialId, notice, view }: { posts: Rev
                         <input type="hidden" name="id" value={selected.id} />
                         <input type="hidden" name="return" value={view === "all" ? "" : view} />
                         <input type="hidden" name="next" value={openNext ? nextId : ""} />
-                        <p className="text-[13px] leading-relaxed text-brown">Open the link and confirm the post is live with the sponsorship line and tracking link.</p>
+                        <p className="text-[13px] leading-relaxed text-brown">Open the link and confirm the caption tags @myleaderhealth. The post does not track without that tag. The sponsorship line and tracking link are optional.</p>
                         <button type="submit" className="inline-flex h-10 w-full items-center justify-center rounded-full bg-ink px-4 text-sm font-medium text-white">Mark as checked</button>
                       </form>
                     ) : null}
@@ -370,6 +371,7 @@ export function PostReviewQueue({ posts, initialId, notice, view }: { posts: Rev
                     <div className="mt-2 flex flex-wrap gap-2">
                       <button type="button" className="text-[13px] underline underline-offset-4" onClick={() => addReply(selected.suggestedNote || "Please remove the treatment claim. We can’t make treatment claims in affiliate posts.")}>Treatment claim</button>
                       <button type="button" className="text-[13px] underline underline-offset-4" onClick={() => addReply("Please add “Paid partnership with Leader Health” in the caption. A link in your bio is not enough.")}>Missing disclosure</button>
+                      <button type="button" className="text-[13px] underline underline-offset-4" onClick={() => addReply("Please tag @myleaderhealth in the caption. The post will not track without that tag.")}>Missing @myleaderhealth</button>
                       <button type="button" className="text-[13px] underline underline-offset-4" onClick={() => addReply("Please resend the video as an MP4, MOV, or WebM under 200 MB. A video saved from TikTok is fine when it is an MP4. Photos need to be under 8 MB.")}>Media quality</button>
                     </div>
                   </div>
@@ -474,6 +476,7 @@ function SlideCard({ slide, canDecide, onAdd }: { slide: ReviewSlide; canDecide:
           {slide.cover ? <span className="rounded-full bg-[#EFEAE9] px-2 py-0.5 text-[11px] text-[#4A3A37]">Cover</span> : null}
           {slide.video ? <span className="rounded-full bg-[#EFEAE9] px-2 py-0.5 text-[11px] text-[#4A3A37]">Video</span> : null}
           {slide.disclosure ? <span className="rounded-full bg-[#DDF0E4] px-2 py-0.5 text-[11px] font-medium text-[#1D6340]">Disclosure</span> : null}
+          {slide.tagged ? <span className="rounded-full bg-[#DDF0E4] px-2 py-0.5 text-[11px] font-medium text-[#1D6340]">@myleaderhealth</span> : null}
           {slide.tracking ? <span className="rounded-full bg-[#DDF0E4] px-2 py-0.5 text-[11px] font-medium text-[#1D6340]">Tracking link</span> : null}
           {slide.claims.length ? <span className="rounded-full bg-[#FBEFD6] px-2 py-0.5 text-[11px] font-medium text-[#7A4E00]">{slide.claims.length} flag{slide.claims.length === 1 ? "" : "s"}</span> : null}
         </div>

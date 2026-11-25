@@ -1,5 +1,6 @@
 import { agreementMonthPeriods, agreementPostMonth } from "./agreement-earnings";
 import { agreementPostTotal, type AgreementPostCount } from "./agreement-partnership";
+import type { PostFormat } from "./post-format";
 
 export type AgreementForPost = {
   id: string;
@@ -26,7 +27,101 @@ export type PostingAgreement = {
   startsOn: string | null;
   endsOn: string | null;
   months: PostingMonthSlot[];
+  mix: AgreementPostCount[];
 };
+
+export type AgreementKindUse = MonthFillPost & {
+  format: string | null;
+  fileCount: number;
+  agreementPlatform: string;
+  agreementPostType: string;
+};
+
+export function agreementKindFormat(platform: string, type: string): PostFormat | null {
+  if (platform === "TikTok" && type === "Video") return "tiktok";
+  if (platform === "Instagram" && type === "Reel") return "instagram_reel";
+  if (platform === "Instagram" && (type === "Image post" || type === "Carousel")) return "instagram_post";
+  if (platform === "Facebook" && type === "Post") return "facebook_post";
+  if (platform === "Facebook" && type === "Reel") return "facebook_reel";
+  if (platform === "Facebook" && type === "Video") return "facebook_video";
+  if (platform === "YouTube" && type === "Short") return "youtube_short";
+  if (platform === "YouTube" && type === "Video") return "youtube_video";
+  return null;
+}
+
+export function postMatchesKind(post: Pick<AgreementKindUse, "format" | "fileCount" | "agreementPlatform" | "agreementPostType">, platform: string, type: string) {
+  if (post.agreementPlatform && post.agreementPostType) return post.agreementPlatform === platform && post.agreementPostType === type;
+  if (platform === "TikTok" && type === "Video") return post.format === "tiktok";
+  if (platform === "Instagram" && type === "Reel") return post.format === "instagram_reel";
+  if (platform === "Instagram" && type === "Carousel") return post.format === "instagram_post" && post.fileCount >= 2;
+  if (platform === "Instagram" && type === "Image post") return post.format === "instagram_post" && post.fileCount <= 1;
+  if (platform === "Facebook" && type === "Post") return post.format === "facebook_post";
+  if (platform === "Facebook" && type === "Reel") return post.format === "facebook_reel";
+  if (platform === "Facebook" && type === "Video") return post.format === "facebook_video";
+  if (platform === "YouTube" && type === "Short") return post.format === "youtube_short";
+  if (platform === "YouTube" && type === "Video") return post.format === "youtube_video";
+  return false;
+}
+
+export function kindUsedCount(posts: readonly AgreementKindUse[], agreementId: string, period: string, platform: string, type: string, excludeIds: ReadonlySet<string> = new Set()) {
+  return posts.filter((post) => post.agreementId === agreementId && !excludeIds.has(post.id) && reservedPostMonth(post) === period && postMatchesKind(post, platform, type)).length;
+}
+
+export function postKindTitle(platform: string, type: string) {
+  if (platform === "TikTok" && type === "Video") return "TikTok video";
+  if (platform === "Instagram" && type === "Reel") return "Instagram reel";
+  if (platform === "Instagram" && type === "Carousel") return "Instagram carousel";
+  if (platform === "Instagram" && type === "Image post") return "Instagram image";
+  return `${platform} ${type.toLowerCase()}`;
+}
+
+export function postTypeLabel(post: { agreementPlatform: string; agreementPostType: string; format: string | null; fileCount: number }) {
+  if (post.agreementPlatform && post.agreementPostType) return postKindTitle(post.agreementPlatform, post.agreementPostType);
+  if (post.format === "tiktok") return "TikTok video";
+  if (post.format === "instagram_reel") return "Instagram reel";
+  if (post.format === "instagram_post") return post.fileCount > 1 ? "Instagram carousel" : "Instagram image";
+  if (post.format === "facebook_post") return "Facebook post";
+  if (post.format === "facebook_reel") return "Facebook reel";
+  if (post.format === "facebook_video") return "Facebook video";
+  if (post.format === "youtube_short") return "YouTube Short";
+  if (post.format === "youtube_video") return "YouTube video";
+  return post.fileCount > 1 ? `Carousel · ${post.fileCount}` : "";
+}
+
+export function postPlaceLabel(post: { offerId: string; agreementId: string; agreementSlot: number | null }, slotNumber: number | null, source = "") {
+  if (post.offerId) return source || "Marketing offer";
+  const number = slotNumber ?? post.agreementSlot;
+  if (number) return `Post ${number}`;
+  if (post.agreementId) return "Agreement post";
+  return source;
+}
+
+export function postIdentity(place: string, type: string) {
+  return [place, type].filter(Boolean).join(" · ");
+}
+
+export function placedSlotNumber(posts: readonly AgreementBoardPost[], agreementId: string, period: string, total: number, postId: string) {
+  if (!agreementId || !period) return null;
+  return agreementSlotRows(posts, agreementId, period, total).find((row) => row.post?.id === postId)?.number ?? null;
+}
+
+export function agreementSlotState(post: Pick<AgreementBoardPost, "contentStatus" | "publicationStatus"> | null) {
+  if (!post) return "Not posted";
+  if (post.publicationStatus === "tracking_active") return "Verified";
+  if (post.contentStatus === "approved" && (post.publicationStatus === "awaiting_publication" || post.publicationStatus == null)) return "Ready to publish";
+  return "In review";
+}
+
+export function mixSentence(mix: readonly AgreementPostCount[]) {
+  const parts = mix.filter((item) => agreementKindFormat(item.platform, item.type)).map((item) => {
+    const name = item.type.toLowerCase();
+    const word = item.count === 1 ? name : name.endsWith("y") && !/[aeiou]y$/.test(name) ? `${name.slice(0, -1)}ies` : `${name}s`;
+    return `${item.count} ${item.platform} ${word}`;
+  });
+  if (parts.length <= 1) return parts[0] ?? "";
+  if (parts.length === 2) return `${parts[0]} and ${parts[1]}`;
+  return `${parts.slice(0, -1).join(", ")}, and ${parts[parts.length - 1]}`;
+}
 
 export type MonthFillPost = {
   id: string;
@@ -65,7 +160,31 @@ export type AgreementBoardPost = MonthFillPost & {
   publicationStatus: string | null;
   reviewNote: string;
   title: string;
+  agreementSlot?: number | null;
 };
+
+export function agreementSlotRows(posts: readonly AgreementBoardPost[], agreementId: string, period: string, total: number) {
+  const filling = posts
+    .filter((post) => post.agreementId === agreementId && reservedPostMonth(post) === period)
+    .sort((left, right) => (left.submittedAt ?? "").localeCompare(right.submittedAt ?? ""));
+  const placed = new Map<number, AgreementBoardPost>();
+  const loose: AgreementBoardPost[] = [];
+  const room = Math.max(total, filling.length);
+  for (const post of filling) {
+    const slot = post.agreementSlot ?? 0;
+    if (slot >= 1 && slot <= room && !placed.has(slot)) placed.set(slot, post);
+    else loose.push(post);
+  }
+  let looseAt = 0;
+  const rows: { number: number; post: AgreementBoardPost | null }[] = [];
+  for (let number = 1; number <= room; number += 1) {
+    const claimed = placed.get(number);
+    if (claimed) rows.push({ number, post: claimed });
+    else if (looseAt < loose.length) rows.push({ number, post: loose[looseAt++] });
+    else rows.push({ number, post: null });
+  }
+  return rows;
+}
 
 export type AgreementBoardSlot = {
   id: string;
@@ -107,44 +226,38 @@ const BOARD_COPY = {
 } as const;
 
 export function agreementMonthBoard(input: { agreementId: string; postTotal: number; period: string; monthLabel: string; posts: readonly AgreementBoardPost[] }): AgreementBoardSlot[] {
-  const filled = input.posts
-    .filter((post) => post.agreementId === input.agreementId && reservedPostMonth(post) === input.period)
-    .sort((left, right) => (left.submittedAt ?? "").localeCompare(right.submittedAt ?? ""));
-  const rows: AgreementBoardSlot[] = filled.map((post, index) => {
-    const state = boardState(post);
+  return agreementSlotRows(input.posts, input.agreementId, input.period, input.postTotal).map((row) => {
+    if (!row.post) {
+      return {
+        id: `empty-${row.number}`,
+        number: row.number,
+        title: `Post ${row.number}`,
+        note: "Fill it in and send it for approval.",
+        label: "Not started",
+        bg: "#EFEAE9",
+        fg: "#4A3A37",
+        actionLabel: "Fill in",
+        href: "/affiliates/posts?compose=1",
+        adminNote: "",
+        pip: "#E8DEDC",
+      };
+    }
+    const state = boardState(row.post);
     const [label, bg, fg, note, actionLabel, pip] = BOARD_COPY[state];
     return {
-      id: post.id,
-      number: index + 1,
-      title: post.title || `Post ${index + 1}`,
+      id: row.post.id,
+      number: row.number,
+      title: row.post.title || `Post ${row.number}`,
       note: state === "verified" && input.monthLabel ? `Done. This post counts toward ${input.monthLabel}.` : note,
       label,
       bg,
       fg,
       actionLabel,
-      href: actionLabel ? `/affiliates/posts?post=${encodeURIComponent(post.id)}` : "",
-      adminNote: state === "changes" ? post.reviewNote : "",
+      href: actionLabel ? `/affiliates/posts?post=${encodeURIComponent(row.post.id)}` : "",
+      adminNote: state === "changes" ? row.post.reviewNote : "",
       pip,
     };
   });
-  const total = Math.max(input.postTotal, rows.length);
-  while (rows.length < total) {
-    const number = rows.length + 1;
-    rows.push({
-      id: `empty-${number}`,
-      number,
-      title: `Post ${number}`,
-      note: "Create it and send it for approval.",
-      label: "Not started",
-      bg: "#EFEAE9",
-      fg: "#4A3A37",
-      actionLabel: "Create post",
-      href: "/affiliates/posts?compose=1",
-      adminNote: "",
-      pip: "#E8DEDC",
-    });
-  }
-  return rows;
 }
 
 export function postsFillingMonth(posts: readonly MonthFillPost[], agreementId: string, period: string, excludeIds: ReadonlySet<string> = new Set()) {
@@ -209,6 +322,7 @@ export function postingAgreement(agreements: readonly AgreementForPost[], today:
     startsOn: current.effectiveOn,
     endsOn: current.expiresOn,
     months: monthSlots(current, posts),
+    mix: (current.posts ?? []).filter((post) => post.count > 0),
   };
 }
 

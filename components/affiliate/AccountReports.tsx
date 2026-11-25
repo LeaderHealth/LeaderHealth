@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
-import { SlidingTabs } from "./SlidingTabs";
+import { SegmentedControl } from "./SegmentedControl";
 import { currentReportMonth, networkLabel, type SocialNetwork } from "@/lib/affiliate/marketing";
 import type { WebsiteMonthReport } from "@/lib/affiliate/website-report";
 
@@ -95,7 +95,7 @@ export function AccountReports({
         <h3 id="marketing-report-title" className="text-lg font-semibold">
           Marketing report
         </h3>
-        <p className="text-[13px] text-[#4A3A37]">Last 3 months · doesn’t change commission or payouts</p>
+        <p className="text-[13px] text-[#4A3A37]">Last 3 months · doesn’t change commission or payouts. Commission is lab orders only.</p>
       </div>
 
       {unavailable ? (
@@ -109,20 +109,14 @@ export function AccountReports({
                 title="Website traffic"
                 note={view === "visits" ? "Visits from the tracking link and promo links" : "Orders from the tracking link, promo code and promo links"}
               />
-              <SlidingTabs
-                variant="track"
+              <SegmentedControl
                 label="Website traffic"
-                items={(
-                  [
-                    ["visits", "Visits"],
-                    ["orders", "Orders"],
-                  ] as const
-                ).map(([id, label]) => ({
-                  id,
-                  label,
-                  current: view === id,
-                  onSelect: () => setView(id),
-                }))}
+                value={view}
+                options={[
+                  { id: "visits", label: "Visits" },
+                  { id: "orders", label: "Orders" },
+                ]}
+                onChange={setView}
               />
             </div>
 

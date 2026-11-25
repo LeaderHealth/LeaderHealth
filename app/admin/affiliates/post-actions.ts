@@ -97,7 +97,7 @@ export async function approvePostAction(formData: FormData) {
   });
   if (affiliate?.email && affiliateEmailConfigured()) {
     try {
-      await sendPostApprovedEmail(affiliate.email, post.caption);
+      await sendPostApprovedEmail(affiliate.email, post.caption, post.format, post.agreementPlatform);
     } catch (error) {
       console.error("[affiliate] post approval email failed", error instanceof Error ? error.message : "unknown");
     }

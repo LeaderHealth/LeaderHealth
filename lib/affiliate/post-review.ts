@@ -3,12 +3,12 @@ import { FieldValue, type DocumentData, type Timestamp } from "firebase-admin/fi
 import { normalizeAffiliateCode } from "./code";
 import { disclosureAcknowledged } from "./disclosures";
 import { affiliateFirebaseConfigured, affiliateFirestore } from "./firebase";
-import { filesMatchFormat, formatUploadIssue, instagramPostUrl, liveLinkFor, postFormat, type PostFormat } from "./post-format";
+import { awaitsManualLinkCheck, filesMatchFormat, formatUploadIssue, instagramPostUrl, liveLinkFor, postFormat, type PostFormat } from "./post-format";
 import { IMAGE_BYTES, VIDEO_BYTES, postUploadKind } from "./post-files";
 import { deliverableFeeCents } from "./deliverable-payments";
 import { formatForOfferKind, lockedPayTerms, offerSlideBounds, type LockedPayTerms } from "./offer-post";
 import { loadMarketingOffer } from "./marketing-offers";
-import { canonicalPostUrl, selectTikTokUpdate, textHasTrackingCode, tiktokVideoId } from "./social-match";
+import { canonicalPostUrl, selectTikTokUpdate, tiktokVideoId } from "./social-match";
 import { fetchInstagramMedia, fetchTikTokPosts, queryTikTokVideos, readInstagramMedia, type InstagramMediaSnapshot } from "./social-fetch";
 import { currentTikTokConnection } from "./social-sync";
 import { SocialError, loadConnectionSecrets, loadSocialAccounts, markSocialReconnect, type TikTokConnectionSecret } from "./social-store";
@@ -19,7 +19,7 @@ import { DEFAULT_TRACKING_DAYS, MANUAL_REPORT_MS, REPORT_WINDOW_MS, manualReport
 import { rateFor, standingViewRateCents } from "./payment-rates";
 import { loadPaymentRates } from "./payment-store";
 import { loadAffiliateAgreement, utcAgreementToday } from "./agreements";
-import { agreementMatchesPost, postingAgreement, postsFillingMonth, type PostingAgreement } from "./post-agreement";
+import { agreementKindFormat, agreementMatchesPost, agreementSlotRows, kindUsedCount, postingAgreement, postsFillingMonth, type PostingAgreement } from "./post-agreement";
 export { MANUAL_REPORT_MS, REPORT_WINDOW_MS, manualReportDue, networkConnectedForPost };
 export type { MetricsOrigin };
 
@@ -27,6 +27,7 @@ const CAPTION_LIMIT = 2200;
 const SLIDE_LIMIT = 20;
 const NOTE_LIMIT = 500;
 export const DISCLOSURE_LINE = "Paid partnership with Leader Health";
+export const BRAND_TAG = "@myleaderhealth";
 export const METRICS_STALE_MS = 6 * 60 * 60 * 1000;
 
 const CONTENT_STATUSES = ["draft", "submitted", "revision_requested", "rejected", "approved", "withdrawn"] as const;
@@ -48,10 +49,10 @@ export type MetricChangeRequest = {
   requestedAt: string | null;
 };
 export type ContentStep = "approve" | "request" | "reject" | "revise";
-export type VerificationFailure = "not_connected" | "not_found" | "missing_disclosure" | "missing_link" | "unavailable";
+export type VerificationFailure = "not_connected" | "not_found" | "missing_disclosure" | "missing_tag" | "missing_link" | "unavailable";
 
 export class PostReviewError extends Error {
-  code: "invalid" | "file" | "storage" | "missing" | "unavailable" | "status" | "url" | "note" | "disclosure" | "link" | "fee" | "campaign" | "offer" | "terms" | "date" | "agreement" | "month";
+  code: "invalid" | "file" | "storage" | "missing" | "unavailable" | "status" | "url" | "note" | "disclosure" | "tag" | "link" | "fee" | "campaign" | "offer" | "terms" | "date" | "agreement" | "month" | "requirement" | "kind";
 
   constructor(code: PostReviewError["code"]) {
     super(code);
@@ -74,6 +75,9 @@ export type BatchPostInput = {
   campaign: string | null;
   offerId: string;
   proposedPublishOn: string | null;
+  agreementSlot: number | null;
+  agreementPlatform: string;
+  agreementPostType: string;
 };
 
 export type ContentRevision = {
@@ -122,6 +126,9 @@ export type ContentSubmission = {
   agreementId: string;
   agreementLabel: string;
   postingMonth: string;
+  agreementSlot: number | null;
+  agreementPlatform: string;
+  agreementPostType: string;
   offerKind: string;
   offerBrief: string;
   publishBy: string;
@@ -158,31 +165,22 @@ export function nextContentStatus(status: ContentStatus, step: ContentStep): Con
 
 export type LinkCheck = { label: string; state: "pass" | "fail" | "unknown" };
 
-const LINK_CHECK_LABELS = ["Post found on your account", "“Paid partnership with Leader Health” in caption", "Tracking link in caption"] as const;
+const LINK_CHECK_LABELS = ["Post found on your account", "@myleaderhealth in caption"] as const;
 
 export function instagramLinkChecks(status: PublicationStatus | null, verificationNote: string): LinkCheck[] {
-  const [found, disclosure, link] = LINK_CHECK_LABELS;
+  const [found, tag] = LINK_CHECK_LABELS;
   if (status === "tracking_active") return LINK_CHECK_LABELS.map((label) => ({ label, state: "pass" }));
   if (status !== "verification_failed") return [];
-  if (verificationNote === verificationFailureNote("missing_link")) {
+  if (verificationNote === verificationFailureNote("missing_tag")) {
     return [
       { label: found, state: "pass" },
-      { label: disclosure, state: "pass" },
-      { label: link, state: "fail" },
+      { label: tag, state: "fail" },
     ];
   }
-  if (verificationNote === verificationFailureNote("missing_disclosure")) {
+  if (verificationNote === verificationFailureNote("not_found") || verificationNote === verificationFailureNote("missing_link") || verificationNote === verificationFailureNote("missing_disclosure")) {
     return [
-      { label: found, state: "pass" },
-      { label: disclosure, state: "fail" },
-      { label: link, state: "unknown" },
-    ];
-  }
-  if (verificationNote === verificationFailureNote("not_found")) {
-    return [
-      { label: found, state: "fail" },
-      { label: disclosure, state: "unknown" },
-      { label: link, state: "unknown" },
+      { label: found, state: verificationNote === verificationFailureNote("not_found") ? "fail" : "pass" },
+      { label: tag, state: "unknown" },
     ];
   }
   return [];
@@ -193,6 +191,12 @@ export function instagramCheckCopy(status: PublicationStatus | null, verificatio
     return {
       headline: "Your post is live",
       detail: "Instagram engagement for this post shows in Stats. It does not change commission or payouts.",
+    };
+  }
+  if (verificationNote === verificationFailureNote("missing_tag")) {
+    return {
+      headline: "The caption needs @myleaderhealth",
+      detail: "Tag @myleaderhealth in the caption on Instagram, then check again. The post does not track without that tag.",
     };
   }
   if (verificationNote === verificationFailureNote("missing_link")) {
@@ -244,6 +248,10 @@ export function captionHasDisclosure(caption: string) {
   return caption.toLowerCase().includes(DISCLOSURE_LINE.toLowerCase());
 }
 
+export function captionHasBrandTag(caption: string) {
+  return caption.toLowerCase().includes(BRAND_TAG.toLowerCase());
+}
+
 const CLAIM_PATTERNS = [
   /\bfixed my [a-z][a-z'’\- ]{0,40}/i,
   /\bcured(?: my)? [a-z][a-z'’\- ]{0,40}/i,
@@ -265,9 +273,8 @@ export function treatmentClaims(caption: string) {
   return found.slice(0, 3);
 }
 
-export function captionIssue(caption: string, code: string) {
-  if (!captionHasDisclosure(caption)) return "disclosure" as const;
-  if (!textHasTrackingCode(caption, code)) return "link" as const;
+export function captionIssue(caption: string) {
+  if (!captionHasBrandTag(caption)) return "tag" as const;
   return null;
 }
 
@@ -290,7 +297,7 @@ export function instagramShortcode(value: string) {
   return shortcode;
 }
 
-export function matchInstagramPost(url: string, code: string, posts: readonly InstagramMediaSnapshot[]) {
+export function matchInstagramPost(url: string, _code: string, posts: readonly InstagramMediaSnapshot[]) {
   const submitted = instagramPostUrl(url);
   const wanted = submitted ? canonicalPostUrl(submitted) : null;
   const shortcode = submitted ? instagramShortcode(submitted) : null;
@@ -301,8 +308,7 @@ export function matchInstagramPost(url: string, code: string, posts: readonly In
     return instagramShortcode(post.permalink) === shortcode;
   });
   if (!found || !/^[0-9]{5,32}$/.test(found.id)) return { ok: false as const, reason: "not_found" as const };
-  if (!captionHasDisclosure(found.caption)) return { ok: false as const, reason: "missing_disclosure" as const };
-  if (!textHasTrackingCode(found.caption, code)) return { ok: false as const, reason: "missing_link" as const };
+  if (!captionHasBrandTag(found.caption)) return { ok: false as const, reason: "missing_tag" as const };
   return { ok: true as const, mediaId: found.id, metrics: postMetricFields(found) };
 }
 
@@ -310,6 +316,7 @@ export function verificationFailureNote(reason: VerificationFailure) {
   if (reason === "not_connected") return "Instagram is not connected. Connect it from Stats, or ask an admin to check the link.";
   if (reason === "not_found") return "That post was not found on the connected Instagram account.";
   if (reason === "missing_disclosure") return "The caption needs “Paid partnership with Leader Health.”";
+  if (reason === "missing_tag") return "The caption needs @myleaderhealth so the post can track.";
   if (reason === "missing_link") return "The caption needs your tracking link. A link in your bio is not enough.";
   return "Instagram could not be reached. Ask an admin to check the link.";
 }
@@ -502,6 +509,9 @@ function submissionFrom(id: string, data: DocumentData | undefined): ContentSubm
     agreementId: typeof data.agreementId === "string" && !data.agreementId.includes("/") ? data.agreementId.slice(0, 128) : "",
     agreementLabel: typeof data.agreementLabel === "string" ? data.agreementLabel.trim().slice(0, 200) : "",
     postingMonth: typeof data.postingMonth === "string" && /^\d{4}-\d{2}$/.test(data.postingMonth) ? data.postingMonth : "",
+    agreementSlot: Number.isInteger(data.agreementSlot) && (data.agreementSlot as number) >= 1 && (data.agreementSlot as number) <= 20 ? (data.agreementSlot as number) : null,
+    agreementPlatform: typeof data.agreementPlatform === "string" ? data.agreementPlatform : "",
+    agreementPostType: typeof data.agreementPostType === "string" ? data.agreementPostType : "",
     offerKind: typeof data.offerKind === "string" ? data.offerKind : "",
     offerBrief: typeof data.offerBrief === "string" ? data.offerBrief.slice(0, 800) : "",
     publishBy: typeof data.publishBy === "string" ? data.publishBy : "",
@@ -603,7 +613,7 @@ async function preparedCaption(code: string, value: unknown) {
   if (!(await disclosureAcknowledged(code))) throw new PostReviewError("invalid");
   const caption = captionText(value);
   if (!caption) throw new PostReviewError("invalid");
-  const issue = captionIssue(caption, code);
+  const issue = captionIssue(caption);
   if (issue) throw new PostReviewError(issue);
   return caption;
 }
@@ -948,10 +958,48 @@ export async function submitContentBatch(input: { code: string; posts: BatchPost
       const date = proposedPublishDate(entry.item.proposedPublishOn);
       if (!date || date.slice(0, 7) !== slot.period) throw new PostReviewError("date");
     }
+    const savedPosts = await loadContentSubmissions(code);
+    const exclude = new Set(ready.flatMap((entry) => (entry.existing ? [entry.existing.id] : [])));
     if (slot.limit != null) {
-      const exclude = new Set(ready.flatMap((entry) => (entry.existing ? [entry.existing.id] : [])));
-      const used = postsFillingMonth(await loadContentSubmissions(code), postedUnder.id, slot.period, exclude);
+      const used = postsFillingMonth(savedPosts, postedUnder.id, slot.period, exclude);
       if (used + ready.length > slot.limit) throw new PostReviewError("month");
+    }
+    if (ready.length !== 1 || ready[0]?.item.agreementSlot == null) throw new PostReviewError("requirement");
+    const chosen = ready[0].item.agreementSlot;
+    const row = agreementSlotRows(
+      savedPosts.map((post) => ({ ...post, title: "", reviewNote: post.reviewNote, publicationStatus: post.publicationStatus })),
+      postedUnder.id,
+      slot.period,
+      postedUnder.postTotal,
+    ).find((item) => item.number === chosen);
+    const occupant = row?.post && !exclude.has(row.post.id) ? row.post : null;
+    if (!row || occupant) throw new PostReviewError("requirement");
+    if (postedUnder.mix.length > 0) {
+      const chosenKind = ready[0].item;
+      const kind = postedUnder.mix.find((item) => item.platform === chosenKind.agreementPlatform && item.type === chosenKind.agreementPostType);
+      const format = kind ? agreementKindFormat(kind.platform, kind.type) : null;
+      if (!kind || !format || chosenKind.format !== format) throw new PostReviewError("kind");
+      const used = kindUsedCount(
+        savedPosts.map((post) => ({
+          id: post.id,
+          agreementId: post.agreementId,
+          contentStatus: post.contentStatus,
+          offerId: post.offerId,
+          publishedAt: post.publishedAt,
+          submittedAt: post.submittedAt,
+          postingMonth: post.postingMonth,
+          format: post.format,
+          fileCount: post.files.length || (post.filePath ? 1 : 0),
+          agreementPlatform: post.agreementPlatform,
+          agreementPostType: post.agreementPostType,
+        })),
+        postedUnder.id,
+        slot.period,
+        kind.platform,
+        kind.type,
+        exclude,
+      );
+      if (used >= kind.count) throw new PostReviewError("kind");
     }
     postingPeriod = slot.period;
   }
@@ -965,6 +1013,10 @@ export async function submitContentBatch(input: { code: string; posts: BatchPost
     const files = uploaded ?? knownFiles(entry.existing);
     if (!files.length) throw new PostReviewError("file");
     const boundOffer = entry.existing?.offerId || entry.item.offerId.trim();
+    if (!boundOffer && postingPeriod) {
+      if (entry.item.agreementPostType === "Carousel" && files.length < 2) throw new PostReviewError("file");
+      if (entry.item.agreementPostType === "Image post" && (files.length !== 1 || !files[0]?.contentType.startsWith("image/"))) throw new PostReviewError("file");
+    }
     const offer = boundOffer ? await loadMarketingOffer(boundOffer) : null;
     if (boundOffer && (!offer || offer.code !== code || offer.status !== "accepted")) throw new PostReviewError("offer");
     const expectedFormat = offer ? formatForOfferKind(offer.kind) : null;
@@ -1003,7 +1055,7 @@ export async function submitContentBatch(input: { code: string; posts: BatchPost
       ...revisionFields(entry.existing),
       agreementId: postedUnder.id,
       agreementLabel: postedUnder.label,
-      ...(postingPeriod ? { postingMonth: postingPeriod } : {}),
+      ...(postingPeriod ? { postingMonth: postingPeriod, agreementSlot: entry.item.agreementSlot, agreementPlatform: entry.item.agreementPlatform, agreementPostType: entry.item.agreementPostType } : {}),
     };
     if (offer) {
       await db.runTransaction(async (tx) => {
@@ -1131,14 +1183,14 @@ export function rejectContentPost(id: string, note: unknown, reviewer: unknown) 
 async function instagramPages(code: string) {
   try {
     const secrets = await loadConnectionSecrets(code);
-    const linked = secrets.flatMap((secret) => (secret.network === "facebook" ? secret.pages.filter((page) => page.instagramAccountId) : []));
+    const linked = secrets.flatMap((secret) => (secret.network === "facebook" ? secret.pages.filter((page) => page.instagramAccountId).map((page) => ({ ...page, sourceNetwork: "facebook" as const })) : []));
     const direct = secrets.flatMap((secret) => (secret.network === "instagram" ? [{
       accountId: secret.accountId,
       accountName: secret.accountName,
       accessToken: secret.accessToken,
       instagramAccountId: secret.accountId,
       instagramAccountName: secret.accountName,
-      graphHost: "instagram" as const,
+      sourceNetwork: "instagram" as const,
     }] : []));
     return [...linked, ...direct];
   } catch (error) {
@@ -1148,9 +1200,9 @@ async function instagramPages(code: string) {
   }
 }
 
-async function rememberInstagramReconnect(code: string, pages: ReadonlyArray<{ graphHost?: "instagram" }>, needed: boolean) {
+async function rememberInstagramReconnect(code: string, pages: ReadonlyArray<{ sourceNetwork?: "facebook" | "instagram" }>, needed: boolean) {
   const networks = new Set<"facebook" | "instagram">();
-  for (const page of pages) networks.add(page.graphHost === "instagram" ? "instagram" : "facebook");
+  for (const page of pages) networks.add(page.sourceNetwork === "instagram" ? "instagram" : "facebook");
   await Promise.all([...networks].map((network) => markSocialReconnect(code, network, needed)));
 }
 
@@ -1202,15 +1254,15 @@ export async function submitLiveInstagramUrl(input: { id: string; code: string; 
   const post = await requireOwned(input.id, code);
   const url = liveLinkFor(post.format, input.url);
   if (!url) throw new PostReviewError("url");
-  const waitingOnTikTok = post.format === "tiktok" && post.publicationStatus === "verification_pending";
-  if (!canPasteLiveUrl(post.contentStatus, post.publicationStatus) && !waitingOnTikTok) throw new PostReviewError("status");
+  const waitingOnManual = awaitsManualLinkCheck(post.format) && post.publicationStatus === "verification_pending";
+  if (!canPasteLiveUrl(post.contentStatus, post.publicationStatus) && !waitingOnManual) throw new PostReviewError("status");
   await requireDb().collection("contentSubmissions").doc(post.id).update({
     postUrl: url,
     publicationStatus: "verification_pending",
     verificationNote: null,
     publishedAt: new Date(),
   });
-  if (post.format === "tiktok") return { ...post, postUrl: url, publicationStatus: "verification_pending" as const };
+  if (awaitsManualLinkCheck(post.format)) return { ...post, postUrl: url, publicationStatus: "verification_pending" as const };
   const publicationStatus = await finishVerification(post.id, code, url);
   return { ...post, publicationStatus };
 }
@@ -1218,8 +1270,8 @@ export async function submitLiveInstagramUrl(input: { id: string; code: string; 
 export async function markContentChecked(id: string) {
   const post = await loadContentSubmission(id);
   if (!post) throw new PostReviewError("missing");
-  const tiktokWaiting = post.format === "tiktok" && post.publicationStatus === "verification_pending";
-  if (post.publicationStatus !== "verification_failed" && !tiktokWaiting) throw new PostReviewError("status");
+  const manualWaiting = awaitsManualLinkCheck(post.format) && post.publicationStatus === "verification_pending";
+  if (post.publicationStatus !== "verification_failed" && !manualWaiting) throw new PostReviewError("status");
   await requireDb().collection("contentSubmissions").doc(post.id).update({
     publicationStatus: "tracking_active",
     verificationNote: "An admin checked this link.",
@@ -1240,6 +1292,7 @@ export async function markContentChecked(id: string) {
 async function writeFreshMetrics(post: ContentSubmission) {
   try {
     if (post.format === "tiktok") return await writeTikTokPostMetrics(post);
+    if (awaitsManualLinkCheck(post.format)) return false;
     return await writeInstagramPostMetrics(post);
   } catch (error) {
     if (error instanceof SocialError && error.code === "expired") {

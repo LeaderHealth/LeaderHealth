@@ -360,12 +360,12 @@ export function CampaignCreate({ affiliates, rates = EMPTY_RATES }: { affiliates
                   <label htmlFor="cDisc" className="flex flex-col gap-1.5 text-sm font-semibold">
                     <span>Required FTC disclosure <span className="text-[#9B2C1F]">*</span></span>
                     <input id="cDisc" value={disc} onChange={(event) => { setDisc(event.target.value); setErr(""); }} className={inputClass} style={{ borderColor: "#CDBDBA" }} />
-                    <span className="text-[13px] font-normal text-[#6B5A57]">Shown to the affiliate and checked in every caption.</span>
+                    <span className="text-[13px] font-normal text-[#6B5A57]">Optional in the caption. It is not required for the post to track.</span>
                   </label>
                   <label htmlFor="cLink" className="flex flex-col gap-1.5 text-sm font-semibold">
                     <span>Tracking link instructions <span className="text-[#9B2C1F]">*</span></span>
                     <input id="cLink" value={linkI} onChange={(event) => { setLinkI(event.target.value); setErr(""); }} className={inputClass} style={{ borderColor: "#CDBDBA" }} />
-                    <span className="text-[13px] font-normal text-[#6B5A57]">Their own tracking link is filled in for them.</span>
+                    <span className="text-[13px] font-normal text-[#6B5A57]">Optional in the caption. The post tracks when it tags @myleaderhealth.</span>
                   </label>
                 </div>
               ) : null}

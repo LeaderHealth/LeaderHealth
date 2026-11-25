@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import Link from "next/link";
 import { excludeTrafficAction, keepTrafficAction } from "@/app/admin/affiliates/payment-actions";
 import type { TrafficRowStatus, TrafficStepTone } from "@/lib/affiliate/traffic-review";
@@ -12,6 +12,8 @@ type Row = {
   color: string;
   clicks: number;
   pageViews: number;
+  promoLink: number;
+  promoOrders: number;
   excluded: number;
   status: TrafficRowStatus;
   spikeHour: string;
@@ -63,7 +65,7 @@ export function TrafficReview({
   steps: { n: string; label: string; sub: string; tone: TrafficStepTone }[];
   rows: Row[];
   days: Day[];
-  totals: { clicks: number; pageViews: number; excluded: number };
+  totals: { clicks: number; pageViews: number; promoLink: number; promoOrders: number; excluded: number };
 }) {
   const [who, setWho] = useState("all");
   const [review, setReview] = useState("");
@@ -103,9 +105,9 @@ export function TrafficReview({
       {error ? <p role="alert" className="rounded-[14px] bg-[#FBE3DF] px-4 py-3 text-[15px] text-[#9B2C1F]">{error}</p> : null}
 
       <section aria-labelledby="traffic-chart-title" className="flex flex-col gap-3.5 rounded-3xl bg-white px-4 py-5 sm:px-6">
-        <div className="flex flex-wrap items-center gap-3">
-          <h3 id="traffic-chart-title" className="min-w-0 flex-1 text-xl font-medium">Verified clicks per day</h3>
-          <div role="group" aria-label="Show" className="flex flex-wrap gap-1.5">
+        <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center">
+          <h3 id="traffic-chart-title" className="text-xl font-medium">Verified clicks per day</h3>
+          <div role="group" aria-label="Show" className="flex flex-wrap gap-1.5 lg:ml-auto">
             <Filter pressed={who === "all"} color="#6B5A57" label="All affiliates" onClick={() => setWho("all")} />
             {rows.map((row) => (
               <Filter key={row.code} pressed={who === row.code} color={row.color} label={row.name} onClick={() => setWho(row.code)} />
@@ -153,71 +155,141 @@ export function TrafficReview({
           <h3 className="text-xl font-medium">{monthLabel}</h3>
           <Link href={previousHref} className="text-sm text-ink underline">Previous month</Link>
           {nextHref ? <Link href={nextHref} className="text-sm text-ink underline">Next month</Link> : null}
-          <span className="ml-auto text-sm text-[#6B5A57]">Ad impressions are never counted.</span>
         </div>
         {rows.length === 0 ? <p className="py-6 text-sm text-[#6B5A57]">No affiliates yet.</p> : (
-          <div className="overflow-x-auto">
-            <div className="min-w-[46rem]">
-              <div className="grid grid-cols-[1.4fr_1fr_1fr_1fr_2.2fr] gap-4 border-b border-[#E8DEDC] px-2 py-2 text-[13px] font-semibold tracking-wide text-[#6B5A57] uppercase">
-                <span>Affiliate</span>
-                <span className="text-right">Verified clicks</span>
-                <span className="text-right">Page views</span>
-                <span className="text-right">Not counted</span>
-                <span>Status</span>
-              </div>
+          <>
+          <ul className="flex flex-col lg:hidden">
+            {rows.map((row) => {
+              const [label, background, color] = STATUS[row.status];
+              const reviewing = review === row.code;
+              return (
+                <li key={row.code} className="border-b border-[#F0E8E6] py-4">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <span className="flex size-[34px] shrink-0 items-center justify-center rounded-full bg-[#F3CFCB] text-xs font-semibold">{row.initials}</span>
+                    <span className="min-w-0 flex-1 text-base font-semibold">{row.name}</span>
+                    <span className="rounded-full px-3 py-1 text-[13px] font-semibold whitespace-nowrap" style={{ background, color }}>{label}</span>
+                  </div>
+                  <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
+                    <Metric label="Verified clicks" value={count(row.clicks)} strong />
+                    <Metric label="Page views" value={count(row.pageViews)} />
+                    <Metric label="Promo code link" value={count(row.promoLink)} />
+                    <Metric label="Promo code orders" value={count(row.promoOrders)} />
+                    <Metric label="Not counted" value={count(row.excluded)} muted />
+                  </dl>
+                  {canReview && !reviewing && row.status === "flagged" ? (
+                    <button type="button" onClick={() => setReview(row.code)} className="mt-3 inline-flex h-[38px] items-center rounded-full bg-ink px-4 text-sm font-medium text-white">Review spike</button>
+                  ) : null}
+                  {reviewing ? <SpikeReview row={row} month={month} onClose={() => setReview("")} /> : null}
+                </li>
+              );
+            })}
+            <li className="pt-4">
+              <span className="text-base font-semibold">Total</span>
+              <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
+                <Metric label="Verified clicks" value={count(totals.clicks)} strong />
+                <Metric label="Page views" value={count(totals.pageViews)} strong />
+                <Metric label="Promo code link" value={count(totals.promoLink)} strong />
+                <Metric label="Promo code orders" value={count(totals.promoOrders)} strong />
+                <Metric label="Not counted" value={count(totals.excluded)} strong />
+              </dl>
+            </li>
+          </ul>
+          <div className="hidden overflow-x-auto lg:block">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="border-b border-[#E8DEDC] text-[13px] font-semibold tracking-wide text-[#6B5A57] uppercase">
+                <th scope="col" className="px-2 py-2 text-left font-semibold whitespace-nowrap">Affiliate</th>
+                <th scope="col" className="px-2 py-2 text-right font-semibold whitespace-nowrap">Verified clicks</th>
+                <th scope="col" className="px-2 py-2 text-right font-semibold whitespace-nowrap">Page views</th>
+                <th scope="col" className="px-2 py-2 text-right font-semibold whitespace-nowrap">Promo code link</th>
+                <th scope="col" className="px-2 py-2 text-right font-semibold whitespace-nowrap">Promo code orders</th>
+                <th scope="col" className="px-2 py-2 text-right font-semibold whitespace-nowrap">Not counted</th>
+                <th scope="col" className="px-2 py-2 text-left font-semibold whitespace-nowrap">Status</th>
+              </tr>
+            </thead>
+            <tbody>
               {rows.map((row) => {
                 const [label, background, color] = STATUS[row.status];
                 const reviewing = review === row.code;
                 return (
-                  <div key={row.code} className="border-b border-[#F0E8E6]">
-                    <div className="grid grid-cols-[1.4fr_1fr_1fr_1fr_2.2fr] items-center gap-4 px-2 py-3.5">
-                      <span className="flex items-center gap-2.5">
-                        <span className="flex size-[34px] items-center justify-center rounded-full bg-[#F3CFCB] text-xs font-semibold">{row.initials}</span>
-                        <span className="text-base font-semibold">{row.name}</span>
-                      </span>
-                      <span className="text-right text-base font-semibold">{count(row.clicks)}</span>
-                      <span className="text-right text-base">{count(row.pageViews)}</span>
-                      <span className="text-right text-base text-[#6B5A57]">{count(row.excluded)}</span>
-                      <span className="flex flex-wrap items-center gap-2.5">
-                        <span className="rounded-full px-3 py-1 text-[13px] font-semibold" style={{ background, color }}>{label}</span>
-                        {canReview && !reviewing && row.status === "flagged" ? (
-                          <button type="button" onClick={() => setReview(row.code)} className="ml-auto inline-flex h-[38px] items-center rounded-full bg-ink px-4 text-sm font-medium text-white">Review spike</button>
-                        ) : null}
-                      </span>
-                    </div>
+                  <Fragment key={row.code}>
+                    <tr className="border-b border-[#F0E8E6]">
+                      <th scope="row" className="px-2 py-3.5 text-left font-semibold">
+                        <span className="flex items-center gap-2.5">
+                          <span className="flex size-[34px] items-center justify-center rounded-full bg-[#F3CFCB] text-xs font-semibold">{row.initials}</span>
+                          <span className="text-base">{row.name}</span>
+                        </span>
+                      </th>
+                      <td className="px-2 py-3.5 text-right text-base font-semibold tabular-nums">{count(row.clicks)}</td>
+                      <td className="px-2 py-3.5 text-right text-base tabular-nums">{count(row.pageViews)}</td>
+                      <td className="px-2 py-3.5 text-right text-base tabular-nums">{count(row.promoLink)}</td>
+                      <td className="px-2 py-3.5 text-right text-base tabular-nums">{count(row.promoOrders)}</td>
+                      <td className="px-2 py-3.5 text-right text-base text-[#6B5A57] tabular-nums">{count(row.excluded)}</td>
+                      <td className="px-2 py-3.5">
+                        <span className="flex flex-wrap items-center gap-2.5">
+                          <span className="rounded-full px-3 py-1 text-[13px] font-semibold whitespace-nowrap" style={{ background, color }}>{label}</span>
+                          {canReview && !reviewing && row.status === "flagged" ? (
+                            <button type="button" onClick={() => setReview(row.code)} className="inline-flex h-[38px] items-center rounded-full bg-ink px-4 text-sm font-medium text-white">Review spike</button>
+                          ) : null}
+                        </span>
+                      </td>
+                    </tr>
                     {reviewing ? (
-                      <div className="mx-2 mb-4 flex flex-col gap-3 rounded-2xl border-2 border-[#E9C98A] px-4 py-4 sm:ml-[52px]">
-                        <span className="text-base font-semibold">Unusual spike: {row.spikeLabel}</span>
-                        <span className="text-[15px] text-[#4A3A37]">Most of these clicks arrived in one hour. That can mean automated traffic.</span>
-                        <div className="flex flex-wrap gap-2.5">
-                          <form action={excludeTrafficAction}>
-                            <input type="hidden" name="month" value={month} />
-                            <input type="hidden" name="code" value={row.code} />
-                            <button type="submit" className="inline-flex h-[46px] items-center rounded-full bg-ink px-5 text-[15px] font-medium text-white">Don’t count the spike ({count(row.spikeCount)} clicks)</button>
-                          </form>
-                          <form action={keepTrafficAction}>
-                            <input type="hidden" name="month" value={month} />
-                            <input type="hidden" name="code" value={row.code} />
-                            <button type="submit" className="inline-flex h-[46px] items-center rounded-full border border-[#CDBDBA] bg-white px-5 text-[15px] font-medium text-ink">Count it</button>
-                          </form>
-                          <button type="button" onClick={() => setReview("")} className="inline-flex h-[46px] items-center text-sm text-ink underline">Decide later</button>
-                        </div>
-                      </div>
+                      <tr className="border-b border-[#F0E8E6]">
+                        <td colSpan={7} className="px-2 pb-4">
+                          <SpikeReview row={row} month={month} onClose={() => setReview("")} inset />
+                        </td>
+                      </tr>
                     ) : null}
-                  </div>
+                  </Fragment>
                 );
               })}
-              <div className="grid grid-cols-[1.4fr_1fr_1fr_1fr_2.2fr] gap-4 px-2 pt-3.5 text-base font-semibold">
-                <span>Total</span>
-                <span className="text-right">{count(totals.clicks)}</span>
-                <span className="text-right">{count(totals.pageViews)}</span>
-                <span className="text-right">{count(totals.excluded)}</span>
-                <span />
-              </div>
-            </div>
+              <tr className="text-base font-semibold">
+                <th scope="row" className="px-2 pt-3.5 text-left">Total</th>
+                <td className="px-2 pt-3.5 text-right tabular-nums">{count(totals.clicks)}</td>
+                <td className="px-2 pt-3.5 text-right tabular-nums">{count(totals.pageViews)}</td>
+                <td className="px-2 pt-3.5 text-right tabular-nums">{count(totals.promoLink)}</td>
+                <td className="px-2 pt-3.5 text-right tabular-nums">{count(totals.promoOrders)}</td>
+                <td className="px-2 pt-3.5 text-right tabular-nums">{count(totals.excluded)}</td>
+                <td />
+              </tr>
+            </tbody>
+          </table>
           </div>
+          </>
         )}
       </section>
+    </div>
+  );
+}
+
+function Metric({ label, value, strong = false, muted = false }: { label: string; value: string; strong?: boolean; muted?: boolean }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <dt className="text-[12px] font-semibold tracking-wide text-[#6B5A57] uppercase">{label}</dt>
+      <dd className={`text-base tabular-nums ${strong ? "font-semibold" : ""} ${muted ? "text-[#6B5A57]" : ""}`}>{value}</dd>
+    </div>
+  );
+}
+
+function SpikeReview({ row, month, onClose, inset = false }: { row: Row; month: string; onClose: () => void; inset?: boolean }) {
+  return (
+    <div className={`mt-3 flex flex-col gap-3 rounded-2xl border-2 border-[#E9C98A] px-4 py-4 ${inset ? "sm:ml-[42px]" : ""}`}>
+      <span className="text-base font-semibold">Unusual spike: {row.spikeLabel}</span>
+      <span className="text-[15px] text-[#4A3A37]">Most of these clicks arrived in one hour. That can mean automated traffic.</span>
+      <div className="flex flex-wrap gap-2.5">
+        <form action={excludeTrafficAction}>
+          <input type="hidden" name="month" value={month} />
+          <input type="hidden" name="code" value={row.code} />
+          <button type="submit" className="inline-flex h-[46px] items-center rounded-full bg-ink px-5 text-[15px] font-medium text-white">Don’t count the spike ({count(row.spikeCount)} clicks)</button>
+        </form>
+        <form action={keepTrafficAction}>
+          <input type="hidden" name="month" value={month} />
+          <input type="hidden" name="code" value={row.code} />
+          <button type="submit" className="inline-flex h-[46px] items-center rounded-full border border-[#CDBDBA] bg-white px-5 text-[15px] font-medium text-ink">Count it</button>
+        </form>
+        <button type="button" onClick={onClose} className="inline-flex h-[46px] items-center text-sm text-ink underline">Decide later</button>
+      </div>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { campaignAnswer, type MarketingCampaignRecord } from "./campaign-record";
 import { campaignPostState, type CampaignPostState } from "./campaign-list";
-import type { PostFormat } from "./post-format";
+import { awaitsManualLinkCheck, type PostFormat } from "./post-format";
 
 export type AffiliateCampaignPost = {
   id: string;
@@ -25,6 +25,7 @@ export type AffiliateCampaignSlot = {
   action: "submit" | "link" | "";
   actionLabel: string;
   hasFile: boolean;
+  format: PostFormat | null;
 };
 
 export type AffiliateCampaignInvite = {
@@ -63,6 +64,11 @@ const FORMAT_LABEL: Record<PostFormat, string> = {
   tiktok: "TikTok",
   instagram_reel: "Instagram reel",
   instagram_post: "Instagram post",
+  facebook_post: "Facebook post",
+  facebook_reel: "Facebook reel",
+  facebook_video: "Facebook video",
+  youtube_short: "YouTube Short",
+  youtube_video: "YouTube video",
 };
 
 function money(cents: number) {
@@ -105,13 +111,25 @@ export function campaignUploadFormats(record: MarketingCampaignRecord): PostForm
   };
   const types = record.contentTypes;
   const platforms = record.platforms;
-  if (types.includes("Reel")) add("instagram_reel");
+  if (types.includes("Reel")) {
+    if (platforms.includes("Facebook")) add("facebook_reel");
+    if (platforms.includes("Instagram") || platforms.length === 0 || !platforms.includes("Facebook")) add("instagram_reel");
+  }
   if (types.includes("Video")) {
     if (platforms.includes("TikTok") || platforms.length === 0) add("tiktok");
-    if (platforms.includes("Instagram") || platforms.includes("YouTube") || platforms.includes("Facebook") || platforms.length === 0) add("instagram_reel");
+    if (platforms.includes("Instagram") || platforms.length === 0) add("instagram_reel");
+    if (platforms.includes("Facebook")) add("facebook_video");
+    if (platforms.includes("YouTube")) add("youtube_video");
   }
+  if (types.includes("Short") && (platforms.includes("YouTube") || platforms.length === 0)) add("youtube_short");
+  if (types.includes("Post") && (platforms.includes("Facebook") || platforms.length === 0)) add("facebook_post");
   if (types.includes("Image post") || types.includes("Carousel") || types.includes("Story")) add("instagram_post");
-  if (formats.length === 0) add(platforms.length === 1 && platforms[0] === "TikTok" ? "tiktok" : "instagram_reel");
+  if (formats.length === 0) {
+    if (platforms.length === 1 && platforms[0] === "TikTok") add("tiktok");
+    else if (platforms.length === 1 && platforms[0] === "Facebook") add("facebook_post");
+    else if (platforms.length === 1 && platforms[0] === "YouTube") add("youtube_video");
+    else add("instagram_reel");
+  }
   return formats;
 }
 
@@ -134,7 +152,7 @@ function slotFor(post: AffiliateCampaignPost | null, index: number, campaign: st
                   ? post?.reviewNote || "Verification failed"
                   : "Create and submit this post";
   const action: AffiliateCampaignSlot["action"] =
-    state === "todo" || state === "changes" ? "submit" : state === "ready" || state === "failed" || (state === "published" && post?.format === "tiktok") ? "link" : "";
+    state === "todo" || state === "changes" ? "submit" : state === "ready" || state === "failed" || (state === "published" && awaitsManualLinkCheck(post?.format ?? null)) ? "link" : "";
   const actionLabel = state === "changes" ? "Resubmit" : state === "ready" || state === "failed" || action === "link" ? "Add live link" : "Submit content";
   return {
     key: post?.id || `${campaign}-${index}`,
@@ -162,6 +180,7 @@ function slotFor(post: AffiliateCampaignPost | null, index: number, campaign: st
     action,
     actionLabel,
     hasFile: Boolean(post?.hasFile),
+    format: post?.format ?? null,
   };
 }
 

@@ -4,6 +4,7 @@ import { formatPayoutMonth, normalizePayoutPeriod } from "@/lib/affiliate/payout
 import { loadMarketingEvents, loadTrafficKeeps } from "@/lib/affiliate/marketing-events";
 import { listAffiliateChoices } from "@/lib/affiliate/marketing-store";
 import { trafficReview } from "@/lib/affiliate/traffic-review";
+import { loadWebsiteEvents, websiteReportMonths } from "@/lib/affiliate/website-report";
 import { adminHasFullAccess, adminSessionActor } from "@/lib/affiliate/session";
 
 export const metadata: Metadata = {
@@ -31,10 +32,11 @@ export default async function WebsiteTrafficPage({
   let loadError = "";
   let review = trafficReview({ period: month, today: new Date().toISOString().slice(0, 10), affiliates: [], events: [], keeps: [] });
   try {
-    const [affiliates, events, keeps] = await Promise.all([
+    const [affiliates, events, keeps, website] = await Promise.all([
       listAffiliateChoices(),
       loadMarketingEvents({ period: month }),
       loadTrafficKeeps(month),
+      loadWebsiteEvents(),
     ]);
     review = trafficReview({
       period: month,
@@ -43,6 +45,21 @@ export default async function WebsiteTrafficPage({
       events,
       keeps,
     });
+    const promo = new Map(
+      affiliates.map((affiliate) => {
+        const report = websiteReportMonths({ code: affiliate.code, visits: website.visits, orders: website.orders }).find((item) => item.month === month);
+        return [affiliate.code, { promoLink: report?.promoVisits ?? 0, promoOrders: (report?.promoOrders ?? 0) + (report?.promoLinkOrders ?? 0) }] as const;
+      }),
+    );
+    review = {
+      ...review,
+      rows: review.rows.map((row) => ({ ...row, promoLink: promo.get(row.code)?.promoLink ?? 0, promoOrders: promo.get(row.code)?.promoOrders ?? 0 })),
+      totals: {
+        ...review.totals,
+        promoLink: [...promo.values()].reduce((sum, item) => sum + item.promoLink, 0),
+        promoOrders: [...promo.values()].reduce((sum, item) => sum + item.promoOrders, 0),
+      },
+    };
   } catch {
     loadError = "Website traffic is unavailable right now.";
   }

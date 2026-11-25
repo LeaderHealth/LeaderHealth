@@ -17,7 +17,7 @@ import { formatCents, formatWhen } from "@/lib/affiliate/format";
 import { standingViewRateCents } from "@/lib/affiliate/payment-rates";
 import { loadPaymentRates } from "@/lib/affiliate/payment-store";
 import { memo } from "@/lib/affiliate/memo";
-import { currentAffiliate } from "../../current";
+import { currentAffiliate } from "../../../current";
 
 export const metadata: Metadata = {
   title: "My agreement",
@@ -105,9 +105,9 @@ export default async function AffiliateContractsPage({ searchParams }: { searchP
           </p>
         ) : null}
         <p className="mt-4 text-sm leading-relaxed">
-          I will include a clear sponsorship disclosure on posts and videos I publish for Leader Health, and I will send each new post for review before I publish it, with my tracking link in the caption.
+          I will tag @myleaderhealth in the caption so the post can track, and I will send each new post for review before I publish it. The sponsorship line and my tracking link are optional in the caption.
         </p>
-        <p className="mt-3 text-sm text-brown">The caption line is “{DISCLOSURE_LINE}.” A link in your bio is not enough.</p>
+        <p className="mt-3 text-sm text-brown">The optional sponsorship line is “{DISCLOSURE_LINE}.”</p>
       </section>
       <section id="agreements" className="scroll-mt-6 flex flex-col gap-5" aria-labelledby="portal-contracts-title">
         <div className="flex flex-col gap-1.5">
@@ -231,6 +231,7 @@ function boardPosts(posts: ContentSubmission[]): AgreementBoardPost[] {
     postingMonth: post.postingMonth,
     reviewNote: post.reviewNote,
     title: postTitle(post.caption),
+    agreementSlot: post.agreementSlot,
   }));
 }
 

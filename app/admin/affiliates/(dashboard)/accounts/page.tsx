@@ -14,6 +14,7 @@ import { currentPayoutPeriod, formatPayoutMonth, normalizePayoutPeriod, payoutLi
 import { affiliateTrackingLink } from "@/lib/affiliate/link";
 import { loadPayoutRecords, type PayoutRecord } from "@/lib/affiliate/payouts";
 import { reportHandledAffiliateError } from "@/lib/affiliate/report";
+import { earnsLabCommission, remainingSalesCents } from "@/lib/affiliate/refunds";
 import {
   AffiliateStoreError,
   AFFILIATE_MAX_AGE,
@@ -132,6 +133,15 @@ function Amount({ cents, strong = false, divider = false }: { cents: number | nu
   return (
     <span role="cell" className={`text-right text-[15px] tabular-nums ${cents ? "" : zero} ${strong ? "font-semibold" : ""} ${divider ? "pl-6" : ""}`}>
       {money(cents)}
+    </span>
+  );
+}
+
+function CompactStat({ label, value, empty = false, tone = "" }: { label: string; value: string; empty?: boolean; tone?: string }) {
+  return (
+    <span className="flex min-w-0 flex-col gap-0.5">
+      <span className="text-xs text-[#6B5A57]">{label}</span>
+      <span className={`text-[15px] tabular-nums ${empty ? zero : tone}`}>{value}</span>
     </span>
   );
 }
@@ -584,10 +594,29 @@ export default async function AffiliateAccountsPage({
     return { social, website, lab, total: sumKnown([social, website, lab]) };
   }
 
+  function metricCount(value: number | null | undefined) {
+    return typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+  }
+
+  function engagementsFor(code: string) {
+    if (postsUnavailable) return null;
+    return contentPosts
+      .filter((post) => post.code === code && post.contentStatus === "approved" && (post.publicationStatus === "tracking_active" || Boolean(post.postUrl)))
+      .reduce((sum, post) => sum + metricCount(post.likes) + metricCount(post.comments) + metricCount(post.shares) + metricCount(post.saves), 0);
+  }
+
+  function labOrdersFor(code: string) {
+    return conversions.filter(
+      (order) => order.code === code && !order.dryRun && remainingSalesCents(order.amountCents, order.refundedAmountCents) > 0 && earnsLabCommission(order),
+    ).length;
+  }
+
   const rows = affiliates.map((affiliate) => ({
     affiliate,
     status: statusKey(affiliate),
     stats: figures(affiliate),
+    engagements: engagementsFor(affiliate.code),
+    labOrders: labOrdersFor(affiliate.code),
     pay: earnings(affiliate),
     deal: agreementFor(affiliate),
   }));
@@ -600,7 +629,6 @@ export default async function AffiliateAccountsPage({
       (statusFilter === "all" || row.status === statusFilter) &&
       (!needle || `${row.affiliate.name} ${row.affiliate.email} ${row.affiliate.code}`.toLowerCase().includes(needle)),
   );
-  const unpaidKnown = rows.every((row) => row.stats.unpaidOrders != null);
   const visibleTotal = (pick: (row: Row) => number | null) => sumKnown(visible.map(pick));
 
   const selected = requestedCode ? (affiliates.find((affiliate) => affiliate.code === requestedCode) ?? null) : null;
@@ -651,10 +679,10 @@ export default async function AffiliateAccountsPage({
     const postsShort = rateThisMonth.requiredPosts - rateThisMonth.verifiedPosts;
     const earnedNote =
       rateThisMonth.status === "none"
-        ? "Social performance + base pay, website and lab"
+        ? "Agreement pay, social performance, website and lab"
         : rateThisMonth.status === "short"
-          ? `Monthly rate needs ${postsShort} more ${postsShort === 1 ? "post" : "posts"}`
-          : "Includes the monthly rate";
+          ? `Agreement pay needs ${postsShort} more ${postsShort === 1 ? "post" : "posts"}`
+          : "Includes agreement pay";
     const promoCodes = promosFor(affiliate).map((promo) => promo.code);
     const joined = shortDate(affiliate.createdAt, true);
     const labRate = LAB_COMMISSIONS_ENABLED ? formatCommissionRate(affiliate) : "Off";
@@ -780,7 +808,7 @@ export default async function AffiliateAccountsPage({
     }
     if (payoutsReady && approvedCents > 0) {
       attention.push({
-        text: `${formatCents(approvedCents)} is approved and waiting to be paid.`,
+        text: `${formatCents(approvedCents)} is approved and not sent.`,
         cta: (
           <Link href="/admin/affiliates/payouts" className={textLink}>
             Go to payouts
@@ -848,7 +876,17 @@ export default async function AffiliateAccountsPage({
     const reportMonths = websiteReportMonths({ code: affiliate.code, visits: websiteVisits, orders: websiteOrders });
     const monthReport = reportMonths.find((month) => month.month === selectedPeriod) ?? null;
     const monthVisits = reportsUnavailable ? null : (monthReport ? monthReport.trackingVisits + monthReport.promoVisits : 0);
-    const monthOrders = reportsUnavailable ? null : (monthReport ? monthReport.trackingOrders + monthReport.promoOrders + monthReport.promoLinkOrders : 0);
+    const monthPaid = loadError
+      ? null
+      : conversions.filter(
+          (order) =>
+            order.code === affiliate.code &&
+            !order.dryRun &&
+            payoutPeriod(order.createdAt) === selectedPeriod &&
+            remainingSalesCents(order.amountCents, order.refundedAmountCents) > 0,
+        );
+    const monthLab = monthPaid?.filter((order) => earnsLabCommission(order)).length ?? 0;
+    const monthPlain = monthPaid == null ? 0 : monthPaid.length - monthLab;
     const unpaidCount = row.stats.unpaidOrders;
     const monthApproved = payoutsReady ? ownPayouts.filter((payout) => payout.period === selectedPeriod && payout.status === "approved").reduce((sum, payout) => sum + payout.earnedCents, 0) : null;
     const covering = ownAgreements
@@ -891,7 +929,7 @@ export default async function AffiliateAccountsPage({
             </p>
           </div>
           <SlidingTabs
-            variant="track"
+            variant="segment"
             label="Affiliate"
             items={[
               { id: "overview", href: profileHref, label: "Overview", current: !agreementsTab && !postsTab && !trackingTab },
@@ -954,23 +992,23 @@ export default async function AffiliateAccountsPage({
             <Tile label="Visits" value={monthVisits == null ? "—" : String(monthVisits)} note="Tracking + promo links" />
             <Tile
               label="Paid orders"
-              value={monthOrders == null ? "—" : String(monthOrders)}
-              tone={monthOrders ? "text-[#1D6340]" : ""}
-              note="Paid checkouts"
+              value={monthPaid == null ? "—" : String(monthPaid.length)}
+              tone={monthPaid?.length ? "text-[#1D6340]" : ""}
+              note={monthPaid == null ? "Unavailable right now" : `Lab orders ${monthLab} · Orders without commission ${monthPlain}`}
             />
             <Tile
-              label="Unpaid orders"
+              label="Checkouts not finished"
               value={unpaidCount == null ? "—" : String(unpaidCount)}
               tone={unpaidCount ? "text-[#7A4E00]" : ""}
-              note={selectedPeriod === currentPeriod ? "Placed, not paid yet" : "Still open now"}
+              note={selectedPeriod === currentPeriod ? "Started checkout. Not a promo use, and no commission." : "Still open now"}
             />
             <Tile
-              label="Posts"
+              label="Posts verified"
               value={postingMonth && periodProgress && periodAgreement ? `${periodProgress.verified} of ${periodAgreement.postTotal}` : "—"}
               note={postingMonth ? (periodProgress?.review ? `Verified, ${periodProgress.review} in review` : "Verified") : view?.phase === "active" && selectedPeriod === currentPeriod ? "Not a posting month" : selectedPeriod === currentPeriod ? "No active agreement" : "No agreement that month"}
             />
             <Tile label="Earned" value={money(thisMonth)} note={earnedNote} />
-            <Tile label="Waiting to be paid" value={monthApproved == null ? "—" : formatCents(monthApproved)} note={monthApproved ? "Sent manually" : "Nothing pending"} />
+            <Tile label="Approved, not sent" value={monthApproved == null ? "—" : formatCents(monthApproved)} note={monthApproved ? "Sent manually" : "Nothing pending"} />
           </div>
         </section>
 
@@ -1147,11 +1185,11 @@ export default async function AffiliateAccountsPage({
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <Tile label="Total visits" value={String(rows.reduce((sum, row) => sum + row.stats.visitors, 0))} note="All affiliates, all time" />
             <Tile
-              label="Total paid orders"
-              value={String(rows.reduce((sum, row) => sum + row.stats.paidOrders, 0))}
-              note={unpaidKnown ? `All time · ${rows.reduce((sum, row) => sum + (row.stats.unpaidOrders ?? 0), 0)} unpaid not counted` : "Unpaid count unavailable"}
+              label="Lab orders"
+              value={String(rows.reduce((sum, row) => sum + row.labOrders, 0))}
+              note="All time. These are the only orders that earn commission."
             />
-            <Tile label="Total earned" value={money(sumKnown(rows.map((row) => row.pay.total)))} note="Social + website + lab, all time" />
+            <Tile label="Total earned" value={money(sumKnown(rows.map((row) => row.pay.total)))} note="Agreement pay, social performance, website and lab, all time" />
             <Tile
               label="Total active agreements"
               value={agreementsUnavailable ? "—" : String(rows.filter((row) => row.deal.view?.phase === "active").length)}
@@ -1165,34 +1203,44 @@ export default async function AffiliateAccountsPage({
             <p className="px-2.5 py-2.5 text-[15px] text-[#6B5A57]">No affiliates match.</p>
           ) : (
             <>
-              <ul aria-labelledby="accounts-title" className="divide-y divide-[#F0E8E6] overflow-hidden rounded-[20px] border border-[#E8DEDC] xl:hidden">
+              <ul aria-labelledby="accounts-title" className="overflow-hidden rounded-[20px] border border-[#E8DEDC] xl:hidden">
                 {visible.map((row) => (
-                  <li key={row.affiliate.code}>
-                    <Link href={`/admin/affiliates/accounts?code=${encodeURIComponent(row.affiliate.code)}`} className={`flex flex-col gap-3 p-4 text-ink hover:bg-background ${focusRing}`}>
+                  <li key={row.affiliate.code} className="border-b border-[#F0E8E6]">
+                    <Link href={`/admin/affiliates/accounts?code=${encodeURIComponent(row.affiliate.code)}`} className={`flex flex-col gap-3.5 p-4 text-ink hover:bg-[#FBF9F8] ${focusRing}`}>
                       <span className="flex items-center gap-3">
                         <Avatar name={row.affiliate.name} />
                         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                          <span className="text-base font-semibold">{row.affiliate.name}</span>
+                          <span className="truncate text-base font-semibold">{row.affiliate.name}</span>
                           <span className="flex items-center gap-1.5 text-[13px] text-[#4A3A37]">
                             <span aria-hidden="true" className={`size-2 rounded-full ${STATUS[row.status].dot}`} />
                             {STATUS[row.status].label}
                           </span>
                         </span>
-                        <span className={`text-base font-bold tabular-nums ${row.pay.total ? "" : muted}`}>{money(row.pay.total)}</span>
+                        <span className="flex flex-col items-end gap-0.5">
+                          <span className="text-xs text-[#6B5A57]">Total earned</span>
+                          <span className={`text-base font-semibold tabular-nums ${row.pay.total ? "" : zero}`}>{money(row.pay.total)}</span>
+                        </span>
                       </span>
-                      {agreementCell(row)}
-                      <span className="grid grid-cols-3 gap-2 text-sm">
-                        <span>
-                          <span className="block text-xs text-[#6B5A57]">Visits</span>
-                          {row.stats.visitors}
+                      <span className="flex flex-col gap-1">
+                        <span className="text-xs text-[#6B5A57]">Agreement</span>
+                        {agreementCell(row)}
+                      </span>
+                      <span className="grid gap-4 sm:grid-cols-2">
+                        <span className="flex flex-col gap-2">
+                          <span className="mx-auto w-fit rounded-full bg-[#F2C6C3] px-2.5 py-1 text-center text-[11px] font-semibold tracking-[0.04em] text-[#331110]">Results so far</span>
+                          <span className="grid grid-cols-3 gap-2">
+                            <CompactStat label="Visits" value={String(row.stats.visitors)} empty={!row.stats.visitors} />
+                            <CompactStat label="Engagements" value={row.engagements == null ? "—" : String(row.engagements)} empty={!row.engagements} />
+                            <CompactStat label="Lab orders" value={String(row.labOrders)} empty={!row.labOrders} tone={row.labOrders ? "text-[#1D6340]" : ""} />
+                          </span>
                         </span>
-                        <span>
-                          <span className="block text-xs text-[#6B5A57]">Paid orders</span>
-                          {row.stats.paidOrders}
-                        </span>
-                        <span>
-                          <span className="block text-xs text-[#6B5A57]">Unpaid</span>
-                          {row.stats.unpaidOrders ?? "—"}
+                        <span className="flex flex-col gap-2">
+                          <span className="mx-auto w-fit rounded-full bg-[#DBD4BD] px-2.5 py-1 text-center text-[11px] font-semibold tracking-[0.04em] text-[#331110]">Earnings so far</span>
+                          <span className="grid grid-cols-3 gap-2">
+                            <CompactStat label="Social" value={money(row.pay.social)} empty={!row.pay.social} />
+                            <CompactStat label="Website" value={money(row.pay.website)} empty={!row.pay.website} />
+                            <CompactStat label="Lab commission" value={LAB_COMMISSIONS_ENABLED ? money(row.pay.lab) : "Off"} empty={LAB_COMMISSIONS_ENABLED ? !row.pay.lab : true} />
+                          </span>
                         </span>
                       </span>
                       <span aria-hidden="true" className="inline-flex items-center gap-0.5 self-end text-[13px] font-medium underline underline-offset-4">
@@ -1204,6 +1252,25 @@ export default async function AffiliateAccountsPage({
                     </Link>
                   </li>
                 ))}
+                <li className="bg-[#FBF9F8] px-4 py-3.5">
+                  <span className="text-[15px] font-semibold">Total{visible.length < rows.length ? " (shown)" : ""}</span>
+                  <span className="mt-3 grid gap-4 sm:grid-cols-2">
+                    <span className="grid grid-cols-3 gap-2">
+                      <CompactStat label="Visits" value={String(visibleTotal((row) => row.stats.visitors) ?? 0)} empty={!visibleTotal((row) => row.stats.visitors)} />
+                      <CompactStat label="Engagements" value={String(visibleTotal((row) => row.engagements) ?? 0)} empty={!visibleTotal((row) => row.engagements)} />
+                      <CompactStat label="Lab orders" value={String(visibleTotal((row) => row.labOrders) ?? 0)} empty={!visibleTotal((row) => row.labOrders)} />
+                    </span>
+                    <span className="grid grid-cols-3 gap-2">
+                      <CompactStat label="Social" value={money(visibleTotal((row) => row.pay.social))} empty={!visibleTotal((row) => row.pay.social)} />
+                      <CompactStat label="Website" value={money(visibleTotal((row) => row.pay.website))} empty={!visibleTotal((row) => row.pay.website)} />
+                      <CompactStat label="Lab commission" value={LAB_COMMISSIONS_ENABLED ? money(visibleTotal((row) => row.pay.lab)) : "Off"} empty={!LAB_COMMISSIONS_ENABLED || !visibleTotal((row) => row.pay.lab)} />
+                    </span>
+                  </span>
+                  <span className="mt-3 flex items-baseline justify-between gap-3">
+                    <span className="text-[13px] text-[#6B5A57]">Total earned</span>
+                    <span className={`text-base font-semibold tabular-nums ${visibleTotal((row) => row.pay.total) ? "" : zero}`}>{money(visibleTotal((row) => row.pay.total))}</span>
+                  </span>
+                </li>
             </ul>
 
               <div role="table" aria-labelledby="accounts-title" className="hidden overflow-hidden rounded-[20px] border border-[#E8DEDC] xl:block">
@@ -1211,8 +1278,12 @@ export default async function AffiliateAccountsPage({
                   <div aria-hidden="true" className={`${GRID} items-end pt-3.5 text-xs text-[#8A7A77]`}>
                     <span />
                     <span />
-                    <span className="col-span-3 ml-6 border-b border-[#E8DEDC] pb-1 text-center">Activity, all time</span>
-                    <span className="col-span-4 ml-6 border-b border-[#E8DEDC] pb-1 text-center">Earned, all time</span>
+                    <span className="col-span-3 ml-6 flex justify-center">
+                      <span className="rounded-full bg-[#F2C6C3] px-2.5 py-1 text-[11px] font-semibold tracking-[0.04em] text-[#331110]">Results so far</span>
+                    </span>
+                    <span className="col-span-4 ml-6 flex justify-center">
+                      <span className="rounded-full bg-[#DBD4BD] px-2.5 py-1 text-[11px] font-semibold tracking-[0.04em] text-[#331110]">Earnings so far</span>
+                    </span>
                     <span />
                   </div>
                   <div role="row" className={`${GRID} whitespace-nowrap pb-2.5 pt-2 text-[13px] font-medium text-[#6B5A57]`}>
@@ -1222,10 +1293,10 @@ export default async function AffiliateAccountsPage({
                       Visits
                     </span>
                     <span role="columnheader" className="text-right">
-                      Paid orders
+                      Engagements
                     </span>
                     <span role="columnheader" className="text-right">
-                      Unpaid
+                      Lab orders
                     </span>
                     <span role="columnheader" className="pl-6 text-right">
                       Social
@@ -1234,7 +1305,7 @@ export default async function AffiliateAccountsPage({
                       Website
                     </span>
                     <span role="columnheader" className="text-right">
-                      Lab
+                      Lab commission
                     </span>
                     <span role="columnheader" className="text-right">
                       Total earned
@@ -1266,8 +1337,8 @@ export default async function AffiliateAccountsPage({
                         {agreementCell(row)}
                       </span>
                       <Count value={row.stats.visitors} divider />
-                      <Count value={row.stats.paidOrders} tone="text-[#1D6340]" />
-                      <Count value={row.stats.unpaidOrders} tone="text-[#7A4E00]" />
+                      <Count value={row.engagements} />
+                      <Count value={row.labOrders} tone="text-[#1D6340]" />
                       <Amount cents={row.pay.social} divider />
                       <Amount cents={row.pay.website} />
                       {LAB_COMMISSIONS_ENABLED ? (
@@ -1291,8 +1362,8 @@ export default async function AffiliateAccountsPage({
                   <span role="cell">Total{visible.length < rows.length ? " (shown)" : ""}</span>
                   <span role="cell" />
                   <Count value={visibleTotal((row) => row.stats.visitors)} divider />
-                  <Count value={visibleTotal((row) => row.stats.paidOrders)} />
-                  <Count value={visibleTotal((row) => row.stats.unpaidOrders)} />
+                  <Count value={visibleTotal((row) => row.engagements)} />
+                  <Count value={visibleTotal((row) => row.labOrders)} />
                   <Amount cents={visibleTotal((row) => row.pay.social)} divider />
                   <Amount cents={visibleTotal((row) => row.pay.website)} />
                   {LAB_COMMISSIONS_ENABLED ? <Amount cents={visibleTotal((row) => row.pay.lab)} /> : <span role="cell" />}

@@ -95,6 +95,8 @@ export function trafficReview(input: {
       color: COLORS[index % COLORS.length],
       clicks: liveClicks.length,
       pageViews: liveViews.length,
+      promoLink: 0,
+      promoOrders: 0,
       excluded,
       status,
       spikeHour: spike?.hour ?? "",
@@ -133,6 +135,8 @@ export function trafficReview(input: {
     totals: {
       clicks: rows.reduce((sum, row) => sum + row.clicks, 0),
       pageViews: rows.reduce((sum, row) => sum + row.pageViews, 0),
+      promoLink: 0,
+      promoOrders: 0,
       excluded: rows.reduce((sum, row) => sum + row.excluded, 0),
     },
   };

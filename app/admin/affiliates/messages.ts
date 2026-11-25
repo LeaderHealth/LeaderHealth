@@ -82,6 +82,7 @@ export const ADMIN_ERRORS: Record<string, string> = {
   "post-url": "Paste the link from the TikTok, Instagram post, or Instagram reel you published.",
   "post-note": "Write a note.",
   "post-disclosure": "Include “Paid partnership with Leader Health” in the caption.",
+  "post-tag": "Tag @myleaderhealth in the caption. The post does not track without that tag.",
   "post-link": "Put the tracking link in the caption. A link in the bio is not enough.",
   reply: "Write a reply to the correction request.",
   taken: "We already have that email.",

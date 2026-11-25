@@ -4,6 +4,7 @@ export type StatsBoardPost = {
   platform: "instagram" | "facebook" | "tiktok" | "youtube" | "other";
   kind: string;
   campaign: string;
+  agreementLabel: string;
   postedOn: string;
   views: number;
   likes: number;
@@ -16,6 +17,21 @@ export type StatsBoardDay = {
   day: string;
   clicks: number;
   pageViews: number;
+};
+
+export type SaleDayCount = {
+  day: string;
+  commissioned: boolean;
+  orders: number;
+  commissionCents: number;
+};
+
+export type SalePeriodRefs = {
+  period: string;
+  commissioned: boolean;
+  orders: number;
+  commissionCents: number;
+  refs: string[];
 };
 
 export type BoardRange = "7" | "30" | "90" | "custom";
@@ -85,6 +101,52 @@ export function postEngagement(post: Pick<StatsBoardPost, "likes" | "comments" |
 
 export function postsIn(posts: StatsBoardPost[], days: string[], platform: BoardPlatform = "all") {
   return posts.filter((post) => inDays(post.postedOn, days) && (platform === "all" || post.platform === platform));
+}
+
+export function saleDaysIn(days: SaleDayCount[], selected: string[], commissioned = true) {
+  return days.filter((item) => inDays(item.day, selected) && item.commissioned === commissioned);
+}
+
+export function salesTotals(days: SaleDayCount[]) {
+  return days.reduce(
+    (sum, day) => ({
+      orders: sum.orders + day.orders,
+      commissionCents: sum.commissionCents + day.commissionCents,
+    }),
+    { orders: 0, commissionCents: 0 },
+  );
+}
+
+export type SaleHistoryRow = {
+  period: string;
+  orders: number;
+  commissionCents: number;
+  refs: string[];
+};
+
+export function saleHistory(periods: SalePeriodRefs[], days: SaleDayCount[], selected: string[], commissioned = true): SaleHistoryRow[] {
+  const totals = new Map<string, { orders: number; commissionCents: number }>();
+  for (const day of saleDaysIn(days, selected, commissioned)) {
+    const period = day.day.slice(0, 7);
+    const current = totals.get(period) ?? { orders: 0, commissionCents: 0 };
+    current.orders += day.orders;
+    current.commissionCents += day.commissionCents;
+    totals.set(period, current);
+  }
+  return [...totals.entries()]
+    .filter(([, row]) => row.orders > 0)
+    .map(([period, row]) => {
+      const full = periods.find((item) => item.period === period && item.commissioned === commissioned);
+      const complete = full != null && full.orders === row.orders;
+      return { period, orders: row.orders, commissionCents: row.commissionCents, refs: complete && full ? [...full.refs] : [] };
+    })
+    .sort((left, right) => right.period.localeCompare(left.period));
+}
+
+export function salePeriodLabel(period: string) {
+  const match = /^(\d{4})-(\d{2})$/.exec(period);
+  if (!match) return period;
+  return new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, 1)));
 }
 
 export function trafficIn(series: StatsBoardDay[], days: string[]) {

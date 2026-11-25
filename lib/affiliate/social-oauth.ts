@@ -11,7 +11,6 @@ import {
 } from "./social-store";
 
 const GRAPH = "https://graph.facebook.com/v21.0";
-const INSTAGRAM_GRAPH = "https://graph.instagram.com/v21.0";
 const STATE_MS = 10 * 60 * 1000;
 const ACCOUNT_ID = /^[A-Za-z0-9._-]{1,128}$/;
 const VERIFIER = /^[A-Za-z0-9\-._~]{43,128}$/;
@@ -22,7 +21,7 @@ export function metaConfigured() {
 }
 
 export function instagramConfigured() {
-  return Boolean(process.env.INSTAGRAM_APP_ID?.trim() && process.env.INSTAGRAM_APP_SECRET?.trim());
+  return Boolean(process.env.INSTAGRAM_APP_ID?.trim() && process.env.INSTAGRAM_APP_SECRET?.trim() && process.env.INSTAGRAM_CONFIG_ID?.trim());
 }
 
 export function youtubeConfigured() {
@@ -86,19 +85,18 @@ export function metaAuthorizeUrl(state: string) {
   url.searchParams.set("redirect_uri", metaRedirectUri());
   url.searchParams.set("state", state);
   url.searchParams.set("response_type", "code");
-  url.searchParams.set("scope", "pages_show_list,pages_read_engagement,pages_read_user_content");
+  url.searchParams.set("scope", "public_profile");
   return url.toString();
 }
 
 export function instagramAuthorizeUrl(state: string) {
-  const url = new URL("https://www.instagram.com/oauth/authorize");
-  url.searchParams.set("enable_fb_login", "0");
-  url.searchParams.set("force_authentication", "1");
+  const url = new URL("https://www.facebook.com/dialog/oauth");
   url.searchParams.set("client_id", env("INSTAGRAM_APP_ID"));
+  url.searchParams.set("config_id", env("INSTAGRAM_CONFIG_ID"));
   url.searchParams.set("redirect_uri", instagramRedirectUri());
   url.searchParams.set("response_type", "code");
-  url.searchParams.set("scope", "instagram_business_basic,instagram_business_manage_insights");
   url.searchParams.set("state", state);
+  url.searchParams.set("prompt", "login");
   return url.toString();
 }
 
@@ -167,16 +165,19 @@ export async function exchangeMetaCode(oauthCode: string) {
 
 export async function exchangeInstagramCode(oauthCode: string): Promise<Omit<InstagramConnectionSecret, "code" | "network">> {
   if (!instagramConfigured()) throw new SocialError("setup");
-  const short = await instagramAuthorization(oauthCode);
-  const durable = await instagramLongLived(short.accessToken);
-  const profile = await instagramProfile(durable.accessToken);
-  const accountId = profile.accountId ?? short.userId;
-  if (!accountId) throw new SocialError("unavailable");
+  const token = await metaAccessToken({
+    client_id: env("INSTAGRAM_APP_ID"),
+    client_secret: env("INSTAGRAM_APP_SECRET"),
+    redirect_uri: instagramRedirectUri(),
+    code: oauthCode,
+  });
+  const account = await assignedInstagramAccount(token.accessToken);
+  if (!account) throw new SocialError("unavailable");
   return {
-    accountId,
-    accountName: profile.accountName ?? accountId,
-    accessToken: durable.accessToken,
-    expiresAt: durable.expiresAt,
+    accountId: account.accountId,
+    accountName: account.accountName,
+    accessToken: token.accessToken,
+    expiresAt: token.expiresAt,
   };
 }
 
@@ -187,15 +188,45 @@ async function exchangeMetaApp(clientId: string, clientSecret: string, redirectU
     redirect_uri: redirectUri,
     code: oauthCode,
   });
-  const userToken = await metaAccessToken({
+  const durable = await metaAccessToken({
     grant_type: "fb_exchange_token",
     client_id: clientId,
     client_secret: clientSecret,
-    fb_exchange_token: shortToken,
+    fb_exchange_token: shortToken.accessToken,
   });
-  const pages = await metaPages(userToken);
-  if (pages.length === 0) throw new SocialError("page");
-  return { userAccessToken: userToken, pages };
+  const userToken = durable.accessToken;
+  const pages = await facebookPages(userToken);
+  if (pages.length > 0) return { userAccessToken: userToken, pages };
+  const profile = await facebookProfile(userToken);
+  if (!profile) throw new SocialError("unavailable");
+  return {
+    userAccessToken: userToken,
+    pages: [{
+      accountId: profile.accountId,
+      accountName: profile.accountName,
+      accessToken: userToken,
+      instagramAccountId: null,
+      instagramAccountName: null,
+    }],
+  };
+}
+
+async function facebookPages(userToken: string) {
+  try {
+    return await metaPages(userToken);
+  } catch (error) {
+    if (error instanceof SocialError && error.code === "unavailable") return [];
+    throw error;
+  }
+}
+
+async function facebookProfile(token: string) {
+  const url = new URL(`${GRAPH}/me`);
+  url.searchParams.set("fields", "id,name");
+  const body = await readJson(url, token);
+  const accountId = asAccountId(body.id);
+  if (!accountId) return null;
+  return { accountId, accountName: label(body.name) ?? accountId };
 }
 
 export async function exchangeTikTokCode(oauthCode: string, verifier: string): Promise<Omit<TikTokConnectionSecret, "code">> {
@@ -305,9 +336,28 @@ async function metaAccessToken(params: Record<string, string>) {
   const url = new URL(`${GRAPH}/oauth/access_token`);
   for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
   const body = await readJson(url);
-  const token = typeof body.access_token === "string" ? body.access_token : "";
-  if (!token) throw new SocialError("unavailable");
-  return token;
+  const accessToken = typeof body.access_token === "string" ? body.access_token : "";
+  if (!accessToken) throw new SocialError("unavailable");
+  const expiresIn = typeof body.expires_in === "number" ? body.expires_in : 0;
+  return {
+    accessToken,
+    expiresAt: expiresIn > 0 ? new Date(Date.now() + expiresIn * 1000).toISOString() : null,
+  };
+}
+
+async function assignedInstagramAccount(token: string) {
+  const url = new URL(`${GRAPH}/me/assigned_instagram_accounts`);
+  url.searchParams.set("fields", "id,username");
+  const body = await readJson(url, token);
+  const data = Array.isArray(body.data) ? body.data : [];
+  for (const item of data) {
+    if (!item || typeof item !== "object") continue;
+    const record = item as Record<string, unknown>;
+    const accountId = accountIdFrom(record.id);
+    if (!accountId) continue;
+    return { accountId, accountName: label(record.username) ?? accountId };
+  }
+  return null;
 }
 
 async function metaPages(userToken: string) {
@@ -339,62 +389,6 @@ function pageFromGraph(value: unknown): FacebookPageSecret[] {
       instagramAccountName: instagramRecord ? label(instagramRecord.username) : null,
     },
   ];
-}
-
-async function instagramAuthorization(oauthCode: string) {
-  const response = await fetch("https://api.instagram.com/oauth/access_token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: env("INSTAGRAM_APP_ID"),
-      client_secret: env("INSTAGRAM_APP_SECRET"),
-      grant_type: "authorization_code",
-      redirect_uri: instagramRedirectUri(),
-      code: oauthCode,
-    }),
-    signal: AbortSignal.timeout(15000),
-  });
-  const body: unknown = await response.json().catch(() => null);
-  const token = instagramToken(body);
-  if (!response.ok || !token.accessToken) throw new SocialError("unavailable");
-  return token;
-}
-
-async function instagramLongLived(shortToken: string) {
-  const url = new URL("https://graph.instagram.com/access_token");
-  url.searchParams.set("grant_type", "ig_exchange_token");
-  url.searchParams.set("client_secret", env("INSTAGRAM_APP_SECRET"));
-  url.searchParams.set("access_token", shortToken);
-  const body = await readJson(url);
-  const accessToken = typeof body.access_token === "string" ? body.access_token : "";
-  if (!accessToken) throw new SocialError("unavailable");
-  const expiresIn = typeof body.expires_in === "number" ? body.expires_in : 0;
-  return {
-    accessToken,
-    expiresAt: expiresIn > 0 ? new Date(Date.now() + expiresIn * 1000).toISOString() : null,
-  };
-}
-
-async function instagramProfile(token: string) {
-  const url = new URL(`${INSTAGRAM_GRAPH}/me`);
-  url.searchParams.set("fields", "user_id,username");
-  const body = await readJson(url, token);
-  return { accountId: accountIdFrom(body.user_id) ?? accountIdFrom(body.id), accountName: label(body.username) };
-}
-
-function instagramToken(body: unknown) {
-  const record = tokenRecord(body);
-  return {
-    accessToken: typeof record?.access_token === "string" ? record.access_token : "",
-    userId: accountIdFrom(record?.user_id),
-  };
-}
-
-function tokenRecord(body: unknown) {
-  if (!body || typeof body !== "object") return null;
-  const record = body as Record<string, unknown>;
-  const nested = Array.isArray(record.data) ? record.data[0] : null;
-  return nested && typeof nested === "object" ? (nested as Record<string, unknown>) : record;
 }
 
 function accountIdFrom(value: unknown) {

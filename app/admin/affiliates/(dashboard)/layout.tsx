@@ -28,6 +28,7 @@ const published = "/admin/affiliates/posts/published";
 const campaigns = "/admin/affiliates/campaigns";
 const campaignNew = "/admin/affiliates/campaigns/new";
 const roi = "/admin/affiliates/roi";
+const social = "/admin/affiliates/social";
 const website = "/admin/affiliates/reporting";
 const payouts = "/admin/affiliates/payouts";
 const orders = "/admin/affiliates/orders";
@@ -64,8 +65,8 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
       active: [accounts, applications, pendingApplications, "/admin/affiliates/add", promoCodes, trackingLinks],
     },
     { href: submissions, label: "Content", active: [submissions, pending, published, campaigns, campaignNew], badge: reviewBadge },
-    { href: roi, label: "Stats", active: [roi, website] },
-    { href: payouts, label: "Payouts", active: [payouts, orders] },
+    { href: roi, label: "Stats", active: [roi, social, website, orders] },
+    { href: payouts, label: "Payouts", active: [payouts] },
     { href: records, label: "Settings", active: [records, compliance, team, payments] },
   ];
   const groups: DashboardGroup[] = [
@@ -89,16 +90,11 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
       ],
     },
     {
-      paths: [roi, website],
+      paths: [roi, social, website, orders],
       items: [
         { href: roi, label: "ROI" },
+        { href: social, label: "Social media" },
         { href: website, label: "Website traffic" },
-      ],
-    },
-    {
-      paths: [payouts, orders],
-      items: [
-        { href: payouts, label: "Marketing and lab payouts" },
         { href: orders, label: "Orders" },
       ],
     },
