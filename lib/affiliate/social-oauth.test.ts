@@ -49,6 +49,7 @@ test("instagram login opens Facebook unified login and Facebook login stays on i
   process.env.INSTAGRAM_CONFIG_ID = "unified-config";
   process.env.INSTAGRAM_REDIRECT_URI = "https://leaderhealth.clinic/api/affiliate/social/meta/callback";
   process.env.FACEBOOK_APP_ID = "facebook-app";
+  process.env.FACEBOOK_CONFIG_ID = "facebook-config";
   process.env.AFFILIATE_SESSION_SECRET = "instagram-test-secret";
   const now = 1_700_000_000_000;
   const state = signSocialState({ code: "88h4dcji", network: "instagram", now });
@@ -65,6 +66,6 @@ test("instagram login opens Facebook unified login and Facebook login stays on i
   const facebook = new URL(metaAuthorizeUrl("facebook-state"));
   assert.equal(facebook.origin + facebook.pathname, "https://www.facebook.com/v21.0/dialog/oauth");
   assert.equal(facebook.searchParams.get("client_id"), "facebook-app");
-  assert.equal(facebook.searchParams.get("scope"), "public_profile");
-  assert.equal(facebook.searchParams.has("config_id"), false);
+  assert.equal(facebook.searchParams.get("config_id"), "facebook-config");
+  assert.equal(facebook.searchParams.has("scope"), false);
 });

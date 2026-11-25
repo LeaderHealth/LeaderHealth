@@ -17,7 +17,7 @@ const VERIFIER = /^[A-Za-z0-9\-._~]{43,128}$/;
 export const TIKTOK_PKCE_COOKIE = "lh_tiktok_pkce";
 
 export function metaConfigured() {
-  return Boolean(process.env.FACEBOOK_APP_ID?.trim() && process.env.FACEBOOK_APP_SECRET?.trim());
+  return Boolean(process.env.FACEBOOK_APP_ID?.trim() && process.env.FACEBOOK_APP_SECRET?.trim() && process.env.FACEBOOK_CONFIG_ID?.trim());
 }
 
 export function instagramConfigured() {
@@ -85,7 +85,7 @@ export function metaAuthorizeUrl(state: string) {
   url.searchParams.set("redirect_uri", metaRedirectUri());
   url.searchParams.set("state", state);
   url.searchParams.set("response_type", "code");
-  url.searchParams.set("scope", "public_profile");
+  url.searchParams.set("config_id", env("FACEBOOK_CONFIG_ID"));
   return url.toString();
 }
 

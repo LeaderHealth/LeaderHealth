@@ -5,15 +5,21 @@ import { clearAffiliateMemo } from "@/lib/affiliate/memo";
 import { redirect } from "next/navigation";
 import { currentAffiliate } from "@/app/affiliates/current";
 import { revokeMetaPermissions, revokeTikTokToken, revokeYouTubeToken } from "@/lib/affiliate/social-oauth";
-import { deleteSocialConnection, loadConnectionSecrets, type FacebookConnectionSecret, type TikTokConnectionSecret, type YouTubeConnectionSecret } from "@/lib/affiliate/social-store";
+import { deleteSocialConnection, loadConnectionSecrets, type FacebookConnectionSecret, type InstagramConnectionSecret, type TikTokConnectionSecret, type YouTubeConnectionSecret } from "@/lib/affiliate/social-store";
 
 export async function disconnectSocialAction(formData: FormData) {
   const affiliate = await currentAffiliate();
   if (!affiliate) redirect("/affiliates");
   const network = formData.get("network");
-  if (network !== "facebook" && network !== "tiktok" && network !== "youtube") redirect("/affiliates/stats?error=social");
+  if (network !== "facebook" && network !== "instagram" && network !== "tiktok" && network !== "youtube") redirect("/affiliates/connect?error=social");
   let notice = "disconnected";
   try {
+    if (network === "instagram") {
+      const secrets = await loadConnectionSecrets(affiliate.code);
+      const connection = secrets.find((item): item is InstagramConnectionSecret => item.network === "instagram");
+      const revoked = connection ? await revokeMetaPermissions(connection.accessToken) : false;
+      if (!revoked) notice = "disconnected-instagram";
+    }
     if (network === "tiktok") {
       const secrets = await loadConnectionSecrets(affiliate.code);
       const connection = secrets.find((item): item is TikTokConnectionSecret => item.network === "tiktok");
@@ -35,12 +41,13 @@ export async function disconnectSocialAction(formData: FormData) {
     await deleteSocialConnection(affiliate.code, network);
   } catch (error) {
     console.error("[affiliate] social disconnect failed", error instanceof Error ? error.name : "unknown");
-    redirect("/affiliates/stats?error=social");
+    redirect("/affiliates/connect?error=social");
   }
   clearAffiliateMemo();
+  revalidatePath("/affiliates/connect");
   revalidatePath("/affiliates/stats");
   revalidatePath("/admin/affiliates/reporting");
-  redirect(`/affiliates/stats?notice=${notice}`);
+  redirect(`/affiliates/connect?notice=${notice}`);
 }
 
 async function revokeStoredYouTube(connection: YouTubeConnectionSecret) {
