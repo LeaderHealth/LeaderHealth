@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { SegmentedControl } from "./SegmentedControl";
 import { disconnectSocialAction } from "@/app/affiliates/social-actions";
+import { SocialConnectLink } from "@/components/affiliate/SocialConnectPrompt";
 import { currentReportMonth, formatReportMonth, networkLabel, reportMetricsBlank, type SocialNetwork } from "@/lib/affiliate/marketing";
 import type { SocialAccountView } from "@/lib/affiliate/social-store";
 import type { WebsiteMonthReport } from "@/lib/affiliate/website-report";
@@ -55,6 +56,7 @@ export function SocialConnections({
         accounts={instagram}
         connectHref="/api/affiliate/social/instagram/start"
         unsetLabel="Instagram reporting is not set up."
+        disconnect="instagram"
         detail={
           <p className="mt-2 text-sm leading-relaxed text-brown">
             Instagram opens its own login. Use a professional Instagram account.{" "}
@@ -121,7 +123,7 @@ function NetworkRow({
   connectHref: string;
   unsetLabel: string;
   detail?: ReactNode;
-  disconnect?: "facebook" | "tiktok" | "youtube";
+  disconnect?: "facebook" | "instagram" | "tiktok" | "youtube";
 }) {
   const status = connectionStatus(accounts);
   const offerConnect = ready && status !== "Connected";
@@ -133,9 +135,9 @@ function NetworkRow({
       {accounts.length > 0 ? <p className="mt-2 text-sm text-brown">{accounts.map((account) => account.accountName).join(", ")}</p> : null}
       <div className="mt-3 flex flex-wrap gap-3">
         {offerConnect ? (
-          <a href={connectHref} className={buttonClass}>
+          <SocialConnectLink href={connectHref} className={buttonClass}>
             Connect {title}
-          </a>
+          </SocialConnectLink>
         ) : null}
         {ready && (disconnect === "tiktok" || disconnect === "youtube") && status === "Connected" ? (
           <a href={connectHref} className={quietClass}>

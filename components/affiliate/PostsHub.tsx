@@ -7,6 +7,7 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { cancelMetricChangeAction, confirmManualMetricsAction, requestMetricChangeAction, saveManualMetricsAction, submitLiveLinkAction, submitPostsAction, withdrawPostAction } from "@/app/affiliates/post-actions";
 import { MediaExpand, MediaPreview } from "@/components/affiliate/MediaExpand";
+import { SocialConnectLink } from "@/components/affiliate/SocialConnectPrompt";
 import { SlidingTabs } from "@/components/affiliate/SlidingTabs";
 import { viewPayFormula } from "@/lib/affiliate/format";
 import { POST_FILE_ACCEPT, VIDEO_FILE_ACCEPT, postUploadIssue } from "@/lib/affiliate/post-files";
@@ -2034,7 +2035,7 @@ function PostDetail({
                 )}
                 <MetricChangeForm post={post} />
                 {post.connectHref ? (
-                  <a href={post.connectHref} className="inline-flex h-11 w-full items-center justify-center rounded-full border border-[#CDBDBA] bg-white px-[22px] text-sm font-medium text-ink sm:w-auto sm:self-start">Connect account</a>
+                  <SocialConnectLink href={post.connectHref} className="inline-flex h-11 w-full items-center justify-center rounded-full border border-[#CDBDBA] bg-white px-[22px] text-sm font-medium text-ink sm:w-auto sm:self-start">Connect account</SocialConnectLink>
                 ) : (
                   <p className="text-sm text-[#4A3A37]">Connect is not available for this network yet.</p>
                 )}
@@ -2083,7 +2084,7 @@ function PostDetail({
                   <button type="submit" className="inline-flex h-11 w-full items-center justify-center rounded-full bg-ink px-[22px] text-sm font-medium text-white sm:w-auto sm:self-start">Save numbers</button>
                 </form>
                 {post.connectHref ? (
-                  <a href={post.connectHref} className="inline-flex h-11 w-full items-center justify-center rounded-full border border-[#CDBDBA] bg-white px-[22px] text-sm font-medium text-ink sm:w-auto sm:self-start">Connect account</a>
+                  <SocialConnectLink href={post.connectHref} className="inline-flex h-11 w-full items-center justify-center rounded-full border border-[#CDBDBA] bg-white px-[22px] text-sm font-medium text-ink sm:w-auto sm:self-start">Connect account</SocialConnectLink>
                 ) : (
                   <p className="text-sm text-[#4A3A37]">Connect is not available for this network yet.</p>
                 )}
