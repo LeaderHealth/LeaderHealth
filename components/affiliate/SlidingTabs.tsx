@@ -20,6 +20,7 @@ export type SlidingTabItem = {
 };
 
 const ease = "duration-[140ms] ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none";
+const fluidEase = "duration-[280ms] ease-[cubic-bezier(0.22,1,0.36,1)] min-[1100px]:duration-[140ms] min-[1100px]:ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none";
 const tabFocus = "focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-[#E39A93]";
 const TAB_SWITCH = "lh-tab-switch";
 
@@ -102,10 +103,12 @@ export function SlidingTabs({
   label,
   items,
   variant = "pills",
+  fluid = false,
 }: {
   label: string;
   items: SlidingTabItem[];
   variant?: "pills" | "track" | "outline" | "segment";
+  fluid?: boolean;
 }) {
   const router = useRouter();
   const rootRef = useRef<HTMLElement>(null);
@@ -129,7 +132,7 @@ export function SlidingTabs({
   }
   const ready = Object.keys(frames).length > 0;
   const segment = variant === "segment";
-  const motion = segment ? "duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none" : ease;
+  const motion = segment ? "duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none" : fluid ? fluidEase : ease;
   const prefetchKey = items.map((item) => (item.href && !item.disabled ? item.href : "")).join("|");
   useEffect(() => {
     for (const href of prefetchKey.split("|")) {
@@ -172,9 +175,9 @@ export function SlidingTabs({
       role={items.some((item) => item.href) ? undefined : "tablist"}
       className={
         segment
-          ? "relative flex w-fit max-w-full gap-1 self-start rounded-full bg-[#F7F3F2] p-1"
+          ? "relative flex w-full max-w-full gap-1 self-start rounded-full bg-[#F7F3F2] p-1.5 sm:w-fit"
           : variant === "track"
-            ? "relative flex w-fit max-w-full flex-wrap self-start rounded-full bg-white p-1.5 shadow-[0_1px_2px_rgba(51,19,15,0.06)]"
+            ? `relative flex max-w-full flex-wrap self-start bg-white p-1.5 shadow-[0_1px_2px_rgba(51,19,15,0.06)] ${fluid ? "w-full rounded-[28px] min-[600px]:rounded-full min-[1100px]:w-fit" : "w-fit rounded-full"}`
             : "relative flex flex-wrap gap-2"
       }
     >
@@ -202,7 +205,7 @@ export function SlidingTabs({
                   ? "bg-ink"
                   : "bg-transparent";
         const className = `relative z-[1] inline-flex cursor-pointer items-center justify-center gap-2 rounded-full text-center font-medium whitespace-nowrap transition-colors ${motion} ${tabFocus} ${
-          segment ? "h-9 px-3.5 text-sm" : variant === "track" ? "h-[46px] px-5 text-base" : variant === "outline" ? "h-9 border px-3.5 text-[13px]" : "min-h-11 px-4 text-sm"
+          segment ? "h-10 min-w-0 flex-auto px-1.5 text-[13px] sm:h-11 sm:flex-none sm:px-[18px] sm:text-[15px]" : variant === "track" ? (fluid ? "h-12 w-1/2 flex-none px-3 text-sm min-[600px]:w-auto min-[600px]:flex-1 min-[1100px]:h-[46px] min-[1100px]:flex-none min-[1100px]:px-5 min-[1100px]:text-base" : "h-[46px] px-5 text-base") : variant === "outline" ? "h-9 border px-3.5 text-[13px]" : "min-h-11 px-4 text-sm"
         } ${background} ${
           item.disabled ? "cursor-not-allowed text-brown" : item.id === shownId ? "text-white" : "text-ink"
         }`;

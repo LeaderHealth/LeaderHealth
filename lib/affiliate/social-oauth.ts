@@ -271,6 +271,16 @@ export async function exchangeYouTubeCode(oauthCode: string): Promise<Omit<YouTu
   };
 }
 
+export async function refreshYouTubeToken(refreshToken: string) {
+  if (!youtubeConfigured()) throw new SocialError("setup");
+  return googleToken({
+    client_id: env("GOOGLE_CLIENT_ID"),
+    client_secret: env("GOOGLE_CLIENT_SECRET"),
+    grant_type: "refresh_token",
+    refresh_token: refreshToken,
+  });
+}
+
 export async function refreshTikTokToken(refreshToken: string) {
   if (!tiktokConfigured()) throw new SocialError("setup");
   return tiktokToken({

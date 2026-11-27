@@ -37,16 +37,17 @@ test("a full refund deducts the entire commission", () => {
   assert.equal(adjustedCommissionCents(4905, plan.commissionCents), 0);
 });
 
-test("a partial refund deducts a proportional commission", () => {
-  assert.equal(
-    commissionRefundTarget({
-      originalAmountCents: 32700,
-      originalCommissionCents: 4905,
-      refundedAmountCents: 16350,
-      full: false,
-    }),
-    Math.round((4905 * 16350) / 32700),
-  );
+test("a partial refund leaves the rounded percent of the sale still left", () => {
+  const clawback = commissionRefundTarget({
+    originalAmountCents: 32700,
+    originalCommissionCents: 4905,
+    refundedAmountCents: 16350,
+    full: false,
+    commissionPercent: 15,
+  });
+  assert.equal(clawback, 2452);
+  assert.equal(adjustedCommissionCents(4905, clawback), 2453);
+  assert.equal(adjustedCommissionCents(4905, clawback), Math.round((16350 * 15) / 100));
 });
 
 test("a fixed commission uses the same proportion of the original order", () => {

@@ -1,4 +1,4 @@
-import { socialPayCents } from "./manual-checkpoint";
+import { socialPayCents, viewWindowEnded } from "./manual-checkpoint";
 
 export const PAYMENT_CATEGORIES = ["views", "engagements", "impressions", "clicks", "pageViews"] as const;
 
@@ -124,6 +124,7 @@ export function websiteMonthAmount(input: {
 
 export function socialMonthCents(input: {
   period: string;
+  now?: number;
   posts: {
     id: string;
     publishedAt?: string | null;
@@ -135,9 +136,11 @@ export function socialMonthCents(input: {
     shares?: number | null;
     saves?: number | null;
     maxPayCents?: number | null;
+    trackingDays?: number | null;
   }[];
   payments: { postId: string; amountCents: number; approvedAt?: string | null; paidAt?: string | null; adjustmentCents?: number | null }[];
 }) {
+  const now = input.now ?? Date.now();
   const paidIds = new Set(input.payments.map((payment) => payment.postId));
   let socialCents = 0;
   let adjustmentCents = 0;
@@ -148,6 +151,7 @@ export function socialMonthCents(input: {
   for (const post of input.posts) {
     if (paidIds.has(post.id) || post.viewRateCents == null || post.views == null) continue;
     if (eventPeriod(post.publishedAt ?? "") !== input.period) continue;
+    if (!viewWindowEnded(post.publishedAt ?? null, now, post.trackingDays)) continue;
     socialCents +=
       socialPayCents({
         views: post.views,

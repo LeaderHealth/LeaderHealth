@@ -5,6 +5,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { SlidingTabs, TabPanel } from "./SlidingTabs";
 import { formatCents } from "@/lib/affiliate/format";
 import {
+  axisCount,
   barPath,
   chartMax,
   compactCount,
@@ -178,7 +179,7 @@ export function AffiliateStatsBoard({ today, posts, traffic, saleDays, salePerio
       <SlidingTabs
         variant="track"
         label="Stats sections"
-        items={([["social", "Social media"], ["web", "Website traffic"], ["posts", "Content"], ["labs", "Sales"]] as const).map(([id, name]) => ({
+        items={([["social", "Social media"], ["web", "Website traffic"], ["posts", "Content"], ["labs", "Orders"]] as const).map(([id, name]) => ({
           id,
           label: name,
           current: tab === id,
@@ -329,7 +330,7 @@ export function AffiliateStatsBoard({ today, posts, traffic, saleDays, salePerio
       {tab === "labs" ? (
         <section aria-labelledby="lab-sales-title" className="flex flex-col gap-[18px] rounded-3xl bg-white px-4 py-6 sm:px-6">
           <div className="flex flex-wrap items-center gap-3">
-            <h3 id="lab-sales-title" className="flex-1 text-xl font-semibold">Sales</h3>
+            <h3 id="lab-sales-title" className="flex-1 text-xl font-semibold">Orders</h3>
             <div role="group" aria-label="Lab orders" className="flex flex-wrap gap-2">
               <Chip pressed={showCommission} onClick={() => setSaleView("commission")}>Lab commission</Chip>
               <Chip pressed={!showCommission} onClick={() => setSaleView("none")}>No commission</Chip>
@@ -372,13 +373,13 @@ export function AffiliateStatsBoard({ today, posts, traffic, saleDays, salePerio
             <>
               <p className="text-[13px] text-[#6B5A57]">HIPAA-friendly stats for these orders: a count grouped by pay period, and an opaque referral ID. Patient names, contact details, products, and purchase dates are not shown.</p>
               <div className="grid gap-3 sm:grid-cols-2">
-                <LabStat label="Orders" value={compactCount(labNow.orders)} detail={versus} current={labNow.orders} previous={labBefore.orders} />
+                <LabStat label="Paid orders" value={compactCount(labNow.orders)} detail={versus} current={labNow.orders} previous={labBefore.orders} />
                 <LabStat label="Pay periods" value={compactCount(activePeriods)} detail="With an order" current={activePeriods} previous={previousActivePeriods} />
               </div>
               <div className="flex flex-col gap-3">
                 <h4 className="text-[15px] font-semibold">Orders by pay period</h4>
                 <div className="flex flex-wrap gap-5 text-sm text-[#4A3A37]">
-                  <Legend mark="line" color="#33130F" label="Orders" value={compactCount(labNow.orders)} />
+                  <Legend mark="line" color="#33130F" label="Paid orders" value={compactCount(labNow.orders)} />
                 </div>
                 <Chart
                   label="Orders by pay period"
@@ -407,7 +408,7 @@ export function AffiliateStatsBoard({ today, posts, traffic, saleDays, salePerio
                 <thead>
                   <tr className="border-b border-[#E8DEDC] text-xs font-semibold uppercase tracking-wide text-[#6B5A57]">
                     <th className="px-2 py-1.5 font-semibold">Pay period</th>
-                    <th className="px-2 py-1.5 font-semibold">{showCommission ? "Lab orders" : "Orders"}</th>
+                    <th className="px-2 py-1.5 font-semibold">{showCommission ? "Lab orders" : "Paid orders"}</th>
                     {showCommission ? <th className="px-2 py-1.5 font-semibold">Lab commission</th> : null}
                     <th className="px-2 py-1.5 font-semibold">Referral ID</th>
                   </tr>
@@ -415,7 +416,7 @@ export function AffiliateStatsBoard({ today, posts, traffic, saleDays, salePerio
                 <tbody>
                   {history.length === 0 ? (
                     <tr>
-                      <td colSpan={showCommission ? 4 : 3} className="px-2 py-3 text-[15px] text-[#6B5A57]">{showCommission ? "No lab orders in this date range." : "No orders in this date range."}</td>
+                      <td colSpan={showCommission ? 4 : 3} className="px-2 py-3 text-[15px] text-[#6B5A57]">{showCommission ? "No lab orders in this date range." : "No paid orders in this date range."}</td>
                     </tr>
                   ) : history.map((group) => (
                     <tr key={group.period} className="border-b border-[#F0E8E6]">
@@ -459,11 +460,6 @@ function shiftBefore(day: string) {
   const date = new Date(`${day}T00:00:00.000Z`);
   date.setUTCDate(date.getUTCDate() - 1);
   return date.toISOString().slice(0, 10);
-}
-
-function axisCount(value: number) {
-  if (value > 0 && value < 1) return value.toFixed(1);
-  return compactCount(value);
 }
 
 function axisDollars(dollars: number) {

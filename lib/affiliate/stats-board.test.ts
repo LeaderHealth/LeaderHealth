@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { contentPosts, daySpan, percentChange, postsIn, saleDaysIn, saleHistory, salesTotals, trafficIn, type SaleDayCount, type SalePeriodRefs, type StatsBoardPost } from "./stats-board";
+import { axisCount, contentPosts, daySpan, percentChange, postsIn, saleDaysIn, saleHistory, salesTotals, trafficIn, type SaleDayCount, type SalePeriodRefs, type StatsBoardPost } from "./stats-board";
 
 const posts: StatsBoardPost[] = [
   { id: "a", title: "Labs", platform: "instagram", kind: "Reel", campaign: "Holiday", agreementLabel: "", postedOn: "2026-11-16", views: 100, likes: 10, comments: 2, shares: 1, saves: 1 },
@@ -45,6 +45,12 @@ test("lab sales keep paid orders inside the range", () => {
   assert.deepEqual(saleHistory(periods, days, span), [{ period: "2026-11", orders: 2, commissionCents: 2600, refs: ["one", "two"] }]);
   assert.deepEqual(saleHistory(periods, days, span, false), [{ period: "2026-11", orders: 1, commissionCents: 0, refs: ["plain"] }]);
   assert.deepEqual(saleHistory(periods, days, daySpan("2026-11-16", 3)), [{ period: "2026-11", orders: 1, commissionCents: 1800, refs: [] }]);
+});
+
+test("chart axis keeps a half step when the peak is 1", () => {
+  assert.equal(axisCount(1), "1");
+  assert.equal(axisCount(0.5), "0.5");
+  assert.equal(axisCount(0), "0");
 });
 
 test("website traffic ignores days outside the range", () => {

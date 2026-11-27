@@ -23,7 +23,7 @@ function shiftMonth(period: string, delta: number) {
 export default async function WebsiteTrafficPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string; notice?: string; code?: string; count?: string; error?: string }>;
+  searchParams: Promise<{ month?: string; notice?: string; code?: string; count?: string; error?: string; review?: string }>;
 }) {
   const query = await searchParams;
   const current = new Date().toISOString().slice(0, 7);
@@ -82,6 +82,7 @@ export default async function WebsiteTrafficPage({
       canReview={actor != null && adminHasFullAccess(actor)}
       notice={notice}
       error={query.error === "traffic" ? "That change could not be saved." : ""}
+      openCode={review.rows.some((row) => row.code === query.review && row.status === "flagged") ? query.review ?? "" : ""}
       steps={review.steps}
       rows={review.rows}
       days={review.days}

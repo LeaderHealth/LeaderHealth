@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { PostReviewQueue, type ReviewCheck, type ReviewPost, type ReviewQueue, type ReviewSlide } from "@/components/affiliate/PostReviewQueue";
 import { formatPublishDate, formatWhen, publishDateValue } from "@/lib/affiliate/format";
-import { captionHasBrandTag, DISCLOSURE_LINE, loadContentSubmissions, treatmentClaims, type ContentSubmission } from "@/lib/affiliate/post-review";
+import { adminRequestLog, captionHasBrandTag, DISCLOSURE_LINE, loadContentSubmissions, treatmentClaims, type ContentSubmission } from "@/lib/affiliate/post-review";
 import { postSourceLabel } from "@/lib/affiliate/offer-post";
+import { awaitsManualLinkCheck } from "@/lib/affiliate/post-format";
 import { textHasTrackingCode } from "@/lib/affiliate/social-match";
 import { memo } from "@/lib/affiliate/memo";
 import { loadAffiliateOverview, type AffiliateSummary } from "@/lib/affiliate/store";
@@ -18,6 +19,7 @@ export const dynamic = "force-dynamic";
 const NOTICES: Record<string, string> = {
   "post-approved": "Approved. The affiliate can publish it.",
   "post-change": "Changes requested. The affiliate will see your note.",
+  "post-live-note": "Note sent. The post stays published. The affiliate will paste the updated link.",
   "post-declined": "Not approved. The affiliate will see your note.",
   "post-checked": "Link marked as checked.",
 };
@@ -29,7 +31,8 @@ function queueOf(post: ContentSubmission): ReviewQueue | null {
   if (post.contentStatus === "revision_requested") return "changes";
   if (post.contentStatus === "rejected") return "declined";
   if (post.publicationStatus === "tracking_active") return "live";
-  if (post.publicationStatus === "verification_failed" || (post.format === "tiktok" && post.publicationStatus === "verification_pending")) return "link";
+  if (post.publicationStatus === "verification_failed") return "link";
+  if (post.publicationStatus === "verification_pending") return "checking";
   if (post.contentStatus === "approved") return "approved";
   return null;
 }
@@ -118,8 +121,9 @@ function queueRank(post: ContentSubmission) {
   if (queue === "changes") return 0;
   if (queue === "waiting") return 1;
   if (queue === "link") return 2;
-  if (queue === "approved") return 3;
-  if (queue === "live") return 4;
+  if (queue === "checking") return 3;
+  if (queue === "approved") return 4;
+  if (queue === "live") return 5;
   if (queue === "withdrawn") return 6;
   return 5;
 }
@@ -135,7 +139,7 @@ function submittedDay(iso: string) {
 
 function inView(queue: ReviewQueue, view: "all" | "pending" | "published") {
   if (view === "pending") return queue === "waiting";
-  if (view === "published") return queue === "live" || queue === "link";
+  if (view === "published") return queue === "live" || queue === "link" || queue === "checking";
   return true;
 }
 
@@ -186,7 +190,8 @@ function reviewGroup(group: ContentSubmission[], affiliate: AffiliateSummary | u
     checks,
     queue,
     canDecide: queue === "waiting" || queue === "changes" || reviewable.some((post) => post.contentStatus === "submitted"),
-    canMark: queue === "link",
+    canMark: queue === "link" || (queue === "checking" && (awaitsManualLinkCheck(primary.format) || Boolean(primary.liveFixNote))),
+    canSendBack: queue === "live" || queue === "link" || (queue === "checking" && (awaitsManualLinkCheck(primary.format) || Boolean(primary.liveFixNote))),
     pastHref: `/admin/affiliates/accounts?code=${encodeURIComponent(primary.code)}`,
     suggestedNote: suggestedNote(slides),
     campaign: primary.campaign,
@@ -197,6 +202,12 @@ function reviewGroup(group: ContentSubmission[], affiliate: AffiliateSummary | u
     dateValue: primary.proposedPublishOn ? formatPublishDate(primary.proposedPublishOn) : primary.publishBy && publishDateValue(primary.publishBy) ? formatPublishDate(primary.publishBy) : "",
     reviewedBy: primary.reviewedBy,
     postUrl: primary.postUrl,
+    fixNote: primary.liveFixNote,
+    requests: adminRequestLog(primary.adminRequests, primary.liveFixNote || primary.reviewNote, primary.reviewedAt, primary.reviewedBy).map((entry) => ({
+      note: entry.note,
+      when: entry.at ? formatWhen(entry.at) : "",
+      by: entry.by,
+    })),
     views: primary.views,
     revisions: primary.revisions.map((revision) => ({
       version: revision.version,

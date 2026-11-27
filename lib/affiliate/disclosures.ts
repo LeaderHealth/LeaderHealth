@@ -1,6 +1,7 @@
 import { getStorage } from "firebase-admin/storage";
 import type { DocumentData, Timestamp } from "firebase-admin/firestore";
 import { normalizeAffiliateCode } from "./code";
+import { noteComplianceEvent } from "./compliance-log";
 import { affiliateFirebaseConfigured, affiliateFirestore } from "./firebase";
 import { disclosurePostUrl, youtubeVideoId } from "./compliance-rules";
 
@@ -72,6 +73,20 @@ export async function acknowledgeDisclosure(code: string) {
   if (snap.exists) return false;
   await ref.create({ code: normalized, acknowledgedAt: new Date() });
   return true;
+}
+
+export async function acknowledgeAgreementDisclosure(input: { code: string; name: string; actor: string }) {
+  try {
+    if (!(await acknowledgeDisclosure(input.code))) return;
+    await noteComplianceEvent({
+      actor: input.actor,
+      action: "disclosure-acknowledged",
+      code: input.code,
+      detail: `${input.name} accepted the sponsorship disclosure in the agreement.`,
+    });
+  } catch (error) {
+    console.error("[affiliate] agreement disclosure failed", error instanceof Error ? error.message : "unknown");
+  }
 }
 
 function proofFrom(id: string, data: DocumentData | undefined): DisclosureProof | null {

@@ -99,6 +99,33 @@ export function tiktokVideoId(value: string) {
   return /^[0-9]{8,30}$/.test(value) ? value : null;
 }
 
+export function facebookLinkToken(value: string) {
+  let url: URL;
+  try {
+    url = new URL(value.trim());
+  } catch {
+    return null;
+  }
+  const query = url.searchParams.get("v") || url.searchParams.get("fbid") || url.searchParams.get("story_fbid") || "";
+  if (/^[0-9A-Za-z._-]{3,64}$/.test(query)) return query;
+  const parts = url.pathname.split("/").filter(Boolean);
+  if (parts[0] === "reel" && parts[1]) return parts[1];
+  if ((parts[1] === "posts" || parts[1] === "videos") && parts[2]) return parts[2];
+  if (parts[0] === "share" && parts[2]) return parts[2];
+  return null;
+}
+
+export function selectFacebookUpdate(input: { postUrl: string; posts: readonly SocialPost[] }) {
+  const token = facebookLinkToken(input.postUrl);
+  return input.posts.find((post) => {
+    if (post.network !== "facebook") return false;
+    if (samePublishedPost(input.postUrl, post.permalink)) return true;
+    if (!token) return false;
+    if (post.id === token || post.id.endsWith(`_${token}`)) return true;
+    return facebookLinkToken(post.permalink) === token;
+  }) ?? null;
+}
+
 export function selectTikTokUpdate(input: { videoId: string | null; postUrl: string | null; videos: readonly SocialPost[] }) {
   const saved = input.videoId ? tiktokVideoId(input.videoId) : null;
   if (saved) {

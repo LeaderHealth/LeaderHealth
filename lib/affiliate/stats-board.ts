@@ -74,6 +74,11 @@ export function compactCount(value: number) {
   return new Intl.NumberFormat("en-US").format(amount);
 }
 
+export function axisCount(value: number) {
+  if (value > 0 && value < 1) return value.toFixed(1);
+  return compactCount(value);
+}
+
 export function shortDay(day: string) {
   return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(`${day}T00:00:00.000Z`));
 }

@@ -1,24 +1,24 @@
 import { getStorage } from "firebase-admin/storage";
 import { FieldValue, type DocumentData, type Timestamp } from "firebase-admin/firestore";
 import { normalizeAffiliateCode } from "./code";
-import { disclosureAcknowledged } from "./disclosures";
 import { affiliateFirebaseConfigured, affiliateFirestore } from "./firebase";
 import { awaitsManualLinkCheck, filesMatchFormat, formatUploadIssue, instagramPostUrl, liveLinkFor, postFormat, type PostFormat } from "./post-format";
 import { IMAGE_BYTES, VIDEO_BYTES, postUploadKind } from "./post-files";
 import { deliverableFeeCents } from "./deliverable-payments";
 import { formatForOfferKind, lockedPayTerms, offerSlideBounds, type LockedPayTerms } from "./offer-post";
 import { loadMarketingOffer } from "./marketing-offers";
-import { canonicalPostUrl, selectTikTokUpdate, tiktokVideoId } from "./social-match";
-import { fetchInstagramMedia, fetchTikTokPosts, queryTikTokVideos, readInstagramMedia, type InstagramMediaSnapshot } from "./social-fetch";
-import { currentTikTokConnection } from "./social-sync";
-import { SocialError, loadConnectionSecrets, loadSocialAccounts, markSocialReconnect, type TikTokConnectionSecret } from "./social-store";
+import { youtubeVideoId } from "./compliance-rules";
+import { canonicalPostUrl, samePublishedPost, selectFacebookUpdate, selectTikTokUpdate, tiktokVideoId } from "./social-match";
+import { fetchFacebookPosts, fetchFacebookVideos, fetchInstagramMedia, fetchTikTokPosts, queryTikTokVideos, readInstagramMedia, readYouTubeVideo, type InstagramMediaSnapshot } from "./social-fetch";
+import { currentTikTokConnection, currentYouTubeConnection } from "./social-sync";
+import { SocialError, loadConnectionSecrets, loadSocialAccounts, markSocialReconnect, type TikTokConnectionSecret, type YouTubeConnectionSecret } from "./social-store";
 import { formatWhen, publishDateValue } from "./format";
 import { affiliateCanAttachCampaign } from "./campaign-record";
 import { loadMarketingCampaignRecords } from "./roi-store";
 import { DEFAULT_TRACKING_DAYS, MANUAL_REPORT_MS, REPORT_WINDOW_MS, manualReportDue, networkConnectedForPost, trackingDaysOf, type MetricsOrigin } from "./manual-checkpoint";
 import { rateFor, standingViewRateCents } from "./payment-rates";
 import { loadPaymentRates } from "./payment-store";
-import { loadAffiliateAgreement, utcAgreementToday } from "./agreements";
+import { agreementAccepted, loadAffiliateAgreement, utcAgreementToday } from "./agreements";
 import { agreementKindFormat, agreementMatchesPost, agreementSlotRows, kindUsedCount, postingAgreement, postsFillingMonth, type PostingAgreement } from "./post-agreement";
 export { MANUAL_REPORT_MS, REPORT_WINDOW_MS, manualReportDue, networkConnectedForPost };
 export type { MetricsOrigin };
@@ -86,6 +86,12 @@ export type ContentRevision = {
   reviewedAt: string | null;
 };
 
+export type AdminRequestEntry = {
+  note: string;
+  at: string | null;
+  by: string;
+};
+
 export type ContentSubmission = {
   id: string;
   code: string;
@@ -100,11 +106,13 @@ export type ContentSubmission = {
   proposedPublishOn: string;
   reviewedBy: string;
   revisions: ContentRevision[];
+  adminRequests: AdminRequestEntry[];
   version: number;
   submittedAt: string | null;
   contentStatus: ContentStatus;
   publicationStatus: PublicationStatus | null;
   reviewNote: string;
+  liveFixNote: string;
   postUrl: string | null;
   instagramMediaId: string | null;
   tiktokVideoId: string | null;
@@ -141,7 +149,7 @@ export type ContentSubmission = {
 export function contentStatusLabel(status: ContentStatus) {
   if (status === "draft") return "Draft";
   if (status === "submitted") return "In review";
-  if (status === "revision_requested") return "Needs changes";
+  if (status === "revision_requested") return "Changes requested";
   if (status === "rejected") return "Rejected";
   if (status === "withdrawn") return "Withdrawn";
   return "Approved";
@@ -186,45 +194,45 @@ export function instagramLinkChecks(status: PublicationStatus | null, verificati
   return [];
 }
 
-export function instagramCheckCopy(status: PublicationStatus | null, verificationNote: string) {
+export function instagramCheckCopy(status: PublicationStatus | null, verificationNote: string, platform = "Instagram") {
   if (status === "tracking_active") {
     return {
       headline: "Your post is live",
-      detail: "Instagram engagement for this post shows in Stats. It does not change commission or payouts.",
+      detail: `${platform} engagement for this post shows in Stats. It does not change commission or payouts.`,
     };
   }
   if (verificationNote === verificationFailureNote("missing_tag")) {
     return {
       headline: "The caption needs @myleaderhealth",
-      detail: "Tag @myleaderhealth in the caption on Instagram, then check again. The post does not track without that tag.",
+      detail: `Tag @myleaderhealth in the caption on ${platform}, then check again. The post does not track without that tag.`,
     };
   }
   if (verificationNote === verificationFailureNote("missing_link")) {
     return {
       headline: "We couldn't find your tracking link in this post",
-      detail: "Edit the caption on Instagram so it includes your tracking link, then check again. A link in your bio is not enough.",
+      detail: `Edit the caption on ${platform} so it includes your tracking link, then check again. A link in your bio is not enough.`,
     };
   }
   if (verificationNote === verificationFailureNote("missing_disclosure")) {
     return {
       headline: "The caption needs the sponsorship line",
-      detail: "Add “Paid partnership with Leader Health” on Instagram, then check again.",
+      detail: `Add “Paid partnership with Leader Health” on ${platform}, then check again.`,
     };
   }
   if (verificationNote === verificationFailureNote("not_found")) {
     return {
-      headline: "That post was not found on your Instagram account",
+      headline: `That post was not found on your ${platform} account`,
       detail: "Paste the link from the account you connected, then check again.",
     };
   }
   if (verificationNote === verificationFailureNote("not_connected")) {
     return {
-      headline: "Instagram is not connected",
+      headline: `${platform} is not connected`,
       detail: "Connect it from Stats, then check again. Or ask an admin to check the link.",
     };
   }
   return {
-    headline: "We couldn't check this Instagram post",
+    headline: status === "verification_failed" ? "Needs a fix" : `We couldn't check this ${platform} post`,
     detail: verificationNote || "Check the link again in a moment.",
   };
 }
@@ -235,6 +243,16 @@ export function publicationAfterApproval(status: ContentStatus): "awaiting_publi
 
 export function canPasteLiveUrl(status: ContentStatus, publication: PublicationStatus | null) {
   return status === "approved" && (publication === "awaiting_publication" || publication === "verification_failed");
+}
+
+export function keepsPublishedOnNote(status: ContentStatus, publication: PublicationStatus | null) {
+  return status === "approved" && (publication === "tracking_active" || publication === "verification_failed" || publication === "verification_pending");
+}
+
+export function liveFixFollowUp(publication: PublicationStatus | null, liveFixNote: string) {
+  if (!liveFixNote.trim()) return {};
+  if (publication !== "verification_pending" && publication !== "verification_failed") return {};
+  return { publicationStatus: "tracking_active" as const };
 }
 
 export function captionText(value: unknown) {
@@ -278,9 +296,20 @@ export function captionIssue(caption: string) {
   return null;
 }
 
+export function formatReviewNote(value: string) {
+  return value
+    .replace(/\r\n/g, "\n")
+    .replace(/[\u0000-\u0008\u000b-\u001f]/g, "")
+    .replace(/[^\S\n]+/g, " ")
+    .replace(/([^\s])(Please )/g, "$1\n\n$2")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 export function reviewNoteText(value: unknown) {
   if (typeof value !== "string") return null;
-  const text = value.replace(/[\u0000-\u001f]/g, "").trim();
+  const text = formatReviewNote(value);
   if (!text || text.length > NOTE_LIMIT) return null;
   return text;
 }
@@ -310,6 +339,15 @@ export function matchInstagramPost(url: string, _code: string, posts: readonly I
   if (!found || !/^[0-9]{5,32}$/.test(found.id)) return { ok: false as const, reason: "not_found" as const };
   if (!captionHasBrandTag(found.caption)) return { ok: false as const, reason: "missing_tag" as const };
   return { ok: true as const, mediaId: found.id, metrics: postMetricFields(found) };
+}
+
+export function storedMediaMatchesLink(postUrl: string | null, permalink: string | null) {
+  if (!postUrl) return true;
+  if (!permalink) return false;
+  if (samePublishedPost(postUrl, permalink)) return true;
+  const submitted = instagramShortcode(postUrl);
+  const saved = instagramShortcode(permalink);
+  return Boolean(submitted && submitted === saved);
 }
 
 export function verificationFailureNote(reason: VerificationFailure) {
@@ -435,6 +473,44 @@ function metricChangeFrom(value: unknown): MetricChangeRequest | null {
   return { views, likes, comments, shares, saves, note, requestedAt: asDate(change.requestedAt)?.toISOString() ?? null };
 }
 
+function adminRequestsFrom(value: unknown): AdminRequestEntry[] {
+  if (!Array.isArray(value)) return [];
+  const items: AdminRequestEntry[] = [];
+  for (const entry of value) {
+    if (!entry || typeof entry !== "object") continue;
+    const row = entry as Record<string, unknown>;
+    const note = typeof row.note === "string" ? formatReviewNote(row.note).slice(0, NOTE_LIMIT) : "";
+    if (!note) continue;
+    const at = asDate(row.at)?.toISOString() ?? null;
+    items.push({ note, at, by: typeof row.by === "string" ? row.by.trim().slice(0, 120) : "" });
+    if (items.length >= 20) break;
+  }
+  return items;
+}
+
+export function nextAdminRequests(existing: readonly AdminRequestEntry[], previousNote: string, previousAt: string | null, previousBy: string, next: AdminRequestEntry) {
+  const items = existing.map((entry) => ({ note: entry.note, at: entry.at, by: entry.by }));
+  const previous = formatReviewNote(previousNote);
+  if (previous && items.at(-1)?.note !== previous) items.push({ note: previous, at: previousAt, by: previousBy.trim().slice(0, 120) });
+  const note = formatReviewNote(next.note);
+  if (note) items.push({ note, at: next.at, by: next.by.trim().slice(0, 120) });
+  return items.slice(-20);
+}
+
+export function adminRequestLog(existing: readonly AdminRequestEntry[], currentNote: string, currentAt: string | null, currentBy: string) {
+  const current = formatReviewNote(currentNote);
+  if (!current || existing.at(-1)?.note === current) return existing.slice(-20);
+  return [...existing, { note: current, at: currentAt, by: currentBy.trim().slice(0, 120) }].slice(-20);
+}
+
+function storedAdminRequests(entries: readonly AdminRequestEntry[]) {
+  return entries.map((entry) => ({
+    note: entry.note,
+    at: entry.at && !Number.isNaN(Date.parse(entry.at)) ? new Date(entry.at) : null,
+    by: entry.by,
+  }));
+}
+
 function revisionsFrom(value: unknown): ContentRevision[] {
   if (!Array.isArray(value)) return [];
   const items: ContentRevision[] = [];
@@ -477,11 +553,13 @@ function submissionFrom(id: string, data: DocumentData | undefined): ContentSubm
     proposedPublishOn: publishDateValue(data.proposedPublishOn) ?? "",
     reviewedBy: typeof data.reviewedBy === "string" ? data.reviewedBy.trim().slice(0, 120) : "",
     revisions: revisionsFrom(data.revisions),
+    adminRequests: adminRequestsFrom(data.adminRequests),
     version: typeof data.version === "number" && data.version >= 1 && data.version <= 99 ? Math.floor(data.version) : 1,
     submittedAt: asDate(data.submittedAt)?.toISOString() ?? null,
     contentStatus,
     publicationStatus: contentStatus === "approved" ? publicationStatus : null,
-    reviewNote: typeof data.reviewNote === "string" ? data.reviewNote : "",
+    reviewNote: typeof data.reviewNote === "string" ? formatReviewNote(data.reviewNote).slice(0, NOTE_LIMIT) : "",
+    liveFixNote: typeof data.liveFixNote === "string" ? formatReviewNote(data.liveFixNote).slice(0, NOTE_LIMIT) : "",
     postUrl: typeof data.postUrl === "string" && data.postUrl ? data.postUrl : null,
     instagramMediaId: typeof data.instagramMediaId === "string" && /^[0-9]{5,32}$/.test(data.instagramMediaId) ? data.instagramMediaId : null,
     tiktokVideoId: typeof data.tiktokVideoId === "string" ? tiktokVideoId(data.tiktokVideoId) : null,
@@ -610,7 +688,7 @@ function blankMetrics() {
 }
 
 async function preparedCaption(code: string, value: unknown) {
-  if (!(await disclosureAcknowledged(code))) throw new PostReviewError("invalid");
+  if (!(await agreementAccepted(code))) throw new PostReviewError("invalid");
   const caption = captionText(value);
   if (!caption) throw new PostReviewError("invalid");
   const issue = captionIssue(caption);
@@ -880,7 +958,7 @@ async function filesForBatchItem(code: string, id: string, item: BatchPostInput,
 export async function saveContentDrafts(input: { code: string; posts: BatchPostInput[] }) {
   const code = normalizeAffiliateCode(input.code);
   if (!code || input.posts.length < 1 || input.posts.length > POST_BATCH_LIMIT) throw new PostReviewError("invalid");
-  if (!(await disclosureAcknowledged(code))) throw new PostReviewError("invalid");
+  if (!(await agreementAccepted(code))) throw new PostReviewError("invalid");
   const db = requireDb();
   const allowed = await campaignNamesFor(code);
   const ids: string[] = [];
@@ -1148,24 +1226,53 @@ async function carouselMates(post: ContentSubmission) {
   return mates.length ? mates : [post];
 }
 
+export function reviewableStatus(status: ContentStatus, step: "approve" | "request" | "reject") {
+  if (status === "submitted" || status === "revision_requested") return true;
+  return step !== "approve" && status === "approved";
+}
+
 async function review(id: string, step: "approve" | "request" | "reject", note: unknown, reviewer: unknown) {
   const post = await loadContentSubmission(id);
   if (!post) throw new PostReviewError("missing");
   const reviewNote = step === "approve" ? null : reviewNoteText(note);
   if (step !== "approve" && !reviewNote) throw new PostReviewError("note");
   const status = step === "approve" ? "approved" : step === "request" ? "revision_requested" : "rejected";
-  const mates = (await carouselMates(post)).filter((item) => item.contentStatus === "submitted" || item.contentStatus === "revision_requested");
+  const mates = (await carouselMates(post)).filter((item) => reviewableStatus(item.contentStatus, step));
   if (!mates.length) throw new PostReviewError("status");
   const reviewedAt = new Date();
   const reviewedBy = reviewerName(reviewer);
-  await Promise.all(mates.map((item) => requireDb().collection("contentSubmissions").doc(item.id).update({
-    contentStatus: status,
-    publicationStatus: step === "approve" ? "awaiting_publication" : null,
-    reviewNote,
-    reviewedAt,
-    reviewedBy,
-  })));
-  return post;
+  const keptPublished = step === "request" && keepsPublishedOnNote(post.contentStatus, post.publicationStatus);
+  await Promise.all(mates.map((item) => {
+    const stayPublished = step === "request" && keepsPublishedOnNote(item.contentStatus, item.publicationStatus);
+    const ref = requireDb().collection("contentSubmissions").doc(item.id);
+    const adminRequests = reviewNote
+      ? storedAdminRequests(nextAdminRequests(item.adminRequests, item.liveFixNote || item.reviewNote, item.reviewedAt, item.reviewedBy, {
+        note: reviewNote,
+        at: reviewedAt.toISOString(),
+        by: reviewedBy,
+      }))
+      : item.adminRequests;
+    if (stayPublished && reviewNote) {
+      return ref.update({
+        ...liveFixFollowUp(item.publicationStatus, item.liveFixNote),
+        liveFixNote: reviewNote,
+        reviewNote,
+        reviewedAt,
+        reviewedBy,
+        adminRequests,
+      });
+    }
+    return ref.update({
+      contentStatus: status,
+      publicationStatus: step === "approve" ? "awaiting_publication" : null,
+      reviewNote,
+      reviewedAt,
+      reviewedBy,
+      liveFixNote: FieldValue.delete(),
+      ...(reviewNote ? { adminRequests } : {}),
+    });
+  }));
+  return { ...post, keptPublished };
 }
 
 export function approveContentPost(id: string, reviewer: unknown) {
@@ -1255,32 +1362,52 @@ export async function submitLiveInstagramUrl(input: { id: string; code: string; 
   const url = liveLinkFor(post.format, input.url);
   if (!url) throw new PostReviewError("url");
   const waitingOnManual = awaitsManualLinkCheck(post.format) && post.publicationStatus === "verification_pending";
-  if (!canPasteLiveUrl(post.contentStatus, post.publicationStatus) && !waitingOnManual) throw new PostReviewError("status");
+  const fixingLive = keepsPublishedOnNote(post.contentStatus, post.publicationStatus) && Boolean(post.liveFixNote);
+  if (!canPasteLiveUrl(post.contentStatus, post.publicationStatus) && !waitingOnManual && !fixingLive) throw new PostReviewError("status");
   await requireDb().collection("contentSubmissions").doc(post.id).update({
     postUrl: url,
     publicationStatus: "verification_pending",
     verificationNote: null,
-    publishedAt: new Date(),
+    instagramMediaId: FieldValue.delete(),
+    tiktokVideoId: FieldValue.delete(),
+    ...(post.publishedAt ? {} : { publishedAt: new Date() }),
+    ...(fixingLive ? {} : { liveFixNote: FieldValue.delete() }),
   });
-  if (awaitsManualLinkCheck(post.format)) return { ...post, postUrl: url, publicationStatus: "verification_pending" as const };
-  const publicationStatus = await finishVerification(post.id, code, url);
-  return { ...post, publicationStatus };
+  let publicationStatus: "verification_pending" | "verification_failed" | "tracking_active";
+  if (post.format === "tiktok") publicationStatus = await finishTikTokVerification(post.id, code, url);
+  else if (post.format === "facebook_post" || post.format === "facebook_reel" || post.format === "facebook_video") publicationStatus = await finishFacebookVerification(post.id, code, url);
+  else if (post.format === "youtube_short" || post.format === "youtube_video") publicationStatus = await finishYouTubeVerification(post.id, code, url);
+  else if (awaitsManualLinkCheck(post.format)) publicationStatus = "verification_pending";
+  else publicationStatus = await finishVerification(post.id, code, url);
+  if (fixingLive && publicationStatus === "tracking_active") {
+    await requireDb().collection("contentSubmissions").doc(post.id).update({
+      publicationStatus: "verification_pending",
+      liveFixNote: post.liveFixNote,
+    });
+    publicationStatus = "verification_pending";
+  }
+  return { ...post, postUrl: url, publicationStatus };
 }
 
 export async function markContentChecked(id: string) {
   const post = await loadContentSubmission(id);
   if (!post) throw new PostReviewError("missing");
   const manualWaiting = awaitsManualLinkCheck(post.format) && post.publicationStatus === "verification_pending";
-  if (post.publicationStatus !== "verification_failed" && !manualWaiting) throw new PostReviewError("status");
+  const changeReview = Boolean(post.liveFixNote) && (post.publicationStatus === "verification_pending" || post.publicationStatus === "verification_failed");
+  if (post.publicationStatus !== "verification_failed" && !manualWaiting && !changeReview) throw new PostReviewError("status");
+  const keepImported = changeReview && post.metricsSource === "automatic";
   await requireDb().collection("contentSubmissions").doc(post.id).update({
     publicationStatus: "tracking_active",
-    verificationNote: "An admin checked this link.",
-    instagramMediaId: null,
-    ...blankMetrics(),
-    metricsSource: null,
-    metricsRecordedAt: null,
-    metricsCheckedAt: null,
-    metricChange: FieldValue.delete(),
+    verificationNote: changeReview ? "An admin checked this update." : "An admin checked this link.",
+    liveFixNote: FieldValue.delete(),
+    ...(keepImported ? {} : {
+      instagramMediaId: null,
+      ...blankMetrics(),
+      metricsSource: null,
+      metricsRecordedAt: null,
+      metricsCheckedAt: null,
+      metricChange: FieldValue.delete(),
+    }),
     deliverableHoldStartedAt: new Date(),
     deliverableRecheckedAt: FieldValue.delete(),
     deliverableForfeitedAt: FieldValue.delete(),
@@ -1292,11 +1419,14 @@ export async function markContentChecked(id: string) {
 async function writeFreshMetrics(post: ContentSubmission) {
   try {
     if (post.format === "tiktok") return await writeTikTokPostMetrics(post);
+    if (post.format === "facebook_post" || post.format === "facebook_reel" || post.format === "facebook_video") return await writeFacebookPostMetrics(post);
+    if (post.format === "youtube_short" || post.format === "youtube_video") return await writeYouTubePostMetrics(post);
     if (awaitsManualLinkCheck(post.format)) return false;
     return await writeInstagramPostMetrics(post);
   } catch (error) {
     if (error instanceof SocialError && error.code === "expired") {
-      await markSocialReconnect(post.code, post.format === "tiktok" ? "tiktok" : "facebook", true);
+      const network = post.format === "tiktok" ? "tiktok" : post.format === "youtube_short" || post.format === "youtube_video" ? "youtube" : "facebook";
+      await markSocialReconnect(post.code, network, true);
       return false;
     }
     throw error;
@@ -1313,14 +1443,223 @@ function importedMetrics(metrics: PostMetrics) {
   };
 }
 
+async function finishTikTokVerification(id: string, code: string, url: string) {
+  const ref = requireDb().collection("contentSubmissions").doc(id);
+  try {
+    const secrets = await loadConnectionSecrets(code);
+    const connection = secrets.find((item): item is TikTokConnectionSecret => item.network === "tiktok");
+    if (!connection) return "verification_pending" as const;
+    const current = await currentTikTokConnection(connection);
+    const videos = await fetchTikTokPosts(current);
+    const match = selectTikTokUpdate({ videoId: null, postUrl: url, videos });
+    if (!match) {
+      await ref.update({ publicationStatus: "verification_failed", verificationNote: verificationFailureNote("not_found"), tiktokVideoId: null });
+      await markSocialReconnect(code, "tiktok", false);
+      return "verification_failed" as const;
+    }
+    if (!captionHasBrandTag(match.video.caption)) {
+      await ref.update({ publicationStatus: "verification_failed", verificationNote: verificationFailureNote("missing_tag"), tiktokVideoId: match.videoId });
+      await markSocialReconnect(code, "tiktok", false);
+      return "verification_failed" as const;
+    }
+    await ref.update({
+      publicationStatus: "tracking_active",
+      verificationNote: null,
+      tiktokVideoId: match.videoId,
+      ...importedMetrics({
+        likes: match.video.likes,
+        comments: match.video.comments,
+        shares: match.video.shares,
+        saves: null,
+        reach: null,
+        views: match.video.impressions,
+      }),
+      deliverableHoldStartedAt: new Date(),
+      deliverableRecheckedAt: FieldValue.delete(),
+      deliverableForfeitedAt: FieldValue.delete(),
+      deliverableForfeitNote: FieldValue.delete(),
+    });
+    await markSocialReconnect(code, "tiktok", false);
+    return "tracking_active" as const;
+  } catch (error) {
+    if (error instanceof SocialError && error.code === "expired") {
+      await markSocialReconnect(code, "tiktok", true);
+    }
+    await ref.update({ publicationStatus: "verification_pending", verificationNote: verificationFailureNote("not_connected"), tiktokVideoId: null });
+    if (!(error instanceof SocialError)) {
+      console.error("[affiliate] tiktok post check failed", error instanceof Error ? error.message : "unknown");
+    }
+    return "verification_pending" as const;
+  }
+}
+
+async function finishFacebookVerification(id: string, code: string, url: string) {
+  const ref = requireDb().collection("contentSubmissions").doc(id);
+  try {
+    const secrets = await loadConnectionSecrets(code);
+    const pages = secrets.flatMap((secret) => (secret.network === "facebook" ? secret.pages : []));
+    if (pages.length === 0) return "verification_pending" as const;
+    const posts = (await Promise.all(pages.map((page) => facebookPagePosts(page)))).flat();
+    const match = selectFacebookUpdate({ postUrl: url, posts });
+    if (!match) {
+      await ref.update({ publicationStatus: "verification_failed", verificationNote: verificationFailureNote("not_found") });
+      await markSocialReconnect(code, "facebook", false);
+      return "verification_failed" as const;
+    }
+    if (!captionHasBrandTag(match.caption)) {
+      await ref.update({ publicationStatus: "verification_failed", verificationNote: verificationFailureNote("missing_tag") });
+      await markSocialReconnect(code, "facebook", false);
+      return "verification_failed" as const;
+    }
+    await ref.update({
+      publicationStatus: "tracking_active",
+      verificationNote: null,
+      ...importedMetrics({
+        likes: match.likes,
+        comments: match.comments,
+        shares: match.shares,
+        saves: null,
+        reach: match.reach,
+        views: match.impressions,
+      }),
+      deliverableHoldStartedAt: new Date(),
+      deliverableRecheckedAt: FieldValue.delete(),
+      deliverableForfeitedAt: FieldValue.delete(),
+      deliverableForfeitNote: FieldValue.delete(),
+    });
+    await markSocialReconnect(code, "facebook", false);
+    return "tracking_active" as const;
+  } catch (error) {
+    if (error instanceof SocialError && error.code === "expired") await markSocialReconnect(code, "facebook", true);
+    await ref.update({ publicationStatus: "verification_pending", verificationNote: verificationFailureNote("not_connected") });
+    if (!(error instanceof SocialError)) console.error("[affiliate] facebook post check failed", error instanceof Error ? error.message : "unknown");
+    return "verification_pending" as const;
+  }
+}
+
+async function facebookPagePosts(page: Parameters<typeof fetchFacebookPosts>[0]) {
+  const [feed, videos] = await Promise.all([
+    fetchFacebookPosts(page).catch((error) => {
+      if (error instanceof SocialError && error.code === "expired") throw error;
+      return [];
+    }),
+    fetchFacebookVideos(page).catch((error) => {
+      if (error instanceof SocialError && error.code === "expired") throw error;
+      return [];
+    }),
+  ]);
+  return [...feed, ...videos];
+}
+
+async function finishYouTubeVerification(id: string, code: string, url: string) {
+  const ref = requireDb().collection("contentSubmissions").doc(id);
+  const videoId = youtubeVideoId(url);
+  if (!videoId) {
+    await ref.update({ publicationStatus: "verification_failed", verificationNote: verificationFailureNote("not_found") });
+    return "verification_failed" as const;
+  }
+  try {
+    const secrets = await loadConnectionSecrets(code);
+    const connection = secrets.find((item): item is YouTubeConnectionSecret => item.network === "youtube");
+    if (!connection) return "verification_pending" as const;
+    const current = await currentYouTubeConnection(connection);
+    const video = await readYouTubeVideo(current.accessToken, videoId);
+    if (!video || video.channelId !== current.accountId) {
+      await ref.update({ publicationStatus: "verification_failed", verificationNote: verificationFailureNote("not_found") });
+      await markSocialReconnect(code, "youtube", false);
+      return "verification_failed" as const;
+    }
+    if (!captionHasBrandTag(video.caption)) {
+      await ref.update({ publicationStatus: "verification_failed", verificationNote: verificationFailureNote("missing_tag") });
+      await markSocialReconnect(code, "youtube", false);
+      return "verification_failed" as const;
+    }
+    await ref.update({
+      publicationStatus: "tracking_active",
+      verificationNote: null,
+      ...importedMetrics({
+        likes: video.likes,
+        comments: video.comments,
+        shares: null,
+        saves: null,
+        reach: null,
+        views: video.views,
+      }),
+      deliverableHoldStartedAt: new Date(),
+      deliverableRecheckedAt: FieldValue.delete(),
+      deliverableForfeitedAt: FieldValue.delete(),
+      deliverableForfeitNote: FieldValue.delete(),
+    });
+    await markSocialReconnect(code, "youtube", false);
+    return "tracking_active" as const;
+  } catch (error) {
+    if (error instanceof SocialError && error.code === "expired") await markSocialReconnect(code, "youtube", true);
+    await ref.update({ publicationStatus: "verification_pending", verificationNote: verificationFailureNote("not_connected") });
+    if (!(error instanceof SocialError)) console.error("[affiliate] youtube post check failed", error instanceof Error ? error.message : "unknown");
+    return "verification_pending" as const;
+  }
+}
+
+async function writeFacebookPostMetrics(post: ContentSubmission) {
+  if (!post.postUrl) return false;
+  const secrets = await loadConnectionSecrets(post.code);
+  const pages = secrets.flatMap((secret) => (secret.network === "facebook" ? secret.pages : []));
+  if (pages.length === 0) return false;
+  const posts = (await Promise.all(pages.map((page) => facebookPagePosts(page)))).flat();
+  const match = selectFacebookUpdate({ postUrl: post.postUrl, posts });
+  if (!match) {
+    await requireDb().collection("contentSubmissions").doc(post.id).update({ metricsCheckedAt: new Date() });
+    await markSocialReconnect(post.code, "facebook", false);
+    return false;
+  }
+  await requireDb().collection("contentSubmissions").doc(post.id).update(importedMetrics({
+    likes: match.likes,
+    comments: match.comments,
+    shares: match.shares,
+    saves: null,
+    reach: match.reach,
+    views: match.impressions,
+  }));
+  await markSocialReconnect(post.code, "facebook", false);
+  return true;
+}
+
+async function writeYouTubePostMetrics(post: ContentSubmission) {
+  const videoId = post.postUrl ? youtubeVideoId(post.postUrl) : null;
+  if (!videoId) return false;
+  const secrets = await loadConnectionSecrets(post.code);
+  const connection = secrets.find((item): item is YouTubeConnectionSecret => item.network === "youtube");
+  if (!connection) return false;
+  const current = await currentYouTubeConnection(connection);
+  const video = await readYouTubeVideo(current.accessToken, videoId);
+  if (!video || video.channelId !== current.accountId) {
+    await requireDb().collection("contentSubmissions").doc(post.id).update({ metricsCheckedAt: new Date() });
+    await markSocialReconnect(post.code, "youtube", false);
+    return false;
+  }
+  await requireDb().collection("contentSubmissions").doc(post.id).update(importedMetrics({
+    likes: video.likes,
+    comments: video.comments,
+    shares: null,
+    saves: null,
+    reach: null,
+    views: video.views,
+  }));
+  await markSocialReconnect(post.code, "youtube", false);
+  return true;
+}
+
 async function writeTikTokPostMetrics(post: ContentSubmission) {
   if (!post.tiktokVideoId && !post.postUrl) return false;
   const secrets = await loadConnectionSecrets(post.code);
   const connection = secrets.find((item): item is TikTokConnectionSecret => item.network === "tiktok");
   if (!connection) return false;
   const current = await currentTikTokConnection(connection);
-  const videos = await loadTikTokVideos(current, post.tiktokVideoId);
-  const match = selectTikTokUpdate({ videoId: post.tiktokVideoId, postUrl: post.postUrl, videos });
+  const savedVideos = await loadTikTokVideos(current, post.tiktokVideoId);
+  const saved = selectTikTokUpdate({ videoId: post.tiktokVideoId, postUrl: post.postUrl, videos: savedVideos });
+  const savedMatchesLink = Boolean(saved && (!post.postUrl || samePublishedPost(post.postUrl, saved.video.permalink)));
+  const videos = savedMatchesLink ? savedVideos : await fetchTikTokPosts(current);
+  const match = savedMatchesLink ? saved : selectTikTokUpdate({ videoId: null, postUrl: post.postUrl, videos });
   const ref = requireDb().collection("contentSubmissions").doc(post.id);
   if (!match) {
     await ref.update({ metricsCheckedAt: new Date() });
@@ -1360,13 +1699,15 @@ async function writeInstagramPostMetrics(post: ContentSubmission) {
   if (post.instagramMediaId) {
     for (const page of pages) {
       const media = await readInstagramMedia(page, post.instagramMediaId);
-      if (!media) continue;
+      if (!media || !storedMediaMatchesLink(post.postUrl, media.permalink)) continue;
       await requireDb().collection("contentSubmissions").doc(post.id).update(importedMetrics(media));
       await markSocialReconnect(post.code, "facebook", false);
       return true;
     }
-    await requireDb().collection("contentSubmissions").doc(post.id).update({ metricsCheckedAt: new Date() });
-    return false;
+    if (!post.postUrl) {
+      await requireDb().collection("contentSubmissions").doc(post.id).update({ metricsCheckedAt: new Date() });
+      return false;
+    }
   }
   if (!post.postUrl) return false;
   const posts = (await Promise.all(pages.map((page) => fetchInstagramMedia(page)))).flat();

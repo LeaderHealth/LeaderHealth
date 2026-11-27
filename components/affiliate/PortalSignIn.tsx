@@ -43,6 +43,7 @@ export function PortalSignIn({
   sent,
   errorId,
   unconfigured,
+  nextPath = "",
   loginAction,
   linkAction,
   resetAction,
@@ -56,6 +57,7 @@ export function PortalSignIn({
   sent: boolean;
   errorId: string;
   unconfigured: string;
+  nextPath?: string;
   loginAction: (formData: FormData) => void | Promise<void>;
   linkAction?: (formData: FormData) => void | Promise<void>;
   resetAction?: (formData: FormData) => void | Promise<void>;
@@ -170,6 +172,7 @@ export function PortalSignIn({
                 showPassword={showPassword}
                 onTogglePassword={() => setShowPassword((current) => !current)}
                 loginAction={loginAction}
+                nextPath={nextPath}
                 linkAction={canLink ? linkAction : undefined}
                 canReset={canReset}
                 invalid={invalid}
@@ -271,6 +274,7 @@ function SignInView({
   showPassword,
   onTogglePassword,
   loginAction,
+  nextPath = "",
   linkAction,
   canReset,
   invalid,
@@ -287,6 +291,7 @@ function SignInView({
   showPassword: boolean;
   onTogglePassword: () => void;
   loginAction: (formData: FormData) => void | Promise<void>;
+  nextPath?: string;
   linkAction?: (formData: FormData) => void | Promise<void>;
   canReset: boolean;
   invalid: boolean;
@@ -300,6 +305,7 @@ function SignInView({
   const passwordId = affiliate ? "portal-password" : "password";
   return (
     <form action={loginAction} className="flex flex-col gap-5 min-[765px]:gap-8">
+      {nextPath ? <input type="hidden" name="next" value={nextPath} /> : null}
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl leading-tight font-medium tracking-[-0.01em] min-[765px]:text-4xl">{affiliate ? "Welcome back, partner" : "Admin sign in"}</h1>
         <p className="text-base leading-normal text-[#4A3A37]">

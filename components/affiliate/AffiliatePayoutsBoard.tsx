@@ -64,10 +64,10 @@ function monthWhen(month: PayoutPeriodTotal, today: string) {
     const dates = [...new Set(month.items.map((item) => item.approved))].filter((note) => note !== "Not yet" && note !== "On hold" && note !== "After this month ends");
     return dates.length === 1 ? `Approved ${dates[0]}` : "In the next manual payout";
   }
-  if (month.status === "hold") return "Waiting on review";
+  if (month.status === "hold") return "On hold";
   if (month.period === today.slice(0, 7)) return "Month still open";
   const notes = [...new Set(month.items.map((item) => item.approved))];
-  return notes.length === 1 && notes[0] === "After this month ends" ? notes[0] : "Waiting for review";
+  return notes.length === 1 && notes[0] === "After this month ends" ? notes[0] : "Earned, not approved yet";
 }
 
 function kindSummary(rows: PayoutBoardItem[], refs: string[]) {
@@ -112,8 +112,8 @@ export function AffiliatePayoutsBoard({ today, items, labs }: { today: string; i
       .filter((month) => status === "all" || month.items.length > 0 || (status === "review" && month.period === today.slice(0, 7) && month.items.length === 0));
   }, [filtered, range, status, today, visible]);
   const cards = [
-    { label: "In review", value: formatCents(payoutCents(items.filter((item) => item.status === "review" || item.status === "hold"))), detail: "Earned, not approved yet", highlight: false },
-    { label: "Approved, not sent", value: formatCents(payoutCents(items.filter((item) => item.status === "approved"))), detail: "Sent manually. We’ll email you when it goes out.", highlight: true },
+    { label: "Needs approval", value: formatCents(payoutCents(items.filter((item) => item.status === "review"))), detail: "Earned, not approved yet", highlight: false },
+    { label: "Approved, not sent", value: formatCents(payoutCents(items.filter((item) => item.status === "approved"))), detail: "We’ll email you when it goes out.", highlight: true },
     { label: "Paid", value: formatCents(payoutCents(items.filter((item) => item.status === "paid"))), detail: "Sent to you", highlight: false },
   ];
   const counts = (id: PayoutBoardStatus | "all") => {
@@ -127,7 +127,7 @@ export function AffiliatePayoutsBoard({ today, items, labs }: { today: string; i
     lab: periods.reduce((sum, month) => sum + month.lab, 0),
     total: periods.reduce((sum, month) => sum + month.total, 0),
   };
-  const filters = ([["all", "All"], ["review", "In review"], ["approved", "Approved, not sent"], ["paid", "Paid"], ["hold", "On hold"]] as const).map(([id, label]) => {
+  const filters = ([["all", "All"], ["review", "Needs approval"], ["approved", "Approved, not sent"], ["paid", "Paid"], ["hold", "On hold"]] as const).map(([id, label]) => {
     const count = counts(id);
     return { id, label, count, off: count === 0 && id !== "all" };
   });

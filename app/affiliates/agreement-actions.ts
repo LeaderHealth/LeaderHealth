@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { currentAffiliate } from "@/app/affiliates/current";
 import { AgreementError, acceptAgreement, askAgreementQuestion, declineAgreement } from "@/lib/affiliate/agreements";
 import { noteComplianceEvent } from "@/lib/affiliate/compliance-log";
+import { acknowledgeAgreementDisclosure } from "@/lib/affiliate/disclosures";
 
 const CONTRACTS = "/affiliates/contracts";
 
@@ -54,7 +55,10 @@ export async function acceptAffiliateAgreementAction(formData: FormData) {
     code: affiliate.code,
     detail: `${affiliate.name} accepted the agreement.`,
   });
+  await acknowledgeAgreementDisclosure({ code: affiliate.code, name: affiliate.name, actor: affiliate.code });
   clearAffiliateMemo();
+  revalidatePath("/affiliates/posts");
+  revalidatePath("/affiliates/tracking-link");
   revalidatePath(CONTRACTS);
   revalidatePath("/affiliates/overview");
   revalidatePath("/admin/affiliates/accounts");

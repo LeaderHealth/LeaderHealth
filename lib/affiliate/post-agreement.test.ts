@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { agreementBoardPeriod, agreementKindFormat, agreementMatchesPost, agreementMonthBoard, agreementSlotState, kindUsedCount, mixSentence, monthCanTake, placedSlotNumber, postIdentity, postPlaceLabel, postTypeLabel, postingAgreement, postingMonthDateBounds, type AgreementBoardPost, type AgreementForPost, type AgreementKindUse, type MonthFillPost } from "./post-agreement";
+import { agreementBoardPeriod, agreementKindFormat, agreementMatchesPost, agreementMonthBoard, agreementSlotRows, agreementSlotState, kindUsedCount, mixSentence, monthCanTake, placedSlotNumber, postIdentity, postPlaceLabel, postTypeLabel, postingAgreement, postingMonthDateBounds, type AgreementBoardPost, type AgreementForPost, type AgreementKindUse, type MonthFillPost } from "./post-agreement";
 
 const today = "2026-11-17";
 
@@ -93,6 +93,7 @@ test("each month of a multi-month agreement keeps its own set of posts", () => {
     monthLabel: "November",
     posts: [
       boardPost({ id: "live", contentStatus: "approved", publicationStatus: "tracking_active", title: "Live" }),
+      boardPost({ id: "noted", contentStatus: "approved", publicationStatus: "tracking_active", title: "Noted", liveFixNote: "Remove the treatment claim.", submittedAt: "2026-11-05T00:00:00.000Z" }),
       boardPost({ id: "no", contentStatus: "rejected", reviewNote: "No", title: "Rejected" }),
       boardPost({ id: "fix", contentStatus: "revision_requested", reviewNote: "Please remove the claim.", submittedAt: "2026-11-03T00:00:00.000Z" }),
       boardPost({ id: "later", postingMonth: "2026-12", submittedAt: "2026-11-04T00:00:00.000Z" }),
@@ -102,8 +103,12 @@ test("each month of a multi-month agreement keeps its own set of posts", () => {
   assert.equal(board[0]?.label, "Verified");
   assert.equal(board[1]?.label, "Changes requested");
   assert.equal(board[1]?.adminNote, "Please remove the claim.");
-  assert.equal(board[2]?.label, "Not started");
-  assert.equal(board[2]?.href, "/affiliates/posts?compose=1");
+  assert.equal(board[2]?.label, "Live but changes requested");
+  assert.equal(board[2]?.note, "Update the live post, then paste the link. It counts toward November after an admin verifies that link.");
+  assert.equal(board[2]?.adminNote, "");
+  assert.equal(board[2]?.actionLabel, "");
+  assert.equal(board[3]?.label, "Not started");
+  assert.equal(board[3]?.href, "/affiliates/posts?compose=1");
   assert.equal(agreementBoardPeriod(["2026-12", "2027-01"], "2026-11-19"), "2026-12");
   assert.deepEqual(postingMonthDateBounds("2026-11", "2026-11-16", "2027-01-10"), { min: "2026-11-16", max: "2026-11-30" });
   assert.deepEqual(postingMonthDateBounds("2026-12", "2026-11-16", "2027-01-10"), { min: "2026-12-01", max: "2026-12-31" });
@@ -162,11 +167,37 @@ test("post labels match the agreement slot and mix", () => {
   assert.equal(agreementSlotState(rows[1] ?? null), "Ready to publish");
   assert.equal(agreementSlotState(null), "Not posted");
   assert.equal(agreementSlotState({ contentStatus: "submitted", publicationStatus: null }), "In review");
+  assert.equal(agreementSlotState({ contentStatus: "approved", publicationStatus: "verification_failed" }), "Needs a fix");
+  assert.equal(agreementSlotState({ contentStatus: "approved", publicationStatus: "verification_pending" }), "Checking the link");
+  assert.equal(agreementSlotState({ contentStatus: "approved", publicationStatus: "verification_pending", liveFixNote: "Remove the claim." }), "Checking the update");
+  assert.equal(agreementSlotState({ contentStatus: "revision_requested", publicationStatus: null }), "Changes requested");
   const place = postPlaceLabel({ offerId: "", agreementId: "agree1", agreementSlot: null }, 1);
   const type = postTypeLabel({ agreementPlatform: "TikTok", agreementPostType: "Video", format: "tiktok", fileCount: 1 });
   assert.equal(postIdentity(place, type), "Post 1 · TikTok video");
   assert.equal(postTypeLabel({ agreementPlatform: "", agreementPostType: "", format: "youtube_short", fileCount: 1 }), "YouTube Short");
   assert.equal(postTypeLabel({ agreementPlatform: "", agreementPostType: "", format: "facebook_reel", fileCount: 1 }), "Facebook reel");
+  const kinds = [
+    { platform: "Instagram", type: "Reel", count: 2 },
+    { platform: "TikTok", type: "Video", count: 2 },
+  ];
+  const tiktoks = [1, 2, 3, 4].map((day) => row({
+    id: `tiktok-${day}`,
+    format: "tiktok",
+    fileCount: 1,
+    submittedAt: `2026-11-0${day}T00:00:00.000Z`,
+  }));
+  const placed = agreementSlotRows(tiktoks, "agree1", "2026-11", 4, kinds);
+  assert.equal(placed.length, 4);
+  assert.equal(placed[0]?.post, null);
+  assert.equal(placed[1]?.post, null);
+  assert.equal(placed.filter((item) => agreementSlotState(item.post) === "Verified").length, 2);
+  const filled = agreementSlotRows([
+    row({ id: "reel-a", format: "instagram_reel" }),
+    row({ id: "reel-b", format: "instagram_reel", submittedAt: "2026-11-03T00:00:00.000Z" }),
+    row({ id: "video-a", format: "tiktok", submittedAt: "2026-11-04T00:00:00.000Z" }),
+    row({ id: "video-b", format: "tiktok", submittedAt: "2026-11-05T00:00:00.000Z" }),
+  ], "agree1", "2026-11", 4, kinds);
+  assert.equal(filled.filter((item) => item.post).length, 4);
   assert.equal(mixSentence([
     { platform: "Instagram", type: "Carousel", count: 2 },
     { platform: "TikTok", type: "Video", count: 2 },

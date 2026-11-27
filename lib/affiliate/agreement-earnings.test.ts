@@ -15,9 +15,9 @@ test("posts filed for a later month stay in that month until they go live", () =
   assert.equal(agreementPostMonth(filed), "2026-12");
   assert.equal(earn([agreement()], [filed, filed, filed, filed], "2026-11").verifiedPosts, 0);
   assert.equal(earn([agreement()], [filed, filed, filed, filed], "2026-12").status, "short");
-  const live = post({ publishedAt: "2026-12-04T00:00:00.000Z", submittedAt: "2026-11-20T00:00:00.000Z", postingMonth: "2026-12" });
-  assert.equal(earn([agreement()], [live, live, live, live], "2026-12").status, "earned");
-  assert.equal(earn([agreement()], [live, live, live, live], "2026-11").verifiedPosts, 0);
+  const live = mix({ publishedAt: "2026-12-04T00:00:00.000Z", submittedAt: "2026-11-20T00:00:00.000Z", postingMonth: "2026-12" });
+  assert.equal(earn([agreement()], live, "2026-12").status, "earned");
+  assert.equal(earn([agreement()], live, "2026-11").verifiedPosts, 0);
   assert.equal(agreementPostMonth(post({ publishedAt: "2026-11-21T00:00:00.000Z", postingMonth: "2026-12" })), "2026-11");
 });
 
@@ -41,7 +41,7 @@ test("only a month covered from the 1st through the last day is a posting month"
   assert.equal(earn([agreement({ expiresOn: "2027-01-05" })], four, "2027-01").status, "none");
   assert.equal(earn([agreement({ effectiveOn: "2026-11-16", expiresOn: "2027-01-31" })], four, "2026-11").status, "none");
   assert.equal(earn([agreement({ effectiveOn: "2026-11-16", expiresOn: "2026-11-20" })], four).status, "none");
-  const december = [post({ publishedAt: "2026-12-04T00:00:00.000Z" }), post({ publishedAt: "2026-12-04T00:00:00.000Z" }), post({ publishedAt: "2026-12-04T00:00:00.000Z" }), post({ publishedAt: "2026-12-04T00:00:00.000Z" })];
+  const december = mix({ publishedAt: "2026-12-04T00:00:00.000Z" });
   assert.equal(earn([agreement({ effectiveOn: "2026-11-16", expiresOn: "2027-01-31" })], december, "2026-12").status, "earned");
 });
 
@@ -71,11 +71,17 @@ function post(patch: Partial<PostForEarning> = {}): PostForEarning {
     publicationStatus: "tracking_active",
     publishedAt: "2026-11-10T15:00:00.000Z",
     submittedAt: "2026-11-08T15:00:00.000Z",
+    format: "instagram_reel",
+    fileCount: 1,
     ...patch,
   };
 }
 
-const four = [post(), post(), post(), post()];
+function mix(patch: Partial<PostForEarning> = {}) {
+  return [post(patch), post(patch), post({ ...patch, format: "tiktok" }), post({ ...patch, format: "tiktok" })];
+}
+
+const four = mix();
 const earn = (agreements: AgreementForEarning[], posts: PostForEarning[], period = "2026-11") =>
   agreementMonthEarning({ agreements, posts, code: "abc123", period });
 
@@ -85,6 +91,22 @@ test("all required posts live earns the full monthly rate", () => {
   assert.equal(result.earnedCents, 30000);
   assert.equal(result.verifiedPosts, 4);
   assert.equal(result.requiredPosts, 4);
+});
+
+test("extra posts of one kind do not fill another kind", () => {
+  const tiktoks = [post({ format: "tiktok" }), post({ format: "tiktok" }), post({ format: "tiktok" }), post({ format: "tiktok" })];
+  const result = earn([agreement()], tiktoks);
+  assert.equal(result.status, "short");
+  assert.equal(result.earnedCents, 0);
+  assert.equal(result.verifiedPosts, 2);
+  assert.equal(result.requiredPosts, 4);
+});
+
+test("a live post with a change request does not count until an admin verifies the new link", () => {
+  const result = earn([agreement()], [...four.slice(0, 3), post({ format: "tiktok", liveFixNote: "Remove the treatment claim." })]);
+  assert.equal(result.status, "short");
+  assert.equal(result.earnedCents, 0);
+  assert.equal(result.verifiedPosts, 3);
 });
 
 test("one post short earns nothing", () => {

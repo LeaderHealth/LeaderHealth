@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { saveCampaignFlowAction } from "@/app/admin/affiliates/actions";
+import { TimedNotice } from "@/components/affiliate/TimedNotice";
 import {
   CAMPAIGN_CONTENT_TYPES,
   CAMPAIGN_PLATFORMS,
@@ -180,6 +181,15 @@ export function CampaignCreate({ affiliates, rates = EMPTY_RATES }: { affiliates
   }
 
   async function save(mode: "draft" | "sent") {
+    if (mode === "draft") {
+      const error = campaignStepError(3, flow());
+      if (error) {
+        setErr(error);
+        setToast("");
+        setStep(3);
+        return;
+      }
+    }
     setSaving(true);
     const result = await saveCampaignFlowAction({ ...flow(), mode });
     setSaving(false);
@@ -200,11 +210,15 @@ export function CampaignCreate({ affiliates, rates = EMPTY_RATES }: { affiliates
   }
 
   function next() {
-    const error = campaignStepError(step, flow());
-    if (error) {
-      setErr(error);
-      setToast("");
-      return;
+    const steps = step === 4 ? [0, 1, 2, 3] : [step];
+    for (const item of steps) {
+      const error = campaignStepError(item, flow());
+      if (error) {
+        setErr(error);
+        setToast("");
+        if (item !== step) setStep(item);
+        return;
+      }
     }
     if (step === 4) {
       void save("sent");
@@ -234,7 +248,7 @@ export function CampaignCreate({ affiliates, rates = EMPTY_RATES }: { affiliates
       <div className="flex flex-wrap items-end gap-4">
         <div className="min-w-0 flex-1">
           <h2 className="text-3xl font-normal">Create campaign</h2>
-          <p className="mt-1.5 text-[15px] text-[#4A3A37]">Only the affiliates you assign will see it. Payment terms are set before they accept.</p>
+          <p className="mt-1.5 text-[15px] text-[#4A3A37]">Invite at least one affiliate. Only the people you invite will see it. Payment terms are set before they accept.</p>
         </div>
         {sent ? null : (
           <button
@@ -247,11 +261,7 @@ export function CampaignCreate({ affiliates, rates = EMPTY_RATES }: { affiliates
           </button>
         )}
       </div>
-      {toast ? (
-        <p role="status" className="rounded-[14px] bg-[#DDF0E4] px-4 py-3 text-[15px] font-medium text-[#1D6340]">
-          {toast}
-        </p>
-      ) : null}
+      {toast ? <TimedNotice message={toast} onDismiss={() => setToast("")} /> : null}
       {sent ? (
         <section className="flex flex-col items-start gap-5 rounded-3xl bg-white p-7">
           <span className="flex size-[52px] items-center justify-center rounded-full bg-[#DDF0E4] text-[#1D6340]">
@@ -427,8 +437,8 @@ export function CampaignCreate({ affiliates, rates = EMPTY_RATES }: { affiliates
               ) : null}
               {step === 3 ? (
                 <div className="flex flex-col gap-4">
-                  <h3 className="text-[22px] font-semibold">Assign affiliates</h3>
-                  <p className="text-sm text-[#4A3A37]">Only these affiliates will see the campaign. Each one is paid the campaign price. Change the amount only when that affiliate has a different price.</p>
+                  <h3 className="text-[22px] font-semibold">Invite affiliates <span className="text-[#9B2C1F]">*</span></h3>
+                  <p className="text-sm text-[#4A3A37]">Invite at least one affiliate. Only these affiliates will see the campaign. Each one is paid the campaign price. Change the amount only when that affiliate has a different price.</p>
                   {affiliates.length === 0 ? <p className="text-sm text-[#6B5A57]">No affiliate accounts yet.</p> : null}
                   {affiliates.map((affiliate) => {
                     const on = sel.includes(affiliate.code);
@@ -479,12 +489,12 @@ export function CampaignCreate({ affiliates, rates = EMPTY_RATES }: { affiliates
                     { title: "Payment", lines: [`${money(baseCents)} per campaign, fixed`, performance ? "Performance-based pay: on. Views, engagements, verified link clicks, and eligible page views." : "Performance-based pay: off"], edit: 2 },
                     {
                       title: "Affiliates",
-                      lines: sel.map((code) => {
+                      lines: sel.length ? sel.map((code) => {
                         const affiliate = affiliates.find((item) => item.code === code);
                         const unit = money(unitCents(code));
                         const total = `${unit} for the campaign`;
                         return `${affiliate?.name ?? code} · ${total}`;
-                      }),
+                      }) : ["Invite at least one affiliate."],
                       edit: 3,
                     },
                   ].map((block) => (
@@ -523,7 +533,7 @@ export function CampaignCreate({ affiliates, rates = EMPTY_RATES }: { affiliates
                 {postsN} × {types.join(" or ") || "content"} · {plats.join(", ") || "no platform"}
               </span>
               <div className="flex flex-col gap-1 border-t border-[#F0E8E6] pt-3">
-                <span className="text-[13px] text-[#6B5A57]">{sel.length ? `${sel.length} ${sel.length === 1 ? "affiliate" : "affiliates"}` : "No affiliates yet"}</span>
+                <span className="text-[13px] text-[#6B5A57]">{sel.length ? `${sel.length} ${sel.length === 1 ? "affiliate" : "affiliates"} invited` : "Invite at least one affiliate"}</span>
                 <span className="text-2xl font-semibold">{money(budget)}</span>
                 <span className="text-[13px] text-[#6B5A57]">Estimated total, base payments only</span>
               </div>

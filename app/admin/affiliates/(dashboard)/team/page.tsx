@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { environmentAdminProfile } from "@/lib/affiliate/admin-profile";
+import { TimedNotice } from "@/components/affiliate/TimedNotice";
 import { listSubAdmins, type SubAdminRecord } from "@/lib/affiliate/admins";
 import { listOpenDashboardSessions, type DashboardSessionRecord } from "@/lib/affiliate/dashboard-sessions";
 import { reportHandledAffiliateError } from "@/lib/affiliate/report";
@@ -158,38 +159,23 @@ export default async function AdminTeamPage({
     }
   }
 
+  const teamNotice =
+    query.sent === "1"
+      ? { query: "sent", message: "Invitation sent. They choose their name, email, and password from that link." }
+      : query.resent === "1"
+        ? { query: "resent", message: "A new invitation was sent. The previous unused link no longer works." }
+        : query.updated === "1"
+          ? { query: "updated", message: "That admin's access was updated." }
+          : query.removed === "1"
+            ? { query: "removed", message: "That admin was removed." }
+            : query.signedout === "1"
+              ? { query: "signedout", message: "That browser was signed out. Other sign-ins still work." }
+              : null;
+
   return (
     <div className="space-y-6">
-      {error ? (
-        <p role="alert" className="rounded-2xl bg-rose px-4 py-3 text-sm text-ink">
-          {error}
-        </p>
-      ) : null}
-      {query.sent === "1" ? (
-        <p role="status" className="rounded-2xl bg-white px-4 py-3 text-sm text-ink">
-          Invitation sent. They choose their name, email, and password from that link.
-        </p>
-      ) : null}
-      {query.resent === "1" ? (
-        <p role="status" className="rounded-2xl bg-white px-4 py-3 text-sm text-ink">
-          A new invitation was sent. The previous unused link no longer works.
-        </p>
-      ) : null}
-      {query.updated === "1" ? (
-        <p role="status" className="rounded-2xl bg-white px-4 py-3 text-sm text-ink">
-          That admin&apos;s access was updated.
-        </p>
-      ) : null}
-      {query.removed === "1" ? (
-        <p role="status" className="rounded-2xl bg-white px-4 py-3 text-sm text-ink">
-          That admin was removed.
-        </p>
-      ) : null}
-      {query.signedout === "1" ? (
-        <p role="status" className="rounded-2xl bg-white px-4 py-3 text-sm text-ink">
-          That browser was signed out. Other sign-ins still work.
-        </p>
-      ) : null}
+      {error ? <TimedNotice message={error} tone="warn" query="error" /> : null}
+      {teamNotice ? <TimedNotice message={teamNotice.message} tone="plain" query={teamNotice.query} /> : null}
       <section className="rounded-[28px] bg-white p-4 sm:p-8">
         <h2 className="text-4xl">Invite an admin</h2>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-taupe">

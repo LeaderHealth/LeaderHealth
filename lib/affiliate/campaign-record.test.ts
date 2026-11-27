@@ -48,7 +48,7 @@ test("campaign send requires each step before it stores a brief", () => {
   assert.equal(campaignStepError(0, { ...ready, platforms: [] }), "Pick at least one platform.");
   assert.equal(campaignStepError(1, { ...ready, posts: "0" }), "Posts required must be 1 or more.");
   assert.equal(campaignStepError(2, { ...ready, amount: "0" }), "Enter a base payment, like 150.");
-  assert.equal(campaignStepError(3, { ...ready, affiliates: [] }), "Assign at least one affiliate.");
+  assert.equal(campaignStepError(3, { ...ready, affiliates: [] }), "Invite at least one affiliate.");
   const saved = readCampaignFlow(ready);
   assert.ok(!("error" in saved));
   if ("error" in saved) return;
@@ -64,10 +64,13 @@ test("campaign send requires each step before it stores a brief", () => {
   assert.ok(!("error" in custom));
   if ("error" in custom) return;
   assert.deepEqual(custom.brief.affiliatePay, [{ code: "88h4dcji", amountCents: 20000 }]);
-  const draft = readCampaignFlow({ ...ready, mode: "draft", name: "Draft push", description: "", affiliates: [] });
+  const emptyDraft = readCampaignFlow({ ...ready, mode: "draft", name: "Draft push", description: "", affiliates: [] });
+  assert.deepEqual(emptyDraft, { error: "Invite at least one affiliate." });
+  const draft = readCampaignFlow({ ...ready, mode: "draft", name: "Draft push", description: "" });
   assert.ok(!("error" in draft));
   if ("error" in draft) return;
   assert.equal(draft.brief.status, "draft");
+  assert.deepEqual(draft.brief.assignedCodes, ["88h4dcji"]);
   const withPerformance = readCampaignFlow({ ...ready, performancePay: true });
   assert.ok(!("error" in withPerformance));
   if ("error" in withPerformance) return;

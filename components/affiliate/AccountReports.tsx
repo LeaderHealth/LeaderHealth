@@ -95,7 +95,7 @@ export function AccountReports({
         <h3 id="marketing-report-title" className="text-lg font-semibold">
           Marketing report
         </h3>
-        <p className="text-[13px] text-[#4A3A37]">Last 3 months · doesn’t change commission or payouts. Commission is lab orders only.</p>
+        <p className="text-[13px] text-[#4A3A37]">Last 3 months · doesn’t change commission or payouts. Commission is lab orders only. Visits are not the verified link clicks used for pay.</p>
       </div>
 
       {unavailable ? (

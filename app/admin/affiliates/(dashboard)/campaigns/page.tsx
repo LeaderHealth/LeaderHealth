@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ADMIN_ERRORS } from "@/app/admin/affiliates/messages";
 import { CampaignList } from "@/components/affiliate/CampaignList";
+import { TimedNotice } from "@/components/affiliate/TimedNotice";
 import { campaignListRows } from "@/lib/affiliate/campaign-list";
 import { loadContentSubmissions } from "@/lib/affiliate/post-review";
 import { loadMarketingCampaignRecords } from "@/lib/affiliate/roi-store";
@@ -40,6 +41,9 @@ export default async function AdminCampaignsPage({
           contentStatus: post.contentStatus,
           publicationStatus: post.publicationStatus,
           createdAt: post.createdAt,
+          postUrl: post.postUrl,
+          publishedAt: post.publishedAt,
+          caption: post.caption,
         })),
       affiliates: overview.affiliates.map((affiliate) => ({ code: affiliate.code, name: affiliate.name })),
     });
@@ -49,8 +53,8 @@ export default async function AdminCampaignsPage({
 
   return (
     <div className="flex flex-col gap-4">
-      {notice ? <p className="text-sm text-ink">{notice}</p> : null}
-      {error ? <p className="text-sm text-ink">{error}</p> : null}
+      {notice ? <TimedNotice message={notice} tone={query.notice === "exists" ? "warn" : "ok"} query="notice" /> : null}
+      {error ? <TimedNotice message={error} tone="warn" query="error" /> : null}
       {loadError ? <p className="text-ink">{loadError}</p> : <CampaignList rows={rows} />}
     </div>
   );

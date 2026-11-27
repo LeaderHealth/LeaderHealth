@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { PortalSignIn } from "@/components/affiliate/PortalSignIn";
 import { affiliateEmailConfigured } from "@/lib/affiliate/email";
-import { affiliateAdminConfigured, adminIsSignedIn } from "@/lib/affiliate/session";
+import { affiliateAdminConfigured, adminIsSignedIn, safeAdminNext } from "@/lib/affiliate/session";
 import { loginAffiliateAdmin, requestSubAdminLink, requestSubAdminPasswordReset } from "./actions";
 import { ADMIN_ERRORS, ADMIN_LOCKED_MAIL } from "./messages";
 
@@ -16,11 +16,11 @@ export const dynamic = "force-dynamic";
 export default async function AffiliatesAdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; sent?: string; method?: string; mailed?: string }>;
+  searchParams: Promise<{ error?: string; sent?: string; method?: string; mailed?: string; next?: string }>;
 }) {
-  if (await adminIsSignedIn()) redirect("/admin/affiliates/overview");
-
   const query = await searchParams;
+  const next = safeAdminNext(query.next);
+  if (await adminIsSignedIn()) redirect(next || "/admin/affiliates/overview");
   const error =
     query.error === "locked" && query.mailed === "1" ? ADMIN_LOCKED_MAIL : query.error ? (ADMIN_ERRORS[query.error] ?? "") : "";
   const sent = query.sent === "1" && !error;
@@ -38,6 +38,7 @@ export default async function AffiliatesAdminPage({
       sent={sent}
       errorId="affiliate-admin-error"
       unconfigured="Set AFFILIATE_ADMIN_EMAIL, AFFILIATE_ADMIN_PASSWORD, and AFFILIATE_SESSION_SECRET in the server environment, then reload this page."
+      nextPath={next}
       loginAction={loginAffiliateAdmin}
       linkAction={requestSubAdminLink}
       resetAction={requestSubAdminPasswordReset}

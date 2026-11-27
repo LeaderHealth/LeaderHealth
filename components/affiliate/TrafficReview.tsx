@@ -3,6 +3,7 @@
 import { Fragment, useState } from "react";
 import Link from "next/link";
 import { excludeTrafficAction, keepTrafficAction } from "@/app/admin/affiliates/payment-actions";
+import { TimedNotice } from "@/components/affiliate/TimedNotice";
 import type { TrafficRowStatus, TrafficStepTone } from "@/lib/affiliate/traffic-review";
 
 type Row = {
@@ -50,6 +51,7 @@ export function TrafficReview({
   canReview,
   notice,
   error,
+  openCode = "",
   steps,
   rows,
   days,
@@ -62,13 +64,14 @@ export function TrafficReview({
   canReview: boolean;
   notice: string;
   error: string;
+  openCode?: string;
   steps: { n: string; label: string; sub: string; tone: TrafficStepTone }[];
   rows: Row[];
   days: Day[];
   totals: { clicks: number; pageViews: number; promoLink: number; promoOrders: number; excluded: number };
 }) {
-  const [who, setWho] = useState("all");
-  const [review, setReview] = useState("");
+  const [who, setWho] = useState(openCode || "all");
+  const [review, setReview] = useState(openCode);
   const visible = (code: string) => who === "all" || who === code;
   const bars = days.map((day) => {
     const parts = day.parts.filter((part) => visible(part.code));
@@ -101,13 +104,13 @@ export function TrafficReview({
         ))}
       </ol>
 
-      {notice ? <p role="status" className="rounded-[14px] bg-[#DDF0E4] px-4 py-3 text-[15px] font-medium text-[#1D6340]">{notice}</p> : null}
-      {error ? <p role="alert" className="rounded-[14px] bg-[#FBE3DF] px-4 py-3 text-[15px] text-[#9B2C1F]">{error}</p> : null}
+      {notice ? <TimedNotice message={notice} query="notice" /> : null}
+      {error ? <TimedNotice message={error} tone="warn" query="error" /> : null}
 
       <section aria-labelledby="traffic-chart-title" className="flex flex-col gap-3.5 rounded-3xl bg-white px-4 py-5 sm:px-6">
         <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center">
-          <h3 id="traffic-chart-title" className="text-xl font-medium">Verified clicks per day</h3>
-          <div role="group" aria-label="Show" className="flex flex-wrap gap-1.5 lg:ml-auto">
+          <h3 id="traffic-chart-title" className="text-xl font-medium">Verified link clicks per day</h3>
+          <div role="group" aria-label="Chart" className="flex flex-wrap gap-1.5 lg:ml-auto">
             <Filter pressed={who === "all"} color="#6B5A57" label="All affiliates" onClick={() => setWho("all")} />
             {rows.map((row) => (
               <Filter key={row.code} pressed={who === row.code} color={row.color} label={row.name} onClick={() => setWho(row.code)} />
@@ -124,7 +127,7 @@ export function TrafficReview({
                   <span>0</span>
                 </div>
               </div>
-              <div role="img" aria-label={`Verified clicks per day, ${first} to ${last}`} className="flex h-[220px] min-w-0 flex-1 items-end gap-1 border-b border-[#DCCFCC] sm:gap-2">
+              <div role="img" aria-label={`Verified link clicks per day, ${first} to ${last}`} className="flex h-[220px] min-w-0 flex-1 items-end gap-1 border-b border-[#DCCFCC] sm:gap-2">
                 {bars.map((bar) => {
                   const segments = [
                     ...bar.parts.filter((part) => part.clicks > 0).map((part) => ({ key: part.code, height: height(part.clicks), color: part.flagged ? "#9B2C1F" : rows.find((row) => row.code === part.code)?.color ?? "#33130F", hatch: false })),
@@ -170,7 +173,7 @@ export function TrafficReview({
                     <span className="rounded-full px-3 py-1 text-[13px] font-semibold whitespace-nowrap" style={{ background, color }}>{label}</span>
                   </div>
                   <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
-                    <Metric label="Verified clicks" value={count(row.clicks)} strong />
+                    <Metric label="Verified link clicks" value={count(row.clicks)} strong />
                     <Metric label="Page views" value={count(row.pageViews)} />
                     <Metric label="Promo code link" value={count(row.promoLink)} />
                     <Metric label="Promo code orders" value={count(row.promoOrders)} />
@@ -186,7 +189,7 @@ export function TrafficReview({
             <li className="pt-4">
               <span className="text-base font-semibold">Total</span>
               <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
-                <Metric label="Verified clicks" value={count(totals.clicks)} strong />
+                <Metric label="Verified link clicks" value={count(totals.clicks)} strong />
                 <Metric label="Page views" value={count(totals.pageViews)} strong />
                 <Metric label="Promo code link" value={count(totals.promoLink)} strong />
                 <Metric label="Promo code orders" value={count(totals.promoOrders)} strong />
@@ -199,7 +202,7 @@ export function TrafficReview({
             <thead>
               <tr className="border-b border-[#E8DEDC] text-[13px] font-semibold tracking-wide text-[#6B5A57] uppercase">
                 <th scope="col" className="px-2 py-2 text-left font-semibold whitespace-nowrap">Affiliate</th>
-                <th scope="col" className="px-2 py-2 text-right font-semibold whitespace-nowrap">Verified clicks</th>
+                <th scope="col" className="px-2 py-2 text-right font-semibold whitespace-nowrap">Verified link clicks</th>
                 <th scope="col" className="px-2 py-2 text-right font-semibold whitespace-nowrap">Page views</th>
                 <th scope="col" className="px-2 py-2 text-right font-semibold whitespace-nowrap">Promo code link</th>
                 <th scope="col" className="px-2 py-2 text-right font-semibold whitespace-nowrap">Promo code orders</th>

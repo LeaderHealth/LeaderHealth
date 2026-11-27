@@ -73,6 +73,15 @@ export function adminHasFullAccess(actor: AdminActor) {
   return actor.role === "owner" || actor.role === "admin";
 }
 
+/** A path inside the admin dashboard. Used to return to a spike review after sign-in. */
+export function safeAdminNext(value: unknown) {
+  if (typeof value !== "string") return "";
+  const path = value.trim();
+  if (!path.startsWith("/admin/affiliates/")) return "";
+  if (path.length > 240 || path.includes("\\") || path.includes("//") || path.includes("..") || path.includes("://")) return "";
+  return path;
+}
+
 function actorFromSubject(role: "owner" | "admin" | "sub", subject: string): AdminActor | null {
   if (role === "admin" || role === "sub") {
     if (!SESSION_ID.test(subject)) return null;

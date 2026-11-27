@@ -83,11 +83,14 @@ export function deliverablePhase(post: DeliverableSnapshot, now: number): Delive
 }
 
 export function deliverableStatusLabel(status: DeliverableLineStatus, adjusted = false) {
-  if (status === "review" || status === "changes" || status === "waiting" || status === "measuring") return "Pending";
+  if (status === "review") return "In review";
+  if (status === "changes") return "Changes requested";
+  if (status === "waiting" || status === "measuring") return "Not ready";
   if (status === "closed") return "Closed";
   if (status === "hold" || status === "recheck") return "On hold";
   if (status === "forfeited") return "Forfeited";
-  if (status === "pending" || status === "approved") return "Earned";
+  if (status === "pending") return "Needs approval";
+  if (status === "approved") return "Earned";
   return adjusted ? "Adjusted" : "Paid";
 }
 

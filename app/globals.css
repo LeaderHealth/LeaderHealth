@@ -115,10 +115,21 @@ html {
   animation: lh-tab-panel-in 220ms ease-out both;
 }
 
+.lh-rise {
+  animation: lh-tab-panel-in 420ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation-delay: calc(var(--rise-step, 0) * 70ms);
+}
+
+.lh-reveal[open] > :not(summary) {
+  animation: lh-tab-panel-in 260ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .lh-popup-backdrop,
   .lh-popup-panel,
   .lh-page-fade,
+  .lh-rise,
+  .lh-reveal[open] > :not(summary),
   .lh-tab-panel {
     animation: none;
   }

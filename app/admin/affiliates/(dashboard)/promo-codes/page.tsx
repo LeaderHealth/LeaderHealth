@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AssignPromoCode, type AssignableAffiliate } from "@/components/affiliate/AssignPromoCode";
+import { TimedNotice } from "@/components/affiliate/TimedNotice";
 import { RemovePromoAffiliate } from "@/components/affiliate/RemovePromoAffiliate";
 import { LAB_COMMISSIONS_ENABLED } from "@/lib/affiliate/code";
 import { formatCents } from "@/lib/affiliate/format";
@@ -119,20 +120,16 @@ export default async function PromoCodesPage({
 
   return (
     <div className="space-y-6">
-      {error ? (
-        <p role="alert" className="rounded-2xl bg-rose px-4 py-3 text-sm text-ink">
-          {error}
-        </p>
-      ) : null}
+      {error ? <TimedNotice message={error} tone="warn" query="error" /> : null}
       {assigned ? (
-        <p role="status" className="break-all rounded-2xl bg-white px-4 py-3 text-sm text-ink">
-          Assigned <span className="font-medium">{assigned}</span>.
-        </p>
+        <TimedNotice message={`Assigned ${assigned}.`} tone="plain" query="assigned">
+          <span className="break-all">Assigned <span className="font-medium">{assigned}</span>.</span>
+        </TimedNotice>
       ) : null}
       {removed ? (
-        <p role="status" className="break-all rounded-2xl bg-white px-4 py-3 text-sm text-ink">
-          Removed <span className="font-medium">{removed}</span> from the assigned affiliate.
-        </p>
+        <TimedNotice message={`Removed ${removed} from the assigned affiliate.`} tone="plain" query="removed">
+          <span className="break-all">Removed <span className="font-medium">{removed}</span> from the assigned affiliate.</span>
+        </TimedNotice>
       ) : null}
       {accountsError ? <p className="text-ink">{accountsError}</p> : null}
     <div className="min-w-0 rounded-[28px] bg-white">

@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { MarkPaidButton } from "@/components/affiliate/MarkPaidButton";
+import { TimedNotice } from "@/components/affiliate/TimedNotice";
 import { PayoutTable, type PayoutTableRow, type PayoutTableStatus } from "@/components/affiliate/PayoutTable";
+import { loadUnfinishedCheckoutCount, UnfinishedCheckoutsTile } from "@/components/affiliate/UnfinishedCheckoutsTile";
 import { LAB_COMMISSIONS_ENABLED } from "@/lib/affiliate/code";
 import {
   deliverableLines,
   loadDeliverablePayments,
   type DeliverableLine,
 } from "@/lib/affiliate/deliverable-payments";
-import { deliverableStatusLabel } from "@/lib/affiliate/deliverable-flow";
 import { formatCents } from "@/lib/affiliate/format";
 import { loadMarketingEvents, loadWebsitePayouts } from "@/lib/affiliate/marketing-events";
 import { eventPeriod, marketingPayoutParts, socialMonthCents, websiteMonthAmount } from "@/lib/affiliate/payment-rates";
@@ -29,7 +30,7 @@ import { AffiliateStoreError, loadAffiliateOverview } from "@/lib/affiliate/stor
 import { adminHasFullAccess, adminSessionActor } from "@/lib/affiliate/session";
 import { approveDeliverablePaymentAction, adjustDeliverableAction, approvePayoutAction, forfeitDeliverableAction, markDeliverablePaidAction, markPayoutPaidAction, recheckDeliverableAction, reinstateDeliverableAction } from "../../actions";
 import { approveAgreementPayoutAction, approveWebsitePayoutAction, markAgreementPayoutPaidAction, markWebsitePayoutPaidAction } from "../../payment-actions";
-import { agreementEarningNote, agreementMonthEarning } from "@/lib/affiliate/agreement-earnings";
+import { agreementMonthEarning } from "@/lib/affiliate/agreement-earnings";
 import { loadAgreementPayouts } from "@/lib/affiliate/agreement-payouts";
 import { loadAffiliateAgreements } from "@/lib/affiliate/agreements";
 import { ADMIN_ERRORS } from "../../messages";
@@ -62,17 +63,21 @@ const notices: Record<string, string> = {
 function bucketRank(status: PayoutTableStatus) {
   if (status === "needs") return 0;
   if (status === "approved") return 1;
-  if (status === "waiting") return 2;
-  return 3;
+  if (status === "hold") return 2;
+  if (status === "waiting") return 3;
+  return 4;
 }
 
 function postBucket(status: DeliverableLine["status"]): PayoutTableStatus | null {
   if (status === "pending") return "needs";
   if (status === "approved") return "approved";
   if (status === "paid") return "paid";
-  if (status === "review" || status === "changes" || status === "waiting" || status === "measuring" || status === "hold" || status === "recheck") return "waiting";
+  if (status === "hold" || status === "recheck") return "hold";
+  if (status === "review" || status === "changes" || status === "waiting" || status === "measuring") return "waiting";
   return null;
 }
+
+const POST_ACTION_STATUSES = new Set<DeliverableLine["status"]>(["pending", "approved", "paid", "recheck", "hold", "forfeited"]);
 
 function postControl(line: DeliverableLine, paidOn: string, canPay: boolean) {
   if (!canPay) return null;
@@ -255,6 +260,7 @@ export default async function AffiliatePayoutsPage({
   let agreementPayouts: Awaited<ReturnType<typeof loadAgreementPayouts>> = [];
   let marketingError = "";
   const month = normalizePayoutPeriod(query.month) ?? currentPayoutPeriod();
+  const unfinishedCheckouts = await loadUnfinishedCheckoutCount();
   try {
     const [overview, payouts] = await Promise.all([
       memo("admin-overview", () => loadAffiliateOverview()),
@@ -328,7 +334,7 @@ export default async function AffiliatePayoutsPage({
       adjustmentCents: social.adjustmentCents,
       baseCents: monthly.earnedCents,
       socialNote: monthPosts.length === 1 ? monthPosts[0].label : monthPosts.length > 1 ? `${monthPosts.length} posts this month` : "Views and engagements this month",
-      baseNote: monthly.status === "none" ? "No monthly posting rate this month" : `Posting rate ${formatCents(monthly.rateCents)} · ${monthly.verifiedPosts} of ${monthly.requiredPosts} posts live`,
+      baseNote: monthly.status === "none" ? "No monthly posting rate this month" : `Posting rate ${formatCents(monthly.rateCents)} · ${monthly.verifiedPosts} of ${monthly.requiredPosts} posts verified`,
     });
     const totalCents = marketingPay.socialAndBaseCents + website.amountCents + labCents;
     if (totalCents === 0 && counts === 0 && monthPosts.length === 0 && monthly.status === "none") return [];
@@ -358,24 +364,10 @@ export default async function AffiliatePayoutsPage({
       if (post.status === "pending" || post.status === "approved") steps.push(post.postId);
     }
     const primary = steps[0] ?? "";
-    const websiteLabel = counts === 0 ? "" : `${website.clicks} clicks, ${website.pageViews} page views`;
-    const waitingNote =
-      status !== "waiting"
-        ? ""
-        : monthPosts.some((post) => post.status === "measuring" || post.status === "hold" || post.status === "recheck")
-          ? "Still counting"
-          : monthly.status === "short" && !monthPosts.length
-            ? `Monthly rate: ${agreementEarningNote(monthly)}`
-            : "Still in review";
     const paidLine = labPaid ?? monthPosts.find((post) => post.status === "paid");
     const paidWhen = paidLine && "paidAt" in paidLine ? formatPayoutDate(paidLine.paidAt) : "";
     const paidRef = paidLine && "reference" in paidLine ? paidLine.reference : "";
-    const detail = status === "paid" ? [paidWhen === "—" ? "" : paidWhen, paidRef].filter(Boolean).join(" · ") : status === "waiting" ? waitingNote : status === "approved" ? "Not sent yet" : month === currentPayoutPeriod() ? "Month still open" : "Waiting for review";
-    const parts = [
-      ...marketingPay.parts,
-      website.amountCents || counts ? { kind: "Website traffic", what: websiteLabel || "This month", amountCents: website.amountCents } : null,
-      labCents ? { kind: "Lab", what: "Lab orders this month", amountCents: labCents } : null,
-    ].filter((part) => part != null);
+    const detail = status === "paid" ? [paidWhen === "—" ? "" : paidWhen, paidRef].filter(Boolean).join(" · ") : status === "waiting" ? "Still counting" : status === "approved" ? "Not sent yet" : status === "hold" ? "" : month === currentPayoutPeriod() ? "Month still open" : "Earned, not approved yet";
     const websiteApprove = (
       <form action={approveWebsitePayoutAction}>
         <input type="hidden" name="code" value={affiliate.code} />
@@ -422,6 +414,7 @@ export default async function AffiliatePayoutsPage({
     );
     const labAction = labPayable ? <PayoutAction line={labPayable} updated={approvedCodes.has(labPayable.code)} paidOn={paidOn} canPay={canPay} /> : null;
     const primaryPost = monthPosts.find((post) => post.postId === primary);
+    const otherPosts = canPay ? monthPosts.filter((post) => post.postId !== primary && POST_ACTION_STATUSES.has(post.status)) : [];
     const record =
       status === "approved" && canPay && primary === "lab" && labPayable?.status === "approved"
         ? { code: affiliate.code, name: affiliate.name, period: month, amountCents: labPayable.earnedCents, paidOn, action: markPayoutPaidAction }
@@ -458,35 +451,24 @@ export default async function AffiliatePayoutsPage({
         totalCents,
         status,
         detail,
-        parts,
         action,
         record,
         extra:
-          monthPosts.some((post) => post.postId !== primary && (post.detail || post.adjustmentCents != null || post.status === "recheck" || post.status === "hold" || post.status === "forfeited" || post.status === "paid")) ||
+          otherPosts.length > 0 ||
           (primary !== "website" && steps.includes("website")) ||
           (primary !== "website-record" && steps.includes("website-record")) ||
           (primary !== "agreement" && steps.includes("agreement")) ||
           (primary !== "agreement-record" && steps.includes("agreement-record")) ||
           (primary !== "lab" && steps.includes("lab")) ? (
             <div className="space-y-3 text-sm">
-              {monthPosts.map((post) =>
-                post.postId === primary ? null : (
-                  <div key={post.postId}>
-                    <p>
-                      {post.label} · {deliverableStatusLabel(post.status, post.adjustmentCents != null)}
-                    </p>
-                    {post.detail ? <p className="mt-1 text-brown">{post.detail}</p> : null}
-                    {post.adjustmentCents != null ? (
-                      <p className="mt-1 text-brown">
-                        {post.adjustmentCents > 0 ? "Bonus" : "Clawback"} {formatCents(Math.abs(post.adjustmentCents))}. {post.adjustmentReason}
-                      </p>
-                    ) : null}
-                    <div className="mt-2">
-                      <MarketingAction line={post} paidOn={paidOn} canPay={canPay} />
-                    </div>
+              {otherPosts.map((post) => (
+                <div key={post.postId}>
+                  <p>{post.label}</p>
+                  <div className="mt-2">
+                    <MarketingAction line={post} paidOn={paidOn} canPay={canPay} />
                   </div>
-                ),
-              )}
+                </div>
+              ))}
               {primary !== "website" && steps.includes("website") ? websiteApprove : null}
               {primary !== "website-record" && steps.includes("website-record") ? <div>{websiteRecord}</div> : null}
               {primary !== "agreement" && steps.includes("agreement") ? agreementApprove : null}
@@ -502,9 +484,11 @@ export default async function AffiliatePayoutsPage({
   const bucketCount = (status: PayoutTableStatus) => rows.filter((row) => row.status === status).length;
   const needsCents = bucketTotal("needs");
   const approvedCents = bucketTotal("approved");
+  const holdCents = bucketTotal("hold");
   const paidCents = bucketTotal("paid");
   const waitingCents = bucketTotal("waiting");
   const needsCount = bucketCount("needs");
+  const holdCount = bucketCount("hold");
   const paidCount = bucketCount("paid");
   function chipNote(period: string) {
     if (period === month) {
@@ -547,16 +531,12 @@ export default async function AffiliatePayoutsPage({
         </div>
       </div>
 
-      {notice ? (
-        <p role="status" className="rounded-[14px] bg-[#ddf0e4] px-4 py-3 text-[15px] font-medium text-[#1d6340]">
-          {notice}
-        </p>
-      ) : null}
+      {notice ? <TimedNotice message={notice} query="notice" /> : null}
       {error ? <p className="text-sm text-ink">{error}</p> : null}
       {loadError ? <p className="text-ink">{loadError}</p> : null}
       {marketingError ? <p className="text-ink">{marketingError}</p> : null}
 
-      <div className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
         <section className={`flex flex-col gap-1 rounded-[20px] bg-white px-[18px] py-4 ${needsCount ? "border-2 border-[#e9c98a]" : "border-2 border-transparent"}`}>
           <h3 className="text-sm text-[#7a4e00]">Needs approval</h3>
           <p className="text-[28px]">{formatCents(needsCents)}</p>
@@ -568,6 +548,11 @@ export default async function AffiliatePayoutsPage({
           <p className="text-[13px] text-[#6b5a57]">Send, then record</p>
         </section>
         <section className="flex flex-col gap-1 rounded-[20px] border-2 border-transparent bg-white px-[18px] py-4">
+          <h3 className="text-sm text-[#9B2C1F]">On hold</h3>
+          <p className="text-[28px]">{formatCents(holdCents)}</p>
+          <p className="text-[13px] text-[#6b5a57]">{holdCount === 1 ? "1 affiliate" : `${holdCount} affiliates`}</p>
+        </section>
+        <section className="flex flex-col gap-1 rounded-[20px] border-2 border-transparent bg-white px-[18px] py-4">
           <h3 className="text-sm text-[#1d6340]">Paid</h3>
           <p className="text-[28px]">{formatCents(paidCents)}</p>
           <p className="text-[13px] text-[#6b5a57]">{paidCount === 1 ? "1 recorded" : `${paidCount} recorded`}</p>
@@ -575,8 +560,9 @@ export default async function AffiliatePayoutsPage({
         <section className="flex flex-col gap-1 rounded-[20px] border-2 border-transparent bg-white px-[18px] py-4">
           <h3 className="text-sm text-[#4a3a37]">Not ready</h3>
           <p className="text-[28px]">{formatCents(waitingCents)}</p>
-          <p className="text-[13px] text-[#6b5a57]">Still counting or in review</p>
+          <p className="text-[13px] text-[#6b5a57]">Still counting</p>
         </section>
+        <UnfinishedCheckoutsTile count={unfinishedCheckouts} className="border-2 border-transparent" />
       </div>
 
       <PayoutTable month={month} title={formatPayoutMonth(month)} rows={rows} />

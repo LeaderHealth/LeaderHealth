@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { approvableCents } from "./payouts";
 import { marketingReportFields } from "./marketing";
-import { campaignReports, rememberedFacebookPosts, samePublishedPost, selectCampaignPosts, selectTikTokUpdate, type SocialPost } from "./social-match";
+import { campaignReports, rememberedFacebookPosts, samePublishedPost, selectCampaignPosts, selectFacebookUpdate, selectTikTokUpdate, type SocialPost } from "./social-match";
 
 const code = "k7mq2n4p";
 
@@ -210,6 +210,23 @@ test("the first TikTok permalink match writes the video id", () => {
   });
   assert.equal(match?.videoId, video.id);
   assert.equal(match?.video.impressions, 12);
+});
+
+test("a pasted Facebook link matches the pulled page post", () => {
+  const video = post({
+    id: "111_222",
+    network: "facebook",
+    accountId: "111",
+    permalink: "https://www.facebook.com/111/posts/222",
+    impressions: 40,
+  });
+  const match = selectFacebookUpdate({
+    postUrl: "https://www.facebook.com/leader/posts/222/",
+    posts: [video],
+  });
+  assert.equal(match?.id, "111_222");
+  assert.equal(match?.impressions, 40);
+  assert.equal(selectFacebookUpdate({ postUrl: "https://www.facebook.com/leader/posts/999/", posts: [video] }), null);
 });
 
 test("a saved Facebook post stays in the monthly totals after its permalink changes", () => {

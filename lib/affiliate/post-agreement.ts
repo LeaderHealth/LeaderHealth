@@ -100,14 +100,19 @@ export function postIdentity(place: string, type: string) {
   return [place, type].filter(Boolean).join(" · ");
 }
 
-export function placedSlotNumber(posts: readonly AgreementBoardPost[], agreementId: string, period: string, total: number, postId: string) {
+export function placedSlotNumber(posts: readonly AgreementBoardPost[], agreementId: string, period: string, total: number, postId: string, kinds: readonly { platform: string; type: string; count: number }[] = []) {
   if (!agreementId || !period) return null;
-  return agreementSlotRows(posts, agreementId, period, total).find((row) => row.post?.id === postId)?.number ?? null;
+  return agreementSlotRows(posts, agreementId, period, total, kinds).find((row) => row.post?.id === postId)?.number ?? null;
 }
 
-export function agreementSlotState(post: Pick<AgreementBoardPost, "contentStatus" | "publicationStatus"> | null) {
+export function agreementSlotState(post: Pick<AgreementBoardPost, "contentStatus" | "publicationStatus" | "liveFixNote"> | null) {
   if (!post) return "Not posted";
+  if (post.publicationStatus === "tracking_active" && post.liveFixNote) return "Live but changes requested";
   if (post.publicationStatus === "tracking_active") return "Verified";
+  if (post.publicationStatus === "verification_failed") return "Needs a fix";
+  if (post.publicationStatus === "verification_pending" && post.liveFixNote) return "Checking the update";
+  if (post.publicationStatus === "verification_pending") return "Checking the link";
+  if (post.contentStatus === "revision_requested") return "Changes requested";
   if (post.contentStatus === "approved" && (post.publicationStatus === "awaiting_publication" || post.publicationStatus == null)) return "Ready to publish";
   return "In review";
 }
@@ -161,12 +166,20 @@ export type AgreementBoardPost = MonthFillPost & {
   reviewNote: string;
   title: string;
   agreementSlot?: number | null;
+  format?: string | null;
+  fileCount?: number;
+  agreementPlatform?: string;
+  agreementPostType?: string;
+  liveFixNote?: string;
 };
 
-export function agreementSlotRows(posts: readonly AgreementBoardPost[], agreementId: string, period: string, total: number) {
-  const filling = posts
+function fillingPosts(posts: readonly AgreementBoardPost[], agreementId: string, period: string) {
+  return posts
     .filter((post) => post.agreementId === agreementId && reservedPostMonth(post) === period)
     .sort((left, right) => (left.submittedAt ?? "").localeCompare(right.submittedAt ?? ""));
+}
+
+function looseSlotRows(filling: readonly AgreementBoardPost[], total: number) {
   const placed = new Map<number, AgreementBoardPost>();
   const loose: AgreementBoardPost[] = [];
   const room = Math.max(total, filling.length);
@@ -184,6 +197,43 @@ export function agreementSlotRows(posts: readonly AgreementBoardPost[], agreemen
     else rows.push({ number, post: null });
   }
   return rows;
+}
+
+function kindFields(post: AgreementBoardPost) {
+  return {
+    format: post.format ?? null,
+    fileCount: post.fileCount ?? 0,
+    agreementPlatform: post.agreementPlatform ?? "",
+    agreementPostType: post.agreementPostType ?? "",
+  };
+}
+
+function kindSlotRows(filling: readonly AgreementBoardPost[], kinds: readonly { platform: string; type: string; count: number }[]) {
+  const slots: { number: number; platform: string; type: string }[] = [];
+  for (const kind of kinds) {
+    for (let index = 0; index < kind.count; index += 1) slots.push({ number: slots.length + 1, platform: kind.platform, type: kind.type });
+  }
+  const placed = new Map<number, AgreementBoardPost>();
+  const taken = new Set<string>();
+  const verified = filling.filter((post) => post.publicationStatus === "tracking_active");
+  const rest = filling.filter((post) => post.publicationStatus !== "tracking_active");
+  for (const post of [...verified, ...rest]) {
+    if (taken.has(post.id)) continue;
+    const preferred = post.agreementSlot ?? 0;
+    const preferredSlot = slots.find((slot) => slot.number === preferred && !placed.has(slot.number) && postMatchesKind(kindFields(post), slot.platform, slot.type));
+    const slot = preferredSlot ?? slots.find((item) => !placed.has(item.number) && postMatchesKind(kindFields(post), item.platform, item.type));
+    if (!slot) continue;
+    placed.set(slot.number, post);
+    taken.add(post.id);
+  }
+  return slots.map((slot) => ({ number: slot.number, post: placed.get(slot.number) ?? null }));
+}
+
+export function agreementSlotRows(posts: readonly AgreementBoardPost[], agreementId: string, period: string, total: number, kinds: readonly { platform: string; type: string; count: number }[] = []) {
+  const filling = fillingPosts(posts, agreementId, period);
+  const typed = kinds.filter((kind) => kind.count > 0);
+  if (!typed.length) return looseSlotRows(filling, total);
+  return kindSlotRows(filling, typed);
 }
 
 export type AgreementBoardSlot = {
@@ -206,11 +256,13 @@ export function agreementBoardPeriod(periods: readonly string[], today: string) 
   return periods.find((period) => period > month) ?? periods.at(-1) ?? "";
 }
 
-function boardState(post: AgreementBoardPost): "review" | "changes" | "approved" | "published" | "verified" | "fix" {
+function boardState(post: AgreementBoardPost): "review" | "changes" | "approved" | "published" | "verified" | "liveChanges" | "checkingFix" | "fix" {
   if (post.contentStatus === "revision_requested") return "changes";
   if (post.contentStatus === "submitted") return "review";
+  if (post.publicationStatus === "tracking_active" && post.liveFixNote) return "liveChanges";
   if (post.publicationStatus === "tracking_active") return "verified";
   if (post.publicationStatus === "verification_failed") return "fix";
+  if (post.publicationStatus === "verification_pending" && post.liveFixNote) return "checkingFix";
   if (post.publicationStatus === "verification_pending") return "published";
   if (post.contentStatus === "approved") return "approved";
   return "review";
@@ -219,14 +271,16 @@ function boardState(post: AgreementBoardPost): "review" | "changes" | "approved"
 const BOARD_COPY = {
   review: ["In review", "#FBEFD6", "#7A4E00", "Leader Health is checking it. Don’t publish yet.", "", "#E9C98A"],
   changes: ["Changes requested", "#FBE3DF", "#9B2C1F", "Update it and send it again.", "Edit and resend", "#E9C98A"],
-  approved: ["Approved", "#33130F", "#FFFFFF", "Publish it now, then add the live link.", "Add live link", "#E9C98A"],
-  published: ["Checking your post", "#F3E6E3", "#5A2A24", "We’re confirming the post, disclosure and tracking link.", "", "#E9C98A"],
+  approved: ["Ready to publish", "#33130F", "#FFFFFF", "Publish it now, then add the live link.", "Add live link", "#E9C98A"],
+  published: ["Checking the link", "#F3E6E3", "#5A2A24", "We’re confirming the post, disclosure and tracking link.", "", "#E9C98A"],
+  checkingFix: ["Checking the update", "#F3E6E3", "#5A2A24", "An admin is confirming the change. It counts toward this month after that check. If more changes are needed, you’ll paste the link again.", "", "#E9C98A"],
   verified: ["Verified", "#DDF0E4", "#1D6340", "Done. This post counts toward this month.", "", "#1D6340"],
+  liveChanges: ["Live but changes requested", "#FBE3DF", "#9B2C1F", "Update the live post, then paste the link. It counts toward this month after an admin verifies that link.", "", "#9B2C1F"],
   fix: ["Needs a fix", "#FBE3DF", "#9B2C1F", "The live post check needs a fix.", "Fix and check again", "#E9C98A"],
 } as const;
 
-export function agreementMonthBoard(input: { agreementId: string; postTotal: number; period: string; monthLabel: string; posts: readonly AgreementBoardPost[] }): AgreementBoardSlot[] {
-  return agreementSlotRows(input.posts, input.agreementId, input.period, input.postTotal).map((row) => {
+export function agreementMonthBoard(input: { agreementId: string; postTotal: number; period: string; monthLabel: string; posts: readonly AgreementBoardPost[]; kinds?: readonly { platform: string; type: string; count: number }[] }): AgreementBoardSlot[] {
+  return agreementSlotRows(input.posts, input.agreementId, input.period, input.postTotal, input.kinds ?? []).map((row) => {
     if (!row.post) {
       return {
         id: `empty-${row.number}`,
@@ -248,7 +302,13 @@ export function agreementMonthBoard(input: { agreementId: string; postTotal: num
       id: row.post.id,
       number: row.number,
       title: row.post.title || `Post ${row.number}`,
-      note: state === "verified" && input.monthLabel ? `Done. This post counts toward ${input.monthLabel}.` : note,
+      note: state === "verified" && input.monthLabel
+        ? `Done. This post counts toward ${input.monthLabel}.`
+        : state === "liveChanges" && input.monthLabel
+          ? `Update the live post, then paste the link. It counts toward ${input.monthLabel} after an admin verifies that link.`
+          : state === "checkingFix" && input.monthLabel
+            ? `An admin is confirming the change. It counts toward ${input.monthLabel} after that check. If more changes are needed, you’ll paste the link again.`
+            : note,
       label,
       bg,
       fg,

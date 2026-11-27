@@ -5,6 +5,7 @@ import { useState } from "react";
 import {
   affiliateStateLabel,
   campaignListFilters,
+  postStateLabel,
   statusLabel,
   type CampaignAffiliateState,
   type CampaignListModel,
@@ -102,7 +103,36 @@ export function CampaignList({ rows }: { rows: CampaignListModel[] }) {
                   className={`w-full border-t border-[#F0E8E6] px-2.5 py-3.5 text-left first:border-t-0 xl:grid xl:items-center xl:gap-4 xl:rounded-xl ${on ? "bg-[#F7F3F2]" : "bg-transparent"}`}
                   style={{ gridTemplateColumns: COLUMNS }}
                 >
-                  <span className="contents">
+                  <span className="flex flex-col gap-3 xl:hidden">
+                    <span className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="min-w-0 text-base font-semibold">{row.name}</span>
+                      <StatusPill status={row.status} />
+                    </span>
+                    <span className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
+                      <span className="flex min-w-0 flex-col gap-0.5">
+                        <span className="text-[12px] font-semibold text-[#6B5A57]">Dates</span>
+                        <span className="text-sm">{row.dates}</span>
+                      </span>
+                      <span className="flex min-w-0 flex-col gap-0.5">
+                        <span className="text-[12px] font-semibold text-[#6B5A57]">Affiliates</span>
+                        <span className="text-sm">{row.affiliateLine}</span>
+                      </span>
+                      <span className="flex min-w-0 flex-col gap-0.5">
+                        <span className="text-[12px] font-semibold text-[#6B5A57]">Budget</span>
+                        <span className="text-sm font-semibold">{row.budgetLabel}</span>
+                      </span>
+                      <span className="flex min-w-0 flex-col gap-1">
+                        <span className="text-[12px] font-semibold text-[#6B5A57]">Posts verified</span>
+                        <span className="flex min-w-0 items-center gap-2">
+                          <span className="h-2 min-w-10 flex-1 overflow-hidden rounded bg-[#E8DEDC]">
+                            <span className="block h-2 bg-[#1D6340]" style={{ width: `${row.progressPct}%` }} />
+                          </span>
+                          <span className="text-sm whitespace-nowrap">{row.progress}</span>
+                        </span>
+                      </span>
+                    </span>
+                  </span>
+                  <span className="hidden xl:contents">
                     <span className="text-base font-semibold">{row.name}</span>
                     <span className="text-sm text-[#4A3A37]">{row.dates}</span>
                     <span className="text-[15px]">{row.affiliateLine}</span>
@@ -152,31 +182,68 @@ export function CampaignList({ rows }: { rows: CampaignListModel[] }) {
                 <span>Status</span>
                 <span>Posts</span>
                 <span>Terms</span>
-                <span className="text-right">Base earned</span>
+                <span className="text-right">Campaign earned</span>
                 <span className="text-right">Performance</span>
               </div>
               {current.affiliates.map((affiliate) => (
-                <div key={affiliate.code} className="grid items-center gap-3 border-t border-[#F0E8E6] py-3.5 xl:grid-cols-[1.3fr_1fr_2fr_1.2fr_0.9fr_0.8fr] xl:gap-4 xl:px-2">
-                  <span className="flex items-center gap-2.5">
-                    <span className="flex size-[34px] items-center justify-center rounded-full bg-[#F3CFCB] text-xs font-semibold">{affiliate.initials}</span>
-                    <span className="text-base font-semibold">{affiliate.name}</span>
+                <div key={affiliate.code} className="grid grid-cols-2 items-center gap-x-4 gap-y-3 border-t border-[#F0E8E6] py-3.5 sm:grid-cols-3 xl:grid-cols-[1.3fr_1fr_2fr_1.2fr_0.9fr_0.8fr] xl:gap-4 xl:px-2">
+                  <span className="col-span-2 flex min-w-0 flex-wrap items-center justify-between gap-2.5 sm:col-span-3 xl:col-span-1">
+                    <span className="flex min-w-0 items-center gap-2.5">
+                      <span className="flex size-[34px] shrink-0 items-center justify-center rounded-full bg-[#F3CFCB] text-xs font-semibold">{affiliate.initials}</span>
+                      <span className="text-base font-semibold">{affiliate.name}</span>
+                    </span>
+                    <span className={`w-fit rounded-full px-2.5 py-1 text-[13px] font-semibold xl:hidden ${AFFILIATE_CHIP[affiliate.state]}`}>{affiliateStateLabel(affiliate.state)}</span>
                   </span>
-                  <span className={`w-fit rounded-full px-2.5 py-1 text-[13px] font-semibold ${AFFILIATE_CHIP[affiliate.state]}`}>{affiliateStateLabel(affiliate.state)}</span>
-                  <span className="flex flex-wrap gap-1.5">
-                    {affiliate.posts.map((post) => (
-                      <span key={post.text} className={`rounded-full px-2.5 py-1 text-xs font-semibold ${post.text === "Waiting for answer" ? "bg-transparent px-0 text-[#6B5A57]" : POST_CHIP[post.state]}`}>
-                        {post.text}
-                      </span>
-                    ))}
+                  <span className={`hidden w-fit rounded-full px-2.5 py-1 text-[13px] font-semibold xl:inline-flex ${AFFILIATE_CHIP[affiliate.state]}`}>{affiliateStateLabel(affiliate.state)}</span>
+                  <span className="col-span-2 flex min-w-0 flex-col gap-1 sm:col-span-3 xl:col-span-1">
+                    <span className="text-[12px] font-semibold text-[#6B5A57] xl:hidden">Posts</span>
+                    <span className="flex flex-wrap gap-1.5">
+                      {affiliate.posts.map((post) => (
+                        <span key={post.text} className={`rounded-full px-2.5 py-1 text-xs font-semibold ${post.text === "Waiting for answer" ? "bg-transparent px-0 text-[#6B5A57]" : POST_CHIP[post.state]}`}>
+                          {post.text}
+                        </span>
+                      ))}
+                    </span>
                   </span>
-                  <span className="text-sm text-[#4A3A37]">{affiliate.terms}</span>
-                  <span className="text-[15px] font-semibold xl:text-right">{affiliate.earnedLabel}</span>
-                  <span className="text-[13px] text-[#6B5A57] xl:text-right">{current.performance}</span>
+                  <span className="flex min-w-0 flex-col gap-0.5">
+                    <span className="text-[12px] font-semibold text-[#6B5A57] xl:hidden">Terms</span>
+                    <span className="text-sm text-[#4A3A37]">{affiliate.terms}</span>
+                  </span>
+                  <span className="flex min-w-0 flex-col gap-0.5 xl:items-end">
+                    <span className="text-[12px] font-semibold text-[#6B5A57] xl:hidden">Campaign earned</span>
+                    <span className="text-[15px] font-semibold">{affiliate.earnedLabel}</span>
+                  </span>
+                  <span className="flex min-w-0 flex-col gap-0.5 xl:items-end">
+                    <span className="text-[12px] font-semibold text-[#6B5A57] xl:hidden">Performance</span>
+                    <span className="text-[13px] text-[#6B5A57]">{current.performance}</span>
+                  </span>
                 </div>
               ))}
             </div>
           )}
-          <p className="text-[13px] text-[#6B5A57]">Performance pay uses recorded views, engagements, verified link clicks, and eligible page views. Base payments are approved in Payouts.</p>
+          <div className="flex flex-col">
+            <h4 className="pb-2 text-base font-semibold">Live posts</h4>
+            {current.livePosts.length === 0 ? (
+              <p className="border-t border-[#F0E8E6] py-3 text-sm text-[#6B5A57]">No live posts for this campaign yet.</p>
+            ) : (
+              <ul>
+                {current.livePosts.map((post) => (
+                  <li key={post.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-[#F0E8E6] py-3">
+                    <span className="flex min-w-0 flex-1 basis-60 flex-col gap-0.5">
+                      <span className="text-[15px] font-semibold">{post.name}</span>
+                      <span className="break-words text-[13px] text-[#4A3A37]">{[post.caption, post.published ? `Published ${post.published}` : ""].filter(Boolean).join(" · ")}</span>
+                    </span>
+                    <span className={`w-fit rounded-full px-2.5 py-1 text-xs font-semibold ${POST_CHIP[post.state]}`}>{postStateLabel(post.state)}</span>
+                    {post.url ? (
+                      <a href={post.url} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center rounded-full border border-[#CDBDBA] px-4 text-[13px] font-medium text-ink hover:bg-[#F7F3F2]">
+                        View post
+                      </a>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </section>
       ) : null}
     </div>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { acknowledgeDisclosureAction } from "../../../compliance-actions";
+import { AgreementRequired } from "@/components/affiliate/AgreementRequired";
+import { TimedNotice } from "@/components/affiliate/TimedNotice";
 import { CopyTrackingLink } from "@/components/affiliate/CopyTrackingLink";
 import { EligibleProducts } from "@/components/affiliate/EligibleProducts";
 import { eligibleProductGroups } from "@/lib/affiliate/eligibleProducts";
@@ -9,7 +10,7 @@ import { formatCents } from "@/lib/affiliate/format";
 import { standingViewRateCents } from "@/lib/affiliate/payment-rates";
 import { loadPaymentRates } from "@/lib/affiliate/payment-store";
 import { affiliateTrackingLink } from "@/lib/affiliate/link";
-import { disclosureAcknowledged } from "@/lib/affiliate/disclosures";
+import { hasAcceptedAgreement, loadAffiliateAgreements } from "@/lib/affiliate/agreements";
 import { listPromoCodes, personalPromoForAffiliate, type PromoCodeRow } from "@/lib/genhealth/promocodes";
 import { currentAffiliate } from "../../../current";
 
@@ -21,11 +22,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const badgeClass = "inline-flex max-w-full items-center rounded-full bg-rose px-3 py-1 text-xs font-medium leading-5 text-ink";
-const buttonClass =
-  "inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-5 text-sm font-medium text-white hover:bg-brown focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
-
 const linkErrors: Record<string, string> = {
-  acknowledge: "Confirm the sponsorship disclosure before continuing.",
   unavailable: "That could not be saved right now.",
 };
 
@@ -37,7 +34,9 @@ export default async function TrackingLinkPage({
   const affiliate = await currentAffiliate();
   if (!affiliate) redirect("/affiliates");
   const query = await searchParams;
-  const acknowledged = await disclosureAcknowledged(affiliate.code).catch(() => false);
+  const ownAgreements = (await loadAffiliateAgreements(affiliate.code).catch(() => null)) ?? [];
+  const acknowledged = hasAcceptedAgreement(ownAgreements);
+  const agreementWaiting = ownAgreements.some((agreement) => agreement.status === "awaiting_signature");
   const error = query.error ? linkErrors[query.error] ?? "" : "";
   let personal: PromoCodeRow | null = null;
   let unavailable = false;
@@ -69,31 +68,8 @@ export default async function TrackingLinkPage({
         </span>
         <span className={badgeClass}>{commission}</span>
       </div>
-      {error ? (
-        <p role="alert" className="mt-4 rounded-2xl bg-rose px-4 py-3 text-sm text-ink">
-          {error}
-        </p>
-      ) : null}
-      {query.notice === "acknowledged" ? (
-        <p role="status" className="mt-4 rounded-2xl bg-background px-4 py-3 text-sm text-ink">
-          Disclosure acknowledged.
-        </p>
-      ) : null}
-      {acknowledged ? null : (
-        <form action={acknowledgeDisclosureAction} className="mt-6 border-t border-rose/70 pt-6">
-          <h3 className="text-lg">Sponsorship agreement</h3>
-          <p className="mt-2 max-w-2xl text-sm text-brown">
-            Posts stays closed until you accept this. Then send each new post, including reels, for review before you publish it. Tag @myleaderhealth in the caption so the post can track. The sponsorship line and your tracking link are optional in the caption.
-          </p>
-          <label className="mt-4 flex items-start gap-3 text-sm text-ink">
-            <input name="acknowledge" type="checkbox" required className="mt-1 size-4 accent-ink" />
-            <span>I will tag @myleaderhealth in the caption so the post can track, and I will send each new post for review before I publish it. The sponsorship line and my tracking link are optional in the caption.</span>
-          </label>
-          <button type="submit" className={`${buttonClass} mt-4`}>
-            Acknowledge
-          </button>
-        </form>
-      )}
+      {error ? <TimedNotice message={error} tone="warn" query="error" className="mt-4" /> : null}
+      {acknowledged ? null : <AgreementRequired waiting={agreementWaiting} />}
       {acknowledged ? (
       <div className="mt-6">
         <p className="text-sm font-medium text-ink">Your code</p>

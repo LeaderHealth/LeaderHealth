@@ -5,6 +5,7 @@ import { clearAffiliateMemo } from "@/lib/affiliate/memo";
 import { redirect } from "next/navigation";
 import { noteComplianceEvent } from "@/lib/affiliate/compliance-log";
 import { affiliateEmailConfigured, sendPostApprovedEmail } from "@/lib/affiliate/email";
+import { formatPlatform } from "@/lib/affiliate/post-format";
 import { PostReviewError, applyMetricChange, approveContentPost, markContentChecked, rejectContentPost, requestContentChange } from "@/lib/affiliate/post-review";
 import { adminAccountEmail, adminIsSignedIn, adminSessionActor } from "@/lib/affiliate/session";
 import { getAffiliate } from "@/lib/affiliate/store";
@@ -119,10 +120,10 @@ export async function requestPostChangeAction(formData: FormData) {
     actor: await actor(),
     action: "content-revision-requested",
     code: post.code,
-    detail: decisionDetail(name, post.campaign, "post needs a change."),
+    detail: decisionDetail(name, post.campaign, post.keptPublished ? "live post stays published and needs an updated link." : "post needs a change."),
   });
   refresh();
-  done("post-change", formData);
+  done(post.keptPublished ? "post-live-note" : "post-change", formData);
 }
 
 export async function rejectPostAction(formData: FormData) {
@@ -157,7 +158,7 @@ export async function markPostCheckedAction(formData: FormData) {
     actor: await actor(),
     action: "post-verified",
     code: post.code,
-    detail: `${name} Instagram post checked by an admin.`,
+    detail: `${name} ${formatPlatform(post.format) || "post"} checked by an admin.`,
   });
   refresh();
   done("post-checked", formData);

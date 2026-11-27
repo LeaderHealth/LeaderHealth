@@ -44,10 +44,6 @@ export const COMPLIANCE_ACTIONS = [
 
 export type ComplianceAction = (typeof COMPLIANCE_ACTIONS)[number];
 
-export const FLAG_REASONS = ["missing_disclosure", "misleading_claim", "unauthorized_content"] as const;
-export type FlagReason = (typeof FLAG_REASONS)[number];
-export type FlagStatus = "open" | "correction_requested" | "resolved";
-
 export function complianceEventFields(input: {
   actor: unknown;
   action: unknown;
@@ -65,29 +61,6 @@ export function complianceEventFields(input: {
 
 export function complianceEventMutation() {
   return "create" as const;
-}
-
-export function flagReason(value: unknown): FlagReason | null {
-  return FLAG_REASONS.find((item) => item === value) ?? null;
-}
-
-export function flagAfter(status: FlagStatus, step: "request" | "reply" | "resolve"): FlagStatus | null {
-  if (step === "request" && status === "open") return "correction_requested";
-  if (step === "reply" && status === "correction_requested") return "correction_requested";
-  if (step === "resolve" && status !== "resolved") return "resolved";
-  return null;
-}
-
-export function flagReasonLabel(reason: FlagReason) {
-  if (reason === "missing_disclosure") return "Missing sponsorship disclosure";
-  if (reason === "misleading_claim") return "Misleading medical claim";
-  return "Unauthorized promotional content";
-}
-
-export function flagStatusLabel(status: FlagStatus) {
-  if (status === "open") return "Open";
-  if (status === "correction_requested") return "Correction requested";
-  return "Resolved";
 }
 
 export function complianceActionLabel(action: ComplianceAction) {

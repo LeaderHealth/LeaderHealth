@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { PendingApplications } from "@/components/affiliate/PendingApplications";
+import { TimedNotice } from "@/components/affiliate/TimedNotice";
 import { listOpenApplications, type AffiliateApplication } from "@/lib/affiliate/applications";
 import { reportHandledAffiliateError } from "@/lib/affiliate/report";
 import { adminHasFullAccess, adminSessionActor } from "@/lib/affiliate/session";
@@ -34,16 +35,8 @@ export default async function PendingApplicationsPage({
 
   return (
     <div className="space-y-6">
-      {error ? (
-        <p role="alert" className="rounded-2xl bg-rose px-4 py-3 text-sm text-ink">
-          {error}
-        </p>
-      ) : null}
-      {query.declined === "1" ? (
-        <p role="status" className="rounded-2xl bg-white px-4 py-3 text-sm text-ink">
-          That application was declined.
-        </p>
-      ) : null}
+      {error ? <TimedNotice message={error} tone="warn" query="error" /> : null}
+      {query.declined === "1" ? <TimedNotice message="That application was declined." tone="plain" query="declined" /> : null}
       <section className="rounded-[28px] bg-white pb-4">
         <h2 id="pending-applications-title" className="px-4 pt-6 text-2xl">Pending applications</h2>
         <p className="px-4 pt-2 text-sm text-brown">

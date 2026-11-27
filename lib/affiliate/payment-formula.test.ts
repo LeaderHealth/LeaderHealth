@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { engagementPayCents, socialPayCents } from "./manual-checkpoint";
 import { marketingEventId, marketingPayPath, marketingVisitorAllowed, shouldRecordMarketingEvent } from "./marketing-path";
-import { defaultPaymentRates, marketingPayoutParts, rateFor, standingViewRateCents, websiteMonthAmount, websitePayCents, type PaymentRates } from "./payment-rates";
+import { defaultPaymentRates, marketingPayoutParts, rateFor, socialMonthCents, standingViewRateCents, websiteMonthAmount, websitePayCents, type PaymentRates } from "./payment-rates";
 
 test("social pay adds engagements and the maximum caps the combined amount", () => {
   assert.equal(
@@ -33,6 +33,27 @@ test("social pay adds engagements and the maximum caps the combined amount", () 
   );
   assert.equal(engagementPayCents(4, 5), 20);
   assert.equal(socialPayCents({ views: null, viewRateCents: 200, likes: null, engagementRateCents: 5 }), 0);
+});
+
+test("unpaid social pay waits until the tracking window ends", () => {
+  const post = {
+    id: "p1",
+    publishedAt: "2026-11-01T00:00:00.000Z",
+    viewRateCents: 200,
+    engagementRateCents: 0,
+    views: 1000,
+    trackingDays: 30,
+  };
+  const inside = socialMonthCents({ period: "2026-11", now: Date.parse("2026-11-15T00:00:00.000Z"), posts: [post], payments: [] });
+  assert.equal(inside.socialCents, 0);
+  const after = socialMonthCents({ period: "2026-11", now: Date.parse("2026-12-02T00:00:00.000Z"), posts: [post], payments: [] });
+  assert.equal(after.socialCents, 200);
+  const payment = { postId: "p1", amountCents: 200, approvedAt: "2026-12-02T00:00:00.000Z", paidAt: "2026-12-05T00:00:00.000Z", adjustmentCents: 25 };
+  const publishMonth = socialMonthCents({ period: "2026-11", now: Date.parse("2026-12-06T00:00:00.000Z"), posts: [post], payments: [payment] });
+  const approvalMonth = socialMonthCents({ period: "2026-12", now: Date.parse("2026-12-06T00:00:00.000Z"), posts: [post], payments: [payment] });
+  assert.equal(publishMonth.socialCents, 0);
+  assert.equal(approvalMonth.socialCents, 200);
+  assert.equal(approvalMonth.adjustmentCents, 25);
 });
 
 test("an affiliate payout adds social performance and base pay", () => {

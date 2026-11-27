@@ -3,6 +3,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { approvePostAction, markPostCheckedAction, rejectPostAction, requestPostChangeAction } from "@/app/admin/affiliates/post-actions";
 import { FilterDatePicker } from "@/components/affiliate/FilterDatePicker";
+import { TimedNotice } from "@/components/affiliate/TimedNotice";
 import { FilterDropdown } from "@/components/affiliate/FilterDropdown";
 import { MediaExpand, MediaPreview } from "@/components/affiliate/MediaExpand";
 
@@ -21,7 +22,7 @@ export type ReviewSlide = {
 
 export type ReviewCheck = { tone: "pass" | "warn"; label: string };
 
-export type ReviewQueue = "waiting" | "changes" | "approved" | "link" | "live" | "declined" | "withdrawn";
+export type ReviewQueue = "waiting" | "changes" | "approved" | "checking" | "link" | "live" | "declined" | "withdrawn";
 
 export type ReviewPost = {
   id: string;
@@ -43,6 +44,7 @@ export type ReviewPost = {
   queue: ReviewQueue;
   canDecide: boolean;
   canMark: boolean;
+  canSendBack: boolean;
   pastHref: string;
   suggestedNote: string;
   campaign: string;
@@ -53,16 +55,19 @@ export type ReviewPost = {
   dateValue: string;
   reviewedBy: string;
   postUrl: string | null;
+  fixNote: string;
+  requests: { note: string; when: string; by: string }[];
   views: number | null;
   revisions: { version: number; note: string; when: string }[];
 };
 
 const STATUS_LABEL: Record<ReviewQueue, string> = {
   waiting: "In review",
-  link: "Link needs a fix",
+  link: "Needs a fix",
+  checking: "Checking the link",
   changes: "Changes requested",
-  approved: "Approved",
-  live: "Published",
+  approved: "Ready to publish",
+  live: "Verified",
   declined: "Rejected",
   withdrawn: "Withdrawn",
 };
@@ -152,7 +157,6 @@ export function PostReviewQueue({ posts, initialId, notice, view }: { posts: Rev
   const [selectedId, setSelectedId] = useState(initialId);
   const [note, setNote] = useState("");
   const [notedFor, setNotedFor] = useState("");
-  const [openNext, setOpenNext] = useState(true);
   const affiliates = useMemo(() => {
     const seen = new Map<string, string>();
     for (const post of posts) seen.set(post.code, post.name);
@@ -178,7 +182,7 @@ export function PostReviewQueue({ posts, initialId, notice, view }: { posts: Rev
   const activeNote = selected && notedFor === selected.id ? note : selected?.suggestedNote ?? "";
   const nextId = selected ? visible.find((post) => post.id !== selected.id && visible.indexOf(post) > visible.indexOf(selected))?.id ?? visible.find((post) => post.id !== selected.id)?.id ?? "" : "";
   const noteReady = activeNote.trim().length > 0;
-  const livePanel = view === "published" && !!selected && (!!selected.postUrl || selected.queue === "live" || selected.queue === "link");
+  const livePanel = view === "published" && !!selected && (!!selected.postUrl || selected.queue === "live" || selected.queue === "link" || selected.queue === "checking");
   const matchHeights = livePanel && selected.slides.length === 1 && selected.revisions.length === 0;
 
   function choose(id: string) {
@@ -239,9 +243,9 @@ export function PostReviewQueue({ posts, initialId, notice, view }: { posts: Rev
           ) : null}
         </div>
       </div>
-      {notice ? <p role="status" className="rounded-2xl bg-white px-4 py-3 text-sm text-ink">{notice}</p> : null}
-      <div className="grid min-h-[calc(100dvh-14rem)] items-stretch gap-4 lg:min-h-[calc(100dvh-12rem)] lg:grid-cols-[17rem_minmax(0,1fr)]">
-        <aside className="flex h-full min-h-0 flex-col gap-3 rounded-[24px] bg-white p-3">
+      {notice ? <TimedNotice message={notice} tone="plain" query="notice" /> : null}
+      <div className="grid min-h-[calc(100dvh-14rem)] grid-cols-[minmax(0,1fr)] items-stretch gap-4 lg:min-h-[calc(100dvh-12rem)] lg:grid-cols-[17rem_minmax(0,1fr)]">
+        <aside className="flex h-full min-h-0 min-w-0 flex-col gap-3 rounded-[24px] bg-white p-3">
           <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search affiliate or caption" className="h-11 rounded-full border border-[#CDBDBA] px-4 text-sm" />
           <p className="px-2 text-xs text-brown">Oldest first</p>
           <ul className="flex flex-col gap-1">
@@ -259,7 +263,7 @@ export function PostReviewQueue({ posts, initialId, notice, view }: { posts: Rev
                       </span>
                       <span className="mt-0.5 block truncate text-[13px] text-brown">{post.excerpt || "No caption yet"}</span>
                       <span className="mt-1 flex flex-wrap gap-1">
-                        <span className="rounded-full bg-[#EFEAE9] px-2 py-0.5 text-[11px] text-[#4A3A37]">{STATUS_LABEL[post.queue]}</span>
+                        <span className="rounded-full bg-[#EFEAE9] px-2 py-0.5 text-[11px] text-[#4A3A37]">{post.queue === "live" && post.fixNote ? "Live but changes requested" : post.queue === "checking" && post.fixNote ? "Checking the update" : STATUS_LABEL[post.queue]}</span>
                         <span className="rounded-full bg-[#EFEAE9] px-2 py-0.5 text-[11px] text-[#4A3A37]">{post.kindShort}</span>
                         <span className="rounded-full bg-[#F3E6E3] px-2 py-0.5 text-[11px] text-[#4A3A37]">{post.source}</span>
                         {post.campaign ? <span className="rounded-full bg-[#EFEAE9] px-2 py-0.5 text-[11px] text-[#4A3A37]">{post.campaign}</span> : null}
@@ -268,6 +272,8 @@ export function PostReviewQueue({ posts, initialId, notice, view }: { posts: Rev
                         {!post.flagCount && post.checksPass ? <span className="rounded-full bg-[#DDF0E4] px-2 py-0.5 text-[11px] font-medium text-[#1D6340]">Checks pass</span> : null}
                         {post.batchLabel ? <span className="text-[11px] text-brown">{post.batchLabel}</span> : null}
                         {post.version > 1 ? <span className="rounded-full bg-[#EFEAE9] px-2 py-0.5 text-[11px] text-[#4A3A37]">Resubmitted · v{post.version}</span> : null}
+                        {post.fixNote && post.queue === "checking" ? <span className="rounded-full bg-[#FBEFD6] px-2 py-0.5 text-[11px] font-medium text-[#7A4E00]">Updated link</span> : null}
+                        {post.fixNote && post.queue !== "checking" ? <span className="rounded-full bg-[#FBEFD6] px-2 py-0.5 text-[11px] font-medium text-[#7A4E00]">Waiting on a link</span> : null}
                       </span>
                     </span>
                     </button>
@@ -321,21 +327,24 @@ export function PostReviewQueue({ posts, initialId, notice, view }: { posts: Rev
                     <p className="mt-3 text-[13px] leading-relaxed text-brown">Checks help, but every slide and caption still needs a look.</p>
                   </div>
                 )}
-                {selected.postUrl || selected.queue === "live" || selected.queue === "link" ? (
+                {selected.postUrl || selected.queue === "live" || selected.queue === "link" || selected.queue === "checking" ? (
                   <div className={`flex flex-col rounded-[18px] border border-[#E8DEDC] bg-white p-4 text-sm shadow-[0_12px_32px_-20px_rgba(51,19,15,0.35)] ${matchHeights ? "xl:flex-1 xl:justify-between xl:gap-4" : "gap-3"}`}>
                     <div className="flex flex-col gap-3">
                       {livePanel ? null : <h4 className="font-semibold">Published post</h4>}
                       {selected.queue === "link" ? (
-                        <span className="self-start rounded-full bg-[#FBEFD6] px-2.5 py-1 text-[11px] font-medium text-[#7A4E00]">Link needs a check</span>
+                        <span className="self-start rounded-full bg-[#FBEFD6] px-2.5 py-1 text-[11px] font-medium text-[#7A4E00]">Needs a fix</span>
+                      ) : selected.queue === "checking" ? (
+                        <span className="self-start rounded-full bg-[#F3E6E3] px-2.5 py-1 text-[11px] font-medium text-[#5A2A24]">{selected.fixNote ? "Checking the update" : "Checking the link"}</span>
                       ) : selected.queue === "live" ? (
-                        <span className="self-start rounded-full bg-[#DDF0E4] px-2.5 py-1 text-[11px] font-medium text-[#1D6340]">Live</span>
+                        <span className={`self-start rounded-full px-2.5 py-1 text-[11px] font-medium ${selected.fixNote ? "bg-[#FBE3DF] text-[#9B2C1F]" : "bg-[#DDF0E4] text-[#1D6340]"}`}>{selected.fixNote ? "Live but changes requested" : "Live"}</span>
                       ) : null}
                       {selected.postUrl ? (
                         <a href={selected.postUrl} target="_blank" rel="noopener noreferrer" className="block break-all text-[13px] leading-relaxed underline decoration-[#CDBDBA] underline-offset-4">{selected.postUrl}</a>
                       ) : (
                         <p className="text-[#7A4E00]">No live link on file.</p>
                       )}
-                      {selected.queue === "link" ? <p className="text-[13px] leading-relaxed text-brown">The live link could not be confirmed.</p> : null}
+                      {selected.requests.length ? <RequestLog requests={selected.requests} /> : selected.fixNote ? <blockquote className="whitespace-pre-line rounded-xl bg-[#FBF6EC] px-3 py-2 text-[13px] leading-relaxed text-[#2A1714]">{selected.fixNote}</blockquote> : null}
+                      {selected.queue === "link" && !selected.fixNote ? <p className="text-[13px] leading-relaxed text-brown">The live link could not be confirmed.</p> : null}
                       {selected.queue === "live" && selected.views == null ? <p className="text-[13px] leading-relaxed text-brown">Views are not on file yet.</p> : null}
                       {selected.queue === "live" && selected.views != null ? <p className="text-[13px] leading-relaxed text-brown">{selected.views.toLocaleString("en-US")} views on file.</p> : null}
                     </div>
@@ -343,11 +352,17 @@ export function PostReviewQueue({ posts, initialId, notice, view }: { posts: Rev
                       <form action={markPostCheckedAction} className="flex flex-col gap-3 border-t border-[#E8DEDC] pt-3">
                         <input type="hidden" name="id" value={selected.id} />
                         <input type="hidden" name="return" value={view === "all" ? "" : view} />
-                        <input type="hidden" name="next" value={openNext ? nextId : ""} />
-                        <p className="text-[13px] leading-relaxed text-brown">Open the link and confirm the caption tags @myleaderhealth. The post does not track without that tag. The sponsorship line and tracking link are optional.</p>
-                        <button type="submit" className="inline-flex h-10 w-full items-center justify-center rounded-full bg-ink px-4 text-sm font-medium text-white">Mark as checked</button>
+                        <input type="hidden" name="next" value={nextId} />
+                        <p className="text-[13px] leading-relaxed text-brown">{selected.fixNote ? "Open the link and confirm the requested change is in the live post. If it still needs work, request more changes. It counts toward the agreement again only after you count it again." : "Open the link and confirm the caption tags @myleaderhealth. The post does not track without that tag. The sponsorship line and tracking link are optional."}</p>
+                        <button type="submit" className="inline-flex h-10 w-full items-center justify-center rounded-full bg-ink px-4 text-sm font-medium text-white">{selected.fixNote ? "Count it again" : "Mark as checked"}</button>
                       </form>
                     ) : null}
+                  </div>
+                ) : null}
+                {!livePanel && selected.requests.length ? (
+                  <div className="rounded-2xl bg-background p-4 text-sm">
+                    <h4 className="font-semibold">Requests</h4>
+                    <div className="mt-2"><RequestLog requests={selected.requests} /></div>
                   </div>
                 ) : null}
                 {selected.revisions.length ? (
@@ -363,10 +378,13 @@ export function PostReviewQueue({ posts, initialId, notice, view }: { posts: Rev
                     </ul>
                   </div>
                 ) : null}
-                {selected.canDecide ? (
+                {selected.canDecide || selected.canSendBack ? (
                   <div className="rounded-2xl bg-background p-4">
                     <label htmlFor="review-note" className="text-sm font-semibold">Note to affiliate</label>
                     <textarea id="review-note" rows={5} value={activeNote} onChange={(event) => updateNote(event.target.value)} className="mt-2 w-full resize-y rounded-xl border border-[#DCCFCC] bg-white px-3 py-2 text-sm leading-relaxed" />
+                    {selected.canSendBack && !selected.canDecide ? (
+                      <p className="mt-2 text-[13px] text-brown">{selected.fixNote && selected.queue !== "live" ? "Requesting more changes sends this back to the affiliate. They update the live post and paste the link again. It stays out of the agreement until you count it again." : "This post stays in Published content. The affiliate updates the live post, then pastes the link so you can see the request is fixed."}</p>
+                    ) : null}
                     <p className="mt-2 text-[13px] text-brown">Required to request changes or decline. Saved replies:</p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       <button type="button" className="text-[13px] underline underline-offset-4" onClick={() => addReply(selected.suggestedNote || "Please remove the treatment claim. We can’t make treatment claims in affiliate posts.")}>Treatment claim</button>
@@ -384,32 +402,30 @@ export function PostReviewQueue({ posts, initialId, notice, view }: { posts: Rev
                 )}
               </div>
             </div>
-            {selected.canDecide ? (
-              <footer className="flex flex-wrap items-center gap-3 border-t border-[#E8DEDC] pt-4">
-                <label className="mr-auto inline-flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={openNext} onChange={(event) => setOpenNext(event.target.checked)} />
-                  Open next post after deciding
-                </label>
+            {selected.canDecide || selected.canSendBack ? (
+              <footer className="flex flex-wrap items-center justify-end gap-3">
                 <form action={rejectPostAction}>
                   <input type="hidden" name="id" value={selected.id} />
                   <input type="hidden" name="note" value={activeNote} />
                   <input type="hidden" name="return" value={view === "all" ? "" : view} />
-                  <input type="hidden" name="next" value={openNext ? nextId : ""} />
+                  <input type="hidden" name="next" value={nextId} />
                   <button type="submit" disabled={!noteReady} className={`${quietButton} text-[#9B2C1F] disabled:cursor-not-allowed disabled:opacity-50`}>Decline</button>
                 </form>
                 <form action={requestPostChangeAction}>
                   <input type="hidden" name="id" value={selected.id} />
                   <input type="hidden" name="note" value={activeNote} />
                   <input type="hidden" name="return" value={view === "all" ? "" : view} />
-                  <input type="hidden" name="next" value={openNext ? nextId : ""} />
-                  <button type="submit" disabled={!noteReady} className="inline-flex h-10 items-center rounded-full bg-ink px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50">Request changes</button>
+                  <input type="hidden" name="next" value={nextId} />
+                  <button type="submit" disabled={!noteReady} className="inline-flex h-10 items-center rounded-full bg-ink px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50">{selected.canSendBack && !selected.canDecide ? (selected.fixNote && selected.queue !== "live" ? "Request more changes" : "Send note") : "Request changes"}</button>
                 </form>
-                <form action={approvePostAction}>
-                  <input type="hidden" name="id" value={selected.id} />
-                  <input type="hidden" name="return" value={view === "all" ? "" : view} />
-                  <input type="hidden" name="next" value={openNext ? nextId : ""} />
-                  <button type="submit" className={quietButton}>{selected.slides.length > 1 ? `Approve all ${selected.slides.length} slides` : "Approve"}</button>
-                </form>
+                {selected.canDecide ? (
+                  <form action={approvePostAction}>
+                    <input type="hidden" name="id" value={selected.id} />
+                    <input type="hidden" name="return" value={view === "all" ? "" : view} />
+                    <input type="hidden" name="next" value={nextId} />
+                    <button type="submit" className={quietButton}>{selected.slides.length > 1 ? `Approve all ${selected.slides.length} slides` : "Approve"}</button>
+                  </form>
+                ) : null}
               </footer>
             ) : null}
           </section>
@@ -418,6 +434,21 @@ export function PostReviewQueue({ posts, initialId, notice, view }: { posts: Rev
         )}
       </div>
     </div>
+  );
+}
+
+function RequestLog({ requests }: { requests: { note: string; when: string; by: string }[] }) {
+  if (!requests.length) return null;
+  const rows = [...requests].reverse();
+  return (
+    <ol className="flex flex-col gap-2">
+      {rows.map((entry, index) => (
+        <li key={`${entry.when}-${entry.note}-${index}`} className="rounded-xl border border-[#E8DEDC] bg-[#FBF6EC] px-3 py-2">
+          <p className="text-[11px] font-medium text-brown">{index === 0 ? "Latest request" : "Earlier request"}{entry.when ? ` · ${entry.when}` : ""}{entry.by ? ` · ${entry.by}` : ""}</p>
+          <p className="mt-1 whitespace-pre-line text-[13px] leading-relaxed text-[#2A1714]">{entry.note}</p>
+        </li>
+      ))}
+    </ol>
   );
 }
 

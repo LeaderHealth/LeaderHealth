@@ -85,6 +85,5 @@ export async function loadComplianceEvents(filter?: { code?: string | null; acto
         },
       ];
     })
-    .sort((left, right) => (right.createdAt ?? "").localeCompare(left.createdAt ?? ""))
-    .slice(0, 200);
+    .sort((left, right) => (right.createdAt ?? "").localeCompare(left.createdAt ?? ""));
 }

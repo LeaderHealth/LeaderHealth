@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { acceptAffiliateAgreementAction, askAgreementQuestionAction, declineAffiliateAgreementAction } from "@/app/affiliates/agreement-actions";
+import { SPONSORSHIP_DISCLOSURE_TERMS } from "@/lib/affiliate/agreement-disclosure";
 import type { AgreementBoardSlot } from "@/lib/affiliate/post-agreement";
 import { AgreementQuestions } from "./AgreementQuestions";
 import type { AgreementQuestionView } from "./agreement-types";
@@ -114,6 +115,10 @@ function Review({
           <p className="whitespace-pre-wrap text-[15px] leading-normal text-[#4A3A37]">{card.guidelines}</p>
         </div>
       ) : null}
+      <div className="flex flex-col gap-1.5 rounded-2xl border border-[#E8DEDC] px-4 py-3.5">
+        <span className="text-base font-semibold">Sponsorship disclosure</span>
+        <p className="text-[15px] leading-normal text-[#4A3A37]">{SPONSORSHIP_DISCLOSURE_TERMS}</p>
+      </div>
       {card.pdfHref ? (
         <a id="pdf" href={card.pdfHref} className="flex items-center gap-3 rounded-2xl bg-[#F7F3F2] px-4 py-3 text-ink">
           <span className="grid h-11 w-9 flex-none place-items-center rounded-md bg-[#F3CFCB] text-[11px] font-bold text-[#9B2C1F]">PDF</span>
@@ -131,7 +136,7 @@ function Review({
       {!card.openQuestion && card.pdfHref ? (
         <label className="flex cursor-pointer items-start gap-3 text-[15px] leading-normal">
           <input type="checkbox" checked={agreed} onChange={(event) => setAgreed(event.target.checked)} className="mt-0.5 size-5 flex-none accent-ink" />
-          I’ve read the agreement and accept its terms.
+          I’ve read the agreement and accept its terms, including the sponsorship disclosure.
         </label>
       ) : null}
       <div className="flex flex-wrap items-center gap-2.5">

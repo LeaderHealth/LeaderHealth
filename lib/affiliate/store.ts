@@ -414,11 +414,14 @@ export async function applyOrderRefund(input: { orderId: string; incoming: reado
     });
     const originalAmount = typeof data.amountCents === "number" ? data.amountCents : null;
     const originalCommission = asNumber(data.commissionCents);
+    const storedPercent = typeof data.commissionPercent === "number" && Number.isFinite(data.commissionPercent) ? data.commissionPercent : null;
+    const commissionPercent = (data.commissionMode === "percent" || data.commissionMode === "default") && storedPercent != null && storedPercent > 0 ? storedPercent : undefined;
     const plans = planRefundAdjustments({
       originalAmountCents: originalAmount,
       originalCommissionCents: originalCommission,
       recorded,
       incoming: input.incoming,
+      commissionPercent,
     });
     if (plans.length === 0) return false;
     const affiliateCode = typeof data.code === "string" ? data.code : "";

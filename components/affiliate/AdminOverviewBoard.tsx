@@ -77,7 +77,7 @@ export type OverviewAffiliate = {
   rank: string;
   name: string;
   views: string;
-  visits: string;
+  linkClicks: string;
   engagements: string;
   labOrders: string;
   labClass: string;
@@ -246,6 +246,7 @@ export function AdminOverviewBoard({
             </div>
           ) : null}
           <span className="text-[13px] text-[#6B5A57]">{rangeText}</span>
+          <span className="max-w-sm text-right text-[13px] text-[#6B5A57]">This range covers Program at a glance, Marketing and sales, and the top affiliates.</span>
         </div>
       </div>
 
@@ -282,7 +283,7 @@ export function AdminOverviewBoard({
         <h3 id="kpi-h" className="text-lg font-semibold">
           Program at a glance
         </h3>
-        <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-6">
           {kpis.map((item) => (
             <div key={item.label} className="flex min-w-0 flex-col gap-1 rounded-2xl bg-[#F7F3F2] px-4 py-3.5">
               <span className="truncate text-sm text-[#4A3A37]">{item.label}</span>
@@ -301,7 +302,7 @@ export function AdminOverviewBoard({
             </h3>
             <span className="text-[13px] text-[#6B5A57]">All affiliates combined</span>
           </div>
-          <Link href="/admin/affiliates/roi" className={`text-sm ${focusRing}`}>
+          <Link href="/admin/affiliates/social" className={`text-sm ${focusRing}`}>
             Full stats →
           </Link>
         </div>
@@ -447,10 +448,10 @@ export function AdminOverviewBoard({
             <p className="border-t border-[#E8DEDC] py-3.5 text-sm text-[#6B5A57]">No affiliates yet.</p>
           ) : (
             <div>
-              <div className="grid grid-cols-[minmax(0,1.3fr)_3.4rem_3.2rem_6.2rem_5.2rem_4.4rem_2.25rem] gap-3 border-b border-[#E8DEDC] pb-2 text-[13px] font-semibold whitespace-nowrap text-[#4A3A37]">
+              <div className="grid grid-cols-[minmax(0,1.3fr)_3.4rem_9.5rem_6.2rem_5.2rem_4.4rem_2.25rem] gap-3 border-b border-[#E8DEDC] pb-2 text-[13px] font-semibold whitespace-nowrap text-[#4A3A37]">
                 <span>Affiliate</span>
                 <span className="text-right">Views</span>
-                <span className="text-right">Visits</span>
+                <span className="text-right">Verified link clicks</span>
                 <span className="text-right">Engagements</span>
                 <span className="text-right">Lab orders</span>
                 <span className="text-right">Earned</span>
@@ -462,14 +463,14 @@ export function AdminOverviewBoard({
                   type="button"
                   onClick={() => openCompare(affiliate.code)}
                   aria-label={`Compare ${affiliate.name}’s stats: this month and last month`}
-                  className={`grid w-full grid-cols-[minmax(0,1.3fr)_3.4rem_3.2rem_6.2rem_5.2rem_4.4rem_2.25rem] items-center gap-3 border-b border-[#F0E8E6] bg-transparent py-3 text-left text-[15px] whitespace-nowrap text-[#2A1714] tabular-nums ${focusRing}`}
+                  className={`grid w-full grid-cols-[minmax(0,1.3fr)_3.4rem_9.5rem_6.2rem_5.2rem_4.4rem_2.25rem] items-center gap-3 border-b border-[#F0E8E6] bg-transparent py-3 text-left text-[15px] whitespace-nowrap text-[#2A1714] tabular-nums ${focusRing}`}
                 >
                   <span className="flex min-w-0 items-center gap-2.5">
-                    <span className="w-4 text-[13px] text-[#6B5A57]">{affiliate.rank}</span>
-                    <span className="truncate font-semibold">{affiliate.name}</span>
+                    <span className="w-4 shrink-0 text-[13px] text-[#6B5A57]">{affiliate.rank}</span>
+                    <span className="whitespace-normal font-semibold">{affiliate.name}</span>
                   </span>
                   <span className="text-right">{affiliate.views}</span>
-                  <span className="text-right">{affiliate.visits}</span>
+                  <span className="text-right">{affiliate.linkClicks}</span>
                   <span className="text-right">{affiliate.engagements}</span>
                   <span className={`text-right font-semibold ${affiliate.labClass}`}>{affiliate.labOrders}</span>
                   <span className="text-right font-semibold">{affiliate.earned}</span>
