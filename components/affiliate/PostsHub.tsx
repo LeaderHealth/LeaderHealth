@@ -13,6 +13,7 @@ import { viewPayFormula } from "@/lib/affiliate/format";
 import { POST_FILE_ACCEPT, VIDEO_FILE_ACCEPT, postUploadIssue } from "@/lib/affiliate/post-files";
 import { awaitsManualLinkCheck, formatTitle, formatUploadIssue, liveLinkFor, type PostFormat } from "@/lib/affiliate/post-format";
 import { AgreementMonthPosts } from "@/components/affiliate/MyAgreement";
+import { TimedNotice } from "@/components/affiliate/TimedNotice";
 import { agreementKindFormat, kindUsedCount, mixSentence, openPostingMonth, postKindTitle, postPlaceLabel, postTypeLabel, postingMonthDateBounds, postingMonthOption, type AgreementBoardSlot, type PostingAgreement } from "@/lib/affiliate/post-agreement";
 
 const POST_BATCH_LIMIT = 10;
@@ -135,6 +136,8 @@ export type HubPost = {
   publication: "awaiting_publication" | "verification_pending" | "tracking_active" | "verification_failed" | null;
   sent: string;
   reviewNote: string;
+  liveFixNote: string;
+  requests: { note: string; when: string }[];
   postUrl: string | null;
   fileHref: string;
   downloadHref: string;
@@ -195,7 +198,7 @@ const FILTERS: { id: Filter; label: string }[] = [
   { id: "all", label: "All" },
   { id: "action", label: "Action needed" },
   { id: "review", label: "In review" },
-  { id: "live", label: "Published" },
+  { id: "live", label: "Verified" },
   { id: "closed", label: "Closed" },
 ];
 
@@ -211,6 +214,30 @@ function hasBrandTag(caption: string) {
   return caption.toLowerCase().includes("@myleaderhealth");
 }
 
+function networkOfFormat(format: PostFormat | null) {
+  if (format === "tiktok") return "tiktok";
+  if (format === "facebook_post" || format === "facebook_reel" || format === "facebook_video") return "facebook";
+  if (format === "youtube_short" || format === "youtube_video") return "youtube";
+  if (format === "instagram_post" || format === "instagram_reel") return "instagram";
+  return "";
+}
+
+function accountConnected(format: PostFormat | null, networks: readonly string[]) {
+  const network = networkOfFormat(format);
+  return network !== "" && networks.includes(network);
+}
+
+function brandTagLine(connected: boolean, carousel: boolean) {
+  if (connected) {
+    return carousel
+      ? "Tag @myleaderhealth in a slide caption so the post can track."
+      : "Tag @myleaderhealth in the caption so the post can track.";
+  }
+  return carousel
+    ? "Tag @myleaderhealth in a slide caption. Your agreement requires this tag."
+    : "Tag @myleaderhealth in the caption. Your agreement requires this tag.";
+}
+
 function insertLine(caption: string, line: string, gap: "\n" | "\n\n") {
   if (caption.toLowerCase().includes(line.toLowerCase())) return caption;
   const trimmed = caption.replace(/\s+$/, "");
@@ -220,6 +247,7 @@ function insertLine(caption: string, line: string, gap: "\n" | "\n\n") {
 function stageOf(post: HubPost): Stage {
   if (post.status === "draft") return "draft";
   if (post.status === "withdrawn" || post.status === "rejected") return "closed";
+  if (post.liveFixNote && post.publication !== "verification_pending") return "action";
   if (post.publication === "tracking_active") return "live";
   if (post.publication === "verification_failed") return "action";
   if (post.publication === "verification_pending") return "checking";
@@ -277,10 +305,13 @@ function asOnePost(group: HubPost[]): HubPost {
 
 function statusMark(post: HubPost) {
   const stage = stageOf(post);
-  if (stage === "live") return { label: "Published", bg: "#DDF0E4", fg: "#1D6340" };
+  if (post.liveFixNote && post.publication === "tracking_active") return { label: "Live but changes requested", bg: "#FBE3DF", fg: "#9B2C1F" };
+  if (post.liveFixNote && post.publication === "verification_pending") return { label: "Checking the update", bg: "#FBEFD6", fg: "#7A4E00" };
+  if (post.liveFixNote) return { label: "Paste the updated link", bg: "#FBE3DF", fg: "#9B2C1F" };
+  if (stage === "live") return { label: "Verified", bg: "#DDF0E4", fg: "#1D6340" };
   if (post.publication === "verification_failed") return { label: "Needs a fix", bg: "#FBE3DF", fg: "#9B2C1F" };
   if (post.status === "revision_requested") return { label: "Changes requested", bg: "#FBE3DF", fg: "#9B2C1F" };
-  if (post.status === "approved") return { label: "Approved · add link", bg: "#33130F", fg: "#FFFFFF" };
+  if (post.status === "approved") return { label: "Ready to publish", bg: "#33130F", fg: "#FFFFFF" };
   if (post.publication === "verification_pending") return { label: "Checking the link", bg: "#FBEFD6", fg: "#7A4E00" };
   if (post.status === "submitted") return { label: "In review", bg: "#FBEFD6", fg: "#7A4E00" };
   if (post.status === "draft") return { label: "Draft", bg: "#EFEAE9", fg: "#4A3A37" };
@@ -289,6 +320,7 @@ function statusMark(post: HubPost) {
 }
 
 function actionCopy(post: HubPost) {
+  if (post.liveFixNote && post.publication !== "verification_pending") return { hint: "Update the live post, then paste the link", cta: "Paste the link", color: "#9B2C1F" };
   if (post.status === "revision_requested") return { hint: "Changes requested · see the note", cta: "Edit and resubmit", color: "#9B2C1F" };
   if (post.publication === "verification_failed") {
     const hint = post.headline.toLowerCase().includes("tracking link")
@@ -298,7 +330,7 @@ function actionCopy(post: HubPost) {
         : "Link check failed · see what to fix";
     return { hint, cta: "Fix and check again", color: "#9B2C1F" };
   }
-  return { hint: "Approved · publish it, then add the link", cta: publishGuide(post.format).cta, color: "#4A3A37" };
+  return { hint: "Ready to publish · publish it, then add the link", cta: publishGuide(post.format).cta, color: "#4A3A37" };
 }
 
 function stepIndex(post: HubPost) {
@@ -604,6 +636,21 @@ function EmptyMark() {
   return <span className="size-[22px] shrink-0 rounded-full border-2 border-dashed border-[#B9A8A5]" />;
 }
 
+function RequestLog({ requests }: { requests: { note: string; when: string }[] }) {
+  if (!requests.length) return null;
+  const rows = [...requests].reverse();
+  return (
+    <ol className="flex flex-col gap-2">
+      {rows.map((entry, index) => (
+        <li key={`${entry.when}-${index}`} className="rounded-xl border border-[#E8DEDC] bg-white px-3.5 py-3">
+          <p className="text-xs font-medium text-brown">{index === 0 ? "Latest request" : "Earlier request"}{entry.when ? ` · ${entry.when}` : ""}</p>
+          <p className="mt-1 whitespace-pre-line text-sm leading-normal text-[#4A3A37]">{entry.note}</p>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 function BackButton({ onClick }: { onClick: () => void }) {
   return (
     <button type="button" onClick={onClick} className="inline-flex h-8 items-center gap-1.5 self-start text-[13px] text-ink">
@@ -678,6 +725,7 @@ export function PostsHub({
   posting = null,
   agreementsUnavailable = false,
   agreementPosts = null,
+  connectedNetworks = [],
 }: {
   posts: HubPost[];
   trackingUrl: string;
@@ -697,6 +745,7 @@ export function PostsHub({
   posting?: PostingAgreement | null;
   agreementsUnavailable?: boolean;
   agreementPosts?: { id: string; monthName: string; period: string; noMonth: boolean; slots: AgreementBoardSlot[] } | null;
+  connectedNetworks?: string[];
 }) {
   const router = useRouter();
   const motionEase = useSoftMotion();
@@ -708,13 +757,6 @@ export function PostsHub({
   const [composeMonth, setComposeMonth] = useState(() => openPostingMonth(posting?.months ?? [], new Date().toISOString().slice(0, 10)));
   const [requirement, setRequirement] = useState<number | null>(null);
   const [postKind, setPostKind] = useState<{ platform: string; type: string } | null>(null);
-  const [shownNotice, setShownNotice] = useState(notice);
-  const [toastHidden, setToastHidden] = useState(false);
-  if (notice !== shownNotice) {
-    setShownNotice(notice);
-    setToastHidden(false);
-  }
-  const toast = toastHidden ? "" : notice;
   const groups = submissionGroups(posts);
   const selected = (() => {
     const group = groups.find((item) => item.some((post) => post.id === selectedId));
@@ -811,17 +853,7 @@ export function PostsHub({
             </div>
           </div>
 
-          {toast ? (
-            <div role="status" className={`flex items-center gap-3 rounded-[14px] px-4 py-3 text-sm font-medium ${noticeTone === "warn" ? "bg-rose text-ink" : "bg-[#DDF0E4] text-[#1D6340]"}`}>
-              <span className="flex-1">{toast}</span>
-              <button type="button" aria-label="Dismiss" onClick={() => setToastHidden(true)} className="grid size-8 place-items-center">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-                  <path d="M6 6l12 12" />
-                  <path d="M18 6L6 18" />
-                </svg>
-              </button>
-            </div>
-          ) : null}
+          {notice ? <TimedNotice message={notice} tone={noticeTone === "warn" ? "warn" : "ok"} query="notice" /> : null}
 
           {agreementPosts ? (
             <AgreementMonthPosts
@@ -933,6 +965,7 @@ export function PostsHub({
             postKind={postKind}
             onPostKind={setPostKind}
             posts={posts}
+            connectedNetworks={connectedNetworks}
             onBack={() => (startCompose ? router.push("/affiliates/posts") : setScreen("hub"))}
           />
         </motion.div>
@@ -951,6 +984,7 @@ export function PostsHub({
             posting={posting}
             agreementsUnavailable={agreementsUnavailable}
             slots={agreementPosts?.slots}
+            connectedNetworks={connectedNetworks}
             onComposeCampaign={(name) => openCompose(undefined, name)}
           />
         </motion.div>
@@ -980,6 +1014,7 @@ function Composer({
   postKind,
   onPostKind,
   posts,
+  connectedNetworks,
   onBack,
 }: {
   cards: Card[];
@@ -1002,6 +1037,7 @@ function Composer({
   postKind: { platform: string; type: string } | null;
   onPostKind: (value: { platform: string; type: string } | null) => void;
   posts: HubPost[];
+  connectedNetworks: readonly string[];
   onBack: () => void;
 }) {
   const [pending, setPending] = useState(false);
@@ -1408,7 +1444,7 @@ function Composer({
               <p className="text-[13px] leading-relaxed text-brown">{limitCopy}</p>
               {!carousel && card.slides[0]?.fileIssue ? <p className="text-[13px] text-[#9B2C1F]">{card.slides[0].fileIssue}</p> : null}
               {carousel ? (
-                <p className="text-[13px] leading-relaxed text-brown">Each slide has its own caption, and every slide caption is reviewed. Tag @myleaderhealth so the post can track. The sponsorship line and tracking link are optional. Slide 1 is best, since the cover is seen first.</p>
+                <p className="text-[13px] leading-relaxed text-brown">{accountConnected(card.format, connectedNetworks) ? "Each slide has its own caption, and every slide caption is reviewed. Tag @myleaderhealth so the post can track. The sponsorship line and tracking link are optional. Slide 1 is best, since the cover is seen first." : "Each slide has its own caption, and every slide caption is reviewed. Tag @myleaderhealth. Your agreement requires this tag. The sponsorship line and tracking link are optional. Slide 1 is best, since the cover is seen first."}</p>
               ) : null}
             </div>
             {carousel ? null : (
@@ -1419,6 +1455,7 @@ function Composer({
             )}
             <CaptionChecker
               carousel={carousel}
+              connected={accountConnected(card.format, connectedNetworks)}
               captions={carousel ? card.slides.map((slide) => slide.caption) : [card.caption]}
               disclosureLine={disclosureLine}
               trackingUrl={trackingUrl}
@@ -1525,6 +1562,7 @@ function FormatPicker({ onChoose }: { onChoose: (format: PostFormat) => void }) 
 
 function CaptionChecker({
   carousel,
+  connected,
   captions,
   disclosureLine,
   trackingUrl,
@@ -1532,6 +1570,7 @@ function CaptionChecker({
   onInsert,
 }: {
   carousel: boolean;
+  connected: boolean;
   captions: string[];
   disclosureLine: string;
   trackingUrl: string;
@@ -1543,7 +1582,7 @@ function CaptionChecker({
   const trackingAt = captions.findIndex((text) => hasTracking(text, trackingUrl, code));
   return (
     <div className="flex flex-col gap-1 rounded-[14px] bg-white px-4 py-3">
-      <p className="text-sm font-medium">{carousel ? "Tag @myleaderhealth in a slide caption so the post can track." : "Tag @myleaderhealth in the caption so the post can track."}</p>
+      <p className="text-sm font-medium">{brandTagLine(connected, carousel)}</p>
       <RequirementRow
         ok={tagAt >= 0}
         label="@myleaderhealth"
@@ -1638,6 +1677,7 @@ function PostDetail({
   posting,
   agreementsUnavailable,
   slots,
+  connectedNetworks,
   onBack,
   onReuse,
   onComposeCampaign,
@@ -1651,6 +1691,7 @@ function PostDetail({
   posting: PostingAgreement | null;
   agreementsUnavailable: boolean;
   slots?: AgreementBoardSlot[];
+  connectedNetworks: readonly string[];
   onBack: () => void;
   onReuse: () => void;
   onComposeCampaign: (campaign: string) => void;
@@ -1695,9 +1736,7 @@ function PostDetail({
     : joinedEdit.length > CAPTION_LIMIT
       ? "These captions together need to stay under 2,200 characters."
       : !tagged
-        ? carousel
-          ? "Tag @myleaderhealth in a slide caption so the post can track."
-          : "Tag @myleaderhealth in the caption so the post can track."
+        ? brandTagLine(accountConnected(post.format, connectedNetworks), carousel)
         : changed
           ? "Ready to resubmit."
           : "Make the requested change before resubmitting.";
@@ -1820,7 +1859,7 @@ function PostDetail({
       {post.status === "revision_requested" ? (
         <section className="flex flex-col gap-3 rounded-[18px] bg-[#FBF1EF] p-5">
           <h3 className="text-[17px] font-semibold">A few changes needed</h3>
-          {post.reviewNote ? <blockquote className="rounded-xl bg-white px-3.5 py-3 text-sm leading-normal text-[#4A3A37]">{post.reviewNote}</blockquote> : null}
+          {post.requests.length ? <RequestLog requests={post.requests} /> : post.reviewNote ? <blockquote className="whitespace-pre-line rounded-xl bg-white px-3.5 py-3 text-sm leading-normal text-[#4A3A37]">{post.reviewNote}</blockquote> : null}
           {editing ? (
             <div className="flex flex-col gap-2.5">
               {carousel ? (
@@ -1876,6 +1915,23 @@ function PostDetail({
           ) : (
             <button type="button" onClick={() => setEditing(true)} className="inline-flex h-11 items-center self-start rounded-full bg-ink px-[22px] text-sm font-medium text-white">Edit and resubmit</button>
           )}
+        </section>
+      ) : null}
+
+      {post.liveFixNote && post.publication === "tracking_active" ? (
+        <section className="flex flex-col gap-3 rounded-[18px] bg-[#FBF1EF] p-5">
+          <h3 className="text-[17px] font-semibold">Update the live post</h3>
+          <p className="text-sm leading-relaxed text-[#4A3A37]">This post stays published. Update the live post, then paste the link so we can see the request is fixed.</p>
+          {post.requests.length ? <RequestLog requests={post.requests} /> : <blockquote className="whitespace-pre-line rounded-xl bg-white px-3.5 py-3 text-sm leading-normal text-[#4A3A37]">{post.liveFixNote}</blockquote>}
+          <form action={submitLiveLinkAction} onSubmit={onLinkSubmit} className="flex flex-col gap-2.5">
+            <input type="hidden" name="id" value={post.id} />
+            <label htmlFor="fix-link" className="text-sm font-medium">Paste the updated post link</label>
+            <div className="flex flex-wrap gap-2.5">
+              <input id="fix-link" name="postUrl" type="url" inputMode="url" required defaultValue={post.postUrl ?? ""} placeholder={guide.placeholder} onChange={() => setLinkError("")} className={`h-11 min-w-0 flex-1 rounded-full border bg-white px-[18px] text-sm ${linkError ? "border-[#9B2C1F]" : "border-[#CDBDBA]"}`} />
+              <button type="submit" className="inline-flex h-11 items-center rounded-full bg-ink px-[22px] text-sm font-medium text-white">Submit link</button>
+            </div>
+            {linkError ? <span role="alert" className="text-[13px] text-[#9B2C1F]">{linkError}</span> : null}
+          </form>
         </section>
       ) : null}
 
@@ -1953,8 +2009,9 @@ function PostDetail({
 
       {post.publication === "verification_pending" ? (
         <section className="flex flex-col gap-3 rounded-[18px] bg-background p-5">
-          <h3 className="text-[17px] font-semibold">We’re checking the link you added</h3>
-          <p className="text-sm leading-relaxed text-[#4A3A37]">{guide.pending}</p>
+          <h3 className="text-[17px] font-semibold">{post.liveFixNote ? "An admin is checking this update" : "We’re checking the link you added"}</h3>
+          {post.liveFixNote ? (post.requests.length ? <RequestLog requests={post.requests} /> : <blockquote className="whitespace-pre-line rounded-xl bg-white px-3.5 py-3 text-sm leading-normal text-[#4A3A37]">{post.liveFixNote}</blockquote>) : null}
+          <p className="text-sm leading-relaxed text-[#4A3A37]">{post.liveFixNote ? "This post stays published. It counts toward your agreement again after an admin confirms the change. If more changes are needed, you’ll get another note and paste the link again." : guide.pending}</p>
           {awaitsManualLinkCheck(post.format) ? (
             <form action={submitLiveLinkAction} onSubmit={onLinkSubmit} className="flex flex-col gap-2.5">
               <input type="hidden" name="id" value={post.id} />
@@ -1972,6 +2029,12 @@ function PostDetail({
       {post.publication === "verification_failed" ? (
         <section className="flex flex-col gap-3 rounded-[18px] border border-[#F0CFC9] bg-white p-5">
           <h3 className="text-[17px] font-semibold">{post.headline}</h3>
+          {post.liveFixNote ? (
+            <>
+              <p className="text-sm leading-relaxed text-[#4A3A37]">This post stays published. Update the live post, then paste the link so we can see the request is fixed.</p>
+              {post.requests.length ? <RequestLog requests={post.requests} /> : <blockquote className="whitespace-pre-line rounded-xl bg-[#FBF1EF] px-3.5 py-3 text-sm leading-normal text-[#4A3A37]">{post.liveFixNote}</blockquote>}
+            </>
+          ) : null}
           <p className="text-sm leading-relaxed text-[#4A3A37]">{post.detail}</p>
           <div className="flex flex-wrap gap-2.5">
             <CopyControl value={post.headline.toLowerCase().includes("sponsorship") ? disclosureLine : trackingUrl} label={post.headline.toLowerCase().includes("sponsorship") ? "Copy sponsorship line" : "Copy tracking link"} />
@@ -1994,6 +2057,13 @@ function PostDetail({
               {linkError ? <span role="alert" className="text-[13px] text-[#9B2C1F]">{linkError}</span> : null}
             </form>
           ) : null}
+        </section>
+      ) : null}
+
+      {stage === "live" && post.requests.length && !post.liveFixNote ? (
+        <section className="flex flex-col gap-3 rounded-[18px] bg-background p-5">
+          <h3 className="text-[17px] font-semibold">Requests</h3>
+          <RequestLog requests={post.requests} />
         </section>
       ) : null}
 
@@ -2104,7 +2174,7 @@ function PostDetail({
       {closed ? (
         <section className="flex flex-col gap-3 rounded-[18px] bg-background p-5">
           <h3 className="text-[17px] font-semibold">{post.status === "rejected" ? "This post wasn’t approved" : "You withdrew this post"}</h3>
-          {post.reviewNote ? <blockquote className="rounded-xl bg-white px-3.5 py-3 text-sm leading-normal text-[#4A3A37]">{post.reviewNote}</blockquote> : null}
+          {post.requests.length ? <RequestLog requests={post.requests} /> : post.reviewNote ? <blockquote className="whitespace-pre-line rounded-xl bg-white px-3.5 py-3 text-sm leading-normal text-[#4A3A37]">{post.reviewNote}</blockquote> : null}
           <button type="button" onClick={onReuse} className={`${quietButtonClass} h-11 self-start px-5`}>{post.status === "rejected" ? "Create Replacement Post" : "Use as a starting point"}</button>
         </section>
       ) : null}

@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AgreementQuestions } from "@/components/affiliate/AgreementQuestions";
+import { TimedNotice } from "@/components/affiliate/TimedNotice";
 import { AgreementSummary } from "@/components/affiliate/AgreementSummary";
 import { MyAgreement, type MyAgreementCard } from "@/components/affiliate/MyAgreement";
 import type { AgreementView } from "@/components/affiliate/agreement-types";
@@ -11,9 +11,8 @@ import { agreementMonthPeriods } from "@/lib/affiliate/agreement-earnings";
 import { affiliateAgreementPlace, presentAgreement } from "@/lib/affiliate/agreement-view";
 import { loadAffiliateAgreements, utcAgreementToday } from "@/lib/affiliate/agreements";
 import { agreementBoardPeriod, agreementMonthBoard, type AgreementBoardPost } from "@/lib/affiliate/post-agreement";
-import { DISCLOSURE_LINE, loadContentSubmissions, type ContentSubmission } from "@/lib/affiliate/post-review";
-import { loadDisclosureAcknowledgement } from "@/lib/affiliate/disclosures";
-import { formatCents, formatWhen } from "@/lib/affiliate/format";
+import { loadContentSubmissions, type ContentSubmission } from "@/lib/affiliate/post-review";
+import { formatCents } from "@/lib/affiliate/format";
 import { standingViewRateCents } from "@/lib/affiliate/payment-rates";
 import { loadPaymentRates } from "@/lib/affiliate/payment-store";
 import { memo } from "@/lib/affiliate/memo";
@@ -53,8 +52,6 @@ export default async function AffiliateContractsPage({ searchParams }: { searchP
   let unavailable = false;
   let agreements: ReturnType<typeof presentAgreement>[] = [];
   let posts: ContentSubmission[] = [];
-  let disclosure: { acknowledgedAt: string | null } | null = null;
-  let disclosureUnavailable = false;
   try {
     const [rows, loadedPosts] = await Promise.all([
       memo(`agreements:${affiliate.code}`, () => loadAffiliateAgreements(affiliate.code)),
@@ -64,11 +61,6 @@ export default async function AffiliateContractsPage({ searchParams }: { searchP
     posts = loadedPosts;
   } catch {
     unavailable = true;
-  }
-  try {
-    disclosure = await memo(`disclosure:${affiliate.code}`, () => loadDisclosureAcknowledgement(affiliate.code));
-  } catch {
-    disclosureUnavailable = true;
   }
   const waiting = agreements.filter((agreement) => agreement.phase === "waiting");
   const active = agreements.filter((agreement) => agreement.phase === "active");
@@ -80,42 +72,13 @@ export default async function AffiliateContractsPage({ searchParams }: { searchP
 
   return (
     <div className="space-y-4">
-      <section className="rounded-[28px] bg-white p-4 sm:p-6" aria-labelledby="portal-disclosure-title">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 id="portal-disclosure-title" className="text-2xl">Sponsorship disclosure agreement</h2>
-          {!disclosureUnavailable && disclosure ? (
-            <p className="inline-flex items-center rounded-full bg-ink px-3 py-1 text-xs font-medium text-white">Accepted</p>
-          ) : null}
-          {!disclosureUnavailable && !disclosure ? (
-            <p className="inline-flex items-center rounded-full border border-ink/20 px-3 py-1 text-xs font-medium text-ink">Not accepted</p>
-          ) : null}
-        </div>
-        {disclosureUnavailable ? <p className="mt-4 text-sm text-ink">This agreement is unavailable right now.</p> : null}
-        {!disclosureUnavailable && disclosure ? (
-          <p role="status" className="mt-4 rounded-[20px] bg-background px-4 py-3 text-sm text-ink">
-            You accepted this sponsorship disclosure agreement{disclosure.acknowledgedAt ? ` on ${formatWhen(disclosure.acknowledgedAt)}` : ""}.
-          </p>
-        ) : null}
-        {!disclosureUnavailable && !disclosure ? (
-          <p className="mt-4 rounded-[20px] bg-background px-4 py-3 text-sm text-ink">
-            You have not accepted this yet.{" "}
-            <Link href="/affiliates/tracking-link" className="font-medium underline underline-offset-4">
-              Accept it on Referral link
-            </Link>
-          </p>
-        ) : null}
-        <p className="mt-4 text-sm leading-relaxed">
-          I will tag @myleaderhealth in the caption so the post can track, and I will send each new post for review before I publish it. The sponsorship line and my tracking link are optional in the caption.
-        </p>
-        <p className="mt-3 text-sm text-brown">The optional sponsorship line is “{DISCLOSURE_LINE}.”</p>
-      </section>
       <section id="agreements" className="scroll-mt-6 flex flex-col gap-5" aria-labelledby="portal-contracts-title">
         <div className="flex flex-col gap-1.5">
           <h2 id="portal-contracts-title" className="text-[32px] font-medium">My agreement</h2>
           <p className="text-[15px] text-[#4A3A37]">Your monthly content agreement with Leader Health.</p>
         </div>
-        {error ? <p role="alert" className="rounded-[14px] bg-[#FBF1EF] px-4 py-3 text-[15px] font-medium text-[#9B2C1F]">{error}</p> : null}
-        {notice ? <p role="status" className="rounded-[14px] bg-[#DDF0E4] px-4 py-3 text-[15px] font-medium text-[#1D6340]">{notice}</p> : null}
+        {error ? <TimedNotice message={error} tone="warn" query="error" /> : null}
+        {notice ? <TimedNotice message={notice} query="notice" /> : null}
         {unavailable ? <p className="text-sm text-ink">Agreements are unavailable right now.</p> : null}
         {!unavailable ? (
           <>
@@ -232,6 +195,11 @@ function boardPosts(posts: ContentSubmission[]): AgreementBoardPost[] {
     reviewNote: post.reviewNote,
     title: postTitle(post.caption),
     agreementSlot: post.agreementSlot,
+    format: post.format,
+    fileCount: post.files.length || (post.filePath ? 1 : 0),
+    agreementPlatform: post.agreementPlatform,
+    agreementPostType: post.agreementPostType,
+    liveFixNote: post.liveFixNote,
   }));
 }
 
@@ -269,7 +237,7 @@ function activeCard(agreement: AgreementView, posts: ContentSubmission[], today:
   const period = agreementBoardPeriod(periods, today);
   const name = monthName(period);
   const slots = period
-    ? agreementMonthBoard({ agreementId: agreement.id, postTotal: agreement.postTotal, period, monthLabel: name, posts: boardPosts(posts) })
+    ? agreementMonthBoard({ agreementId: agreement.id, postTotal: agreement.postTotal, period, monthLabel: name, posts: boardPosts(posts), kinds: agreement.posts })
     : [];
   const verified = slots.filter((slot) => slot.pip === "#1D6340").length;
   const monthly = agreement.monthly || "The monthly amount";

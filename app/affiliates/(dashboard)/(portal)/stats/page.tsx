@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AffiliateStatsBoard } from "@/components/affiliate/AffiliateStatsBoard";
+import { TimedNotice } from "@/components/affiliate/TimedNotice";
 import { loadAffiliateAgreements, type AffiliateAgreement } from "@/lib/affiliate/agreements";
 import { agreementPostMonth } from "@/lib/affiliate/agreement-earnings";
 import { agreementPostTotal } from "@/lib/affiliate/agreement-partnership";
@@ -182,15 +183,24 @@ export default async function AffiliateStatsPage({
     unavailable = "Stats are unavailable right now.";
   }
 
+  const statsNotice =
+    query.notice === "connected"
+      ? "Account connected."
+      : query.notice === "disconnected"
+        ? "Account disconnected."
+        : query.notice === "disconnected-facebook"
+          ? "Leader Health is disconnected. You can also remove Leader Health in Facebook under Settings, Security, Apps and websites."
+          : query.notice === "disconnected-tiktok"
+            ? "Leader Health is disconnected. You can also remove Leader Health in TikTok under Settings, Security, Manage app permissions."
+            : query.notice === "disconnected-youtube"
+              ? "Leader Health is disconnected. You can also remove Leader Health in your Google Account under Security, Third-party apps and services."
+              : "";
+
   return (
     <section className="min-w-0" aria-labelledby="portal-stats-title">
       <h2 id="portal-stats-title" className="sr-only">Stats</h2>
-      {socialError ? <p role="alert" className="mb-4 rounded-2xl bg-rose px-4 py-3 text-sm text-ink">{socialError}</p> : null}
-      {query.notice === "connected" ? <p role="status" className="mb-4 rounded-2xl bg-white px-4 py-3 text-sm text-ink">Account connected.</p> : null}
-      {query.notice === "disconnected" ? <p role="status" className="mb-4 rounded-2xl bg-white px-4 py-3 text-sm text-ink">Account disconnected.</p> : null}
-      {query.notice === "disconnected-facebook" ? <p role="status" className="mb-4 rounded-2xl bg-white px-4 py-3 text-sm text-ink">Leader Health is disconnected. You can also remove Leader Health in Facebook under Settings, Security, Apps and websites.</p> : null}
-      {query.notice === "disconnected-tiktok" ? <p role="status" className="mb-4 rounded-2xl bg-white px-4 py-3 text-sm text-ink">Leader Health is disconnected. You can also remove Leader Health in TikTok under Settings, Security, Manage app permissions.</p> : null}
-      {query.notice === "disconnected-youtube" ? <p role="status" className="mb-4 rounded-2xl bg-white px-4 py-3 text-sm text-ink">Leader Health is disconnected. You can also remove Leader Health in your Google Account under Security, Third-party apps and services.</p> : null}
+      {socialError ? <TimedNotice message={socialError} tone="warn" query="error" className="mb-4" /> : null}
+      {statsNotice ? <TimedNotice message={statsNotice} tone="plain" query="notice" className="mb-4" /> : null}
       {unavailable ? <p className="text-ink">{unavailable}</p> : <AffiliateStatsBoard today={utcDay()} posts={posts} traffic={traffic} saleDays={saleDays} salePeriods={salePeriods} />}
     </section>
   );

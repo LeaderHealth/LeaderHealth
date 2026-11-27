@@ -18,6 +18,7 @@ import {
 } from "@/lib/affiliate/agreements";
 import { agreementSendError } from "@/lib/affiliate/agreement-partnership";
 import { noteComplianceEvent } from "@/lib/affiliate/compliance-log";
+import { acknowledgeAgreementDisclosure } from "@/lib/affiliate/disclosures";
 import { normalizeAffiliateCode } from "@/lib/affiliate/code";
 import { adminAccountEmail, adminIsSignedIn, adminSessionActor } from "@/lib/affiliate/session";
 import { getAffiliate } from "@/lib/affiliate/store";
@@ -149,7 +150,9 @@ export async function acceptAgreementAction(formData: FormData) {
   } catch (error) {
     fail(code, error, wizardStep(formData));
   }
-  await noteComplianceEvent({ actor: await actor(), action: "agreement-signed", code, detail: `${name} acceptance recorded by an admin.` });
+  const by = await actor();
+  await noteComplianceEvent({ actor: by, action: "agreement-signed", code, detail: `${name} acceptance recorded by an admin.` });
+  await acknowledgeAgreementDisclosure({ code, name, actor: by });
   done(code, "agreement-accepted", wizardStep(formData));
 }
 
@@ -163,7 +166,9 @@ export async function signAgreementAction(formData: FormData) {
   } catch (error) {
     fail(code, error, wizardStep(formData));
   }
-  await noteComplianceEvent({ actor: await actor(), action: "agreement-signed", code, detail: `${name} signed agreement stored.` });
+  const by = await actor();
+  await noteComplianceEvent({ actor: by, action: "agreement-signed", code, detail: `${name} signed agreement stored.` });
+  await acknowledgeAgreementDisclosure({ code, name, actor: by });
   done(code, "agreement-signed", wizardStep(formData));
 }
 

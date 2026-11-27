@@ -308,6 +308,37 @@ export async function sendPayoutSentEmail(email: string, label: string, amountCe
   );
 }
 
+export function trafficSpikeCopy(input: { name: string; detail: string }) {
+  const name = input.name.trim() || "An affiliate";
+  const detail = input.detail.trim() || "an unusual number of verified link clicks in one hour";
+  return {
+    subject: "Unusual traffic spike to review",
+    preview: `${name} has an unusual spike in verified link clicks.`,
+    heading: "Review this traffic spike",
+    body: `${name} has an unusual spike: ${detail}. Count those clicks toward pay, or leave that hour out.`,
+    button: "Review the spike",
+  };
+}
+
+export async function sendTrafficSpikeEmail(input: { email: string; name: string; detail: string; url: string }) {
+  const copy = trafficSpikeCopy(input);
+  await deliverAffiliateEmail(
+    input.email,
+    copy.subject,
+    [copy.body, "", "Sign in to count the spike or leave it out of pay.", "", input.url].join("\n"),
+    "Traffic spike email failed",
+    brandedEmailHtml({
+      preview: copy.preview,
+      heading: copy.heading,
+      body: copy.body,
+      note: "Sign in to count the spike or leave it out of pay.",
+      button: copy.button,
+      url: input.url,
+    }),
+    [logoAttachment()],
+  );
+}
+
 export async function sendPostApprovedEmail(email: string, caption: string, format: PostFormat | null = null, agreementPlatform = "") {
   const excerpt = postApprovalExcerpt(caption);
   const url = affiliatePostsUrl();

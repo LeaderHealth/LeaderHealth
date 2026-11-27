@@ -170,7 +170,7 @@ export function WebsiteReportSection({ months }: { months: WebsiteMonthReport[] 
   return (
     <section className="mt-6">
       <h3 className="text-lg">Website traffic</h3>
-      <p className="mt-1 text-sm text-brown">Visits come from tracking links. A promo code is counted when the link carries that code, or when a paid order uses it.</p>
+      <p className="mt-1 text-sm text-brown">Visits come from tracking links. A promo code is counted when the link carries that code, or when a paid order uses it. Visits are not the verified link clicks used for pay.</p>
       <div className="mt-4">
         <SegmentedControl
           label="Website traffic"

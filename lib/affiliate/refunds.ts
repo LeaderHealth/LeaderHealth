@@ -43,6 +43,7 @@ export function commissionRefundTarget(input: {
   originalCommissionCents: number;
   refundedAmountCents: number;
   full: boolean;
+  commissionPercent?: number | null;
 }) {
   const commission = whole(input.originalCommissionCents);
   if (commission === 0) return 0;
@@ -50,6 +51,12 @@ export function commissionRefundTarget(input: {
   if (input.full) return commission;
   if (input.originalAmountCents == null || input.originalAmountCents <= 0 || refunded <= 0) return 0;
   if (refunded >= input.originalAmountCents) return commission;
+  const percent = input.commissionPercent;
+  if (typeof percent === "number" && Number.isFinite(percent) && percent > 0) {
+    const saleLeft = Math.max(0, whole(input.originalAmountCents) - refunded);
+    const remaining = Math.min(commission, Math.round((saleLeft * percent) / 100));
+    return commission - remaining;
+  }
   return Math.min(commission, Math.round((commission * refunded) / input.originalAmountCents));
 }
 
@@ -87,6 +94,7 @@ export function planRefundAdjustments(input: {
   originalCommissionCents: number;
   recorded: readonly RecordedRefund[];
   incoming: readonly RefundObservation[];
+  commissionPercent?: number | null;
 }): PlannedRefund[] {
   const seen = new Set(input.recorded.map((refund) => refund.key));
   let deducted = input.recorded.reduce((sum, refund) => sum + whole(refund.commissionCents), 0);
@@ -109,6 +117,7 @@ export function planRefundAdjustments(input: {
       originalCommissionCents: input.originalCommissionCents,
       refundedAmountCents: nextRefunded,
       full: completesOrder,
+      commissionPercent: input.commissionPercent,
     });
     const delta = target - deducted;
     refunded = nextRefunded;

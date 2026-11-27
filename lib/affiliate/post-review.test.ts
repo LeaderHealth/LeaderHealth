@@ -10,6 +10,8 @@ import {
   assignedCampaignName,
   campaignChangeAllowed,
   canPasteLiveUrl,
+  keepsPublishedOnNote,
+  liveFixFollowUp,
   BRAND_TAG,
   captionHasBrandTag,
   captionHasDisclosure,
@@ -19,18 +21,50 @@ import {
   instagramLinkChecks,
   instagramPostUrl,
   matchInstagramPost,
+  storedMediaMatchesLink,
   manualReportDue,
   metricsAreStale,
   nextContentStatus,
   postMetricFields,
   proposedPublishDate,
   publicationAfterApproval,
+  formatReviewNote,
+  adminRequestLog,
+  nextAdminRequests,
+  reviewableStatus,
   revisionOnResubmit,
   verificationFailureNote,
 } from "./post-review";
 
 const code = "qhwax57x";
 const link = "https://leaderhealth.clinic/?ref=qhwax57x&utm_source=qhwax57x&utm_medium=affiliate";
+
+test("a note keeps the break before a saved reply", () => {
+  assert.equal(
+    formatReviewNote("not good\n\nPlease remove the treatment claim. We can’t make treatment claims in affiliate posts."),
+    "not good\n\nPlease remove the treatment claim. We can’t make treatment claims in affiliate posts.",
+  );
+  assert.equal(
+    formatReviewNote("not goodPlease remove the treatment claim. We can’t make treatment claims in affiliate posts."),
+    "not good\n\nPlease remove the treatment claim. We can’t make treatment claims in affiliate posts.",
+  );
+});
+
+test("each admin request stays in the log", () => {
+  const first = nextAdminRequests([], "", null, "", { note: "yhfgvhy", at: "2026-11-27T22:00:00.000Z", by: "help@myleaderhealth.com" });
+  assert.deepEqual(first, [{ note: "yhfgvhy", at: "2026-11-27T22:00:00.000Z", by: "help@myleaderhealth.com" }]);
+  const second = nextAdminRequests(first, "yhfgvhy", "2026-11-27T22:00:00.000Z", "help@myleaderhealth.com", {
+    note: "Please remove the treatment claim.",
+    at: "2026-11-27T22:30:00.000Z",
+    by: "help@myleaderhealth.com",
+  });
+  assert.equal(second.length, 2);
+  assert.equal(second[0]?.note, "yhfgvhy");
+  assert.equal(second[1]?.note, "Please remove the treatment claim.");
+  const open = adminRequestLog([], "yhfgvhy", "2026-11-27T22:00:00.000Z", "help@myleaderhealth.com");
+  assert.equal(open.length, 1);
+  assert.equal(adminRequestLog(second, "Please remove the treatment claim.", "2026-11-27T22:30:00.000Z", "help@myleaderhealth.com").length, 2);
+});
 
 test("content review moves only from the allowed status", () => {
   assert.equal(nextContentStatus("submitted", "approve"), "approved");
@@ -42,14 +76,31 @@ test("content review moves only from the allowed status", () => {
   assert.equal(nextContentStatus("approved", "approve"), null);
   assert.equal(nextContentStatus("rejected", "revise"), null);
   assert.equal(nextContentStatus("revision_requested", "approve"), null);
+  assert.equal(reviewableStatus("approved", "request"), true);
+  assert.equal(reviewableStatus("approved", "reject"), true);
+  assert.equal(reviewableStatus("approved", "approve"), false);
+  assert.equal(reviewableStatus("rejected", "request"), false);
+  assert.equal(reviewableStatus("withdrawn", "reject"), false);
   assert.equal(publicationAfterApproval("submitted"), "awaiting_publication");
   assert.equal(publicationAfterApproval("approved"), null);
   assert.equal(canPasteLiveUrl("approved", "awaiting_publication"), true);
   assert.equal(canPasteLiveUrl("approved", "verification_failed"), true);
   assert.equal(canPasteLiveUrl("approved", "tracking_active"), false);
   assert.equal(canPasteLiveUrl("submitted", null), false);
+  assert.equal(keepsPublishedOnNote("approved", "tracking_active"), true);
+  assert.equal(keepsPublishedOnNote("approved", "verification_failed"), true);
+  assert.equal(keepsPublishedOnNote("approved", "verification_pending"), true);
+  assert.equal(keepsPublishedOnNote("approved", "awaiting_publication"), false);
+  assert.equal(keepsPublishedOnNote("submitted", null), false);
+  assert.deepEqual(liveFixFollowUp("verification_pending", "Remove the claim."), { publicationStatus: "tracking_active" });
+  assert.deepEqual(liveFixFollowUp("verification_failed", "Remove the claim."), { publicationStatus: "tracking_active" });
+  assert.deepEqual(liveFixFollowUp("tracking_active", "Remove the claim."), {});
+  assert.deepEqual(liveFixFollowUp("verification_pending", ""), {});
+  assert.equal(storedMediaMatchesLink(null, "https://www.instagram.com/p/OLDPOST/"), true);
+  assert.equal(storedMediaMatchesLink("https://www.instagram.com/reel/NEWPOST/", "https://www.instagram.com/reel/NEWPOST/"), true);
+  assert.equal(storedMediaMatchesLink("https://www.instagram.com/p/NEWPOST/", "https://www.instagram.com/p/OLDPOST/"), false);
   assert.equal(contentStatusLabel("submitted"), "In review");
-  assert.equal(contentStatusLabel("revision_requested"), "Needs changes");
+  assert.equal(contentStatusLabel("revision_requested"), "Changes requested");
   assert.equal(contentStatusLabel("withdrawn"), "Withdrawn");
   assert.equal(contentStatusLabel("draft"), "Draft");
   const missingTag = verificationFailureNote("missing_tag");

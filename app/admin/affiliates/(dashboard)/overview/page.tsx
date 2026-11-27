@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { AdminOverviewBoard, type OverviewActivity, type OverviewAffiliate, type OverviewAgreement, type OverviewCompareRow, type OverviewKpi, type OverviewPay, type OverviewStat, type OverviewTodo } from "@/components/affiliate/AdminOverviewBoard";
-import { agreementForMonth, agreementMonthEarning, agreementPostMonth } from "@/lib/affiliate/agreement-earnings";
+import { agreementForMonth, agreementMonthEarning } from "@/lib/affiliate/agreement-earnings";
 import { loadAgreementPayouts, type AgreementPayoutRow } from "@/lib/affiliate/agreement-payouts";
 import { loadAffiliateAgreements, openAgreementQuestion, type AffiliateAgreement } from "@/lib/affiliate/agreements";
 import { LAB_COMMISSIONS_ENABLED } from "@/lib/affiliate/code";
@@ -11,13 +11,13 @@ import { eventPeriod, socialMonthCents, websiteMonthAmount, type PaymentRates } 
 import { loadPaymentRates } from "@/lib/affiliate/payment-store";
 import { listOpenApplications } from "@/lib/affiliate/applications";
 import { memo } from "@/lib/affiliate/memo";
+import { agreementSlotRows, agreementSlotState, type AgreementBoardPost } from "@/lib/affiliate/post-agreement";
 import { loadContentSubmissions, type ContentSubmission } from "@/lib/affiliate/post-review";
 import { currentPayoutPeriod, formatPayoutMonth, loadPayoutRecords, payoutLines, previousPayoutPeriod, type PayoutLine, type PayoutRecord } from "@/lib/affiliate/payouts";
 import { adjustedCommissionCents, earnsLabCommission, remainingSalesCents } from "@/lib/affiliate/refunds";
 import { daySpan, rangeLabel, shortDay, shiftDay } from "@/lib/affiliate/stats-board";
 import { AffiliateStoreError, loadAffiliateOverview, loadUncommissionedPendingOrders, type AffiliateSummary, type ConversionSummary } from "@/lib/affiliate/store";
 import { trafficReview } from "@/lib/affiliate/traffic-review";
-import { loadWebsiteEvents, type WebsiteVisit } from "@/lib/affiliate/website-report";
 import { adminHasFullAccess, adminSessionActor } from "@/lib/affiliate/session";
 
 export const metadata: Metadata = {
@@ -159,6 +159,14 @@ function countDelta(now: number, last: number, invert = false) {
   };
 }
 
+function agreementPipColor(label: string) {
+  if (label === "Verified") return "#1D6340";
+  if (label === "Ready to publish") return "#33130F";
+  if (label === "In review" || label === "Checking the link" || label === "Checking the update") return "#E9C98A";
+  if (label === "Needs a fix" || label === "Changes requested" || label === "Live but changes requested") return "#9B2C1F";
+  return "#E8DEDC";
+}
+
 function waitingDays(oldest: string, today: string) {
   const start = Date.parse(`${dayOf(oldest)}T00:00:00.000Z`);
   const end = Date.parse(`${today}T00:00:00.000Z`);
@@ -215,7 +223,6 @@ export default async function AffiliateOverviewPage({ searchParams }: { searchPa
       : Promise.resolve({ unavailable: false, count: null as number | null }),
     Promise.all([
       memo("payment-rates", () => loadPaymentRates()),
-      memo("website-events", () => loadWebsiteEvents()),
       ...eventMonths.map((period) => memo(`marketing-events:${period}`, () => loadMarketingEvents({ period }))),
       ...eventMonths.map((period) => memo(`website-payouts-period:${period}`, () => loadWebsitePayouts(period))),
     ]).then(
@@ -263,12 +270,10 @@ export default async function AffiliateOverviewPage({ searchParams }: { searchPa
   let contentRates: PaymentRates | null = null;
   let marketingEvents: Awaited<ReturnType<typeof loadMarketingEvents>> = [];
   let websiteSnapshots: Awaited<ReturnType<typeof loadWebsitePayouts>> = [];
-  let websiteVisits: WebsiteVisit[] = [];
   let websiteReady = false;
   if (websiteBundle.ok) {
-    const [rates, website, ...rest] = websiteBundle.value;
+    const [rates, ...rest] = websiteBundle.value;
     contentRates = rates as PaymentRates | null;
-    websiteVisits = (website as { visits: WebsiteVisit[] }).visits;
     const events = rest.slice(0, eventMonths.length) as Awaited<ReturnType<typeof loadMarketingEvents>>[];
     const snapshots = rest.slice(eventMonths.length) as Awaited<ReturnType<typeof loadWebsitePayouts>>[];
     marketingEvents = events.flat();
@@ -352,9 +357,9 @@ export default async function AffiliateOverviewPage({ searchParams }: { searchPa
     return paidOrders(code, start, end).filter((conversion) => conversion.promoCode);
   }
 
-  function visitsFor(code: string, start: string, end: string) {
+  function linkClicksFor(code: string, start: string, end: string) {
     if (!websiteReady) return null;
-    return websiteVisits.filter((visit) => visit.code === code && inSpan(visit.createdAt, start, end)).length;
+    return marketingEvents.filter((event) => event.code === code && event.kind === "click" && event.payable && event.excluded !== true && inSpan(event.createdAt, start, end)).length;
   }
 
   function viewsFor(code: string, start: string, end: string) {
@@ -374,7 +379,6 @@ export default async function AffiliateOverviewPage({ searchParams }: { searchPa
   const viewNow = affiliates.reduce((sum, affiliate) => sum + (viewsFor(affiliate.code, selected.start, selected.end) ?? 0), 0);
   const viewThen = affiliates.reduce((sum, affiliate) => sum + (viewsFor(affiliate.code, previous.start, previous.end) ?? 0), 0);
   const viewChange = changeNote(viewNow, viewThen, selected.previousName);
-  const visitNow = websiteReady ? websiteVisits.filter((visit) => inSpan(visit.createdAt, selected.start, selected.end)).length : null;
   const labSaleOrders = conversions.filter(
     (conversion) => !conversion.dryRun && conversion.orderKind === "lab" && inSpan(conversion.createdAt, selected.start, selected.end) && remainingSalesCents(conversion.amountCents, conversion.refundedAmountCents) > 0,
   );
@@ -465,8 +469,8 @@ export default async function AffiliateOverviewPage({ searchParams }: { searchPa
       ? [
           {
             n: applications.unavailable || applications.count == null ? "—" : String(applications.count),
-            title: "Application to approve",
-            sub: applications.unavailable ? "Unavailable right now" : "Waiting for approval",
+            title: applications.count === 1 ? "Application to approve" : "Applications to approve",
+            sub: applications.unavailable ? "Unavailable right now" : applications.count ? "Waiting for approval" : "None waiting",
             href: "/admin/affiliates/applications",
             active: !applications.unavailable && (applications.count ?? 0) > 0,
             urgent: false,
@@ -476,7 +480,7 @@ export default async function AffiliateOverviewPage({ searchParams }: { searchPa
     {
       n: postsReady ? String(failedLinks.length) : "—",
       title: "Link check failed",
-      sub: !postsReady ? "Unavailable right now" : failedLinks.length === 0 ? "No live posts need a link fix" : failedLinks.length === 1 ? `${failedName} · link needs a fix` : "Tracking link missing on a live post",
+      sub: !postsReady ? "Unavailable right now" : failedLinks.length === 0 ? "No live posts need a link fix" : failedLinks.length === 1 ? `${failedName} · Needs a fix` : "Tracking link missing on a live post",
       href: "/admin/affiliates/posts/published",
       active: postsReady && failedLinks.length > 0,
       urgent: false,
@@ -485,7 +489,7 @@ export default async function AffiliateOverviewPage({ searchParams }: { searchPa
       n: websiteReady ? String(spikeRows.length) : "—",
       title: "Traffic spike to review",
       sub: !websiteReady ? "Unavailable right now" : spikeRows.length === 0 ? "No spike this month" : `${spikeRows[0]?.name ?? "An affiliate"} · ${spikeRows[0]?.spikeLabel ?? "unusual clicks"}`,
-      href: "/admin/affiliates/reporting",
+      href: spikeRows[0] ? `/admin/affiliates/reporting?month=${currentPeriod}&review=${encodeURIComponent(spikeRows[0].code)}` : "/admin/affiliates/reporting",
       active: websiteReady && spikeRows.length > 0,
       urgent: false,
     },
@@ -499,12 +503,18 @@ export default async function AffiliateOverviewPage({ searchParams }: { searchPa
       noteClass: "text-[#4A3A37]",
     },
     { label: "Views", value: postsReady ? viewNow.toLocaleString("en-US") : "—", note: postsReady ? viewChange.text : "Unavailable right now", noteClass: postsReady ? viewChange.className : "text-[#4A3A37]" },
-    { label: "Visits", value: visitNow == null ? "—" : String(visitNow), note: visitNow == null ? "Unavailable right now" : "Tracking + promo links", noteClass: "text-[#4A3A37]" },
+    { label: "Verified link clicks", value: websiteReady ? clicks.toLocaleString("en-US") : "—", note: websiteReady ? "Payable clicks" : "Unavailable right now", noteClass: "text-[#4A3A37]" },
     {
       label: "Lab orders",
       value: String(labCommissionOrders.length),
-      note: unpaidTotal == null ? "Checkout count unavailable" : `${unpaidTotal} checkouts not finished\nNot counted`,
-      noteClass: "whitespace-pre-line rounded-md bg-[#FBEFD6] px-2 py-1 leading-snug text-[#7A4E00]",
+      note: "Paid lab orders",
+      noteClass: "text-[#4A3A37]",
+    },
+    {
+      label: "Checkouts not finished",
+      value: unpaidTotal == null ? "—" : unpaidTotal.toLocaleString("en-US"),
+      note: unpaidTotal == null ? "Unavailable right now" : "Not counted",
+      noteClass: "text-[#7A4E00]",
     },
     { label: "Posts verified", value: `${verifiedNow} of ${requiredNow}`, note: "Across all agreements", noteClass: "text-[#4A3A37]" },
   ];
@@ -519,7 +529,7 @@ export default async function AffiliateOverviewPage({ searchParams }: { searchPa
       noteClass: "text-[#6B5A57]",
       tip: "Paid orders that used the code. Commission is lab orders only.",
     },
-    { label: "Verified link clicks", value: websiteReady ? clicks.toLocaleString("en-US") : "—", note: "Your tracking link", noteClass: "text-[#6B5A57]", tip: "Verified link clicks" },
+    { label: "Verified link clicks", value: websiteReady ? clicks.toLocaleString("en-US") : "—", note: "Payable clicks", noteClass: "text-[#6B5A57]", tip: "Verified link clicks" },
     { label: "Public page views", value: websiteReady ? pageViews.toLocaleString("en-US") : "—", note: "Approved Leader Health pages", noteClass: "text-[#6B5A57]", tip: "Public page views" },
   ];
 
@@ -530,14 +540,27 @@ export default async function AffiliateOverviewPage({ searchParams }: { searchPa
     return [{ day, platform: chartPlatform(post), views: countOf(post.views), engagements: engagementOf(post) }];
   });
 
+  const boardPosts: AgreementBoardPost[] = contentPosts.map((post) => ({
+    id: post.id,
+    agreementId: post.agreementId,
+    contentStatus: post.contentStatus,
+    offerId: post.offerId,
+    publishedAt: post.publishedAt,
+    submittedAt: post.submittedAt,
+    postingMonth: post.postingMonth,
+    publicationStatus: post.publicationStatus,
+    reviewNote: post.reviewNote,
+    title: "",
+    agreementSlot: post.agreementSlot,
+    format: post.format,
+    fileCount: post.files.length || (post.filePath ? 1 : 0),
+    agreementPlatform: post.agreementPlatform,
+    agreementPostType: post.agreementPostType,
+    liveFixNote: post.liveFixNote,
+  }));
   const agreementRows: OverviewAgreement[] = affiliates.flatMap((affiliate) => {
     const agreement = agreementForMonth(agreements, affiliate.code, currentPeriod);
     if (!agreement) return [];
-    const inMonth = contentPosts.filter(
-      (post) => post.code === affiliate.code && post.agreementId === agreement.id && agreementPostMonth(post) === currentPeriod && post.contentStatus !== "rejected" && post.contentStatus !== "withdrawn" && post.contentStatus !== "draft",
-    );
-    const verified = inMonth.filter((post) => post.publicationStatus === "tracking_active").length;
-    const review = inMonth.filter((post) => post.publicationStatus !== "tracking_active").length;
     const required = agreementMonthEarning({
       agreements,
       posts: contentPosts,
@@ -545,12 +568,25 @@ export default async function AffiliateOverviewPage({ searchParams }: { searchPa
       period: currentPeriod,
       snapshot: agreementPayouts.find((row) => row.code === affiliate.code && row.period === currentPeriod) ?? null,
     }).requiredPosts;
+    const labels = agreementSlotRows(boardPosts, agreement.id, currentPeriod, required, agreement.posts).map((row) => agreementSlotState(row.post));
+    const verified = labels.filter((label) => label === "Verified").length;
+    const ready = labels.filter((label) => label === "Ready to publish").length;
+    const review = labels.filter((label) => label === "In review").length;
+    const checking = labels.filter((label) => label === "Checking the link" || label === "Checking the update").length;
+    const changes = labels.filter((label) => label === "Changes requested").length;
+    const fix = labels.filter((label) => label === "Needs a fix").length;
     const left = Math.max(0, Number(monthEnd(currentPeriod).slice(8, 10)) - Number(today.slice(8, 10)));
-    const parts = [`${verified} verified`];
-    if (review) parts.push(`${review} in review`);
+    const parts = [
+      verified ? `${verified} verified` : "",
+      ready ? `${ready} ready to publish` : "",
+      review ? `${review} in review` : "",
+      checking ? `${checking} checking the link` : "",
+      changes ? `${changes} ${changes === 1 ? "change requested" : "changes requested"}` : "",
+      labels.filter((label) => label === "Live but changes requested").length ? `${labels.filter((label) => label === "Live but changes requested").length} live with changes requested` : "",
+      fix ? `${fix} ${fix === 1 ? "needs a fix" : "need a fix"}` : "",
+    ].filter(Boolean);
     if (today.slice(0, 7) === currentPeriod) parts.push(left === 0 ? "Month ends today" : `${left} ${left === 1 ? "day" : "days"} left`);
-    const onTrack = required > 0 && verified >= required;
-    const moving = verified + review > 0;
+    const complete = required > 0 && verified >= required;
     const mix = agreement.posts
       .filter((post) => post.count > 0)
       .map((post) => `${post.count} ${post.platform} ${post.count === 1 ? "post" : "posts"}`)
@@ -560,10 +596,10 @@ export default async function AffiliateOverviewPage({ searchParams }: { searchPa
         initials: initials(affiliate.name),
         name: affiliate.name,
         terms: `${agreement.monthlyCents ? `${formatCents(agreement.monthlyCents)}/month` : "No monthly amount"}${mix ? ` · ${mix}` : ""}`,
-        pips: Array.from({ length: required }, (_, index) => (index < verified ? "#1D6340" : index < verified + review ? "#E9C98A" : "#E8DEDC")),
+        pips: labels.map(agreementPipColor),
         progress: parts.join(" · "),
-        label: onTrack ? "Complete" : moving ? "On track" : "Behind",
-        pillClass: onTrack || moving ? "bg-[#DDF0E4] text-[#1D6340]" : "bg-[#FBEFD6] text-[#7A4E00]",
+        label: complete ? "Complete" : "Behind",
+        pillClass: complete ? "bg-[#DDF0E4] text-[#1D6340]" : "bg-[#FBEFD6] text-[#7A4E00]",
         href: `/admin/affiliates/accounts?code=${encodeURIComponent(affiliate.code)}&view=agreements`,
       },
     ];
@@ -574,8 +610,8 @@ export default async function AffiliateOverviewPage({ searchParams }: { searchPa
     const lastViews = viewsFor(code, `${priorPeriod}-01`, monthEnd(priorPeriod)) ?? 0;
     const nowEng = engagementsFor(code, `${currentPeriod}-01`, today) ?? 0;
     const lastEng = engagementsFor(code, `${priorPeriod}-01`, monthEnd(priorPeriod)) ?? 0;
-    const nowVisits = visitsFor(code, `${currentPeriod}-01`, today) ?? 0;
-    const lastVisits = visitsFor(code, `${priorPeriod}-01`, monthEnd(priorPeriod)) ?? 0;
+    const nowClicks = linkClicksFor(code, `${currentPeriod}-01`, today) ?? 0;
+    const lastClicks = linkClicksFor(code, `${priorPeriod}-01`, monthEnd(priorPeriod)) ?? 0;
     const nowPaidOrders = paidOrders(code, `${currentPeriod}-01`, today);
     const lastPaidOrders = paidOrders(code, `${priorPeriod}-01`, monthEnd(priorPeriod));
     const nowLab = nowPaidOrders.filter((order) => earnsLabCommission(order)).length;
@@ -588,7 +624,7 @@ export default async function AffiliateOverviewPage({ searchParams }: { searchPa
     const counts: { label: string; now: number; last: number; invert?: boolean; note?: string }[] = [
       { label: "Views", now: nowViews, last: lastViews },
       { label: "Engagements", now: nowEng, last: lastEng },
-      { label: "Visits", now: nowVisits, last: lastVisits },
+      { label: "Verified link clicks", now: nowClicks, last: lastClicks },
       { label: "Paid orders", now: nowPaidOrders.length, last: lastPaidOrders.length },
       { label: "Lab orders", now: nowLab, last: lastLab },
       { label: "Orders without commission", now: nowPaidOrders.length - nowLab, last: lastPaidOrders.length - lastLab },
@@ -677,7 +713,7 @@ export default async function AffiliateOverviewPage({ searchParams }: { searchPa
       rank: String(index + 1),
       name: row.affiliate.name,
       views: (viewsFor(row.affiliate.code, selected.start, selected.end) ?? 0).toLocaleString("en-US"),
-      visits: visitsFor(row.affiliate.code, selected.start, selected.end)?.toLocaleString("en-US") ?? "—",
+      linkClicks: linkClicksFor(row.affiliate.code, selected.start, selected.end)?.toLocaleString("en-US") ?? "—",
       engagements: engagements == null ? "—" : engagements.toLocaleString("en-US"),
       labOrders: String(labOrders),
       labClass: labOrders > 0 ? "text-[#1D6340]" : "text-[#B3A5A2]",

@@ -2,20 +2,20 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CopyTrackingLink } from "@/components/affiliate/CopyTrackingLink";
+import { TimedNotice } from "@/components/affiliate/TimedNotice";
 import { affiliateCampaignBoard } from "@/lib/affiliate/affiliate-campaigns";
-import { loadAffiliateAgreements, type AffiliateAgreement } from "@/lib/affiliate/agreements";
+import { hasAcceptedAgreement, loadAffiliateAgreements, type AffiliateAgreement } from "@/lib/affiliate/agreements";
 import { agreementMonthEarning, agreementForMonth, agreementPostMonth, type AgreementMonthEarning } from "@/lib/affiliate/agreement-earnings";
 import { loadAgreementPayoutsForCode, type AgreementPayoutRow } from "@/lib/affiliate/agreement-payouts";
 import { agreementPostTotal } from "@/lib/affiliate/agreement-partnership";
 import { LAB_COMMISSIONS_ENABLED } from "@/lib/affiliate/code";
 import { deliverableLines, loadDeliverablePayments, marketingTotals } from "@/lib/affiliate/deliverable-payments";
-import { disclosureAcknowledged } from "@/lib/affiliate/disclosures";
 import { formatCents, formatPublishDate, publishDateValue } from "@/lib/affiliate/format";
 import { affiliateTrackingLink } from "@/lib/affiliate/link";
 import { eventPeriod, socialMonthCents } from "@/lib/affiliate/payment-rates";
 import { currentPayoutPeriod, formatPayoutMonth, loadPayoutRecords, type PayoutRecord } from "@/lib/affiliate/payouts";
 import { agreementSlotRows, agreementSlotState, mixSentence, placedSlotNumber, postIdentity, postPlaceLabel, postTypeLabel, type AgreementBoardPost } from "@/lib/affiliate/post-agreement";
-import { contentStatusLabel, loadContentSubmissions, publicationStatusLabel, type ContentSubmission } from "@/lib/affiliate/post-review";
+import { contentStatusLabel, loadContentSubmissions, type ContentSubmission } from "@/lib/affiliate/post-review";
 import { earnsLabCommission, remainingSalesCents } from "@/lib/affiliate/refunds";
 import { memo } from "@/lib/affiliate/memo";
 import { loadMarketingCampaignRecords } from "@/lib/affiliate/roi-store";
@@ -152,7 +152,8 @@ function engagementsOf(post: ContentSubmission) {
 function pipColor(label: string) {
   if (label === "Verified") return "#1D6340";
   if (label === "Ready to publish") return "#33130F";
-  if (label === "In review") return "#E9C98A";
+  if (label === "In review" || label === "Checking the link" || label === "Checking the update") return "#E9C98A";
+  if (label === "Needs a fix" || label === "Changes requested" || label === "Live but changes requested") return "#9B2C1F";
   return "#E8DEDC";
 }
 
@@ -169,13 +170,18 @@ function overviewBoard(posts: ContentSubmission[]): AgreementBoardPost[] {
     reviewNote: post.reviewNote,
     title: "",
     agreementSlot: post.agreementSlot,
+    format: post.format,
+    fileCount: post.files.length || (post.filePath ? 1 : 0),
+    agreementPlatform: post.agreementPlatform,
+    agreementPostType: post.agreementPostType,
+    liveFixNote: post.liveFixNote,
   }));
 }
 
 function recentKind(post: ContentSubmission, rows: AgreementBoardPost[], agreements: readonly AffiliateAgreement[]) {
   const owner = agreements.find((item) => item.id === post.agreementId);
   const total = owner ? agreementPostTotal(owner.posts) : 0;
-  const slot = placedSlotNumber(rows, post.agreementId, agreementPostMonth(post), total, post.id);
+  const slot = placedSlotNumber(rows, post.agreementId, agreementPostMonth(post), total, post.id, owner?.posts ?? []);
   const place = postPlaceLabel(
     { offerId: post.offerId, agreementId: post.agreementId, agreementSlot: post.agreementSlot },
     slot,
@@ -193,7 +199,7 @@ function recentKind(post: ContentSubmission, rows: AgreementBoardPost[], agreeme
 function paymentLine(earning: AgreementMonthEarning, left: number, socialCents: number) {
   const base = earning.status === "none" ? 0 : earning.earnedCents;
   const total = base + socialCents;
-  const sum = `${formatCents(total)} · ${formatCents(base)} base + ${formatCents(socialCents)} social`;
+  const sum = `${formatCents(total)} · ${formatCents(base)} agreement + ${formatCents(socialCents)} social`;
   if (earning.status === "paid") return { text: `Paid · ${sum}`, className: "bg-[#DDF0E4] text-[#1D6340]" };
   if (earning.status === "earned" || earning.status === "approved") return { text: `Requirements met · ${sum}`, className: "bg-[#DDF0E4] text-[#1D6340]" };
   if (socialCents > 0) return { text: sum, className: "bg-[#F7F3F2] text-ink" };
@@ -202,13 +208,17 @@ function paymentLine(earning: AgreementMonthEarning, left: number, socialCents: 
 }
 
 function postStatus(post: ContentSubmission) {
+  if (post.liveFixNote && post.publicationStatus === "tracking_active") return { label: "Live but changes requested", className: "bg-[#FBE3DF] text-[#9B2C1F]", href: "/affiliates/posts" };
+  if (post.liveFixNote && post.publicationStatus === "verification_pending") return { label: "Checking the update", className: "bg-[#FBEFD6] text-[#7A4E00]", href: "" };
+  if (post.liveFixNote) return { label: "Paste the updated link", className: "bg-[#FBE3DF] text-[#9B2C1F]", href: "/affiliates/posts" };
   if (post.publicationStatus === "tracking_active") return { label: "Verified", className: "bg-[#DDF0E4] text-[#1D6340]", href: "" };
+  if (post.publicationStatus === "verification_failed") return { label: "Needs a fix", className: "bg-[#FBE3DF] text-[#9B2C1F]", href: "/affiliates/posts" };
   if (post.contentStatus === "approved" && (post.publicationStatus === "awaiting_publication" || post.publicationStatus == null)) {
     return { label: "Ready to publish", className: "bg-ink text-white", href: "/affiliates/posts" };
   }
-  if (post.contentStatus === "submitted" || post.contentStatus === "revision_requested" || post.publicationStatus === "verification_pending") {
-    return { label: post.publicationStatus === "verification_pending" ? publicationStatusLabel(post.publicationStatus) : contentStatusLabel(post.contentStatus), className: "bg-[#FBEFD6] text-[#7A4E00]", href: "" };
-  }
+  if (post.publicationStatus === "verification_pending") return { label: "Checking the link", className: "bg-[#FBEFD6] text-[#7A4E00]", href: "" };
+  if (post.contentStatus === "revision_requested") return { label: "Changes requested", className: "bg-[#FBE3DF] text-[#9B2C1F]", href: "" };
+  if (post.contentStatus === "submitted") return { label: "In review", className: "bg-[#FBEFD6] text-[#7A4E00]", href: "" };
   return { label: contentStatusLabel(post.contentStatus), className: "bg-[#EFEAE9] text-[#4A3A37]", href: "" };
 }
 
@@ -295,6 +305,7 @@ export default async function AffiliatePortalOverviewPage({
         publicationStatus: post.publicationStatus,
         format: post.format,
         reviewNote: post.reviewNote,
+        liveFixNote: post.liveFixNote,
         hasFile: Boolean(post.filePath),
         createdAt: post.createdAt,
       })),
@@ -307,16 +318,11 @@ export default async function AffiliatePortalOverviewPage({
 
   let personalCode: string | null = null;
   let promosUnavailable = false;
-  let acknowledged = false;
+  const acknowledged = hasAcceptedAgreement(agreements);
   try {
     personalCode = personalPromoForAffiliate(await memo("promo-codes", () => listPromoCodes()), affiliate.code)?.code ?? null;
   } catch {
     promosUnavailable = true;
-  }
-  try {
-    acknowledged = await memo(`disclosure-ack:${affiliate.code}`, () => disclosureAcknowledged(affiliate.code));
-  } catch {
-    acknowledged = false;
   }
 
   const countedIn = (start: number, end: number, commissioned: boolean) =>
@@ -358,14 +364,10 @@ export default async function AffiliatePortalOverviewPage({
     period: currentPeriod,
     snapshot: agreementPayouts.find((row) => row.period === currentPeriod) ?? null,
   });
-  const monthPosts = agreement
-    ? ownPosts.filter((post) => post.agreementId === agreement.id && agreementPostMonth(post) === currentPeriod && post.contentStatus !== "rejected" && post.contentStatus !== "withdrawn" && post.contentStatus !== "draft")
-    : [];
-  const verified = monthPosts.filter((post) => post.publicationStatus === "tracking_active").length;
   const required = agreement ? agreementPostTotal(agreement.posts) : 0;
-  const shownVerified = Math.min(verified, required);
+  const slotRows = agreement ? agreementSlotRows(overviewBoard(ownPosts), agreement.id, currentPeriod, required, agreement.posts) : [];
+  const shownVerified = slotRows.filter((row) => agreementSlotState(row.post) === "Verified").length;
   const left = Math.max(0, required - shownVerified);
-  const slotRows = agreement ? agreementSlotRows(overviewBoard(ownPosts), agreement.id, currentPeriod, required) : [];
   const pips = slotRows.map((row) => {
     const label = agreementSlotState(row.post);
     return { number: row.number, label, color: pipColor(label) };
@@ -394,7 +396,7 @@ export default async function AffiliatePortalOverviewPage({
     .sort((leftPost, rightPost) => (postStamp(rightPost) ?? "").localeCompare(postStamp(leftPost) ?? ""))
     .slice(0, 3);
   const windowText = rangeLabel(windowStart, windowEnd - 1);
-  const createHref = acknowledged ? "/affiliates/posts/new" : "/affiliates/tracking-link";
+  const createHref = acknowledged ? "/affiliates/posts/new" : "/affiliates/contracts#agreements";
 
   return (
     <div className="space-y-[18px]">
@@ -426,15 +428,17 @@ export default async function AffiliatePortalOverviewPage({
       {loadError ? <p className="text-ink">{loadError}</p> : null}
 
       {inviteName ? (
-        <div role="status" className="flex flex-wrap items-center gap-3 rounded-2xl bg-[#FBF6EC] px-[18px] py-3">
-          <span className="size-2 shrink-0 rounded-full bg-[#C98A1A]" aria-hidden="true" />
-          <span className="min-w-[240px] flex-1 text-[15px]">
-            New campaign invitation: <b>{inviteName}</b>
+        <TimedNotice message={inviteName} tone="warm" ms={8000}>
+          <span className="flex flex-wrap items-center gap-3">
+            <span className="size-2 shrink-0 rounded-full bg-[#C98A1A]" aria-hidden="true" />
+            <span className="min-w-[200px] flex-1">
+              New campaign invitation: <b>{inviteName}</b>
+            </span>
+            <Link href="/affiliates/campaigns" className="text-sm font-medium text-ink underline underline-offset-4">
+              Review invitation
+            </Link>
           </span>
-          <Link href="/affiliates/campaigns" className="text-sm font-medium text-ink">
-            Review invitation
-          </Link>
-        </div>
+        </TimedNotice>
       ) : null}
 
       <section aria-labelledby="performance-title" className="flex flex-col gap-3.5 rounded-[24px] bg-white px-6 py-[22px]">
@@ -469,7 +473,7 @@ export default async function AffiliatePortalOverviewPage({
                 <CopyTrackingLink url={trackingLink} label="Copy" accessibleName="Copy tracking link" copiedNotice="Link copied." failedNotice="Couldn't copy the link." />
               </div>
             ) : (
-              <p className="text-sm text-[#4A3A37]">Accept the sponsorship agreement on the referral link page before sharing your tracking link.</p>
+              <p className="text-sm text-[#4A3A37]">Your tracking link opens once you accept your agreement.</p>
             )}
             <span className="text-[13px] text-[#4A3A37]">Optional in the caption. Tag @myleaderhealth in every caption so the post can track. A link in your bio doesn’t count.</span>
           </div>
@@ -483,7 +487,7 @@ export default async function AffiliatePortalOverviewPage({
               </div>
             ) : (
               <p className="text-sm text-[#4A3A37]">
-                {acknowledged ? (promosUnavailable ? "Promo codes are unavailable right now." : "No personal code is assigned yet.") : "Your code stays closed until you accept the sponsorship agreement."}
+                {acknowledged ? (promosUnavailable ? "Promo codes are unavailable right now." : "No personal code is assigned yet.") : "Your code opens once you accept your agreement."}
               </p>
             )}
             <span className="text-[13px] text-[#4A3A37]">
@@ -558,10 +562,16 @@ export default async function AffiliatePortalOverviewPage({
             <span className="text-[13px] text-[#6B5A57]">Waiting to be sent</span>
           </div>
           <div className="flex flex-col gap-0.5 rounded-2xl bg-[#F7F3F2] px-4 py-3.5">
-            <span className="text-sm text-[#4A3A37]">In review</span>
-            <span className="text-[26px] font-medium">{formatCents(marketing.pendingCents + marketing.heldCents)}</span>
-            <span className="text-[13px] text-[#6B5A57]">{marketing.heldCents > 0 ? `Earned, not approved yet · ${formatCents(marketing.heldCents)} on hold` : "Earned, not approved yet"}</span>
+            <span className="text-sm text-[#4A3A37]">Needs approval</span>
+            <span className="text-[26px] font-medium">{formatCents(marketing.pendingCents)}</span>
+            <span className="text-[13px] text-[#6B5A57]">Earned, not approved yet</span>
           </div>
+          {marketing.heldCents > 0 ? (
+            <div className="flex flex-col gap-0.5 rounded-2xl bg-[#F7F3F2] px-4 py-3.5">
+              <span className="text-sm text-[#4A3A37]">On hold</span>
+              <span className="text-[26px] font-medium">{formatCents(marketing.heldCents)}</span>
+            </div>
+          ) : null}
           <div className="flex flex-col gap-0.5 rounded-2xl bg-[#F7F3F2] px-4 py-3.5">
             <span className="text-sm text-[#4A3A37]">Paid to date</span>
             <span className="text-[26px] font-medium">{formatCents(marketing.paidCents)}</span>

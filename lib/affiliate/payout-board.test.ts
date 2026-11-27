@@ -152,6 +152,6 @@ test("the monthly posting rate shows as a base payment once earned, and a short 
   assert.equal(october?.amountCents, 30000);
   assert.equal(november?.status, "review");
   assert.equal(november?.amountCents, 0);
-  assert.match(november?.work ?? "", /2 of 4 required posts live/);
+  assert.match(november?.work ?? "", /2 of 4 required posts verified/);
   assert.equal(items.some((item) => item.id === "monthly-2026-09"), false);
 });

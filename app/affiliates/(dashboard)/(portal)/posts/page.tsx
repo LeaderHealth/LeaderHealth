@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { acknowledgeDisclosureAction } from "../../../compliance-actions";
+import { AgreementRequired } from "@/components/affiliate/AgreementRequired";
+import { TimedNotice } from "@/components/affiliate/TimedNotice";
 import { PostsHub, type HubPost } from "@/components/affiliate/PostsHub";
-import { disclosureAcknowledged } from "@/lib/affiliate/disclosures";
 import { deliverableDetail, deliverablePhase, deliverableStatusLabel, holdEndsAt } from "@/lib/affiliate/deliverable-flow";
 import { resolvedTrackingDays, viewPayCents } from "@/lib/affiliate/manual-checkpoint";
 import { loadDeliverablePayments, type DeliverablePayment } from "@/lib/affiliate/deliverable-payments";
@@ -11,13 +11,13 @@ import { rateFor, standingViewRateCents } from "@/lib/affiliate/payment-rates";
 import { loadPaymentRates } from "@/lib/affiliate/payment-store";
 import { affiliateTrackingLink } from "@/lib/affiliate/link";
 import { postSourceLabel } from "@/lib/affiliate/offer-post";
-import { DISCLOSURE_LINE, instagramCheckCopy, instagramLinkChecks, loadContentSubmissions, manualReportDue, metricLines, metricsOriginLabel, networkConnectedForPost, type ContentSubmission } from "@/lib/affiliate/post-review";
+import { adminRequestLog, DISCLOSURE_LINE, instagramCheckCopy, instagramLinkChecks, loadContentSubmissions, manualReportDue, metricLines, metricsOriginLabel, networkConnectedForPost, type ContentSubmission } from "@/lib/affiliate/post-review";
 import { formatPlatform } from "@/lib/affiliate/post-format";
 import { affiliateCanAttachCampaign } from "@/lib/affiliate/campaign-record";
 import { loadMarketingCampaignRecords } from "@/lib/affiliate/roi-store";
 import { instagramConfigured, tiktokConfigured } from "@/lib/affiliate/social-oauth";
 import { loadSocialAccounts, type SocialAccountView } from "@/lib/affiliate/social-store";
-import { loadAffiliateAgreements, utcAgreementToday } from "@/lib/affiliate/agreements";
+import { hasAcceptedAgreement, loadAffiliateAgreements, utcAgreementToday } from "@/lib/affiliate/agreements";
 import { agreementPostMonth, agreementMonthPeriods } from "@/lib/affiliate/agreement-earnings";
 import { presentAgreement } from "@/lib/affiliate/agreement-view";
 import { agreementBoardPeriod, agreementMonthBoard, postingAgreement, type AgreementBoardPost, type PostingAgreement } from "@/lib/affiliate/post-agreement";
@@ -31,14 +31,10 @@ export const metadata: Metadata = {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const buttonClass =
-  "inline-flex min-h-11 items-center justify-center rounded-full bg-ink px-5 text-sm font-medium text-white hover:bg-brown focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
-
 const postErrors: Record<string, string> = {
-  acknowledge: "Confirm the sponsorship disclosure before continuing.",
   invalid: "Add a caption and a picture or video.",
   disclosure: "Include “Paid partnership with Leader Health” in the caption.",
-  tag: "Tag @myleaderhealth in the caption. The post does not track without that tag.",
+  tag: "Tag @myleaderhealth in the caption. Your agreement requires this tag.",
   link: "Put your tracking link in the caption. A link in your bio is not enough.",
   url: "Paste the link from the TikTok, Instagram post, or Instagram reel you published.",
   file: "Use a PNG, JPEG, or WebP image under 8 MB, or an MP4, MOV, or WebM video under 200 MB. A saved TikTok video is usually an MP4.",
@@ -104,9 +100,13 @@ function historyFor(post: ContentSubmission): HubPost["history"] {
   if (post.contentStatus === "rejected") events.push({ label: "Not approved", when: when(post.reviewedAt), note: post.reviewNote, tone: "bad" });
   if (post.contentStatus === "withdrawn") events.push({ label: "You withdrew it", when: when(post.reviewedAt), note: "", tone: "neutral" });
   if (post.contentStatus === "approved") events.push({ label: "Approved", when: when(post.reviewedAt), note: "", tone: "neutral" });
+  if (post.liveFixNote) events.push({ label: "Update the live post and paste the link", when: when(post.reviewedAt), note: post.liveFixNote, tone: "bad" });
   if (post.postUrl) events.push({ label: post.format === "instagram_reel" ? "You added the reel link" : `You added the ${formatPlatform(post.format) || "Instagram"} link`, when: "", note: post.postUrl, tone: "neutral" });
   if (post.publicationStatus === "tracking_active") events.push({ label: "Live. @myleaderhealth found", when: "", note: "", tone: "good" });
-  if (post.publicationStatus === "verification_failed") events.push({ label: "The Instagram check needs a fix", when: "", note: post.verificationNote, tone: "bad" });
+  if (post.publicationStatus === "verification_failed") {
+    const platform = formatPlatform(post.format);
+    events.push({ label: platform ? `${platform} · Needs a fix` : "Needs a fix", when: "", note: post.verificationNote, tone: "bad" });
+  }
   return events;
 }
 
@@ -156,8 +156,8 @@ function paymentCopy(post: ContentSubmission, payment: DeliverablePayment | unde
 }
 
 function hubPost(post: ContentSubmission, accounts: SocialAccountView[], payment: DeliverablePayment | undefined): HubPost {
-  const copy = instagramCheckCopy(post.publicationStatus, post.verificationNote);
   const platform = formatPlatform(post.format);
+  const copy = instagramCheckCopy(post.publicationStatus, post.verificationNote, platform || "Instagram");
   const detail = post.publicationStatus === "tracking_active" && platform && platform !== "Instagram"
     ? `${platform} engagement for this post shows in Stats. It does not change commission or payouts.`
     : copy.detail;
@@ -178,6 +178,11 @@ function hubPost(post: ContentSubmission, accounts: SocialAccountView[], payment
     publication: post.publicationStatus,
     sent: formatDay(post.createdAt),
     reviewNote: post.reviewNote,
+    liveFixNote: post.liveFixNote,
+    requests: adminRequestLog(post.adminRequests, post.liveFixNote || post.reviewNote, post.reviewedAt, post.reviewedBy).map((entry) => ({
+      note: entry.note,
+      when: entry.at ? formatWhen(entry.at) : "",
+    })),
     postUrl: post.postUrl,
     fileHref: `/affiliates/post-file?post=${encodeURIComponent(post.id)}`,
     downloadHref: `/affiliates/post-file?post=${encodeURIComponent(post.id)}&download=1`,
@@ -231,7 +236,9 @@ export default async function AffiliatePostsPage({
   if (!affiliate) redirect("/affiliates");
   const query = await searchParams;
   const code = affiliate.code;
-  const acknowledged = await memo(`disclosure-ack:${code}`, () => disclosureAcknowledged(code).catch(() => false));
+  const ownAgreements = (await memo(`agreements:${code}`, () => loadAffiliateAgreements(code)).catch(() => null)) ?? [];
+  const acknowledged = hasAcceptedAgreement(ownAgreements);
+  const agreementWaiting = ownAgreements.some((agreement) => agreement.status === "awaiting_signature");
   let posts: ContentSubmission[] = [];
   let accounts: SocialAccountView[] = [];
   let payments: DeliverablePayment[] = [];
@@ -288,27 +295,12 @@ export default async function AffiliatePostsPage({
 
   return (
     <div className="min-w-0 rounded-[28px] bg-white p-4 sm:p-8">
-      {error ? (
-        <p role="alert" className="mb-4 rounded-2xl bg-rose px-4 py-3 text-sm text-ink">
-          {error}
-        </p>
-      ) : null}
+      {error ? <TimedNotice message={error} tone="warn" query="error" className="mb-4" /> : null}
       {acknowledged ? null : (
         <>
           <h2 className="text-2xl">Posts</h2>
-          {notice ? <p role="status" className="mt-4 rounded-2xl bg-background px-4 py-3 text-sm text-ink">{notice}</p> : null}
-        <form action={acknowledgeDisclosureAction} className="mt-6">
-          <input type="hidden" name="next" value="posts" />
-          <h3 className="text-lg">Sponsorship agreement</h3>
-          <p className="mt-2 max-w-2xl text-sm text-brown">Tag @myleaderhealth in the caption so the post can track. The sponsorship line and your tracking link are optional in the caption.</p>
-          <label className="mt-4 flex items-start gap-3 text-sm text-ink">
-            <input name="acknowledge" type="checkbox" required className="mt-1 size-4 accent-ink" />
-            <span>I will tag @myleaderhealth in the caption so the post can track, and I will send each new post for review before I publish it. The sponsorship line and my tracking link are optional in the caption.</span>
-          </label>
-          <button type="submit" className={`${buttonClass} mt-4`}>
-            Acknowledge
-          </button>
-        </form>
+          {notice ? <TimedNotice message={notice} tone="plain" query="notice" className="mt-4" /> : null}
+          <AgreementRequired waiting={agreementWaiting} />
         </>
       )}
       {acknowledged && postsUnavailable ? <p className="text-sm text-ink">Posts are unavailable right now.</p> : null}
@@ -333,6 +325,7 @@ export default async function AffiliatePostsPage({
           posting={posting}
           agreementsUnavailable={agreementsUnavailable}
           agreementPosts={monthPosts ? { id: monthPosts.id, monthName: monthPosts.monthName, period: monthPosts.period, noMonth: monthPosts.noMonth, slots: monthPosts.slots } : null}
+          connectedNetworks={accounts.filter((account) => !account.needsReconnect).map((account) => account.network)}
         />
       ) : null}
     </div>
@@ -351,7 +344,7 @@ function monthPostList(agreements: Parameters<typeof presentAgreement>[0][], pos
     period,
     noMonth: !period,
     slots: period
-      ? agreementMonthBoard({ agreementId: active.id, postTotal: active.postTotal, period, monthLabel: name, posts: boardPosts(posts) })
+      ? agreementMonthBoard({ agreementId: active.id, postTotal: active.postTotal, period, monthLabel: name, posts: boardPosts(posts), kinds: active.posts })
       : [],
     guidelines: active.guidelines,
     pdfHref: active.file ? `/affiliates/agreement-file?agreement=${encodeURIComponent(active.id)}` : null,
@@ -383,5 +376,10 @@ function boardPosts(posts: ContentSubmission[]): AgreementBoardPost[] {
     reviewNote: post.reviewNote,
     title: captionTitle(post.caption),
     agreementSlot: post.agreementSlot,
+    format: post.format,
+    fileCount: post.files.length || (post.filePath ? 1 : 0),
+    agreementPlatform: post.agreementPlatform,
+    agreementPostType: post.agreementPostType,
+    liveFixNote: post.liveFixNote,
   }));
 }

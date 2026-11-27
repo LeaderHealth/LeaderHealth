@@ -52,9 +52,10 @@ type DatePickerProps = {
   name?: string;
   required?: boolean;
   variant?: "filter" | "field";
+  max?: string;
 };
 
-export function FilterDatePicker({ label, placeholder, value: controlled, defaultValue = "", onChange, name, required, variant = "filter" }: DatePickerProps) {
+export function FilterDatePicker({ label, placeholder, value: controlled, defaultValue = "", onChange, name, required, variant = "filter", max }: DatePickerProps) {
   const [ownValue, setOwnValue] = useState(defaultValue);
   const value = controlled ?? ownValue;
   const field = variant === "field";
@@ -113,7 +114,9 @@ export function FilterDatePicker({ label, placeholder, value: controlled, defaul
     const move = moves[event.key];
     if (!move) return;
     event.preventDefault();
-    setFocusDay(move());
+    const next = move();
+    const limit = max && toKey(next) > max ? fromKey(max) : null;
+    setFocusDay(limit ?? next);
   }
 
   const month = new Date(focusDay.getFullYear(), focusDay.getMonth(), 1);
@@ -188,6 +191,7 @@ export function FilterDatePicker({ label, placeholder, value: controlled, defaul
             const inMonth = date.getMonth() === month.getMonth();
             const isSelected = key === value;
             const isToday = key === todayKey;
+            const blocked = Boolean(max && key > max);
             return (
               <button
                 key={key}
@@ -197,10 +201,14 @@ export function FilterDatePicker({ label, placeholder, value: controlled, defaul
                 tabIndex={key === focusKey ? 0 : -1}
                 aria-selected={isSelected}
                 aria-current={isToday ? "date" : undefined}
+                aria-disabled={blocked || undefined}
+                disabled={blocked}
                 aria-label={date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
                 onClick={() => choose(key)}
                 className={`mx-auto grid size-9 place-items-center rounded-full text-sm transition-colors duration-[120ms] ${focusRing} ${
-                  isSelected
+                  blocked
+                    ? "cursor-not-allowed text-[#D6CBC9]"
+                    : isSelected
                     ? "bg-ink font-semibold text-white"
                     : isToday
                       ? "font-semibold text-ink ring-1 ring-inset ring-[#E39A93] hover:bg-[#F7F3F2]"
@@ -218,7 +226,7 @@ export function FilterDatePicker({ label, placeholder, value: controlled, defaul
           <button type="button" onClick={() => choose("")} disabled={value === ""} className={`rounded-full px-3 py-1.5 text-sm font-medium text-[#6B5A57] hover:bg-[#F7F3F2] disabled:opacity-40 disabled:hover:bg-transparent ${focusRing}`}>
             Clear
           </button>
-          <button type="button" onClick={() => choose(todayKey)} className={`rounded-full px-3 py-1.5 text-sm font-medium text-ink underline underline-offset-4 hover:bg-[#F7F3F2] ${focusRing}`}>
+          <button type="button" onClick={() => choose(max && todayKey > max ? max : todayKey)} className={`rounded-full px-3 py-1.5 text-sm font-medium text-ink underline underline-offset-4 hover:bg-[#F7F3F2] ${focusRing}`}>
             Today
           </button>
         </div>

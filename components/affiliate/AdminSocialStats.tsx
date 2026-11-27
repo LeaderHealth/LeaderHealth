@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
+  axisCount,
   chartMax,
   compactCount,
   daySpan,
@@ -103,7 +104,7 @@ export function AdminSocialStats({ today, posts }: { today: string; posts: Admin
       <div className="flex flex-wrap items-end gap-4">
         <div className="min-w-[16rem] flex-1">
           <h2 className="text-2xl">Social media</h2>
-          <p className="mt-2 max-w-2xl text-sm text-brown">Views and engagements on published posts across affiliates. These numbers don’t change payouts.</p>
+          <p className="mt-2 max-w-2xl text-sm text-brown">Same views and engagements used for social pay. Approving and sending money stays in Payouts.</p>
         </div>
         <div className="flex flex-col items-start gap-1.5 sm:items-end">
           <div role="group" aria-label="Date range" className="flex flex-wrap gap-2">
@@ -115,7 +116,7 @@ export function AdminSocialStats({ today, posts }: { today: string; posts: Admin
         </div>
       </div>
 
-      <section aria-label="Social media totals" className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
+      <section aria-label="Social media totals" className="grid grid-cols-2 gap-2.5 sm:gap-3.5 xl:grid-cols-4">
         <Tile label="Views" value={compactCount(views)} detail={versus} current={views} previous={previousViews} />
         <Tile label="Engagements" value={compactCount(engagements)} detail="Likes, comments, shares, saves" current={engagements} previous={previousEngagements} />
         <Tile label="Engagement rate" value={`${rate.toFixed(1)}%`} detail="Engagements ÷ views" current={rate} previous={previousRate} points />
@@ -137,8 +138,8 @@ export function AdminSocialStats({ today, posts }: { today: string; posts: Admin
         </div>
         <div className="flex gap-2.5">
           <div aria-hidden="true" className="flex h-[200px] w-12 flex-col justify-between text-right text-xs text-ink">
-            <span>{compactCount(viewMax)}</span>
-            <span>{compactCount(viewMax / 2)}</span>
+            <span>{axisCount(viewMax)}</span>
+            <span>{axisCount(viewMax / 2)}</span>
             <span>0</span>
           </div>
           <div className="min-w-0 flex-1">
@@ -157,16 +158,16 @@ export function AdminSocialStats({ today, posts }: { today: string; posts: Admin
             </div>
           </div>
           <div aria-hidden="true" className="flex h-[200px] w-12 flex-col justify-between text-xs text-[#D9534A]">
-            <span>{compactCount(engagementMax)}</span>
-            <span>{compactCount(engagementMax / 2)}</span>
+            <span>{axisCount(engagementMax)}</span>
+            <span>{axisCount(engagementMax / 2)}</span>
             <span>0</span>
           </div>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
           {breakdown.map(([label, value]) => {
             const share = engagements > 0 ? Math.round((value / engagements) * 100) : 0;
             return (
-              <div key={label} className="flex flex-col gap-2 rounded-2xl bg-[#F7F3F2] px-4 py-3.5">
+              <div key={label} className="flex min-w-0 flex-col gap-2 rounded-2xl bg-[#F7F3F2] px-3.5 py-3 sm:px-4 sm:py-3.5">
                 <div className="flex items-baseline justify-between">
                   <span className="text-sm text-[#4A3A37]">{label}</span>
                   <span className="text-[13px] text-[#6B5A57]">{share}%</span>
@@ -187,7 +188,30 @@ export function AdminSocialStats({ today, posts }: { today: string; posts: Admin
         {affiliates.length === 0 ? (
           <p className="mt-4 text-[15px] text-[#6B5A57]">No published posts in this date range.</p>
         ) : (
-          <table className="mt-4 w-full border-collapse text-sm">
+          <>
+          <ul className="mt-4 sm:hidden">
+            {affiliates.map((affiliate) => (
+              <li key={affiliate.code} className="border-t border-[#F0E8E6] py-3.5 first:border-t-0 first:pt-0">
+                <Link href={`/admin/affiliates/accounts?code=${encodeURIComponent(affiliate.code)}`} className="font-semibold underline-offset-4 hover:underline">
+                  {affiliate.name}
+                </Link>
+                <dl className="mt-2.5 grid grid-cols-2 gap-x-4 gap-y-2.5 text-sm">
+                  {[
+                    ["Posts", compactCount(affiliate.posts)],
+                    ["Views", compactCount(affiliate.views)],
+                    ["Engagements", compactCount(affiliate.engagements)],
+                    ["Rate", affiliate.views > 0 ? `${((affiliate.engagements / affiliate.views) * 100).toFixed(1)}%` : "—"],
+                  ].map(([label, value]) => (
+                    <div key={label} className="min-w-0">
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-[#6B5A57]">{label}</dt>
+                      <dd className="mt-0.5 tabular-nums">{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </li>
+            ))}
+          </ul>
+          <table className="mt-4 hidden w-full border-collapse text-sm sm:table">
             <thead>
               <tr className="border-b border-[#E8DEDC] text-left text-xs font-semibold uppercase tracking-wide text-[#6B5A57]">
                 <th className="px-2 py-2 font-semibold">Affiliate</th>
@@ -213,6 +237,7 @@ export function AdminSocialStats({ today, posts }: { today: string; posts: Admin
               ))}
             </tbody>
           </table>
+          </>
         )}
       </section>
     </div>
@@ -222,9 +247,9 @@ export function AdminSocialStats({ today, posts }: { today: string; posts: Admin
 function Tile({ label, value, detail, current, previous, points = false }: { label: string; value: string; detail: string; current: number; previous: number; points?: boolean }) {
   const delta = deltaLabel(current, previous, points);
   return (
-    <div className="flex flex-col gap-1.5 rounded-[20px] bg-white p-[18px]">
+    <div className="flex min-w-0 flex-col gap-1.5 rounded-[20px] bg-white p-3.5 sm:p-[18px]">
       <span className="text-sm text-[#4A3A37]">{label}</span>
-      <span className="text-[30px] font-medium tracking-tight">{value}</span>
+      <span className="text-2xl font-medium tracking-tight sm:text-[30px]">{value}</span>
       <span className={`self-start rounded-full px-2 py-0.5 text-[13px] font-semibold ${delta.up ? "bg-[#DDF0E4] text-[#1D6340]" : "bg-[#FBE3DF] text-[#9B2C1F]"}`}>{delta.text}</span>
       <span className="text-[13px] text-[#6B5A57]">{detail}</span>
     </div>

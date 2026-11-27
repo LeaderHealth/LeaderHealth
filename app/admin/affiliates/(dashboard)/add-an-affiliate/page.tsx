@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { ApplicationLinkForm } from "@/components/affiliate/ApplicationLinkForm";
+import { TimedNotice } from "@/components/affiliate/TimedNotice";
 import { adminHasFullAccess, adminSessionActor } from "@/lib/affiliate/session";
 import { createApplicationLinkAction, sendApplicationLinkAction } from "../../actions";
 import { ADMIN_ERRORS } from "../../messages";
@@ -24,16 +25,8 @@ export default async function AddAffiliatePage({
 
   return (
     <div className="space-y-6">
-      {error ? (
-        <p role="alert" className="rounded-2xl bg-rose px-4 py-3 text-sm text-ink">
-          {error}
-        </p>
-      ) : null}
-      {query.declined === "1" ? (
-        <p role="status" className="rounded-2xl bg-white px-4 py-3 text-sm text-ink">
-          That application was declined.
-        </p>
-      ) : null}
+      {error ? <TimedNotice message={error} tone="warn" query="error" /> : null}
+      {query.declined === "1" ? <TimedNotice message="That application was declined." tone="plain" query="declined" /> : null}
       <section className="rounded-[28px] bg-white p-4 sm:p-8">
         <h2 className="text-4xl">Send an application link</h2>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-taupe">

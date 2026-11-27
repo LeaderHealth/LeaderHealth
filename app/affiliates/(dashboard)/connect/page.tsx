@@ -4,6 +4,7 @@ import { skipSocialOnboarding } from "@/app/affiliates/connect-actions";
 import { disconnectSocialAction } from "@/app/affiliates/social-actions";
 import { currentAffiliate } from "@/app/affiliates/current";
 import { SocialConnectLink } from "@/components/affiliate/SocialConnectPrompt";
+import { TimedNotice } from "@/components/affiliate/TimedNotice";
 import { instagramConfigured, metaConfigured, tiktokConfigured, youtubeConfigured } from "@/lib/affiliate/social-oauth";
 import { readSocialOnboarding } from "@/lib/affiliate/social-onboarding";
 import { loadSocialAccounts, type SocialAccountView } from "@/lib/affiliate/social-store";
@@ -79,8 +80,8 @@ export default async function ConnectAccountsPage({ searchParams }: { searchPara
   return (
     <div className="min-w-0">
       <h2 className="text-2xl">Connect accounts</h2>
-      {query.error === "social" ? <p role="alert" className="mt-4 rounded-2xl bg-white px-4 py-3 text-sm text-ink">That account could not be disconnected.</p> : null}
-      {query.notice && disconnectNotice[query.notice] ? <p role="status" className="mt-4 rounded-2xl bg-white px-4 py-3 text-sm text-ink">{disconnectNotice[query.notice]}</p> : null}
+      {query.error === "social" ? <TimedNotice message="That account could not be disconnected." tone="warn" query="error" className="mt-4" /> : null}
+      {query.notice && disconnectNotice[query.notice] ? <TimedNotice message={disconnectNotice[query.notice]} tone="plain" query="notice" className="mt-4" /> : null}
       <p className="mt-4 max-w-3xl text-sm leading-relaxed text-brown">
         Connecting at least one account lets Leader Health verify an approved promotional post and fill in its views, likes, comments, shares, reach, and impressions. Connecting is encouraged and is not required to finish. Leader Health does not post for you and does not ask for a password.
       </p>

@@ -33,7 +33,7 @@ import { adjustDeliverablePayment, approveDeliverablePayment, canReleaseDelivera
 import { approvePayout, formatPayoutMonth, markPayoutPaid, PayoutError } from "@/lib/affiliate/payouts";
 import { notifyAffiliatePayout } from "@/lib/affiliate/payout-mail";
 import { readCampaignFlow, type CampaignFlowInput } from "@/lib/affiliate/campaign-record";
-import { RoiStoreError, saveCampaignBrief, saveMarketingCampaign, saveMarketingCost } from "@/lib/affiliate/roi-store";
+import { RoiStoreError, deleteMarketingCost, saveCampaignBrief, saveMarketingCampaign, saveMarketingCost, updateMarketingCost } from "@/lib/affiliate/roi-store";
 import { roiRange } from "@/lib/affiliate/roi";
 import {
   ApplicationError,
@@ -62,6 +62,7 @@ import {
   adminLoginConfigured,
   adminHasFullAccess,
   adminSessionActor,
+  safeAdminNext,
   clearAdminSession,
   currentAdminSessionId,
   setAdminSession,
@@ -98,7 +99,13 @@ async function notifyAdminLock(email: string) {
 }
 
 export async function loginAffiliateAdmin(formData: FormData) {
-  if (!adminLoginConfigured()) fail("unconfigured");
+  const next = safeAdminNext(formData.get("next"));
+  const deny = (error: string, mailed = false): never => {
+    const mailedQuery = mailed ? "&mailed=1" : "";
+    const nextQuery = next ? `&next=${encodeURIComponent(next)}` : "";
+    redirect(`/admin/affiliates?error=${encodeURIComponent(error)}${mailedQuery}${nextQuery}`);
+  };
+  if (!adminLoginConfigured()) deny("unconfigured");
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
   const rememberDevice = formData.get("remember") === "on";
@@ -107,25 +114,25 @@ export async function loginAffiliateAdmin(formData: FormData) {
     blocked = await loginBlocked("admin", email);
   } catch (error) {
     console.error("[affiliate] admin sign-in lock check failed", error instanceof Error ? error.message : "unknown");
-    fail("unavailable");
+    deny("unavailable");
   }
-  if (blocked) fail("locked");
+  if (blocked) deny("locked");
   if (adminCredentialsMatch(email, password)) {
     try {
       await clearLoginFailures("admin", email);
     } catch (error) {
       console.error("[affiliate] admin sign-in lock clear failed", error instanceof Error ? error.message : "unknown");
-      fail("unavailable");
+      deny("unavailable");
     }
-    if (!(await setAdminSession(rememberDevice))) fail("unavailable");
-    redirect("/admin/affiliates/overview");
+    if (!(await setAdminSession(rememberDevice))) deny("unavailable");
+    redirect(next || "/admin/affiliates/overview");
   }
   let storedAdmin: Awaited<ReturnType<typeof subAdminIdForPassword>> = null;
   try {
     storedAdmin = await subAdminIdForPassword(email, password);
   } catch (error) {
     console.error("[affiliate] sub-admin sign-in failed", error instanceof Error ? error.message : "unknown");
-    fail("unavailable");
+    deny("unavailable");
   }
   if (!storedAdmin) {
     let locked = false;
@@ -133,7 +140,7 @@ export async function loginAffiliateAdmin(formData: FormData) {
       locked = await recordLoginFailure("admin", email);
     } catch (error) {
       console.error("[affiliate] admin sign-in lock record failed", error instanceof Error ? error.message : "unknown");
-      fail("unavailable");
+      deny("unavailable");
     }
     if (locked) {
       let mailed = false;
@@ -142,18 +149,19 @@ export async function loginAffiliateAdmin(formData: FormData) {
       } catch (error) {
         console.error("[affiliate] admin sign-in lock email failed", error instanceof Error ? error.message : "unknown");
       }
-      fail("locked", "/admin/affiliates", mailed);
+      deny("locked", mailed);
     }
-    fail("password");
+    deny("password");
   }
+  const account = storedAdmin ?? deny("password");
   try {
     await clearLoginFailures("admin", email);
   } catch (error) {
     console.error("[affiliate] admin sign-in lock clear failed", error instanceof Error ? error.message : "unknown");
-    fail("unavailable");
+    deny("unavailable");
   }
-  if (!(await setStoredAdminSession(storedAdmin.id, storedAdmin.role, rememberDevice))) fail("unavailable");
-  redirect("/admin/affiliates/overview");
+  if (!(await setStoredAdminSession(account.id, account.role, rememberDevice))) deny("unavailable");
+  redirect(next || "/admin/affiliates/overview");
 }
 
 function signInFail(error: string, method: "link" | "reset"): never {
@@ -797,23 +805,82 @@ export async function saveCampaignFlowAction(input: CampaignFlowInput) {
   return { ok: true as const, status: parsed.brief.status, count: parsed.brief.assignedCodes.length };
 }
 
+async function costRecorder() {
+  const actor = await adminSessionActor();
+  if (actor && "id" in actor && actor.role !== "owner") {
+    const admin = await readSubAdmin(actor.id).catch(() => null);
+    if (admin?.email) return admin.email;
+  }
+  return adminAccountEmail() ?? "";
+}
+
+function costCampaign(formData: FormData) {
+  return String(formData.get("campaign") ?? "").slice(0, 80);
+}
+
+function costFail(error: unknown, range: string, detail: string, label: string): never {
+  const values: Record<string, string> = detail ? { campaign: detail } : {};
+  if (error instanceof RoiStoreError) redirect(roiQuery(range, { ...values, error: `roi-${error.code}` }));
+  console.error(`[affiliate] marketing cost ${label} failed`, error instanceof Error ? error.message : "unknown");
+  redirect(roiQuery(range, { ...values, error: "roi-unavailable" }));
+}
+
 export async function saveMarketingCostAction(formData: FormData) {
   await requireAdmin();
   const range = roiRange(formData.get("range"));
+  const detail = formData.get("back") === "detail" ? costCampaign(formData) : "";
+  let saved = { campaign: "", costCents: 0 };
   try {
-    await saveMarketingCost({
+    saved = await saveMarketingCost({
       campaign: formData.get("campaign"),
       amount: formData.get("amount"),
       spentOn: formData.get("spentOn"),
+      note: formData.get("note"),
+      recordedBy: await costRecorder(),
     });
   } catch (error) {
-    if (error instanceof RoiStoreError) redirect(roiQuery(range, { error: `roi-${error.code}` }));
-    console.error("[affiliate] marketing cost failed", error instanceof Error ? error.message : "unknown");
-    redirect(roiQuery(range, { error: "roi-unavailable" }));
+    costFail(error, range, detail, "save");
   }
   clearAffiliateMemo();
   revalidatePath(ROI_PATH);
-  redirect(roiQuery(range, { notice: "saved" }));
+  const amount = String(saved.costCents);
+  redirect(
+    roiQuery(range, detail ? { campaign: saved.campaign, notice: "cost-added", amount } : { notice: "cost-added", amount, added: saved.campaign }),
+  );
+}
+
+export async function updateMarketingCostAction(formData: FormData) {
+  await requireAdmin();
+  const range = roiRange(formData.get("range"));
+  const detail = costCampaign(formData);
+  let saved = { campaign: detail, costCents: 0 };
+  try {
+    saved = await updateMarketingCost(formData.get("id"), {
+      amount: formData.get("amount"),
+      spentOn: formData.get("spentOn"),
+      note: formData.get("note"),
+    });
+  } catch (error) {
+    costFail(error, range, detail, "update");
+  }
+  clearAffiliateMemo();
+  revalidatePath(ROI_PATH);
+  redirect(roiQuery(range, { campaign: saved.campaign || detail, notice: "cost-updated", amount: String(saved.costCents) }));
+}
+
+export async function deleteMarketingCostAction(formData: FormData) {
+  await requireAdmin();
+  const range = roiRange(formData.get("range"));
+  const detail = costCampaign(formData);
+  let removed = { campaign: detail };
+  try {
+    removed = await deleteMarketingCost(formData.get("id"));
+  } catch (error) {
+    costFail(error, range, detail, "delete");
+  }
+  clearAffiliateMemo();
+  revalidatePath(ROI_PATH);
+  redirect(roiQuery(range, { campaign: removed.campaign || detail, notice: "cost-removed" }));
 }
 
 const APPLY_PATH = "/admin/affiliates/add-an-affiliate";

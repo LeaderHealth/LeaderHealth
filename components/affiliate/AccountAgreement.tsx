@@ -12,7 +12,9 @@ import {
   signAgreementAction,
   withdrawAgreementAction,
 } from "@/app/admin/affiliates/agreement-actions";
+import { TimedNotice } from "@/components/affiliate/TimedNotice";
 import { agreementCutMonths, agreementMonthPeriods } from "@/lib/affiliate/agreement-earnings";
+import { SPONSORSHIP_DISCLOSURE_TERMS } from "@/lib/affiliate/agreement-disclosure";
 import { AGREEMENT_PLATFORMS, AGREEMENT_POST_TYPES, agreementDateRule, type AgreementPlatform } from "@/lib/affiliate/agreement-partnership";
 import { AgreementQuestions } from "./AgreementQuestions";
 import type { AgreementDraftSeed, AgreementPhase, AgreementView } from "./agreement-types";
@@ -216,7 +218,7 @@ export function AccountAgreement({
   canEnd: boolean;
   canReplace: boolean;
   replaceNeedsNote: boolean;
-  progress: { verified: number; review: number } | null;
+  progress: { labels: string[] } | null;
   toast: string;
   replyNotice?: string;
   error: string;
@@ -374,7 +376,7 @@ export function AccountAgreement({
 
   useEffect(() => {
     if (serverError || (!toast && !replyNotice)) return;
-    const timer = window.setTimeout(clearNotice, 1500);
+    const timer = window.setTimeout(clearNotice, 6000);
     return () => window.clearTimeout(timer);
   }, [toast, replyNotice, serverError]);
 
@@ -691,6 +693,14 @@ export function AccountAgreement({
                         </div>
                       ))}
                     </div>
+                    <div className="flex flex-col gap-2 rounded-[14px] border border-[#E8DEDC] bg-white px-4 py-3.5">
+                      <span className="flex flex-wrap items-center gap-2">
+                        <span className="text-base font-semibold">Sponsorship disclosure</span>
+                        <span className="rounded-full bg-[#DDF0E4] px-2.5 py-0.5 text-[13px] font-semibold text-[#1D6340]">Included</span>
+                      </span>
+                      <p className="text-[15px] leading-normal text-[#4A3A37]">“{SPONSORSHIP_DISCLOSURE_TERMS}”</p>
+                      <p className="text-sm text-[#6B5A57]">{first} accepts this together with the agreement.</p>
+                    </div>
                   </div>
                 ) : null}
 
@@ -705,6 +715,7 @@ export function AccountAgreement({
                         ["Paid each month", paid || "—", 1],
                         ["Posts each month", `${total} · ${kinds.join(" · ") || "—"}`, 1],
                         ["Where", draft.platforms.join(", ") || "—", 1],
+                        ["Sponsorship disclosure", "Included", 2],
                       ] as const
                     ).map(([label, value, target]) => (
                       <button
@@ -1066,14 +1077,7 @@ function DraftDelete({ code, agreement, first }: { code: string; agreement: Agre
 }
 
 function FlashNotice({ message, onClose }: { message: string; onClose: () => void }) {
-  return (
-    <div role="status" className="flex items-center gap-3 rounded-[14px] bg-[#DDF0E4] px-4 py-3 text-[15px] font-medium text-[#1D6340]">
-      <span className="flex-1">{message}</span>
-      <button type="button" onClick={onClose} className={`text-sm underline ${focusRing}`}>
-        Dismiss
-                        </button>
-                      </div>
-  );
+  return <TimedNotice message={message} onDismiss={onClose} />;
 }
 
 function WithdrawSent({ code, agreementId }: { code: string; agreementId: string }) {
@@ -1155,7 +1159,7 @@ function ReadAgreement({
   confirmEnd: boolean;
   onAskEnd: () => void;
   onCancelEnd: () => void;
-  progress: { verified: number; review: number } | null;
+  progress: { labels: string[] } | null;
   replyNotice?: string;
   error: string;
 }) {
@@ -1182,8 +1186,22 @@ function ReadAgreement({
   const covered = coveredMonths(agreement.effectiveValue, agreement.expiresValue);
   const cuts = cutNotes(agreement.effectiveValue, agreement.expiresValue);
   const postingThisMonth = agreementMonthPeriods(agreement.effectiveValue, agreement.expiresValue).includes(new Date().toISOString().slice(0, 7));
-  const verified = progress?.verified ?? 0;
-  const review = progress?.review ?? 0;
+  const labels = progress?.labels ?? [];
+  const verified = labels.filter((label) => label === "Verified").length;
+  const ready = labels.filter((label) => label === "Ready to publish").length;
+  const review = labels.filter((label) => label === "In review").length;
+  const checking = labels.filter((label) => label === "Checking the link" || label === "Checking the update").length;
+  const changes = labels.filter((label) => label === "Changes requested").length;
+  const liveChanges = labels.filter((label) => label === "Live but changes requested").length;
+  const fix = labels.filter((label) => label === "Needs a fix").length;
+  const stripNote = [
+    ready ? `${ready} ready to publish` : "",
+    review ? `${review} in review` : "",
+    checking ? `${checking} checking the link` : "",
+    changes ? `${changes} ${changes === 1 ? "change requested" : "changes requested"}` : "",
+    liveChanges ? `${liveChanges} live with changes requested` : "",
+    fix ? `${fix} ${fix === 1 ? "needs a fix" : "need a fix"}` : "",
+  ].filter(Boolean).join(", ");
   const glance = [
     ["Paid each month", agreement.monthly || "—"],
     ["Posts each month", String(total)],
@@ -1233,7 +1251,7 @@ function ReadAgreement({
                 : undefined
             }
           />
-          {replyNotice ? <p role="status" className="text-sm text-[#1D6340]">{replyNotice}</p> : null}
+          {replyNotice ? <TimedNotice message={replyNotice} /> : null}
         </div>
       ) : null}
 
@@ -1259,13 +1277,13 @@ function ReadAgreement({
           <span className="text-sm text-[#6B5A57]">This month</span>
           <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${total}, minmax(0, 1fr))` }}>
             {Array.from({ length: total }, (_, index) => {
-              const color = index < verified ? "bg-[#1D6340]" : index < verified + review ? "bg-[#E9C98A]" : "bg-[#E8DEDC]";
-              const label = index < verified ? "Verified" : index < verified + review ? "In review" : "Not posted yet";
+              const label = labels[index] ?? "Not posted";
+              const color = label === "Verified" ? "bg-[#1D6340]" : label === "Ready to publish" ? "bg-[#33130F]" : label === "In review" || label === "Checking the link" || label === "Checking the update" ? "bg-[#E9C98A]" : label === "Needs a fix" || label === "Changes requested" || label === "Live but changes requested" ? "bg-[#9B2C1F]" : "bg-[#E8DEDC]";
               return <span key={index} title={label} className={`h-2 rounded-full ${color}`} />;
             })}
           </div>
           <span className="text-sm text-[#4A3A37]">
-            {verified} of {total} posts verified this month{review ? `, ${review} in review` : ""}. Paid once all {total} for the month are verified.
+            {verified} of {total} posts verified this month{stripNote ? `, ${stripNote}` : ""}. Paid once all {total} for the month are verified.
             {covered.length > 1 ? ` ${joinAnd(covered)} each get their own ${total} posts.` : ""}
           </span>
         </div>
@@ -1275,6 +1293,11 @@ function ReadAgreement({
         <span className="text-sm text-[#6B5A57]">Guidelines</span>
         <span className="whitespace-pre-line text-[15px] leading-relaxed">{agreement.guidelines || "—"}</span>
         <span className="text-sm text-[#6B5A57]">Plus @myleaderhealth in the caption so the post can track, and admin approval on every post. The sponsorship line and tracking link are optional.</span>
+      </div>
+
+      <div className="flex flex-col gap-1 border-t border-[#F0E8E6] pt-3">
+        <span className="text-sm text-[#6B5A57]">Sponsorship disclosure</span>
+        <span className="text-[15px] leading-relaxed">Included in this agreement{agreement.signedAt ? ` and accepted ${agreement.signedAt}` : ""}.</span>
       </div>
 
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-[#F0E8E6] pt-3 text-sm">

@@ -56,7 +56,7 @@ function boardPost(post: ContentSubmission): StatsBoardPost | null {
 }
 
 function published(post: ContentSubmission) {
-  return post.contentStatus === "approved" && (post.publicationStatus === "tracking_active" || Boolean(post.postUrl));
+  return post.contentStatus === "approved" && post.publicationStatus === "tracking_active";
 }
 
 export default async function AdminSocialStatsPage() {

@@ -65,7 +65,7 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
       active: [accounts, applications, pendingApplications, "/admin/affiliates/add", promoCodes, trackingLinks],
     },
     { href: submissions, label: "Content", active: [submissions, pending, published, campaigns, campaignNew], badge: reviewBadge },
-    { href: roi, label: "Stats", active: [roi, social, website, orders] },
+    { href: social, label: "Stats", active: [roi, social, website, orders] },
     { href: payouts, label: "Payouts", active: [payouts] },
     { href: records, label: "Settings", active: [records, compliance, team, payments] },
   ];
@@ -133,7 +133,7 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
                     signOut={logoutAffiliateAdmin}
                   />
                 ) : null}
-                <AreaNav label="Affiliate admin" items={nav} />
+                <AreaNav label="Affiliate admin" items={nav} origins={{ roi }} />
               </div>
             </div>
             <div className="mt-8 flex min-w-0 flex-col xl:mt-0">

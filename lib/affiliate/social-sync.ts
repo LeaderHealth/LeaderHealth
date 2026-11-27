@@ -5,14 +5,16 @@ import { MarketingReportError, saveMarketingReport } from "./marketing-store";
 import { loadMatchedFacebookPosts, saveMatchedFacebookPosts } from "./matched-posts";
 import { campaignReports, rememberedFacebookPosts, type SocialPost } from "./social-match";
 import { fetchFacebookPosts, fetchInstagramPosts, fetchTikTokPosts, readFacebookPost } from "./social-fetch";
-import { refreshTikTokToken } from "./social-oauth";
+import { refreshTikTokToken, refreshYouTubeToken } from "./social-oauth";
 import {
   SocialError,
   loadConnectionSecrets,
   markSocialReconnect,
   saveTikTokConnection,
+  saveYouTubeConnection,
   type FacebookPageSecret,
   type TikTokConnectionSecret,
+  type YouTubeConnectionSecret,
 } from "./social-store";
 
 export type SocialSyncAccount = {
@@ -196,6 +198,19 @@ async function freshTikTok(connection: TikTokConnectionSecret) {
 
 export async function currentTikTokConnection(connection: TikTokConnectionSecret) {
   return freshTikTok(connection);
+}
+
+export async function currentYouTubeConnection(connection: YouTubeConnectionSecret) {
+  if (tokenFresh(connection.expiresAt) || !connection.refreshToken) return connection;
+  const refreshed = await refreshYouTubeToken(connection.refreshToken);
+  const next: YouTubeConnectionSecret = {
+    ...connection,
+    accessToken: refreshed.accessToken,
+    refreshToken: refreshed.refreshToken || connection.refreshToken,
+    expiresAt: refreshed.expiresAt,
+  };
+  await saveYouTubeConnection(next);
+  return next;
 }
 
 function tokenFresh(expiresAt: string | null) {

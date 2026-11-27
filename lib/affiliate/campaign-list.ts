@@ -11,6 +11,19 @@ export type CampaignListPost = {
   contentStatus: string;
   publicationStatus: string | null;
   createdAt: string | null;
+  postUrl?: string | null;
+  publishedAt?: string | null;
+  caption?: string;
+};
+
+export type CampaignLivePost = {
+  id: string;
+  code: string;
+  name: string;
+  caption: string;
+  url: string;
+  published: string;
+  state: CampaignPostState;
 };
 
 export type CampaignListAffiliate = {
@@ -31,6 +44,7 @@ export type CampaignListModel = {
   pending: number;
   performance: "On" | "Off";
   stats: { label: string; value: string }[];
+  livePosts: CampaignLivePost[];
   affiliates: {
     code: string;
     name: string;
@@ -69,13 +83,13 @@ export function affiliateStateLabel(state: CampaignAffiliateState) {
 
 export function postStateLabel(state: CampaignPostState) {
   if (state === "todo") return "Not started";
-  if (state === "pending") return "Pending review";
+  if (state === "pending") return "In review";
   if (state === "changes") return "Changes requested";
-  if (state === "ready") return "Approved";
-  if (state === "published") return "Published · verifying";
+  if (state === "ready") return "Ready to publish";
+  if (state === "published") return "Checking the link";
   if (state === "verified") return "Verified";
   if (state === "rejected") return "Rejected";
-  return "Verification failed";
+  return "Needs a fix";
 }
 
 export function campaignPostState(post: { contentStatus: string; publicationStatus: string | null }): CampaignPostState {
@@ -141,6 +155,22 @@ function sameCampaign(left: string, right: string) {
   return left.trim().toLowerCase() === right.trim().toLowerCase();
 }
 
+const LIVE_STATES: CampaignPostState[] = ["verified", "published", "failed"];
+
+function safeUrl(value: string | null | undefined) {
+  if (!value) return "";
+  try {
+    return new URL(value).protocol === "https:" ? value : "";
+  } catch {
+    return "";
+  }
+}
+
+function shortCaption(value: string | undefined) {
+  const text = (value ?? "").replace(/\s+/g, " ").trim();
+  return text.length > 80 ? `${text.slice(0, 79)}…` : text;
+}
+
 export function campaignListRows(input: {
   records: MarketingCampaignRecord[];
   posts: CampaignListPost[];
@@ -161,7 +191,10 @@ export function campaignListRows(input: {
         list.push(post);
         byCode.set(post.code, list);
       }
-      const affiliates = record.assignedCodes.map((code) => {
+      const assigned = new Set(record.assignedCodes);
+      const posters = [...byCode.keys()].filter((code) => !assigned.has(code));
+      const affiliates = [...record.assignedCodes, ...posters].map((code) => {
+        const invited = assigned.has(code);
         const own = byCode.get(code) ?? [];
         const states = own.map(campaignPostState);
         const verified = states.filter((state) => state === "verified").length;
@@ -170,26 +203,39 @@ export function campaignListRows(input: {
         const state: CampaignAffiliateState =
           answer === "declined" && own.length === 0 ? "declined" : own.length === 0 && answer !== "accepted" ? "invited" : required > 0 && verified >= required ? "completed" : "progress";
         const chips = states.map((item, index) => ({ text: `#${index + 1} ${postStateLabel(item)}`, state: item }));
-        if (state === "progress" || state === "completed") {
+        if (invited && (state === "progress" || state === "completed")) {
           for (let index = chips.length; index < required; index += 1) chips.push({ text: `#${index + 1} Not started`, state: "todo" });
         }
         if (chips.length === 0) chips.push({ text: state === "declined" ? "Declined" : "Waiting for answer", state: "todo" });
         const rate = rateCents(record, code);
-        const earned = required > 0 && verified >= required ? rate : 0;
-        const terms = money(rate);
+        const earned = invited && required > 0 && verified >= required ? rate : 0;
         return {
           code,
+          invited,
           name: names.get(code) ?? code,
           initials: initials(names.get(code) ?? code),
           state,
           posts: chips,
-          terms: `${terms} for the campaign`,
+          terms: invited ? `${money(rate)} for the campaign` : "Not invited · no campaign pay",
           earned,
           verified,
         };
       });
-      const joined = affiliates.filter((affiliate) => affiliate.state === "progress" || affiliate.state === "completed");
-      const verified = affiliates.reduce((sum, affiliate) => sum + affiliate.verified, 0);
+      const joined = affiliates.filter((affiliate) => affiliate.invited && (affiliate.state === "progress" || affiliate.state === "completed"));
+      const verified = joined.reduce((sum, affiliate) => sum + affiliate.verified, 0);
+      const livePosts = posts
+        .map((post) => ({ post, state: campaignPostState(post) }))
+        .filter(({ state }) => LIVE_STATES.includes(state))
+        .map(({ post, state }) => ({
+          id: post.id,
+          code: post.code,
+          name: names.get(post.code) ?? post.code,
+          caption: shortCaption(post.caption),
+          url: safeUrl(post.postUrl),
+          published: post.publishedAt ? dayLabel(post.publishedAt.slice(0, 10), true) : "",
+          state,
+        }))
+        .reverse();
       const required = joined.length * record.postsRequired;
       const pending = posts.filter((post) => campaignPostState(post) === "pending").length;
       const ended = Boolean(record.endsOn && record.endsOn < today);
@@ -219,9 +265,10 @@ export function campaignListRows(input: {
         stats: [
           { label: "Affiliates joined", value: record.assignedCodes.length ? `${joined.length} of ${record.assignedCodes.length}` : "0 of 0" },
           { label: "Posts verified", value: `${verified} of ${required}` },
-          { label: "Waiting for review", value: String(pending) },
-          { label: "Base earned so far", value: money(earned) },
+          { label: "In review", value: String(pending) },
+          { label: "Campaign earned", value: money(earned) },
         ],
+        livePosts,
         affiliates: affiliates.map((affiliate) => ({
           code: affiliate.code,
           name: affiliate.name,

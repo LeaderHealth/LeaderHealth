@@ -1,5 +1,6 @@
 import { agreementPostTotal, type AgreementPostCount } from "./agreement-partnership";
 import { eventPeriod } from "./payment-rates";
+import { postMatchesKind } from "./post-agreement";
 
 export type AgreementForEarning = {
   id: string;
@@ -21,6 +22,11 @@ export type PostForEarning = {
   publishedAt: string | null;
   submittedAt: string | null;
   postingMonth?: string | null;
+  format?: string | null;
+  fileCount?: number;
+  agreementPlatform?: string;
+  agreementPostType?: string;
+  liveFixNote?: string;
 };
 
 export type AgreementPayoutSnapshot = {
@@ -148,8 +154,33 @@ export function postingMonthsOverlap(existing: readonly MonthSpan[], next: { id?
   return monthsSpanned(next.effectiveOn, next.expiresOn).some((period) => existing.some((agreement) => agreement.id !== candidate.id && inForce(agreement, period) && inForce(candidate, period)));
 }
 
+function kindPost(post: PostForEarning) {
+  return {
+    format: post.format ?? null,
+    fileCount: post.fileCount ?? 0,
+    agreementPlatform: post.agreementPlatform ?? "",
+    agreementPostType: post.agreementPostType ?? "",
+  };
+}
+
+function liveAgreementPosts(posts: readonly PostForEarning[], code: string, agreementId: string, period: string) {
+  return posts.filter((post) => post.code === code && post.agreementId === agreementId && post.publicationStatus === "tracking_active" && !post.liveFixNote && agreementPostMonth(post) === period);
+}
+
 export function verifiedAgreementPosts(posts: readonly PostForEarning[], code: string, agreementId: string, period: string) {
-  return posts.filter((post) => post.code === code && post.agreementId === agreementId && post.publicationStatus === "tracking_active" && agreementPostMonth(post) === period).length;
+  return liveAgreementPosts(posts, code, agreementId, period).length;
+}
+
+function filledSlots(posts: readonly PostForEarning[], kinds: readonly AgreementPostCount[]) {
+  return kinds.reduce((sum, kind) => {
+    if (kind.count <= 0) return sum;
+    const matched = posts.filter((post) => postMatchesKind(kindPost(post), kind.platform, kind.type)).length;
+    return sum + Math.min(matched, kind.count);
+  }, 0);
+}
+
+function everyKindFilled(posts: readonly PostForEarning[], kinds: readonly AgreementPostCount[]) {
+  return kinds.every((kind) => kind.count <= 0 || posts.filter((post) => postMatchesKind(kindPost(post), kind.platform, kind.type)).length >= kind.count);
 }
 
 export function agreementMonthEarning(input: {
@@ -174,8 +205,9 @@ export function agreementMonthEarning(input: {
   const rateCents = agreement?.monthlyCents ?? 0;
   if (!agreement || rateCents <= 0) return NONE;
   const requiredPosts = agreementPostTotal(agreement.posts);
-  const verifiedPosts = verifiedAgreementPosts(input.posts, input.code, agreement.id, input.period);
-  const earned = requiredPosts > 0 && verifiedPosts >= requiredPosts;
+  const live = liveAgreementPosts(input.posts, input.code, agreement.id, input.period);
+  const verifiedPosts = filledSlots(live, agreement.posts);
+  const earned = requiredPosts > 0 && everyKindFilled(live, agreement.posts);
   return {
     agreementId: agreement.id,
     requiredPosts,
@@ -188,7 +220,7 @@ export function agreementMonthEarning(input: {
 
 export function agreementEarningNote(earning: AgreementMonthEarning) {
   if (earning.status === "none") return "";
-  const live = `${earning.verifiedPosts} of ${earning.requiredPosts} posts live`;
+  const live = `${earning.verifiedPosts} of ${earning.requiredPosts} posts verified`;
   if (earning.status === "short") return live;
   return `${live} · monthly rate`;
 }

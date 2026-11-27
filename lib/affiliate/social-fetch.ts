@@ -6,10 +6,54 @@ const INSTAGRAM_GRAPH = "https://graph.instagram.com/v21.0";
 
 const FACEBOOK_POST_FIELDS = "id,message,permalink_url,created_time,shares,comments.summary(true).limit(0),reactions.type(LIKE).limit(0).summary(true)";
 
+export async function fetchFacebookVideos(page: FacebookPageSecret) {
+  const posts = await graphList(`/${page.accountId}/videos`, page.accessToken, "id,description,permalink_url,created_time,comments.summary(true).limit(0)");
+  return mapPool(posts, 4, (item) => facebookPost(page, { ...item, message: text(item.description) || text(item.message) }));
+}
+
 export async function fetchFacebookPosts(page: FacebookPageSecret) {
   const fallback = "id,message,permalink_url,created_time,shares,comments.summary(true).limit(0)";
   const posts = await graphList(`/${page.accountId}/published_posts`, page.accessToken, FACEBOOK_POST_FIELDS, fallback);
   return mapPool(posts, 4, (item) => facebookPost(page, item));
+}
+
+export type YouTubeVideoSnapshot = {
+  id: string;
+  channelId: string;
+  caption: string;
+  views: number;
+  likes: number;
+  comments: number;
+};
+
+export async function readYouTubeVideo(token: string, videoId: string): Promise<YouTubeVideoSnapshot | null> {
+  const url = new URL("https://www.googleapis.com/youtube/v3/videos");
+  url.searchParams.set("part", "snippet,statistics");
+  url.searchParams.set("id", videoId);
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(15000),
+  });
+  const body: unknown = await response.json().catch(() => null);
+  if (response.status === 401 || oauthTokenExpired(body)) throw new SocialError("expired");
+  if (!response.ok || !body || typeof body !== "object") throw new SocialError("unavailable");
+  const items = "items" in body && Array.isArray(body.items) ? body.items : [];
+  const first = items[0];
+  if (!first || typeof first !== "object") return null;
+  const record = first as Record<string, unknown>;
+  const snippet = record.snippet && typeof record.snippet === "object" ? (record.snippet as Record<string, unknown>) : null;
+  const statistics = record.statistics && typeof record.statistics === "object" ? (record.statistics as Record<string, unknown>) : null;
+  const id = text(record.id);
+  const channelId = text(snippet?.channelId);
+  if (!id || !channelId) return null;
+  return {
+    id,
+    channelId,
+    caption: [text(snippet?.title), text(snippet?.description)].filter(Boolean).join("\n"),
+    views: count(Number(text(statistics?.viewCount))),
+    likes: count(Number(text(statistics?.likeCount))),
+    comments: count(Number(text(statistics?.commentCount))),
+  };
 }
 
 export async function readFacebookPost(page: FacebookPageSecret, postId: string) {

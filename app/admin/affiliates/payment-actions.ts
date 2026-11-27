@@ -175,9 +175,19 @@ function trafficMonth(value: unknown) {
   return normalizePayoutPeriod(value) ?? "";
 }
 
-function trafficRedirect(month: string, notice: string, extra?: Record<string, string>): never {
-  const params = new URLSearchParams({ month, notice, ...extra });
-  redirect(`${TRAFFIC}?${params.toString()}`);
+function trafficRedirect(formData: FormData, month: string, notice: string, extra?: Record<string, string>): never {
+  const back = formData.get("return") === "overview";
+  const params = new URLSearchParams({ notice, ...extra });
+  if (!back) params.set("month", month);
+  clearAffiliateMemo();
+  revalidatePath(TRAFFIC);
+  revalidatePath("/admin/affiliates/overview");
+  revalidatePath("/admin/affiliates/payouts");
+  redirect(back ? `/admin/affiliates/overview?${params.toString()}` : `${TRAFFIC}?${params.toString()}`);
+}
+
+function rethrowRedirect(error: unknown) {
+  if (typeof error === "object" && error && "digest" in error && String((error as { digest?: unknown }).digest).startsWith("NEXT_REDIRECT")) throw error;
 }
 
 function trafficFail(month: string): never {
@@ -201,12 +211,9 @@ export async function excludeTrafficAction(formData: FormData) {
     const spike = await spikeHour(code, period);
     if (!spike) trafficFail(period);
     const count = await excludeTrafficSpike(code, period, spike.hour);
-    clearAffiliateMemo();
-  revalidatePath(TRAFFIC);
-    clearAffiliateMemo();
-  revalidatePath("/admin/affiliates/payouts");
-    trafficRedirect(period, "excluded", { count: String(count) });
+    trafficRedirect(formData, period, "excluded", { count: String(count) });
   } catch (error) {
+    rethrowRedirect(error);
     console.error("[affiliate] traffic exclude failed", error instanceof Error ? error.message : "unknown");
     trafficFail(period);
   }
@@ -221,11 +228,10 @@ export async function keepTrafficAction(formData: FormData) {
     const spike = await spikeHour(code, period);
     if (!spike) trafficFail(period);
     await keepTrafficSpike(code, period, spike.hour);
+    trafficRedirect(formData, period, "kept");
   } catch (error) {
+    rethrowRedirect(error);
     console.error("[affiliate] traffic keep failed", error instanceof Error ? error.message : "unknown");
     trafficFail(period);
   }
-  clearAffiliateMemo();
-  revalidatePath(TRAFFIC);
-  trafficRedirect(period, "kept");
 }

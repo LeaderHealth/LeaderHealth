@@ -381,6 +381,14 @@ export async function loadAffiliateAgreements(code?: string) {
     .sort((left, right) => (right.createdAt ?? "").localeCompare(left.createdAt ?? ""));
 }
 
+export function hasAcceptedAgreement(agreements: readonly { status: AgreementStatus; signedAt: string | null }[]) {
+  return agreements.some((agreement) => (agreement.status === "signed" || agreement.status === "ended") && agreement.signedAt != null);
+}
+
+export async function agreementAccepted(code: string) {
+  return hasAcceptedAgreement(await loadAffiliateAgreements(code));
+}
+
 export async function loadAffiliateAgreement(id: string) {
   if (!affiliateFirebaseConfigured() || !id || id.includes("/")) return null;
   const snap = await affiliateFirestore().collection("affiliateAgreements").doc(id).get();

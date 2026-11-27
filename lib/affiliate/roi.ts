@@ -1,5 +1,5 @@
 import { affiliateCampaign } from "./link";
-import { remainingSalesCents } from "./refunds";
+import { adjustedCommissionCents, remainingSalesCents } from "./refunds";
 
 export const ROI_UNASSIGNED = "No promo code";
 
@@ -11,15 +11,37 @@ export type RoiOrder = {
   promoCode: string;
   amountCents: number | null;
   refundedAmountCents: number;
+  commissionCents?: number;
+  commissionRefundedCents?: number;
   dryRun: boolean;
   createdAt: string | null;
 };
 
+export type RoiPostPay = {
+  code?: string;
+  campaign: string;
+  amountCents: number;
+  approvedAt: string | null;
+};
+
+export function roiCommissionCents(order: Pick<RoiOrder, "commissionCents" | "commissionRefundedCents">) {
+  return adjustedCommissionCents(order.commissionCents ?? 0, order.commissionRefundedCents ?? 0);
+}
+
+export function roiPostPayCents(pay: Pick<RoiPostPay, "amountCents">) {
+  return Number.isFinite(pay.amountCents) ? Math.max(0, Math.round(pay.amountCents)) : 0;
+}
+
 export type RoiCost = {
+  id?: string;
   campaign: string;
   costCents: number;
   spentOn: string | null;
+  note?: string;
+  recordedBy?: string;
 };
+
+export const MARKETING_COST_NOTE_MAX = 80;
 
 export type RoiRow = {
   campaign: string;
@@ -81,12 +103,20 @@ export function roiCostCents(value: unknown) {
   return Math.round(dollars * 100);
 }
 
-export function roiSpentOn(value: unknown) {
+export function roiSpentOn(value: unknown, latest?: string) {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
   const [year, month, day] = value.split("-").map(Number);
   const date = new Date(Date.UTC(year, month - 1, day));
   if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null;
+  if (latest && value > latest) return null;
   return value;
+}
+
+export function marketingCostNote(value: unknown) {
+  if (value == null) return "";
+  if (typeof value !== "string") return null;
+  const note = value.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
+  return note.length > MARKETING_COST_NOTE_MAX ? null : note;
 }
 
 export function campaignSocialTotals(posts: readonly CampaignSocialPost[], range: RoiRange, now = Date.now()): CampaignSocial[] {
@@ -158,14 +188,26 @@ function campaignLabel(value: string) {
   return trimmed;
 }
 
+function windowFor(label: string, windows: readonly CampaignWindow[]) {
+  if (!label || label === ROI_UNASSIGNED) return undefined;
+  return windows.find((window) => window.name.trim().toLowerCase() === label.toLowerCase());
+}
+
+function inWindow(value: string | null, window: CampaignWindow | undefined, range: RoiRange, now: number) {
+  return roiInRange(value, range, now) && insideCampaignPeriod(orderDay(value), window);
+}
+
 export function roiFigures(input: {
   orders: readonly RoiOrder[];
   costs: readonly RoiCost[];
+  postPay?: readonly RoiPostPay[];
   campaigns?: readonly string[];
+  windows?: readonly CampaignWindow[];
   range: RoiRange;
   now?: number;
 }): RoiReport {
   const now = input.now ?? Date.now();
+  const windows = input.windows ?? [];
   const buckets = new Map<string, { campaign: string; orders: number; costCents: number; revenueCents: number }>();
 
   function bucket(key: string, label: string) {
@@ -183,18 +225,31 @@ export function roiFigures(input: {
   }
 
   for (const order of input.orders) {
-    if (order.dryRun || !roiInRange(order.createdAt, input.range, now)) continue;
-    const row = bucket(campaignKey(order.promoCode), campaignLabel(order.promoCode));
+    if (order.dryRun) continue;
+    const label = campaignLabel(order.promoCode);
+    if (!inWindow(order.createdAt, windowFor(label, windows), input.range, now)) continue;
+    const remaining = remainingSalesCents(order.amountCents, order.refundedAmountCents);
+    if (remaining <= 0) continue;
+    const row = bucket(campaignKey(order.promoCode), label);
     row.orders += 1;
-    row.revenueCents += remainingSalesCents(order.amountCents, order.refundedAmountCents);
+    row.revenueCents += remaining;
+    row.costCents += roiCommissionCents(order);
+  }
+
+  for (const pay of input.postPay ?? []) {
+    const key = campaignKey(pay.campaign);
+    const label = campaignLabel(pay.campaign);
+    if (!key || !inWindow(pay.approvedAt, windowFor(label, windows), input.range, now)) continue;
+    bucket(key, label).costCents += roiPostPayCents(pay);
   }
 
   for (const cost of input.costs) {
     const spentOn = roiSpentOn(cost.spentOn ?? "");
-    if (!spentOn || !roiInRange(spentOn, input.range, now)) continue;
+    const label = campaignLabel(cost.campaign);
+    if (!spentOn || !inWindow(spentOn, windowFor(label, windows), input.range, now)) continue;
     const cents = Math.max(0, Math.round(cost.costCents));
     if (!Number.isFinite(cents) || cents <= 0) continue;
-    const row = bucket(campaignKey(cost.campaign), campaignLabel(cost.campaign));
+    const row = bucket(campaignKey(cost.campaign), label);
     row.costCents += cents;
   }
 
@@ -229,6 +284,87 @@ export function roiFigures(input: {
   };
 }
 
+export type AffiliateRoiPart = {
+  orders: number;
+  costCents: number;
+  revenueCents: number;
+  profitCents: number;
+};
+
+export type AffiliateRoiRow = AffiliateRoiPart & {
+  code: string;
+  name: string;
+  campaigns: AffiliateRoiPart;
+  outside: AffiliateRoiPart;
+};
+
+function emptyPart(): AffiliateRoiPart {
+  return { orders: 0, costCents: 0, revenueCents: 0, profitCents: 0 };
+}
+
+export function affiliateRoiRows(input: {
+  orders: readonly CampaignRankOrder[];
+  postPay: readonly RoiPostPay[];
+  windows?: readonly CampaignWindow[];
+  names?: ReadonlyMap<string, string>;
+  range: RoiRange;
+  now?: number;
+}): AffiliateRoiRow[] {
+  const now = input.now ?? Date.now();
+  const names = input.names ?? new Map<string, string>();
+  const windows = new Map((input.windows ?? []).map((window) => [window.name.trim().toLowerCase(), window]));
+  const rows = new Map<string, AffiliateRoiRow>();
+  const row = (value: string) => {
+    const code = value.trim();
+    if (!code) return null;
+    const key = code.toLowerCase();
+    const existing = rows.get(key);
+    if (existing) return existing;
+    const created = { code, name: names.get(code) || names.get(key) || code, ...emptyPart(), campaigns: emptyPart(), outside: emptyPart() };
+    rows.set(key, created);
+    return created;
+  };
+
+  for (const order of input.orders) {
+    if (order.dryRun || !roiInRange(order.createdAt, input.range, now)) continue;
+    const remaining = remainingSalesCents(order.amountCents, order.refundedAmountCents);
+    if (remaining <= 0) continue;
+    const target = row(order.code);
+    if (!target) continue;
+    const window = windows.get(order.promoCode.trim().toLowerCase());
+    const part = window && insideCampaignPeriod(orderDay(order.createdAt), window) ? target.campaigns : target.outside;
+    part.orders += 1;
+    part.revenueCents += remaining;
+    part.costCents += roiCommissionCents(order);
+  }
+  for (const pay of input.postPay) {
+    const window = windows.get(pay.campaign.trim().toLowerCase());
+    if (!inWindow(pay.approvedAt, window, input.range, now)) continue;
+    const target = row(pay.code ?? "");
+    if (!target) continue;
+    const part = window ? target.campaigns : target.outside;
+    part.costCents += roiPostPayCents(pay);
+  }
+
+  const settle = (part: AffiliateRoiPart) => ({ ...part, profitCents: part.revenueCents - part.costCents });
+  return [...rows.values()]
+    .map((item) => {
+      const campaigns = settle(item.campaigns);
+      const outside = settle(item.outside);
+      return {
+        ...item,
+        campaigns,
+        outside,
+        orders: campaigns.orders + outside.orders,
+        costCents: campaigns.costCents + outside.costCents,
+        revenueCents: campaigns.revenueCents + outside.revenueCents,
+        profitCents: campaigns.profitCents + outside.profitCents,
+      };
+    })
+    .filter((item) => item.orders > 0 || item.costCents > 0)
+    .sort((left, right) => right.profitCents - left.profitCents || right.revenueCents - left.revenueCents || left.name.localeCompare(right.name));
+}
+
 export type CampaignRankPost = {
   code: string;
   campaign: string | null;
@@ -242,6 +378,8 @@ export type CampaignRankOrder = {
   promoCode: string;
   amountCents: number | null;
   refundedAmountCents: number;
+  commissionCents?: number;
+  commissionRefundedCents?: number;
   dryRun: boolean;
   createdAt: string | null;
 };

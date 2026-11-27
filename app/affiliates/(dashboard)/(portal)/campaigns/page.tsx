@@ -12,6 +12,7 @@ import { loadAffiliateAgreements, utcAgreementToday } from "@/lib/affiliate/agre
 import { agreementPostMonth } from "@/lib/affiliate/agreement-earnings";
 import { postingAgreement } from "@/lib/affiliate/post-agreement";
 import { memo } from "@/lib/affiliate/memo";
+import { loadSocialAccounts } from "@/lib/affiliate/social-store";
 import { currentAffiliate } from "../../../current";
 
 export const metadata: Metadata = {
@@ -23,7 +24,7 @@ export const dynamic = "force-dynamic";
 
 const errors: Record<string, string> = {
   disclosure: "Include the sponsorship disclosure in the caption.",
-  tag: "Tag @myleaderhealth in the caption. The post does not track without that tag.",
+  tag: "Tag @myleaderhealth in the caption. Your agreement requires this tag.",
   link: "Put your tracking link in the caption. A link in your bio is not enough.",
   file: "Use a PNG, JPEG, or WebP image under 8 MB, or an MP4, MOV, or WebM video under 200 MB.",
   url: "Paste the link to the live post.",
@@ -65,6 +66,7 @@ export default async function AffiliateCampaignsPage({
       publicationStatus: post.publicationStatus,
       format: post.format,
       reviewNote: post.reviewNote,
+      liveFixNote: post.liveFixNote,
       hasFile: Boolean(post.filePath || post.files.length),
       createdAt: post.createdAt,
     }));
@@ -72,9 +74,10 @@ export default async function AffiliateCampaignsPage({
     unavailable = true;
   }
   const board = affiliateCampaignBoard({ records, posts, code: affiliate.code });
-  const [agreementRows, rates] = await Promise.all([
+  const [agreementRows, rates, accounts] = await Promise.all([
     memo(`agreements:${affiliate.code}`, () => loadAffiliateAgreements(affiliate.code)).catch(() => null),
     memo("payment-rates", () => loadPaymentRates()).catch(() => null),
+    memo(`accounts:${affiliate.code}`, () => loadSocialAccounts(affiliate.code)).catch(() => []),
   ]);
   const posting = agreementRows ? postingAgreement(agreementRows, utcAgreementToday(), submissions) : null;
   const viewRate = rates ? standingViewRateCents(rates) : null;
@@ -85,11 +88,11 @@ export default async function AffiliateCampaignsPage({
       : query.notice === "declined"
         ? `${name || "The campaign"} declined.`
         : query.notice === "post"
-          ? "Sent for review. Status: Pending review."
+          ? "Sent for review. Status: In review."
           : query.notice === "tracked"
             ? "Link added. The live post is verified."
             : query.notice === "pending"
-              ? "Link added. Status: Published, pending verification."
+              ? "Link added. Status: Checking the link."
               : query.notice === "check"
                 ? "We could not confirm that post."
                 : "";
@@ -121,6 +124,7 @@ export default async function AffiliateCampaignsPage({
         }))}
         toast={toast}
         error={query.error ? errors[query.error] ?? "That could not be saved right now." : ""}
+        connectedNetworks={accounts.filter((account) => !account.needsReconnect).map((account) => account.network)}
       />
     </>
   );

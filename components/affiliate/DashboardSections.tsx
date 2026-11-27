@@ -42,8 +42,9 @@ function FadingSectionRow({ group }: { group: DashboardGroup }) {
 }
 
 function SectionPanel({ pathname, children }: { pathname: string; children: ReactNode }) {
+  const campaign = useSearchParams().get("campaign");
   return (
-    <TabPanel tabKey={pathname} className="min-w-0">
+    <TabPanel tabKey={campaign ? `${pathname}?campaign=${campaign}` : pathname} className="min-w-0">
       {children}
     </TabPanel>
   );

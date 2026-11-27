@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { PasswordInput } from "@/components/affiliate/PasswordInput";
+import { TimedNotice } from "@/components/affiliate/TimedNotice";
 import type { PasswordChangeState } from "@/app/affiliates/actions";
 
 function ChangePasswordForm({
@@ -78,11 +79,7 @@ function ChangePasswordForm({
                   Change password
                 </h2>
                 <form key={result?.status === "saved" ? "saved" : "edit"} action={submitPassword} className="mt-6 space-y-3">
-                  {result?.status === "saved" ? (
-                    <p role="status" className="rounded-2xl bg-rose px-3 py-2 text-sm text-ink">
-                      Your password is saved.
-                    </p>
-                  ) : null}
+                  {result?.status === "saved" ? <TimedNotice message="Your password is saved." tone="ok" /> : null}
                   {result && result.status !== "saved" ? (
                     <p role="alert" className="rounded-2xl bg-rose px-3 py-2 text-sm text-ink">
                       {PASSWORD_MESSAGES[result.status]}

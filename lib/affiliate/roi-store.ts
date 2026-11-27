@@ -5,18 +5,20 @@ import { affiliateFirebaseConfigured, affiliateFirestore } from "./firebase";
 import { publishDateValue } from "./format";
 import {
   campaignDirectoryName,
+  marketingCostNote,
   roiCostCents,
   roiFigures,
+  type CampaignWindow,
   roiSpentOn,
   type CampaignRankOrder,
   type RoiCost,
   type RoiOrder,
+  type RoiPostPay,
   type RoiRange,
   type RoiReport,
 } from "./roi";
-
 export class RoiStoreError extends Error {
-  code: "campaign" | "choose" | "amount" | "date" | "when" | "unavailable";
+  code: "campaign" | "choose" | "amount" | "date" | "future" | "note" | "missing" | "when" | "unavailable";
 
   constructor(code: RoiStoreError["code"], message: string) {
     super(message);
@@ -43,16 +45,21 @@ function orderFrom(data: DocumentData): RoiOrder {
     promoCode: typeof data.promoCode === "string" ? data.promoCode : "",
     amountCents: typeof data.amountCents === "number" ? data.amountCents : null,
     refundedAmountCents: asNumber(data.refundedAmountCents),
+    commissionCents: asNumber(data.commissionCents),
+    commissionRefundedCents: asNumber(data.commissionRefundedCents),
     dryRun: data.dryRun === true,
     createdAt: asTimestamp(data.createdAt),
   };
 }
 
-function costFrom(data: DocumentData): RoiCost {
+function costFrom(data: DocumentData, id?: string): RoiCost {
   return {
+    id,
     campaign: typeof data.campaign === "string" ? data.campaign : "",
     costCents: asNumber(data.costCents),
     spentOn: typeof data.spentOn === "string" ? data.spentOn : null,
+    note: typeof data.note === "string" ? data.note : "",
+    recordedBy: typeof data.recordedBy === "string" ? data.recordedBy : "",
   };
 }
 
@@ -247,36 +254,76 @@ export async function loadCampaignOrders(): Promise<CampaignRankOrder[]> {
   });
 }
 
-export async function loadRoiReport(range: RoiRange, now = Date.now()): Promise<RoiReport> {
+export async function loadMarketingCosts(): Promise<RoiCost[]> {
+  const snap = await requireRoiDb().collection("marketingCosts").get();
+  return snap.docs.map((doc) => costFrom(doc.data(), doc.id));
+}
+
+export async function loadRoiReport(range: RoiRange, postPay: readonly RoiPostPay[] = [], now = Date.now()): Promise<RoiReport> {
   const db = requireRoiDb();
-  const [ordersSnap, costsSnap, campaigns] = await Promise.all([
+  const [ordersSnap, costsSnap, records] = await Promise.all([
     db.collection("conversions").get(),
     db.collection("marketingCosts").get(),
-    loadMarketingCampaigns(),
+    loadMarketingCampaignRecords(),
   ]);
+  const active = records.filter((record) => record.status !== "draft");
+  const windows: CampaignWindow[] = active.map((record) => ({ name: record.name, startsOn: record.startsOn, endsOn: record.endsOn }));
   return roiFigures({
     range,
     now,
-    campaigns,
+    campaigns: active.map((record) => record.name),
+    windows,
     orders: ordersSnap.docs.map((doc) => orderFrom(doc.data())),
     costs: costsSnap.docs.map((doc) => costFrom(doc.data())),
+    postPay,
   });
 }
 
-export async function saveMarketingCost(input: { campaign: unknown; amount: unknown; spentOn: unknown }) {
-  const name = campaignDirectoryName(input.campaign);
-  if (!name) throw new RoiStoreError("campaign", "Enter a campaign name.");
-  const campaign = (await loadMarketingCampaigns()).find((item) => item.toLowerCase() === name.toLowerCase());
-  if (!campaign) throw new RoiStoreError("choose", "Choose a campaign.");
+function costFields(input: { amount: unknown; spentOn: unknown; note: unknown }) {
   const costCents = roiCostCents(input.amount);
   if (costCents == null) throw new RoiStoreError("amount", "Enter a cost greater than zero.");
   const spentOn = roiSpentOn(input.spentOn);
   if (!spentOn) throw new RoiStoreError("date", "Enter the date the money was spent.");
+  if (!roiSpentOn(spentOn, new Date().toISOString().slice(0, 10))) throw new RoiStoreError("future", "Choose today or an earlier date.");
+  const note = marketingCostNote(input.note);
+  if (note == null) throw new RoiStoreError("note", "Keep the note to 80 characters.");
+  return { costCents, spentOn, note };
+}
+
+function costDoc(id: unknown) {
+  if (typeof id !== "string" || !/^[A-Za-z0-9]{1,40}$/.test(id)) throw new RoiStoreError("missing", "That cost was already removed.");
+  return requireRoiDb().collection("marketingCosts").doc(id);
+}
+
+export async function saveMarketingCost(input: { campaign: unknown; amount: unknown; spentOn: unknown; note?: unknown; recordedBy?: string }) {
+  const name = campaignDirectoryName(input.campaign);
+  if (!name) throw new RoiStoreError("campaign", "Enter a campaign name.");
+  const campaign = (await loadMarketingCampaigns()).find((item) => item.toLowerCase() === name.toLowerCase());
+  if (!campaign) throw new RoiStoreError("choose", "Choose a campaign.");
+  const fields = costFields({ amount: input.amount, spentOn: input.spentOn, note: input.note });
 
   await requireRoiDb().collection("marketingCosts").add({
     campaign,
-    costCents,
-    spentOn,
+    ...fields,
+    recordedBy: input.recordedBy ?? "",
     createdAt: new Date(),
   });
+  return { campaign, costCents: fields.costCents };
+}
+
+export async function updateMarketingCost(id: unknown, input: { amount: unknown; spentOn: unknown; note: unknown }) {
+  const ref = costDoc(id);
+  const fields = costFields(input);
+  const snap = await ref.get();
+  if (!snap.exists) throw new RoiStoreError("missing", "That cost was already removed.");
+  await ref.update({ ...fields, updatedAt: new Date() });
+  return { campaign: costFrom(snap.data() ?? {}).campaign, costCents: fields.costCents };
+}
+
+export async function deleteMarketingCost(id: unknown) {
+  const ref = costDoc(id);
+  const snap = await ref.get();
+  if (!snap.exists) throw new RoiStoreError("missing", "That cost was already removed.");
+  await ref.delete();
+  return { campaign: costFrom(snap.data() ?? {}).campaign };
 }

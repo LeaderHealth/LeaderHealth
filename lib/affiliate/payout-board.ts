@@ -71,14 +71,14 @@ export type PayoutBoardWebsite = {
 };
 
 export const PAYOUT_KINDS: Record<PayoutBoardKind, { label: string; color: string; detail: string }> = {
-  base: { label: "Base payments", color: "#33130F", detail: "Monthly posting rate and fixed post fees" },
+  base: { label: "Agreement", color: "#33130F", detail: "Monthly posting rate and fixed post fees" },
   social: { label: "Social performance", color: "#A8706A", detail: "Views and engagement" },
   web: { label: "Website performance", color: "#E39A93", detail: "Clicks and page views" },
   lab: { label: "Lab commission", color: "#C9A27E", detail: "Monthly total from lab orders" },
 };
 
 export const PAYOUT_STATUSES: Record<PayoutBoardStatus, { label: string; background: string; color: string }> = {
-  review: { label: "In review", background: "#DBD4BD", color: "#331110" },
+  review: { label: "Needs approval", background: "#DBD4BD", color: "#331110" },
   approved: { label: "Approved, not sent", background: "#F3E6E3", color: "#5A2A24" },
   paid: { label: "Paid", background: "#DDF0E4", color: "#1D6340" },
   hold: { label: "On hold", background: "#FBE3DF", color: "#9B2C1F" },
@@ -142,7 +142,7 @@ function boardStatus(status: DeliverableLineStatus | "pending" | "approved" | "p
 function paymentNote(status: PayoutBoardStatus, paidOn: string | null) {
   if (status === "paid") return paidOn ? `Paid ${payoutDateLabel(paidOn)}` : "Paid";
   if (status === "approved") return "In the next manual payout";
-  if (status === "hold") return "Waiting on review";
+  if (status === "hold") return "On hold";
   return "After approval";
 }
 
@@ -276,7 +276,7 @@ function monthlyItem(row: PayoutBoardMonthly, today: string): PayoutBoardItem | 
   const status: PayoutBoardStatus = row.status === "paid" ? "paid" : row.status === "approved" ? "approved" : "review";
   const paidOn = payoutDay(row.paidAt);
   const approvedOn = payoutDay(row.approvedAt) || paidOn;
-  const live = `${row.verifiedPosts} of ${row.requiredPosts} required posts live.`;
+  const live = `${row.verifiedPosts} of ${row.requiredPosts} required posts verified.`;
   return {
     id: `monthly-${row.period}`,
     title: `${payoutMonthLabel(row.period)} monthly posting rate`,
@@ -284,8 +284,8 @@ function monthlyItem(row: PayoutBoardMonthly, today: string): PayoutBoardItem | 
     amountCents: Math.max(0, row.earnedCents),
     earnedOn: paidOn || periodDay(row.period, today),
     status,
-    terms: `${formatCents(row.rateCents)} for each month all ${row.requiredPosts} required posts are live`,
-    work: row.status === "short" ? `${live} The monthly rate is earned once every required post is live.` : live,
+    terms: `${formatCents(row.rateCents)} for each month all ${row.requiredPosts} required posts are verified`,
+    work: row.status === "short" ? `${live} The monthly rate is earned once every required post is verified.` : live,
     approved: approvedOn ? payoutDateLabel(approvedOn) : "Not yet",
     paymentNote: paymentNote(status, paidOn),
     paidOn: paidOn || null,

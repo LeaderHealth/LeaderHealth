@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { TimedNotice } from "@/components/affiliate/TimedNotice";
 import { respondToCampaignAction } from "@/app/affiliates/campaign-actions";
 import { submitLiveLinkAction, submitPostsAction } from "@/app/affiliates/post-actions";
 import type { AffiliateActiveCampaign, AffiliateCampaignInvite, AffiliateCampaignSlot, AffiliatePastCampaign } from "@/lib/affiliate/affiliate-campaigns";
@@ -70,6 +71,20 @@ function openKinds(posting: PostingAgreement | null, fills: CampaignFill[], peri
   });
 }
 
+function networkOfFormat(format: string | null) {
+  if (format === "tiktok") return "tiktok";
+  if (format === "facebook_post" || format === "facebook_reel" || format === "facebook_video") return "facebook";
+  if (format === "youtube_short" || format === "youtube_video") return "youtube";
+  if (format === "instagram_post" || format === "instagram_reel") return "instagram";
+  return "";
+}
+
+function brandTagLine(format: string | null, networks: readonly string[]) {
+  const network = networkOfFormat(format);
+  if (network !== "" && networks.includes(network)) return "Tag @myleaderhealth in the caption so the post can track.";
+  return "Tag @myleaderhealth in the caption. Your agreement requires this tag.";
+}
+
 function linkPlaceholder(format: PostFormat | null) {
   if (format === "tiktok") return "tiktok.com/@you/video/…";
   if (format === "instagram_post") return "instagram.com/p/…";
@@ -97,6 +112,7 @@ export function AffiliateCampaigns({
   fills,
   toast,
   error,
+  connectedNetworks = [],
 }: {
   invites: AffiliateCampaignInvite[];
   active: AffiliateActiveCampaign[];
@@ -108,6 +124,7 @@ export function AffiliateCampaigns({
   fills: CampaignFill[];
   toast: string;
   error: string;
+  connectedNetworks?: string[];
 }) {
   const [declining, setDeclining] = useState("");
   const [open, setOpen] = useState("");
@@ -145,8 +162,8 @@ export function AffiliateCampaigns({
         <h2 className="text-[30px] font-medium tracking-tight">My campaigns</h2>
         <p className="text-[15px] leading-normal text-[#4A3A37]">Campaigns Leader Health invited you to. You can still send posts outside a campaign in My posts.</p>
       </div>
-      {toast ? <p role="status" className="rounded-[14px] bg-[#DDF0E4] px-4 py-3 text-[15px] font-medium text-[#1D6340]">{toast}</p> : null}
-      {error ? <p role="alert" className="rounded-[14px] bg-[#FBE3DF] px-4 py-3 text-sm text-[#9B2C1F]">{error}</p> : null}
+      {toast ? <TimedNotice message={toast} query="notice" /> : null}
+      {error ? <TimedNotice message={error} tone="warn" query="error" /> : null}
 
       <section className="flex flex-col gap-3">
         <h3 className="text-xl font-semibold">New invitations</h3>
@@ -261,7 +278,7 @@ export function AffiliateCampaigns({
                         }
                         if (!hasTag) {
                           event.preventDefault();
-                          setProblem("Tag @myleaderhealth in the caption so the post can track.");
+                          setProblem(brandTagLine(chosen?.format ?? null, connectedNetworks));
                           return;
                         }
                         if (!posting) {
@@ -343,7 +360,7 @@ export function AffiliateCampaigns({
                         <textarea id={`cap-${slot.key}`} rows={4} value={caption} onChange={(event) => { setCaption(event.target.value); setProblem(""); }} className="resize-y rounded-xl border border-[#CDBDBA] bg-white px-3.5 py-2.5 text-[15px] font-normal leading-normal" />
                       </label>
                       <div className="flex flex-col gap-2">
-                        <span className="text-sm font-semibold">3. Tag @myleaderhealth so the post can track</span>
+                        <span className="text-sm font-semibold">{networkOfFormat(chosen?.format ?? null) !== "" && connectedNetworks.includes(networkOfFormat(chosen?.format ?? null)) ? "3. Tag @myleaderhealth so the post can track" : "3. Tag @myleaderhealth. Your agreement requires this tag."}</span>
                         <CheckLine ok={hasTag} label="@myleaderhealth" onInsert={hasTag ? undefined : () => setCaption((current) => `${current.trim() ? `${current.replace(/\s+$/, "")}\n` : ""}@myleaderhealth`)} />
                         <CheckLine ok={hasDisclosure} optional label={disclosure} onInsert={hasDisclosure ? undefined : () => setCaption((current) => `${current.trim() ? `${current.replace(/\s+$/, "")}\n\n` : ""}${disclosure}`)} />
                         <CheckLine ok={hasLink} optional label={trackingUrl || "Your tracking link"} mono onInsert={!trackingUrl || hasLink ? undefined : () => setCaption((current) => `${current.trim() ? `${current.replace(/\s+$/, "")}\n` : ""}${trackingUrl}`)} />

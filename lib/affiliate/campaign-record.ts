@@ -223,7 +223,7 @@ export function campaignStepError(step: number, input: CampaignFlowInput) {
   }
   if (step === 2) return amount == null ? "Enter a base payment, like 150." : "";
   if (step === 3) {
-    if (rows.length === 0) return "Assign at least one affiliate.";
+    if (rows.length === 0) return "Invite at least one affiliate.";
     if (rows.some((row) => paymentCents(row.amount) == null)) return "Check each affiliate’s payment.";
     return "";
   }
@@ -244,6 +244,8 @@ export function readCampaignFlow(input: CampaignFlowInput): { name: string; brie
       const error = campaignStepError(step, input);
       if (error) return { error };
     }
+  } else if (affiliateRows(input.affiliates).length === 0) {
+    return { error: "Invite at least one affiliate." };
   }
   const rows = affiliateRows(input.affiliates);
   const amount = paymentCents(input.amount);

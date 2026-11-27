@@ -6,8 +6,7 @@ import { AreaNav, type AreaNavItem } from "@/components/affiliate/AreaNav";
 import { DashboardSections, type DashboardGroup } from "@/components/affiliate/DashboardSections";
 import { PortalBrand } from "@/components/affiliate/PortalBrand";
 import { ProfileCard } from "@/components/affiliate/ProfileCard";
-import { loadAffiliateAgreements } from "@/lib/affiliate/agreements";
-import { disclosureAcknowledged } from "@/lib/affiliate/disclosures";
+import { hasAcceptedAgreement, loadAffiliateAgreements } from "@/lib/affiliate/agreements";
 import { remindManualReports } from "@/lib/affiliate/manual-report";
 import { newCampaignInvitations } from "@/lib/affiliate/affiliate-campaigns";
 import { loadContentSubmissions } from "@/lib/affiliate/post-review";
@@ -27,10 +26,11 @@ const stats = "/affiliates/stats";
 const payments = "/affiliates/payouts";
 const orders = "/affiliates/orders";
 const agreements = "/affiliates/contracts";
-const acknowledgments = "/affiliates/compliance";
+const legacyCompliance = "/affiliates/compliance";
 const connected = "/affiliates/connect";
 
-function needsPostAction(post: { contentStatus: string; publicationStatus: string | null }) {
+function needsPostAction(post: { contentStatus: string; publicationStatus: string | null; liveFixNote?: string }) {
+  if (post.liveFixNote && post.publicationStatus !== "verification_pending") return true;
   if (post.contentStatus === "revision_requested" || post.publicationStatus === "verification_failed") return true;
   return post.contentStatus === "approved" && (post.publicationStatus === "awaiting_publication" || post.publicationStatus === null);
 }
@@ -58,7 +58,8 @@ function approvedMessage(posts: { format: PostFormat | null; agreementPlatform: 
 export default async function AffiliateDashboardLayout({ children }: { children: ReactNode }) {
   const affiliate = await currentAffiliate();
   if (!affiliate) redirect("/affiliates");
-  const postsOpen = await disclosureAcknowledged(affiliate.code).catch(() => false);
+  const ownAgreements = await loadAffiliateAgreements(affiliate.code).catch(() => null);
+  const postsOpen = ownAgreements ? hasAcceptedAgreement(ownAgreements) : false;
   let approvedPosts: { id: string; format: PostFormat | null; agreementPlatform: string }[] = [];
   let postsNeedingAction = 0;
   let ownPosts: { campaign: string; contentStatus: string }[] = [];
@@ -80,12 +81,7 @@ export default async function AffiliateDashboardLayout({ children }: { children:
       postsNeedingAction = 0;
     }
   }
-  let agreementWaiting = false;
-  try {
-    agreementWaiting = (await loadAffiliateAgreements(affiliate.code)).some((agreement) => agreement.status === "awaiting_signature");
-  } catch {
-    agreementWaiting = false;
-  }
+  const agreementWaiting = ownAgreements?.some((agreement) => agreement.status === "awaiting_signature") ?? false;
   let campaignInvites = 0;
   try {
     campaignInvites = newCampaignInvitations(await loadMarketingCampaignRecords(), affiliate.code, ownPosts);
@@ -94,7 +90,7 @@ export default async function AffiliateDashboardLayout({ children }: { children:
   }
   const submissionBadge = postsOpen && postsNeedingAction > 0 ? postsNeedingAction : undefined;
   const campaignBadge = campaignInvites > 0 ? campaignInvites : undefined;
-  const closed = { disabled: true, hint: "Accept the sponsorship agreement on your referral link." };
+  const closed = { disabled: true, hint: "Accept the agreement in My agreement first." };
   const createItem: AreaNavItem = postsOpen ? { href: createPost, label: "Create post" } : { href: createPost, label: "Create post", ...closed };
   const submissionsItem: AreaNavItem = postsOpen
     ? { href: submissions, label: "My posts", badge: submissionBadge }
@@ -104,19 +100,12 @@ export default async function AffiliateDashboardLayout({ children }: { children:
     { href: submissions, label: "Content", active: [submissions, createPost, myCampaigns, agreements], badge: submissionBadge },
     { href: stats, label: "Stats", active: [stats] },
     { href: payments, label: "Payouts", active: [payments, orders] },
-    { href: acknowledgments, label: "Settings", active: [acknowledgments, connected] },
+    { href: connected, label: "Settings", active: [legacyCompliance, connected] },
   ];
   const groups: DashboardGroup[] = [
     {
       paths: [submissions, createPost, myCampaigns, agreements],
       items: [createItem, submissionsItem, { href: myCampaigns, label: "My campaigns", badge: campaignBadge }, { href: agreements, label: "My agreement", badge: agreementWaiting ? 1 : undefined }],
-    },
-    {
-      paths: [acknowledgments, connected],
-      items: [
-        { href: acknowledgments, label: "Compliance" },
-        { href: connected, label: "Connected accounts" },
-      ],
     },
   ];
 

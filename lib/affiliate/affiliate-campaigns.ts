@@ -10,6 +10,7 @@ export type AffiliateCampaignPost = {
   publicationStatus: string | null;
   format: PostFormat | null;
   reviewNote: string;
+  liveFixNote: string;
   hasFile: boolean;
   createdAt: string | null;
 };
@@ -135,7 +136,13 @@ export function campaignUploadFormats(record: MarketingCampaignRecord): PostForm
 
 function slotFor(post: AffiliateCampaignPost | null, index: number, campaign: string): AffiliateCampaignSlot {
   const state = post ? campaignPostState(post) : "todo";
-  const note =
+  const fixing = Boolean(post?.liveFixNote) && (state === "verified" || state === "published" || state === "failed");
+  const waitingOnCheck = fixing && state === "published";
+  const note = fixing
+    ? waitingOnCheck
+      ? "An admin is confirming the change. If more changes are needed, you’ll paste the link again."
+      : post?.liveFixNote || "Update the live post, then paste the link."
+    :
     state === "pending"
       ? "Leader Health is reviewing it"
       : state === "changes"
@@ -149,34 +156,36 @@ function slotFor(post: AffiliateCampaignPost | null, index: number, campaign: st
               : state === "rejected"
                 ? post?.reviewNote || "This post was not approved"
                 : state === "failed"
-                  ? post?.reviewNote || "Verification failed"
+                  ? post?.reviewNote || "Needs a fix"
                   : "Create and submit this post";
-  const action: AffiliateCampaignSlot["action"] =
-    state === "todo" || state === "changes" ? "submit" : state === "ready" || state === "failed" || (state === "published" && awaitsManualLinkCheck(post?.format ?? null)) ? "link" : "";
-  const actionLabel = state === "changes" ? "Resubmit" : state === "ready" || state === "failed" || action === "link" ? "Add live link" : "Submit content";
+  const action: AffiliateCampaignSlot["action"] = fixing
+    ? waitingOnCheck ? "" : "link"
+    : state === "todo" || state === "changes" ? "submit" : state === "ready" || state === "failed" || (state === "published" && awaitsManualLinkCheck(post?.format ?? null)) ? "link" : "";
+  const actionLabel = fixing ? (waitingOnCheck ? "" : "Paste the updated link") : state === "changes" ? "Resubmit" : state === "ready" || state === "failed" || action === "link" ? "Add live link" : "Submit content";
   return {
     key: post?.id || `${campaign}-${index}`,
     postId: post?.id ?? "",
     number: `#${index + 1}`,
     title: `Post ${index + 1}`,
     note,
-    label:
-      state === "todo"
+    label: fixing
+      ? state === "published" ? "Waiting for a check" : state === "verified" ? "Live but changes requested" : "Paste the updated link"
+      : state === "todo"
         ? "Not started"
         : state === "pending"
-          ? "Pending review"
+          ? "In review"
           : state === "changes"
             ? "Changes requested"
             : state === "ready"
               ? "Ready to publish"
               : state === "published"
-                ? "Published · pending verification"
+                ? "Checking the link"
                 : state === "verified"
                   ? "Verified"
                   : state === "rejected"
                     ? "Rejected"
-                    : "Verification failed",
-    tone: state,
+                    : "Needs a fix",
+    tone: fixing ? "failed" : state,
     action,
     actionLabel,
     hasFile: Boolean(post?.hasFile),
